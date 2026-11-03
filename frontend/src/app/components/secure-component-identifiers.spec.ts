@@ -8,7 +8,7 @@ const SECURE_IDENTIFIER_SOURCES = [
   { path: 'primitives/input/input.component.ts', occurrences: 1 },
   { path: 'primitives/select/select.component.ts', occurrences: 1 },
   { path: 'primitives/textarea/textarea.component.ts', occurrences: 1 },
-  { path: 'tip-host-modal/tip-host-modal.component.ts', occurrences: 3 },
+  { path: 'tip-host-modal/tip-host-modal.component.ts', occurrences: 4 },
   { path: 'virtual-gift-modal/virtual-gift-modal.component.ts', occurrences: 2 },
 ] as const;
 

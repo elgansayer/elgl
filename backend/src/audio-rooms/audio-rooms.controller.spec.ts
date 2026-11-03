@@ -4,6 +4,7 @@ import { AudioRoomsController } from './audio-rooms.controller';
 import { AudioRoomsService } from './audio-rooms.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CallLogRecord } from './interfaces/call-log.interface';
+import { TipHostDto } from './dto/tip-host.dto';
 
 describe('AudioRoomsController', () => {
   let controller: AudioRoomsController;
@@ -317,18 +318,32 @@ describe('AudioRoomsController', () => {
 
   describe('tipHost', () => {
     it('should return null if user is not provided', async () => {
-      const result = await controller.tipHost(null, 'room-1', {} as any);
+      const result = await controller.tipHost(null, 'room-1', new TipHostDto());
       expect(result).toBeNull();
       expect(audioRoomsService.tipHost).not.toHaveBeenCalled();
     });
 
+    it('rejects a body room that does not match the authoritative route', async () => {
+      const dto = new TipHostDto();
+      dto.room_id = 'room-2';
+      dto.amount_coins = 10;
+
+      await expect(
+        controller.tipHost({ id: 'user-1' }, 'room-1', dto),
+      ).rejects.toThrow('audioRoom.tipValidationError');
+      expect(audioRoomsService.tipHost).not.toHaveBeenCalled();
+    });
+
     it('should call service tipHost when user is provided', async () => {
-      const dto: any = { amount_coins: 10 };
-      const resultPayload: any = {
+      const dto = new TipHostDto();
+      dto.room_id = 'room-1';
+      dto.amount_coins = 10;
+      dto.idempotency_key = '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12';
+      const resultPayload = {
         tip_id: 'tip-1',
         amount_coins: 10,
         receiver_id: 'host-1',
-        receiver_new_balance: 60,
+        sender_new_balance: 90,
       };
       (audioRoomsService.tipHost as Mock).mockResolvedValue(resultPayload);
 
@@ -337,6 +352,7 @@ describe('AudioRoomsController', () => {
       expect(audioRoomsService.tipHost).toHaveBeenCalledWith('user-1', {
         room_id: 'room-1',
         amount_coins: 10,
+        idempotency_key: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
       });
       expect(result).toEqual(resultPayload);
     });

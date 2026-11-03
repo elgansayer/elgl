@@ -162,6 +162,9 @@ type AudioRoomTipRow = {
   sender_user_id: string;
   receiver_user_id: string;
   amount_coins: number;
+  idempotency_key?: string | null;
+  sender_balance_after?: number | null;
+  receiver_balance_after?: number | null;
   created_at?: string;
 };
 
@@ -456,8 +459,9 @@ type XpEventRow = {
   created_at: string;
 };
 
+// user_follows has the composite primary key (follower_id, following_id) and no
+// id column (supabase/migrations/005_moments.sql).
 type UserFollowRow = {
-  id: string;
   follower_id: string;
   following_id: string;
   created_at: string;
@@ -541,17 +545,15 @@ type UserStickerPackRow = {
   created_at?: string;
 };
 
+// public.moments is owned through user_id and stores text in text_content and
+// the language community in target_language (supabase/migrations/005_moments.sql).
 type MomentRow = {
   id: string;
-  author_id?: string | null;
   user_id?: string | null;
   text_content?: string | null;
-  /** @deprecated legacy alias for text_content used by some older call sites */
-  content_text?: string | null;
   media_urls?: string[] | null;
   media_type?: string | null;
   voice_note_url?: string | null;
-  detected_language?: string | null;
   target_language?: string | null;
   post_type?: string | null;
   question_text?: string | null;
@@ -570,7 +572,6 @@ type MomentRow = {
 type MomentCommentRow = {
   id: string;
   user_id: string;
-  author_id?: string;
   moment_id: string;
   text_content: string | null;
   correction_payload?: {
@@ -602,7 +603,8 @@ type MomentQuestionAnswersRow = {
   id?: string;
   moment_id: string;
   user_id: string;
-  answer: string;
+  /** Column name from 005_moments.sql (VARCHAR(255) NOT NULL). */
+  selected_answer: string;
   is_correct: boolean;
   created_at?: string;
 };
@@ -2280,6 +2282,25 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      transfer_audio_room_tip: {
+        Args: {
+          p_room_id: string;
+          p_sender_id: string;
+          p_amount: number;
+          p_idempotency_key: string;
+        };
+        Returns: {
+          tip_id: string;
+          amount_coins: number;
+          receiver_id: string;
+          sender_new_balance: number;
+          // Internal RPC field. Never expose another user's wallet balance.
+          receiver_new_balance: number;
+          sender_name: string;
+          receiver_name: string;
+          created: boolean;
+        }[];
+      };
       get_host_dashboard_earnings: {
         Args: {
           p_room_id: string;

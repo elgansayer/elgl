@@ -117,6 +117,11 @@ describe('I18nService', () => {
       expect(translation).toBe('100 Coins');
     });
 
+    it('should localise the amount in an audio-room tip animation', () => {
+      const translation = service.translate('audioRoom.tipName', { amount: 50 });
+      expect(translation).toBe('50 Coins');
+    });
+
     it('should return the key itself if no translation is found', () => {
       const translation = service.translate('non.existent.key');
       expect(translation).toBe('non.existent.key');
@@ -130,6 +135,13 @@ describe('I18nService', () => {
         cost: 50,
       });
       expect(translation).toBe('🎉 Alice gifted Bob a Rose! (🪙 50 Coins)');
+    });
+
+    it('should expose inline gift fallbacks and coin copy', () => {
+      expect(service.translate('gift.someone')).toBe('Someone');
+      expect(service.translate('gift.you')).toBe('you');
+      expect(service.translate('gift.coinValue', { cost: 10 })).toBe('10 coins');
+      expect(service.translate('gift.unavailable')).toBe('Gift details unavailable');
     });
 
     it('should ignore params that do not appear as placeholders in the translation string', () => {
@@ -196,9 +208,9 @@ describe('I18nService', () => {
         target: 'English',
       }),
     ).toBe('Japanese → English');
-    expect(
-      service.translate('discovery.audioIntroFeed.resultCount', { count: 2 }),
-    ).toBe('Audio introduction results: 2');
+    expect(service.translate('discovery.audioIntroFeed.resultCount', { count: 2 })).toBe(
+      'Audio introduction results: 2',
+    );
     expect(service.translate('discovery.audioIntroFeed.noAudioIntros')).toBe(
       'No audio introductions available.',
     );

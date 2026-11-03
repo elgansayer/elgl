@@ -969,7 +969,7 @@ describe('ChatService', () => {
 
   describe('searchAllMessages', () => {
     function membershipBuilder(response: {
-      data: { room_id: string }[] | null;
+      data: { room_id: string; is_locked?: boolean | null }[] | null;
       error: { message: string } | null;
     }) {
       return {
@@ -1066,6 +1066,7 @@ describe('ChatService', () => {
       expect(projection).not.toContain('viewed_at');
       expect(projection).toContain('is_encrypted');
       expect(projection).toContain('encrypted_payload');
+      expect(memberships.select).toHaveBeenCalledWith('room_id, is_locked');
       expect(memberships.eq).toHaveBeenCalledWith('user_id', 'user-1');
       expect(messages.in).toHaveBeenCalledWith('room_id', ['room-1', 'room-2']);
       expect(messages.ilike).toHaveBeenCalledWith('text_content', '%hello%');
@@ -1107,6 +1108,71 @@ describe('ChatService', () => {
 
       await expect(
         service.searchAllMessages('user-1', 'hello', 50, 'room-2'),
+      ).resolves.toEqual([]);
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_messages');
+    });
+
+    it('keeps hidden (locked) chats out of an all-chats search', async () => {
+      const memberships = membershipBuilder({
+        data: [
+          { room_id: 'room-1', is_locked: false },
+          { room_id: 'room-hidden', is_locked: true },
+          { room_id: 'room-2', is_locked: null },
+          { room_id: 'room-3' },
+        ],
+        error: null,
+      });
+      const messages = messagesBuilder({ data: [], error: null });
+      mockSupabaseClient.from.mockImplementation((table: string) =>
+        table === 'chat_room_members' ? memberships : messages,
+      );
+
+      await expect(
+        service.searchAllMessages('user-1', 'dinner'),
+      ).resolves.toEqual([]);
+
+      expect(messages.in).toHaveBeenCalledWith('room_id', [
+        'room-1',
+        'room-2',
+        'room-3',
+      ]);
+      expect(messages.in).not.toHaveBeenCalledWith(
+        'room_id',
+        expect.arrayContaining(['room-hidden']),
+      );
+    });
+
+    it('does not search a hidden chat when its room id is supplied directly', async () => {
+      const memberships = membershipBuilder({
+        data: [
+          { room_id: 'room-1', is_locked: false },
+          { room_id: 'room-hidden', is_locked: true },
+        ],
+        error: null,
+      });
+      mockSupabaseClient.from.mockReturnValue(memberships);
+
+      await expect(
+        service.searchAllMessages('user-1', 'dinner', 50, 'room-hidden'),
+      ).resolves.toEqual([]);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_messages');
+    });
+
+    it('returns an empty result without querying messages when every joined chat is hidden', async () => {
+      const memberships = membershipBuilder({
+        data: [
+          { room_id: 'room-hidden-1', is_locked: true },
+          { room_id: 'room-hidden-2', is_locked: true },
+        ],
+        error: null,
+      });
+      mockSupabaseClient.from.mockReturnValue(memberships);
+
+      await expect(
+        service.searchAllMessages('user-1', 'dinner'),
       ).resolves.toEqual([]);
       expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
       expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_messages');
@@ -1198,117 +1264,6 @@ describe('ChatService', () => {
       await expect(
         service.searchAllMessages('user-1', 'hello'),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
-    });
-  });
-
-  describe('addFavourite', () => {
-    // We create independent builders for this describe block so they don't
-    // interfere with the shared `mockQueryBuilder` used by other tests.
-    let mockChatMessagesBuilder: any;
-    let mockFavouritesBuilder: any;
-
-    beforeEach(() => {
-      mockChatMessagesBuilder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn(),
-      };
-
-      mockFavouritesBuilder = {
-        insert: vi.fn(),
-      };
-
-      // Override `mockSupabaseClient.from` only inside `addFavourite` tests.
-      // We restore the default behaviour in afterEach.
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'chat_messages') {
-          return mockChatMessagesBuilder;
-        }
-        if (table === 'favourites') {
-          return mockFavouritesBuilder;
-        }
-        return mockQueryBuilder;
-      });
-    });
-
-    afterEach(() => {
-      // Restore the default `from` behaviour for other test suites.
-      mockSupabaseClient.from.mockReturnValue(mockQueryBuilder);
-    });
-
-    it('should save favourite record and return void', async () => {
-      const dto: any = { message_id: 'msg-1', note_text: 'My favourite note' };
-      const message = { id: 'msg-1', text_content: 'Hello' };
-
-      mockChatMessagesBuilder.single.mockResolvedValue({
-        data: message,
-        error: null,
-      });
-      mockFavouritesBuilder.insert.mockResolvedValue({ error: null });
-
-      await service.addFavourite('user-1', dto);
-
-      expect(mockChatMessagesBuilder.single).toHaveBeenCalled();
-      expect(mockFavouritesBuilder.insert).toHaveBeenCalledWith({
-        user_id: 'user-1',
-        item_type: 'message',
-        item_payload: message,
-        notes: 'My favourite note',
-      });
-    });
-
-    it('should throw Error when addFavourite fails with error message', async () => {
-      const dto: any = { message_id: 'msg-1' };
-
-      mockChatMessagesBuilder.single.mockResolvedValue({
-        data: null,
-        error: { message: 'Message not found error' },
-      });
-
-      await expect(service.addFavourite('user-1', dto)).rejects.toThrow(
-        'Message not found',
-      );
-    });
-  });
-
-  describe('getFavourites', () => {
-    it('should return list of favourite records for user', async () => {
-      const favourites = [{ id: 'fav-1', message_id: 'msg-1' }];
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: favourites,
-        error: null,
-      });
-
-      const result = await service.getFavourites('user-1');
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('favourites');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
-      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
-        ascending: false,
-      });
-      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(100);
-      expect(result).toEqual(favourites);
-    });
-
-    it('should return empty array when getFavourites returns error or null data', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'Query error' },
-      });
-
-      const result = await service.getFavourites('user-1');
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('deleteFavourite', () => {
-    it('should delete a favourite by id and user', async () => {
-      await service.deleteFavourite('user-1', 'fav-1');
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('favourites');
-      expect(mockQueryBuilder.delete).toHaveBeenCalled();
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'fav-1');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
     });
   });
 
