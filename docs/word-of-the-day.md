@@ -14,7 +14,7 @@ The Home card sends the current access token, validates the response shape, rend
 
 The endpoint is protected by `SupabaseAuthGuard`; a missing authenticated user fails closed with `401`. The service does not accept a client-supplied user ID or language override, so one learner cannot request another learner's preferences. Profile lookup failures are logged only by provider error code or exception class; user IDs, JWTs, profile values, and provider messages are not logged.
 
-Responses send `private, no-store` to browsers and the CDN. This prevents a learner's language-personalised response from being stored or reused, and guarantees that UTC day rollover and profile-language changes are visible on the next request.
+Responses send `private, no-store` to browsers and the CDN, and the endpoint is excluded from Angular service-worker data groups. This prevents a learner's language-personalised response from being stored or reused, and guarantees that UTC day rollover and profile-language changes are visible on the next request.
 
 ## Failure handling
 
@@ -31,8 +31,9 @@ Focused coverage lives in:
 - `backend/src/word-of-the-day/word-of-the-day.service.spec.ts`
 - `backend/src/word-of-the-day/word-of-the-day.controller.spec.ts`
 - `frontend/src/app/components/word-of-the-day/word-of-the-day.component.spec.ts`
+- `frontend/src/app/components/word-of-the-day/word-of-the-day-cache-boundary.contract.spec.ts`
 
-The tests cover target/native/fallback language selection, UTC determinism and rotation, locale normalisation, provider failure, authentication, no-store cache policy, bearer-token delivery, malformed and unavailable API responses, and removal of hard-coded fallback content from the active Home card.
+The tests cover target/native/fallback language selection, UTC determinism and rotation, locale normalisation, provider failure, authentication, browser/CDN/service-worker cache boundaries, bearer-token delivery, malformed and unavailable API responses, and removal of hard-coded fallback content from the active Home card.
 
 ## Rollout and rollback
 
