@@ -70,10 +70,10 @@ describe('AppleNotificationService', () => {
 
     const subscriptionPlansService = {
       getTierByProductId: vi.fn((productId: string) => {
-        if (productId.includes('developer')) {
-          return 'developer_20_ukp_26_usd';
-        }
-        return undefined;
+        if (productId.includes('consumer')) return 'consumer';
+        if (productId.includes('pro')) return 'pro';
+        if (productId.includes('developer')) return 'developer';
+        return null;
       }),
     };
 
@@ -164,7 +164,7 @@ describe('AppleNotificationService', () => {
 
       expect(
         monetisationService.updateVipStatusFromWebhook,
-      ).toHaveBeenCalledWith('user-1', true, 'consumer_8_ukp_10_usd');
+      ).toHaveBeenCalledWith('user-1', true, 'consumer');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith(
         'apple_subscriptions',
       );
@@ -182,10 +182,13 @@ describe('AppleNotificationService', () => {
     },
   );
 
-  it('should map developer product ids to the developer tier', async () => {
+  it.each([
+    ['com.hellotalk.pro.monthly', 'pro'],
+    ['com.hellotalk.developer.monthly', 'developer'],
+  ])('maps %s to the canonical %s tier', async (productId, expectedTier) => {
     const signedPayload = buildSignedPayload('SUBSCRIBED', undefined, {
       ...transactionInfo,
-      productId: 'com.hellotalk.developer.monthly',
+      productId,
     });
 
     await service.handleNotification({ signedPayload });
@@ -193,8 +196,22 @@ describe('AppleNotificationService', () => {
     expect(monetisationService.updateVipStatusFromWebhook).toHaveBeenCalledWith(
       'user-1',
       true,
-      'developer_20_ukp_26_usd',
+      expectedTier,
     );
+  });
+
+  it('fails closed for a verified notification with an unknown product', async () => {
+    const signedPayload = buildSignedPayload('SUBSCRIBED', undefined, {
+      ...transactionInfo,
+      productId: 'com.hellotalk.unknown.monthly',
+    });
+
+    await service.handleNotification({ signedPayload });
+
+    expect(
+      monetisationService.updateVipStatusFromWebhook,
+    ).not.toHaveBeenCalled();
+    expect(mockQueryBuilder.upsert).not.toHaveBeenCalled();
   });
 
   it.each(['EXPIRED', 'CANCEL', 'REFUND', 'REVOKE'])(
@@ -243,7 +260,7 @@ describe('AppleNotificationService', () => {
     expect(monetisationService.updateVipStatusFromWebhook).toHaveBeenCalledWith(
       'user-1',
       true,
-      'consumer_8_ukp_10_usd',
+      'consumer',
     );
   });
 

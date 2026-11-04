@@ -50,6 +50,18 @@ describe('UpdateProfileDto', () => {
     );
   });
 
+  it('accepts null to clear a saved proficiency level', async () => {
+    const dto = Object.assign(new UpdateProfileDto(), {
+      proficiency_level: null,
+    });
+
+    const errors = await validate(dto);
+
+    expect(
+      errors.filter((error) => error.property === 'proficiency_level'),
+    ).toHaveLength(0);
+  });
+
   it('accepts the five-language transport ceiling used by Pro and Developer tiers', async () => {
     const dto = Object.assign(new UpdateProfileDto(), {
       target_languages: ['ja', 'fr', 'es', 'de', 'it'],

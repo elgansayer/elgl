@@ -20,6 +20,28 @@ const FILTER_TYPES: Record<
   system: ['system'],
 };
 
+export interface NotificationUnreadCounts {
+  unreadCount: number;
+  byTab: {
+    moments: number;
+    discovery: number;
+    profile: number;
+  };
+}
+
+const MOMENTS_NOTIFICATION_TYPES: NotificationDto['type'][] = [
+  'like_moment',
+  'comment_moment',
+  'reply_comment',
+  'mention_comment',
+];
+const DISCOVERY_NOTIFICATION_TYPES: NotificationDto['type'][] = [
+  'follow',
+  'like_profile',
+  'profile_visit',
+];
+const PROFILE_NOTIFICATION_TYPES: NotificationDto['type'][] = ['system'];
+
 @Injectable()
 export class NotificationsInboxService {
   private readonly logger = new Logger(NotificationsInboxService.name);
@@ -78,24 +100,46 @@ export class NotificationsInboxService {
     return (data ?? []) as NotificationDto[];
   }
 
-  async getUnreadCount(recipientId: string): Promise<{ unreadCount: number }> {
-    const supabase = this.supabaseService.getClient();
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('recipient_id', recipientId)
-      .eq('is_read', false);
+  async getUnreadCount(recipientId: string): Promise<NotificationUnreadCounts> {
+    const [all, moments, discovery, profile] = await Promise.all([
+      this.countUnread(recipientId),
+      this.countUnread(recipientId, MOMENTS_NOTIFICATION_TYPES),
+      this.countUnread(recipientId, DISCOVERY_NOTIFICATION_TYPES),
+      this.countUnread(recipientId, PROFILE_NOTIFICATION_TYPES),
+    ]);
 
-    if (error) {
+    if (
+      [all, moments, discovery, profile].some((result) => result.error !== null)
+    ) {
       this.logger.warn('notifications_inbox.unread_count_failed');
       throw new ServiceUnavailableException(
         'Notification count is temporarily unavailable',
       );
     }
 
-    const unreadCount =
-      Number.isSafeInteger(count) && (count ?? 0) > 0 ? (count as number) : 0;
-    return { unreadCount };
+    return {
+      unreadCount: this.safeCount(all.count),
+      byTab: {
+        moments: this.safeCount(moments.count),
+        discovery: this.safeCount(discovery.count),
+        profile: this.safeCount(profile.count),
+      },
+    };
+  }
+
+  private countUnread(recipientId: string, types?: NotificationDto['type'][]) {
+    let query = this.supabaseService
+      .getClient()
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('recipient_id', recipientId)
+      .eq('is_read', false);
+    if (types) query = query.in('type', types);
+    return query;
+  }
+
+  private safeCount(count: number | null): number {
+    return Number.isSafeInteger(count) && (count ?? 0) > 0 ? (count ?? 0) : 0;
   }
 
   async markAsRead(recipientId: string, notificationId: string): Promise<void> {

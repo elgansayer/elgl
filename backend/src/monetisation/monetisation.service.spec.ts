@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PinoLogger } from 'nestjs-pino';
 import {
   ForbiddenException,
   NotFoundException,
@@ -116,6 +115,12 @@ describe('MonetisationService', () => {
           provide: SubscriptionPlansService,
           useValue: {
             getPlanById: vi.fn(),
+            getTierByProductId: vi.fn((productId: string) => {
+              if (productId.startsWith('consumer')) return 'consumer';
+              if (productId.startsWith('pro')) return 'pro';
+              if (productId.startsWith('developer')) return 'developer';
+              return null;
+            }),
           },
         },
         {
@@ -189,6 +194,49 @@ describe('MonetisationService', () => {
         vip_tier: 'consumer',
       });
       expect(result).toEqual({ received: true, status: 'processed' });
+    });
+
+    it('should activate the canonical Pro tier from verified checkout metadata', async () => {
+      const event = {
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            metadata: {
+              userId: 'pro-user',
+              planId: 'pro_12_ukp_15_usd',
+              interval: 'month',
+            },
+          },
+        },
+      };
+      mockConstructEvent.mockReturnValue(event);
+
+      await service.handleStripeWebhook(Buffer.from(''), 'sig');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        is_vip: true,
+        vip_tier: 'pro',
+      });
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'pro-user');
+    });
+
+    it('does not grant VIP when a verified Stripe event names an unknown plan', async () => {
+      const event = {
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            metadata: {
+              userId: 'user-1',
+              planId: 'unknown-plan',
+            },
+          },
+        },
+      };
+      mockConstructEvent.mockReturnValue(event);
+
+      await service.handleStripeWebhook(Buffer.from(''), 'sig');
+
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
     });
 
     it('should revoke VIP status when customer.subscription.deleted', async () => {
@@ -425,6 +473,8 @@ describe('MonetisationService', () => {
       vi.spyOn(configService, 'get').mockImplementation((key: string) => {
         if (key === 'STRIPE_MONTHLY_PRICE_ID') return 'price_monthly';
         if (key === 'STRIPE_YEARLY_PRICE_ID') return 'price_yearly';
+        if (key === 'STRIPE_PRO_MONTHLY_PRICE_ID') return 'price_pro_monthly';
+        if (key === 'STRIPE_PRO_YEARLY_PRICE_ID') return 'price_pro_yearly';
         if (key === 'FRONTEND_URL') return 'http://localhost:4200';
         return null;
       });
@@ -498,6 +548,36 @@ describe('MonetisationService', () => {
       expect(result).toEqual({
         sessionUrl: 'https://checkout.stripe.com/session_456',
         sessionId: 'cs_test_def456',
+      });
+    });
+
+    it('creates a Pro checkout using only the configured server-side price', async () => {
+      const mockSession = {
+        url: 'https://checkout.stripe.com/pro_session',
+        id: 'cs_test_pro',
+      };
+      mockCheckoutSessionCreate.mockResolvedValue(mockSession);
+
+      const result = await service.createCheckoutSession(
+        'pro-user',
+        'pro_12_ukp_15_usd',
+        'month',
+      );
+
+      expect(mockCheckoutSessionCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          line_items: [{ price: 'price_pro_monthly', quantity: 1 }],
+          metadata: {
+            userId: 'pro-user',
+            planId: 'pro_12_ukp_15_usd',
+            interval: 'month',
+            tier: 'pro',
+          },
+        }),
+      );
+      expect(result).toEqual({
+        sessionUrl: 'https://checkout.stripe.com/pro_session',
+        sessionId: 'cs_test_pro',
       });
     });
 

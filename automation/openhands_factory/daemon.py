@@ -38,6 +38,7 @@ from openhands_factory.maintenance import MAINTENANCE_TAG, MaintenanceController
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.recovery_retention import prune_recovery_archives
+from openhands_factory.session_identity import SessionIdentityJournal
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 from openhands_factory.worktree_cache import prune_inactive_worktree_caches
@@ -101,6 +102,21 @@ def is_new_github_issue(job: Job) -> bool:
     )
 
 
+def refund_unspent_issue_admission(
+    gate: IssueAdmissionGate, task_id: str, admitted_at: datetime, job: Job | None
+) -> bool:
+    """Return an intake slot when the admitted issue needed no implementation.
+
+    The step out of DISCOVERED never calls a model. An issue whose first run ends
+    DONE was already merged or closed, so its slot would otherwise sit idle for a
+    whole interval while real work waits behind years of resolved backlog.
+    """
+
+    if job is not None and job.state is not JobState.DONE:
+        return False
+    return gate.revoke(task_id, admitted_at)
+
+
 def is_maintenance_job(job: Job) -> bool:
     return job.task.source == "github-issue" and MAINTENANCE_TAG in job.task.triage_tags
 
@@ -117,6 +133,7 @@ def maintenance_selection(
         job
         for identifier, job in jobs.items()
         if is_maintenance_job(job)
+        and not job.intake_blocked
         and identifier not in excluded
         and job.state not in {JobState.DONE, JobState.QUARANTINED}
         and (job.next_attempt_at is None or job.next_attempt_at <= now)
@@ -250,6 +267,7 @@ def select_batch(
         job
         for job in jobs.values()
         if job.task.identifier not in excluded
+        and not job.intake_blocked
         and job.state.value not in {"done", "quarantined"}
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
         and (not review_only or is_review_lane_job(job))
@@ -312,6 +330,7 @@ def selection_diagnostics(
             job
             for job in ordinary.values()
             if job.task.identifier not in excluded_task_ids
+            and not job.intake_blocked
             and job.state.value not in {"done", "quarantined"}
             and (job.next_attempt_at is None or job.next_attempt_at <= now)
             and (not review_only or is_review_lane_job(job))
@@ -371,6 +390,7 @@ def select_batch_failsafe(
         job
         for job in jobs.values()
         if job.task.identifier not in excluded_task_ids
+        and not job.intake_blocked
         and job.state not in {JobState.DONE, JobState.QUARANTINED}
         and (job.next_attempt_at is None or job.next_attempt_at <= now)
         and (not review_only or is_review_lane_job(job))
@@ -514,11 +534,19 @@ def queue_snapshot(
         job
         for job in non_terminal
         if job.task.identifier not in active
+        and not job.intake_blocked
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     quarantined = [job for job in jobs.values() if job.state.value == "quarantined"]
     blocked = sorted(
-        [*backing_off, *quarantined],
+        {
+            job.task.identifier: job
+            for job in [
+                *backing_off,
+                *quarantined,
+                *(job for job in non_terminal if job.intake_blocked),
+            ]
+        }.values(),
         key=lambda job: (job.updated_at, job.task.identifier),
     )
     failure_fingerprints = Counter(
@@ -543,6 +571,8 @@ def queue_snapshot(
                 job.quarantined_at.isoformat() if job.quarantined_at is not None else None
             ),
             "failure_fingerprint": job.last_failure_fingerprint,
+            "intake_blocked": job.intake_blocked,
+            "intake_block_reason": job.intake_block_reason,
         }
         for job in blocked[:MAX_ACTIONABLE_BLOCKED_TASKS]
     ]
@@ -553,6 +583,7 @@ def queue_snapshot(
         "backing_off_count": len(backing_off),
         "quarantined_count": len(quarantined),
         "blocked_count": len(blocked),
+        "intake_blocked_count": sum(job.intake_blocked for job in non_terminal),
         "top_failure_fingerprints": top_failure_fingerprints,
         "oldest_blocked_tasks": oldest_blocked_tasks,
         "by_state": dict(sorted(state_counts.items())),
@@ -639,11 +670,13 @@ class FactoryDaemon:
             lease_seconds=config.max_task_minutes * 60 + 300,
         )
         self.verification_slots = Semaphore(1)
+        self._session_journal: SessionIdentityJournal | None = None
         self.pipeline = FactoryPipeline(
             config,
             verification_slots=self.verification_slots,
             host_resource_slots=self.host_resource_slots,
         )
+        self._supervise_neptune_pipeline()
         self.issue_admission = self._issue_admission_gate(config)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
@@ -657,6 +690,20 @@ class FactoryDaemon:
             "last_selected_jobs": [],
             "last_selection_at": None,
         }
+
+    def _supervise_neptune_pipeline(self) -> None:
+        """Retain the existing private journal when a Neptune router is rebuilt.
+
+        Other repository policies remain unchanged. Constructing a supervisor
+        reserves no slot and starts no provider or scheduling loop.
+        """
+        if not self.config.tests_only_merging:
+            return
+        if self._session_journal is None:
+            self._session_journal = SessionIdentityJournal(
+                self.config.state_dir / "manual-session-identities"
+            )
+        self.pipeline.router.supervise_sessions(self._session_journal)
 
     @staticmethod
     def _issue_admission_gate(config: FactoryConfig) -> IssueAdmissionGate:
@@ -768,6 +815,7 @@ class FactoryDaemon:
             verification_slots=self.verification_slots,
             host_resource_slots=self.host_resource_slots,
         )
+        self._supervise_neptune_pipeline()
         self.issue_admission = self._issue_admission_gate(self.config)
         LOGGER.info(
             "Activated Factory generation %s runtime=%s",
@@ -815,6 +863,7 @@ class FactoryDaemon:
     def _loop(self) -> int:
         active: dict[Future[Job | None], str] = {}
         active_started_at: dict[str, str] = {}
+        issue_admissions: dict[str, datetime] = {}
         next_refresh_at = 0.0
         next_prune_at = 0.0
         architect_future: Future[None] | None = None
@@ -838,6 +887,7 @@ class FactoryDaemon:
                         continue
                     del active[future]
                     active_started_at.pop(task_id, None)
+                    admitted_at = issue_admissions.pop(task_id, None)
                     try:
                         job = future.result()
                     except Exception:
@@ -845,6 +895,10 @@ class FactoryDaemon:
                         continue
                     if job is not None:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
+                    if admitted_at is not None and refund_unspent_issue_admission(
+                        self.issue_admission, task_id, admitted_at, job
+                    ):
+                        LOGGER.info("Task %s needed no work; returned its intake slot", task_id)
                 active_task_ids = set(active.values())
                 wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                 review_lane_busy = review_lane_is_busy(self.pipeline.jobs.load(), active_task_ids)
@@ -1053,7 +1107,8 @@ class FactoryDaemon:
                     )
                     for job in selected_jobs:
                         self._assert_owner()
-                        if is_new_github_issue(job) and not self.issue_admission.admit(
+                        new_issue = is_new_github_issue(job)
+                        if new_issue and not self.issue_admission.admit(
                             job.task.identifier, scheduler_time
                         ):
                             LOGGER.info(
@@ -1089,6 +1144,8 @@ class FactoryDaemon:
                             )
                         active[future] = job.task.identifier
                         active_started_at[job.task.identifier] = datetime.now(UTC).isoformat()
+                        if new_issue and self.issue_admission.enabled:
+                            issue_admissions[job.task.identifier] = scheduler_time
                         LOGGER.info("Scheduled task %s", job.task.identifier)
                 if not paused and storage_ready:
                     architect_future, architect_error = consume_completed_architect_future(

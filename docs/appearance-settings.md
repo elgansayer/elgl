@@ -7,7 +7,7 @@ Issue #1444 defines the user-facing **Settings → Appearance** surface. The exi
 - **Theme** supports `system`, `light`, and `dark`. `system` follows `prefers-colour-scheme` live while the app is open. Theme selection is cached locally so it can be applied before network-dependent settings are available.
 - **App text size** exposes Small, Normal, and Large presets. They map to 90%, 100%, and 115% of the 16px rem baseline. The existing 80–150% `FontScaleService` range is retained for backwards compatibility and accessibility tooling.
 - **Chat text size** is independent from the app text size. Small, Medium/Normal, and Large map to `0.8125rem`, `0.875rem`, and `1rem` for chat message content. It is cached locally for immediate startup and persisted through the authenticated `/chat/settings` API when Appearance settings are saved.
-- **UI language** is owned by `I18nService`. Changing it must not mutate the learner's `native_languages`, `target_languages`, discovery matching, or study-plan data.
+- **UI language** is exposed here as a link to `/settings/language`. That dedicated page applies changes through `UiLanguagePreferenceService`, backed by `I18nService`, and must not mutate the learner's `native_languages`, `target_languages`, discovery matching, or study-plan data.
 - **Primary accent** is profile-backed and available only to profiles with the existing VIP entitlement. Hiding or disabling the browser control is not an authorization boundary; backend profile validation remains authoritative.
 
 Invalid or corrupt locally stored values are ignored. Browser storage failures do not prevent the in-memory preference from applying. A failed server save restores the previous server-backed chat text size and leaves the page in a retryable error state rather than claiming success.
@@ -20,7 +20,7 @@ Invalid or corrupt locally stored values are ignored. Browser storage failures d
 - `FontScaleService` owns application and chat text rendering scales;
 - `ChatSettingsService` owns server persistence for chat text size;
 - `UserService` owns authenticated profile-backed accent persistence;
-- `I18nService` owns UI-language selection.
+- `UiLanguagePreferenceService` owns the fail-closed UI-language transaction, while `I18nService` owns the active locale and dictionary. Appearance settings only reflects the current locale and links to the dedicated selection page.
 
 The Appearance component coordinates those services but must not become a second source of truth for their persisted state.
 

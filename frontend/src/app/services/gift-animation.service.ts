@@ -75,12 +75,17 @@ export class GiftAnimationService {
 
   /** Prevent overlapping animations from piling up rAF callbacks. */
   private isPlaying = false;
+  private playbackGeneration = 0;
 
   readonly currentAnimation = signal<GiftAnimationOverlay | null>(null);
   readonly isVisible = signal<boolean>(false);
   readonly particles = signal<SvgParticle[]>([]);
   readonly elapsed = signal<number>(0);
   readonly hasAnimation = computed(() => this.currentAnimation() !== null);
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.cleanup());
+  }
 
   private generateSecureId(): string {
     // Check for a complete lack of the crypto API, which should be very rare in modern browsers
@@ -100,6 +105,7 @@ export class GiftAnimationService {
   }
 
   playAnimation(overlay: GiftAnimationOverlay): void {
+    const generation = ++this.playbackGeneration;
     this.cleanup();
 
     this.currentAnimation.set({
@@ -116,33 +122,33 @@ export class GiftAnimationService {
     this.animationFrameId = requestAnimationFrame(this.tick);
 
     // Hide after 5 seconds, then clear the overlay after a short fade-out.
-    void this.scheduleAutoHide();
-
-    this.destroyRef.onDestroy(() => this.cleanup());
+    void this.scheduleAutoHide(generation);
   }
 
-  private async scheduleAutoHide(): Promise<void> {
+  private async scheduleAutoHide(generation: number): Promise<void> {
     const hideTimeout = interval(5000).pipe(take(1));
     await firstValueFrom(hideTimeout);
+    if (generation !== this.playbackGeneration || this.destroyRef.destroyed) return;
     this.isVisible.set(false);
     const cleanupTimeout = interval(600).pipe(take(1));
     await firstValueFrom(cleanupTimeout);
-    if (this.destroyRef.destroyed) return;
+    if (generation !== this.playbackGeneration || this.destroyRef.destroyed) return;
     this.currentAnimation.set(null);
     this.cancelParticles();
     this.isPlaying = false;
   }
 
   dismiss(): void {
+    const generation = ++this.playbackGeneration;
     this.cleanup();
     this.isVisible.set(false);
-    void this.scheduleCleanup();
+    void this.scheduleCleanup(generation);
   }
 
-  private async scheduleCleanup(): Promise<void> {
+  private async scheduleCleanup(generation: number): Promise<void> {
     const cleanupTimeout = interval(600).pipe(take(1));
     await firstValueFrom(cleanupTimeout);
-    if (this.destroyRef.destroyed) return;
+    if (generation !== this.playbackGeneration || this.destroyRef.destroyed) return;
     this.currentAnimation.set(null);
     this.cancelParticles();
     this.isPlaying = false;

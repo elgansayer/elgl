@@ -37,7 +37,7 @@ import { environment } from '../../../environments/environment';
       } @else if (status() === 'done') {
         <p class="text-success">Account transferred successfully!</p>
       } @else if (status() === 'error') {
-        <p class="text-danger">{{ errorMessage() }}</p>
+        <p class="text-danger-ink">{{ errorMessage() }}</p>
       }
     </div>
   `,

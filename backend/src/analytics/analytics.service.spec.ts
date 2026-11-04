@@ -53,6 +53,40 @@ describe('AnalyticsService', () => {
     );
   });
 
+  it('preserves client error stack traces with <anonymous> and generic types without stripping angle brackets', async () => {
+    const payload: ClientErrorDto = {
+      message: 'Render error',
+      stack:
+        'TypeError: render<List<T>>()\n    at <anonymous> (app.component.ts:42:10)',
+      componentStack: '<AppComponent>\n  at <anonymous>',
+      stackFrames: [
+        {
+          functionName: '<anonymous>',
+          fileName: 'app.component.ts',
+          source: 'render<List<T>>()',
+        },
+      ],
+    };
+
+    await service.recordClientError(payload);
+
+    expect(insertBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Render error',
+        stack:
+          'TypeError: render<List<T>>()\n    at <anonymous> (app.component.ts:42:10)',
+        component_stack: '<AppComponent>\n  at <anonymous>',
+        stack_frames: [
+          {
+            functionName: '<anonymous>',
+            fileName: 'app.component.ts',
+            source: 'render<List<T>>()',
+          },
+        ],
+      }),
+    );
+  });
+
   it('redacts untrusted URL query strings, fragments, and credentials', async () => {
     await service.recordClientError({
       message: 'boom',

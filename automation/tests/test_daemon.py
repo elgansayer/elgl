@@ -498,6 +498,7 @@ def test_queue_snapshot_separates_runnable_backoff_active_and_terminal_jobs() ->
         "backing_off_count": 1,
         "quarantined_count": 1,
         "blocked_count": 2,
+        "intake_blocked_count": 0,
         "top_failure_fingerprints": [],
         "oldest_blocked_tasks": [
             {
@@ -507,6 +508,8 @@ def test_queue_snapshot_separates_runnable_backoff_active_and_terminal_jobs() ->
                 "next_attempt_at": (now + timedelta(minutes=5)).isoformat(),
                 "quarantined_at": None,
                 "failure_fingerprint": None,
+                "intake_blocked": False,
+                "intake_block_reason": None,
             },
             {
                 "task_id": "14",
@@ -515,6 +518,8 @@ def test_queue_snapshot_separates_runnable_backoff_active_and_terminal_jobs() ->
                 "next_attempt_at": None,
                 "quarantined_at": None,
                 "failure_fingerprint": None,
+                "intake_blocked": False,
+                "intake_block_reason": None,
             },
         ],
         "by_state": {

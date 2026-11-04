@@ -1,7 +1,7 @@
-const plugin = require('tailwindcss/plugin');
+import plugin from 'tailwindcss/plugin';
 
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   darkMode: 'class',
   content: ['./src/**/*.{html,ts,scss}'],
   theme: {
@@ -33,6 +33,9 @@ module.exports = {
           dark: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
           light: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
         },
+        'primary-ink': {
+          DEFAULT: 'rgb(var(--color-primary-text-rgb) / <alpha-value>)',
+        },
         // "Tide" - your exchange partner's voice. Fixed (not per-user), the
         // other half of the duet used anywhere a screen shows two paired
         // people (chat header, discovery match card, shared-streak widget).
@@ -41,8 +44,14 @@ module.exports = {
           dark: 'rgb(var(--color-secondary-rgb) / <alpha-value>)',
           light: 'rgb(var(--color-secondary-rgb) / <alpha-value>)',
         },
+        'secondary-ink': {
+          DEFAULT: 'rgb(var(--color-secondary-text-rgb) / <alpha-value>)',
+        },
         danger: {
           DEFAULT: 'rgb(var(--color-danger-rgb) / <alpha-value>)',
+        },
+        'danger-ink': {
+          DEFAULT: 'rgb(var(--color-danger-text-rgb) / <alpha-value>)',
         },
         success: {
           DEFAULT: 'rgb(var(--color-success-rgb) / <alpha-value>)',
@@ -105,7 +114,13 @@ module.exports = {
         // Arabic, Cyrillic, Devanagari, etc). Never apply `font-display` to
         // user-generated or translated content, only to guaranteed-Latin
         // product copy (headlines, streak numerals, onboarding).
-        display: ['ui-sans-serif', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        display: [
+          'ui-sans-serif',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'sans-serif',
+        ],
       },
       borderRadius: {
         app: '0.75rem', // controls: buttons, inputs - confident, not bubble-heavy
@@ -137,11 +152,17 @@ module.exports = {
         '.pb-safe': {
           paddingBottom: 'env(safe-area-inset-bottom)',
         },
-        '.pl-safe': {
-          paddingLeft: 'env(safe-area-inset-left)',
+        '.ps-safe': {
+          paddingInlineStart: 'env(safe-area-inset-left)',
         },
-        '.pr-safe': {
-          paddingRight: 'env(safe-area-inset-right)',
+        '.pe-safe': {
+          paddingInlineEnd: 'env(safe-area-inset-right)',
+        },
+        "[dir='rtl'] .ps-safe": {
+          paddingInlineStart: 'env(safe-area-inset-right)',
+        },
+        "[dir='rtl'] .pe-safe": {
+          paddingInlineEnd: 'env(safe-area-inset-left)',
         },
       });
     }),

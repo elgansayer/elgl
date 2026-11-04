@@ -148,6 +148,10 @@ This is tracked by #7068.
 Full surface coverage is enforced by `npm run check:design-coverage`: every runtime UI surface must be
 specifically mapped to a design-sync item with a preview specimen.
 
+Local `check:design-sync-drift` runs include tracked working-tree changes and untracked, non-ignored files so
+pre-commit repairs are checked as a complete change. GitHub Actions pull-request and push runs continue to
+check only the committed event diff.
+
 ### Automation
 
 The code-first push, design-first pull, conflict detection and weekly design-improvement loop run

@@ -1,12 +1,23 @@
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast, showErrorToast } from '../../services/toast.service';
-import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  OnDestroy,
+  input,
+  effect,
+  untracked,
+  afterRenderEffect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { ChatService, ChatMessage, ChatRoom, GroupMember } from '../../services/chat.service';
+import { FavouriteService } from '../../services/favourite.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { TypingService } from '../../services/typing.service';
@@ -39,7 +50,14 @@ import { AppCardComponent } from '../primitives/card/card.component';
 import { AppInputComponent } from '../primitives/input/input.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
-import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
+import { applyChatRoomRealtimeEvent, isChatMessage, isRecord } from './chat-room-realtime';
+import { UnreadCounterService } from '../../services/unread-counter.service';
+import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
+
+function isGroupMember(value: unknown): value is GroupMember {
+  return typeof value === 'object' && value !== null && 'user_id' in value;
+}
 
 @Component({
   selector: 'app-chat-room',
@@ -69,6 +87,7 @@ import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
     AppInputComponent,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
+    GiftAnimationComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -76,6 +95,7 @@ import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
 export class ChatRoomComponent implements OnDestroy {
   readonly centrifugeService = inject(CentrifugeService);
   private chatService = inject(ChatService);
+  private readonly favouriteService = inject(FavouriteService);
   readonly authService = inject(AuthService);
   private userService = inject(UserService);
   readonly typingService = inject(TypingService);
@@ -85,18 +105,59 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
+  private readonly unreadCounter = inject(UnreadCounterService);
+  private readonly chatEncryption = inject(PersonalChatEncryptionService);
+  private readonly pendingMessageScroll = signal<string | null>(null);
 
   id = input.required<string>();
 
   constructor() {
+    afterRenderEffect(() => {
+      const messageId = this.pendingMessageScroll();
+      if (!messageId || !document.getElementById(`msg-${messageId}`)) return;
+      this.pendingMessageScroll.set(null);
+      this.scrollToMessage(messageId);
+    });
+
     effect(() => {
       const roomId = this.id();
-      if (this.roomId && this.roomId !== roomId) {
-        this.saveChatDrafts();
-      }
-      this.roomId = roomId;
-      void this.initializeRoom();
+      // Only the room id may re-run this effect. Saving the outgoing draft reads the reply target
+      // and initialisation starts requests; neither may become a dependency.
+      untracked(() => this.openRoom(roomId));
     });
+
+    effect(() => {
+      const userId = this.authService.currentUser()?.id;
+      // A direct route reload can finish loading the room before Supabase restores the session.
+      // Retry the synchronous draft restore when that account becomes available.
+      untracked(() => {
+        if (userId && this.roomDraftReady && this.draftScope === null) this.restoreDraft();
+      });
+    });
+  }
+
+  private openRoom(roomId: string): void {
+    if (this.roomId && this.roomId !== roomId) {
+      // Persist the room being left, then empty the composer so its text, reply target and
+      // correction state cannot appear in the next room.
+      this.saveChatDrafts();
+      this.resetComposerState();
+    }
+    this.roomId = roomId;
+    this.draftScope = null;
+    this.roomDraftReady = false;
+    void this.initializeRoom();
+  }
+
+  private resetComposerState(): void {
+    this.textInput = '';
+    this.originalText = '';
+    this.correctedText = '';
+    this.explanationText = '';
+    this._restoredReplyToId = null;
+    this.mentionQuery.set(null);
+    this.replyingTo.set(null);
+    this.showCorrectionForm.set(false);
   }
 
   readonly messages = signal<ChatMessage[]>([]);
@@ -112,6 +173,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly showParticipantDrawer = signal<boolean>(false);
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);
+  readonly isE2eeRoom = signal<boolean>(false);
   readonly autoPlayVoiceNotes = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
@@ -129,7 +191,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly partnerLanguage = signal<string | null>(null);
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
-    return this.messages().filter((m) => !blocked.includes(m.sender_id));
+    return this.messages().filter((m) => (m.sender_id ? !blocked.includes(m.sender_id) : true));
   });
 
   readonly replyingTo = signal<ChatMessage | null>(null);
@@ -160,9 +222,8 @@ export class ChatRoomComponent implements OnDestroy {
   private mentionRangeEnd = 0;
 
   readonly mentionItemToString = (value: unknown): string => {
-    if (!value || typeof value !== 'object' || !('user_id' in value)) return this.textInput;
-    const member = value as GroupMember;
-    const displayName = member.user?.display_name;
+    if (!isGroupMember(value)) return this.textInput;
+    const displayName = value.user?.display_name;
     if (!displayName) return this.textInput;
     return (
       this.textInput.slice(0, this.mentionRangeStart) +
@@ -188,6 +249,12 @@ export class ChatRoomComponent implements OnDestroy {
   private subscription: { unsubscribe: () => void } | null = null;
   private subscribedRoomId: string | null = null;
   private readonly pendingReadReceipts = new Set<string>();
+  private readonly isSendingText = signal(false);
+  // The room and account whose stored draft has been loaded into the composer. Nothing is saved
+  // until this matches the current room and account, so leaving a room before its draft was
+  // restored (or while it is locked) can never overwrite that draft with an empty composer.
+  private draftScope: { roomId: string; userId: string } | null = null;
+  private roomDraftReady = false;
 
   private async initializeRoom(): Promise<void> {
     await this.loadRoomDetails();
@@ -199,9 +266,12 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   private async finishLoadingRoom(): Promise<void> {
+    // Restoring is a synchronous storage read, so it happens before any request: the composer holds
+    // the draft straight away and loadMessages() can match the saved reply target.
+    this.roomDraftReady = true;
+    this.restoreDraft();
     await this.loadBlockedUsers();
     await this.loadMessages();
-    this.restoreDraft();
     await this.setupRealTime();
     await this.loadParticipants();
     await this.resolvePartnerLanguage();
@@ -263,8 +333,11 @@ export class ChatRoomComponent implements OnDestroy {
       const rooms = await this.chatService.getRooms();
       this.roomDetails = rooms.find((r) => r.id === this.roomId) || null;
       this.isLocked.set(this.roomDetails?.is_locked ?? false);
+      const isCapable = await this.chatEncryption.isRoomE2eeCapable(this.roomId);
+      this.isE2eeRoom.set(isCapable);
     } catch (e) {
       console.error('Failed to load room details:', e);
+      this.isE2eeRoom.set(false);
     }
   }
 
@@ -292,13 +365,14 @@ export class ChatRoomComponent implements OnDestroy {
       this.subscribedRoomId = null;
       this.subscription = null;
     }
+    this.chatEncryption.clearKey(this.roomId);
     this.pendingReadReceipts.clear();
     this.typingService.disconnect();
     this.saveChatDrafts();
   }
 
   saveChatDrafts(): void {
-    this.draftService.saveChatDraft(this.roomId, this.textInput);
+    if (!this.canPersistDrafts()) return;
     this.draftService.saveChatDraftV2(this.roomId, {
       textInput: this.textInput,
       replyToId: this.replyingTo()?.id ?? null,
@@ -308,23 +382,40 @@ export class ChatRoomComponent implements OnDestroy {
     });
   }
 
-  private restoreDraft(): void {
-    const simpleDraft = this.draftService.loadChatDraft(this.roomId);
-    if (simpleDraft) this.textInput = simpleDraft;
-
-    const v2Draft = this.draftService.loadChatDraftV2(this.roomId);
-    if (v2Draft) {
-      if (v2Draft.textInput) this.textInput = v2Draft.textInput;
-      if (v2Draft.originalText) this.originalText = v2Draft.originalText;
-      if (v2Draft.correctedText) this.correctedText = v2Draft.correctedText;
-      if (v2Draft.explanationText) this.explanationText = v2Draft.explanationText;
-      if (v2Draft.replyToId) this._restoredReplyToId = v2Draft.replyToId;
-    }
+  private canPersistDrafts(): boolean {
+    const scope = this.draftScope;
+    return (
+      scope !== null &&
+      scope.roomId === this.roomId &&
+      scope.userId === this.authService.currentUser()?.id
+    );
   }
 
-  private clearChatDrafts(): void {
-    this.draftService.clearChatDraft(this.roomId);
-    this.draftService.clearChatDraftV2(this.roomId);
+  private restoreDraft(): void {
+    const roomId = this.roomId;
+    const userId = this.authService.currentUser()?.id;
+    // Drafts are account-scoped, so there is nowhere safe to read from or write to until the
+    // account is known. The composer still works; it just is not persisted.
+    if (!roomId || !userId) return;
+
+    // Text typed while the room was loading is newer than whatever was stored.
+    const typedWhileLoading = this.textInput !== '';
+    const draft = this.draftService.loadChatDraftV2(roomId);
+    if (draft) {
+      if (draft.textInput && !typedWhileLoading) this.textInput = draft.textInput;
+      if (draft.originalText) this.originalText = draft.originalText;
+      if (draft.correctedText) this.correctedText = draft.correctedText;
+      if (draft.explanationText) this.explanationText = draft.explanationText;
+      if (draft.replyToId) this._restoredReplyToId = draft.replyToId;
+    }
+
+    this.draftScope = { roomId, userId };
+    if (typedWhileLoading) this.saveChatDrafts();
+  }
+
+  private clearChatDrafts(roomId = this.roomId): void {
+    this.draftService.clearChatDraft(roomId);
+    this.draftService.clearChatDraftV2(roomId);
   }
 
   private _restoredReplyToId: string | null = null;
@@ -368,19 +459,28 @@ export class ChatRoomComponent implements OnDestroy {
     this.typingService.connect(this.roomId);
   }
 
-  private handleRealtimeEvent(data: unknown, eventRoomId: string): void {
+  private async handleRealtimeEvent(data: unknown, eventRoomId: string): Promise<void> {
     // A late callback from a previous subscription must never mutate the newly
     // selected room.
     if (eventRoomId !== this.roomId) return;
 
+    if (isRecord(data) && isChatMessage(data['message'])) {
+      const msg = data['message'];
+      if (msg.is_encrypted && msg.encrypted_payload) {
+        try {
+          msg.text_content = await this.chatEncryption.decryptMessage(
+            eventRoomId,
+            msg.encrypted_payload,
+          );
+        } catch {
+          msg.text_content = this.i18n.translate('chatRoom.encryptedMessageUnavailable');
+        }
+      }
+    }
+
     const currentUserId = this.authService.currentUser()?.id;
     const currentMessages = this.messages();
-    const result = applyChatRoomRealtimeEvent(
-      currentMessages,
-      data,
-      eventRoomId,
-      currentUserId,
-    );
+    const result = applyChatRoomRealtimeEvent(currentMessages, data, eventRoomId, currentUserId);
 
     if (result.messages !== currentMessages) {
       this.messages.set(result.messages);
@@ -419,6 +519,7 @@ export class ChatRoomComponent implements OnDestroy {
     this.pendingReadReceipts.add(message.id);
     try {
       await this.chatService.markMessageStatus(message.id, 'read');
+      this.unreadCounter.decrement('chat');
       this.messages.update((messages) =>
         messages.map((candidate) =>
           candidate.id === message.id ? { ...candidate, delivery_status: 'read' } : candidate,
@@ -468,7 +569,13 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   async sendTextMessage(): Promise<void> {
-    if (!this.textInput.trim() || this.isCheckingGrammar()) return;
+    // The composer keeps its text until delivery succeeds, so a second submit while a request is
+    // pending would otherwise send the same message twice.
+    if (!this.textInput.trim() || this.isCheckingGrammar() || this.isSendingText()) return;
+    // The learner can move to another room while a request is pending; everything below belongs
+    // to the room the message was written in.
+    const roomId = this.roomId;
+    const composerText = this.textInput;
     const text = this.textInput.trim();
     const replyToId = this.replyingTo()?.id;
     this.mentionQuery.set(null);
@@ -476,43 +583,60 @@ export class ChatRoomComponent implements OnDestroy {
 
     this.isCheckingGrammar.set(true);
     try {
-      const grammar = await this.vocabStore.checkGrammar(
-        text,
-        this.partnerLanguage() ?? undefined,
-      );
+      const grammar = await this.vocabStore.checkGrammar(text, this.partnerLanguage() ?? undefined);
       const corrected = grammar.corrected.trim();
       if (grammar.errors_found > 0 && corrected && corrected !== text) {
-        this.textInput = corrected;
-        this.saveChatDrafts();
-        showToast(grammar.explanation);
+        if (this.roomId === roomId) {
+          this.textInput = corrected;
+          this.saveChatDrafts();
+          showToast(grammar.explanation);
+        }
         return;
       }
     } finally {
       this.isCheckingGrammar.set(false);
     }
 
+    this.isSendingText.set(true);
     try {
       const sent = await this.chatService.sendMessage({
-        room_id: this.roomId,
+        room_id: roomId,
         message_type: 'text',
         text_content: text,
         reply_to_id: replyToId,
       });
-      this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
-      this.replyingTo.set(null);
-      this.textInput = '';
-      this.clearChatDrafts();
+      if (this.roomId === roomId) {
+        this.messages.update((list) =>
+          list.some((m) => m.id === sent.id) ? list : [...list, sent],
+        );
+        if (this.textInput === composerText && this.replyingTo()?.id === replyToId) {
+          this.clearChatDrafts(roomId);
+          this.replyingTo.set(null);
+          this.textInput = '';
+        } else {
+          // Do not erase a newer composition written while the request was in flight.
+          this.saveChatDrafts();
+        }
+      } else {
+        const savedDraft = this.draftService.loadChatDraftV2(roomId);
+        if (savedDraft?.textInput === composerText && savedDraft.replyToId === replyToId) {
+          this.clearChatDrafts(roomId);
+        }
+      }
     } catch (e) {
       console.error('Failed to send text message:', e);
-      this.draftService.saveChatDraft(this.roomId, text);
+      this.draftService.saveChatDraft(roomId, text);
+    } finally {
+      this.isSendingText.set(false);
     }
   }
 
   async sendCorrection(): Promise<void> {
     if (!this.originalText.trim() || !this.correctedText.trim()) return;
+    const roomId = this.roomId;
     try {
       const sent = await this.chatService.sendMessage({
-        room_id: this.roomId,
+        room_id: roomId,
         message_type: 'correction',
         correction_payload: {
           original: this.originalText.trim(),
@@ -520,12 +644,15 @@ export class ChatRoomComponent implements OnDestroy {
           explanation: this.explanationText.trim() || undefined,
         },
       });
+      // The learner may have moved to another room, whose composer was already reset.
+      if (this.roomId !== roomId) return;
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
       this.originalText = '';
       this.correctedText = '';
       this.explanationText = '';
       this.showCorrectionForm.set(false);
-      this.clearChatDrafts();
+      // The message being composed is untouched by a correction, so keep its draft stored.
+      this.saveChatDrafts();
     } catch (e) {
       console.error('Failed to send correction:', e);
     }
@@ -593,11 +720,12 @@ export class ChatRoomComponent implements OnDestroy {
 
   async bookmark(msg: ChatMessage): Promise<void> {
     try {
-      await this.chatService.addFavourite(msg.id, `Saved from room ${this.roomId}`);
-      showToast(this.i18n.translate('chatRoom.bookmarkedAlert'));
+      // Bookmarking is idempotent on the server, so saving an already saved message is not an error.
+      await this.favouriteService.addFavourite({ message_id: msg.id });
+      showToast(this.i18n.translate('chatRoom.bookmarkSuccess'), 'success');
     } catch (e) {
       console.error('Failed to bookmark message:', e);
-      showToast(this.i18n.translate('chatRoom.bookmarkErrorAlert'));
+      showErrorToast(this.i18n.translate('chatRoom.bookmarkError'));
     }
   }
 
@@ -721,7 +849,16 @@ export class ChatRoomComponent implements OnDestroy {
 
   onSearchResultSelect(message: ChatMessage): void {
     this.showSearchPanel.set(false);
-    if (message.room_id === this.roomId) this.scrollToMessage(message.id);
+    if (message.room_id !== this.roomId) return;
+
+    if (!this.messages().some((loadedMessage) => loadedMessage.id === message.id)) {
+      this.messages.update((loadedMessages) =>
+        [...loadedMessages, message].sort((left, right) =>
+          left.created_at.localeCompare(right.created_at),
+        ),
+      );
+    }
+    this.pendingMessageScroll.set(message.id);
   }
 
   async toggleParticipantDrawer(): Promise<void> {
@@ -782,11 +919,14 @@ export class ChatRoomComponent implements OnDestroy {
 
   startReply(messageId: string): void {
     const parent = this.messages().find((m) => m.id === messageId);
-    if (parent) this.replyingTo.set(parent);
+    if (!parent) return;
+    this.replyingTo.set(parent);
+    this.saveChatDrafts();
   }
 
   cancelReply(): void {
     this.replyingTo.set(null);
+    this.saveChatDrafts();
   }
 
   openDoodlePreview(url: string): void {

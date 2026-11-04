@@ -21,8 +21,8 @@ The development server uses port `4300` by default.
 - Sensitive data must already be minimized/redacted by the admin API.
 - High-risk actions must use backend step-up authentication, reason, approval and audit mechanisms.
 
-## Initial modules
+## Modules
 
-The foundation reserves routes for overview, users, moderation, audit, logs and system health. These are placeholders until their versioned `/api/admin/v1` contracts are wired.
+Overview, users, moderation, network security, roles, audit, logs and system health are wired to their versioned `/api/admin/v1` contracts and gated by the backend capability named on each route. User management is an investigation surface (search, open by ID, detail and capability-gated login history); `docs/admin/USER_MANAGEMENT.md` records its failure states and why account enforcement actions are not part of it yet.
 
 See `docs/admin/README.md`, `docs/admin/ARCHITECTURE.md`, `docs/admin/ADMIN_PORTAL.md`, `docs/admin/SECURITY.md`, and `docs/admin/MODULES.md` before implementing privileged features.

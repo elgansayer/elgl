@@ -6,6 +6,18 @@ import {
   Histogram,
   Gauge,
 } from 'prom-client';
+import type {
+  LinkPreviewFailureReason,
+  LinkPreviewOutcome,
+} from '../link-preview/link-preview-diagnostics';
+
+/**
+ * How a run of the daily top-10 partner recommendation job ended: `partial`
+ * means the cache was refreshed but some language pairs failed, `skipped`
+ * means another replica held the single-flight lock.
+ */
+export type MatchmakingDailyJobOutcome =
+  'success' | 'partial' | 'failed' | 'skipped';
 
 @Injectable()
 export class MetricsService {
@@ -83,6 +95,17 @@ export class MetricsService {
   readonly matchmakingRequestDuration: Histogram<string>;
   readonly matchmakingDailyCacheMisses: Counter<string>;
   readonly matchmakingTierSuccessRate: Gauge<string>;
+  readonly matchmakingDailyJobRuns: Counter<string>;
+  readonly matchmakingDailyJobDuration: Histogram<string>;
+  readonly matchmakingDailyJobLearnersScanned: Counter<string>;
+  readonly matchmakingDailyJobSetsCached: Counter<string>;
+  readonly matchmakingDailyJobTruncated: Counter<string>;
+  readonly matchmakingDailyJobLastCompleted: Gauge<string>;
+
+  // Moments For You feed metrics
+  readonly momentsForYouRankingDuration: Histogram<string>;
+  readonly momentsForYouCandidates: Histogram<string>;
+  readonly momentsForYouDegradedTotal: Counter<string>;
 
   // Admin Moderation Dashboard metrics
   readonly adminBanActions: Counter<string>;
@@ -95,6 +118,11 @@ export class MetricsService {
   readonly adminPendingReports: Gauge<string>;
   readonly adminActiveBlocks: Gauge<string>;
   readonly adminLoginHistoryRequests: Counter<string>;
+
+  // Link Preview (OpenGraph scraper) metrics
+  readonly linkPreviewRequests: Counter<string>;
+  readonly linkPreviewFailures: Counter<string>;
+  readonly linkPreviewFetchDuration: Histogram<string>;
 
   constructor() {
     this.register = new Registry();
@@ -530,6 +558,70 @@ export class MetricsService {
       registers: [this.register],
     });
 
+    this.matchmakingDailyJobRuns = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_runs_total',
+      help: 'Daily top-10 partner recommendation job runs by outcome (success, partial, failed, skipped)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobDuration = new Histogram({
+      name: 'hellotalk_matchmaking_daily_job_duration_seconds',
+      help: 'Wall-clock duration of the daily top-10 partner recommendation job',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [1, 5, 15, 30, 60, 120, 300, 600, 1200, 1800, 3600],
+    });
+
+    this.matchmakingDailyJobLearnersScanned = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_learners_scanned_total',
+      help: 'Eligible learners read by the daily partner recommendation job',
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobSetsCached = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_sets_cached_total',
+      help: 'Per-learner top-10 recommendation sets written to the Redis cache by the daily job',
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobTruncated = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_truncated_total',
+      help: 'Daily partner recommendation runs that stopped at the per-run learner ceiling before every eligible learner was processed',
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobLastCompleted = new Gauge({
+      name: 'hellotalk_matchmaking_daily_job_last_completed_timestamp_seconds',
+      help: 'Unix time of the last daily partner recommendation run that refreshed the cache (success or partial), read from Redis so it survives restarts',
+      registers: [this.register],
+    });
+
+    // --- Moments For You Metrics ---
+
+    this.momentsForYouRankingDuration = new Histogram({
+      name: 'hellotalk_moments_for_you_ranking_duration_seconds',
+      help: 'Duration of For You ranking, including viewer context loading',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5],
+    });
+
+    this.momentsForYouCandidates = new Histogram({
+      name: 'hellotalk_moments_for_you_candidates',
+      help: 'Number of Moments at each stage of the For You pipeline',
+      labelNames: ['stage'],
+      registers: [this.register],
+      buckets: [0, 1, 5, 10, 25, 50, 75, 100, 150],
+    });
+
+    this.momentsForYouDegradedTotal = new Counter({
+      name: 'hellotalk_moments_for_you_degraded_total',
+      help: 'Number of For You requests served without an optional candidate source or personalisation context',
+      labelNames: ['reason'],
+      registers: [this.register],
+    });
+
     // --- Admin Moderation Dashboard Metrics ---
 
     this.adminBanActions = new Counter({
@@ -599,6 +691,30 @@ export class MetricsService {
       help: 'Total number of admin login history lookup requests',
       labelNames: ['result'],
       registers: [this.register],
+    });
+
+    // --- Link Preview (OpenGraph scraper) Metrics ---
+
+    this.linkPreviewRequests = new Counter({
+      name: 'hellotalk_link_preview_requests_total',
+      help: 'Total link preview requests by outcome (cache_hit, fetched, empty, rejected, failed)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
+
+    this.linkPreviewFailures = new Counter({
+      name: 'hellotalk_link_preview_failures_total',
+      help: 'Total rejected or failed link preview requests by classified reason',
+      labelNames: ['reason'],
+      registers: [this.register],
+    });
+
+    this.linkPreviewFetchDuration = new Histogram({
+      name: 'hellotalk_link_preview_fetch_duration_seconds',
+      help: 'Duration of one origin scrape (fetch and parse) by outcome',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [0.1, 0.25, 0.5, 1, 2, 4, 6, 8, 10],
     });
   }
 
@@ -880,6 +996,59 @@ export class MetricsService {
     this.matchmakingTierSuccessRate.set(rate);
   }
 
+  /**
+   * Records one finished run of the daily top-10 partner recommendation job.
+   * `skipped` means another replica held the single-flight lock.
+   */
+  recordMatchmakingDailyJobRun(run: {
+    outcome: MatchmakingDailyJobOutcome;
+    durationSeconds: number;
+    learnersScanned: number;
+    setsCached: number;
+    truncated: boolean;
+  }): void {
+    this.matchmakingDailyJobRuns.inc({ outcome: run.outcome });
+    this.matchmakingDailyJobDuration.observe(
+      { outcome: run.outcome },
+      run.durationSeconds,
+    );
+    this.matchmakingDailyJobLearnersScanned.inc(run.learnersScanned);
+    this.matchmakingDailyJobSetsCached.inc(run.setsCached);
+    if (run.truncated) {
+      this.matchmakingDailyJobTruncated.inc();
+    }
+  }
+
+  /** Publishes when the daily job last refreshed the cache (unix seconds). */
+  setMatchmakingDailyJobLastCompleted(epochSeconds: number): void {
+    this.matchmakingDailyJobLastCompleted.set(epochSeconds);
+  }
+
+  // --- Moments For You metric helpers ---
+
+  observeMomentsForYouRanking(
+    outcome: 'ranked' | 'degraded' | 'empty',
+    durationSeconds: number,
+  ): void {
+    this.momentsForYouRankingDuration.observe({ outcome }, durationSeconds);
+  }
+
+  observeMomentsForYouCandidates(
+    stage: 'recent_source' | 'in_network_source' | 'pool' | 'served',
+    count: number,
+  ): void {
+    this.momentsForYouCandidates.observe({ stage }, count);
+  }
+
+  recordMomentsForYouDegraded(
+    reason:
+      | 'viewer_context_unavailable'
+      | 'recent_source_unavailable'
+      | 'in_network_source_unavailable',
+  ): void {
+    this.momentsForYouDegradedTotal.inc({ reason });
+  }
+
   // --- Escrow Payment metric helpers ---
 
   recordEscrowCreated(amountCoins: number): void {
@@ -962,6 +1131,31 @@ export class MetricsService {
 
   recordAdminLoginHistoryRequest(result: 'success' | 'failure'): void {
     this.adminLoginHistoryRequests.inc({ result });
+  }
+
+  // --- Link Preview (OpenGraph scraper) metric helpers ---
+
+  /**
+   * Records one link-preview request. Labels are closed enums rather than URLs
+   * or hostnames so cardinality stays bounded and no private link is exported.
+   */
+  recordLinkPreview(
+    outcome: LinkPreviewOutcome,
+    details: {
+      reason?: LinkPreviewFailureReason;
+      durationSeconds?: number;
+    } = {},
+  ): void {
+    this.linkPreviewRequests.inc({ outcome });
+    if (details.reason) {
+      this.linkPreviewFailures.inc({ reason: details.reason });
+    }
+    if (details.durationSeconds !== undefined) {
+      this.linkPreviewFetchDuration.observe(
+        { outcome },
+        details.durationSeconds,
+      );
+    }
   }
 
   setModerationQueueSize(count: number): void {

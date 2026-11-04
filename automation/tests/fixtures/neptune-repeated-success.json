@@ -1,0 +1,26 @@
+{
+  "source": "Neptune PR532, draft-to-ready, 2026-10-30; only public check identity/status fields retained",
+  "head": "c3e90b9e672a8347619ceeb1602a051187ecc0f5",
+  "check_runs": [
+    {
+      "id": 124054401930,
+      "name": "Neptune merge gate",
+      "head_sha": "c3e90b9e672a8347619ceeb1602a051187ecc0f5",
+      "status": "completed",
+      "conclusion": "success",
+      "app": {
+        "id": 15368
+      }
+    },
+    {
+      "id": 124054087729,
+      "name": "Neptune merge gate",
+      "head_sha": "c3e90b9e672a8347619ceeb1602a051187ecc0f5",
+      "status": "completed",
+      "conclusion": "success",
+      "app": {
+        "id": 15368
+      }
+    }
+  ]
+}

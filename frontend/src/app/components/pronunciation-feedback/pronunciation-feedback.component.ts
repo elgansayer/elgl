@@ -40,7 +40,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <p>{{ fb.overallAssessment }}</p>
           @if (fb.phonemeBreakdown.length) {
             <details>
-              <summary class="cursor-pointer text-sm text-primary">{{ 'pronunciation.phonemes' | t }}</summary>
+              <summary class="cursor-pointer text-sm text-primary-ink">{{ 'pronunciation.phonemes' | t }}</summary>
               <ul class="mt-2 space-y-1 text-sm">
                 @for (phoneme of fb.phonemeBreakdown; track $index) {
                   <li class="font-mono">{{ phoneme }}</li>

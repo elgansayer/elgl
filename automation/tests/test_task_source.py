@@ -1,5 +1,6 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -8,6 +9,21 @@ import pytest
 from openhands_factory.models import Task, changed_path_fingerprint, logical_task_key
 from openhands_factory.state import atomic_write_json
 from openhands_factory.task_source import TaskClaimConflict, TaskStore
+
+
+@pytest.mark.parametrize("owner", ["live-worker", "reconciler"])
+def test_active_github_identity_stays_fenced_when_title_changes(tmp_path, owner):
+    store = TaskStore(tmp_path)
+    original = Task("42", "Original title", "Body", "github-issue", 5)
+    store.acquire(original, "live-worker")
+    edited = replace(original, title="Edited title")
+    assert edited.logical_key != original.logical_key
+    with pytest.raises(TaskClaimConflict):
+        store.acquire(edited, owner)
+    assert len(store.leases()) == 1
+    assert store.leases()[original.logical_key].owner == "live-worker"
+    store.release("42", owner="live-worker")
+    assert store.acquire(edited, owner).task_key == edited.logical_key
 
 
 def test_logical_key_is_independent_of_issue_and_pr_numbers() -> None:
@@ -451,3 +467,83 @@ def test_corrupt_far_future_task_lease_does_not_suppress_work(tmp_path: Path) ->
 
     assert store.select([task]) == task
     assert store.prune_expired_leases(now) == [task.identifier]
+
+
+def _retitled_owned_store(tmp_path, cache_mode):
+    store = TaskStore(tmp_path)
+    old = Task("77", "Original task title", "", "github-pull-request", 1)
+    new = replace(old, title="Retitled task")
+    store.cache([old])
+    store.acquire(old, "old-owner")
+    store.bind_branch("77", "old-owner", "bootstrap/original", "old-base")
+    store.bind_pull_request("77", "old-owner", 77, "bootstrap/original")
+    store.record_verification("77", "old-owner", "old-head", "paths:old")
+    store.release("77", owner="old-owner")
+    original = store.claims()[old.logical_key]
+    store.cache([new])
+    store.acquire(new, "current-owner")
+    if cache_mode == "missing":
+        store.cache([])
+    elif cache_mode == "old":
+        store.cache([old])
+    else:
+        store.cache([replace(new, title="Another public retitle")])
+    return store, old, new, original
+
+
+@pytest.mark.parametrize("cache_mode", ["missing", "old", "retitled-again"])
+@pytest.mark.parametrize("operation", ["renew", "release", "bind", "verify", "complete"])
+def test_owned_mutations_find_the_exact_owner_after_retitle_and_cache_change(
+    tmp_path, cache_mode, operation
+):
+    store, old, new, original = _retitled_owned_store(tmp_path, cache_mode)
+    if operation == "renew":
+        assert store.renew("77", "current-owner").task_key == new.logical_key
+    elif operation == "release":
+        store.release("77", owner="current-owner")
+        assert store.claims()[new.logical_key].owner is None
+    elif operation == "bind":
+        assert (
+            store.bind_branch("77", "current-owner", "bootstrap/retitled", "new-base").task_key
+            == new.logical_key
+        )
+        assert store.claims()[new.logical_key].canonical_branch == "bootstrap/retitled"
+    elif operation == "verify":
+        assert (
+            store.record_verification("77", "current-owner", "new-head", "paths:new").task_key
+            == new.logical_key
+        )
+        assert store.claims()[new.logical_key].latest_verified_sha == "new-head"
+    else:
+        assert store.complete("77", "current-owner").task_key == new.logical_key
+        assert store.claims()[new.logical_key].completed_at is not None
+    assert store.claims()[old.logical_key] == original
+
+
+def test_wrong_owner_cannot_modify_either_retitled_claim(tmp_path):
+    store, old, new, original = _retitled_owned_store(tmp_path, "missing")
+    before = store.lease_path.read_bytes()
+    with pytest.raises(ValueError):
+        store.renew("77", "unrelated-owner")
+    with pytest.raises(TaskClaimConflict):
+        store.release("77", owner="unrelated-owner")
+    assert store.lease_path.read_bytes() == before
+    assert store.claims()[old.logical_key] == original
+    assert store.claims()[new.logical_key].owner == "current-owner"
+
+
+def test_ambiguous_same_owner_claims_fail_closed_without_changing_records(tmp_path):
+    store, old, new, original = _retitled_owned_store(tmp_path, "missing")
+    claims = store.claims()
+    current = claims[new.logical_key]
+    # A malformed historical duplicate must never pick an arbitrary ownership.
+    claims[old.logical_key] = replace(
+        original, owner="current-owner", expires_at=current.expires_at
+    )
+    store._write_leases(claims)
+    before = store.lease_path.read_bytes()
+    with pytest.raises(ValueError, match=r"[Aa]mbiguous"):
+        store.renew("77", "current-owner")
+    with pytest.raises(ValueError, match=r"[Aa]mbiguous"):
+        store.release("77", owner="current-owner")
+    assert store.lease_path.read_bytes() == before

@@ -1,12 +1,38 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { ClientErrorDto } from './client-error.dto';
+import { ClientErrorDto, LogClientErrorDto } from './client-error.dto';
 
 async function errorsFor(input: Record<string, unknown>) {
   return validate(plainToInstance(ClientErrorDto, input));
 }
 
 describe('ClientErrorDto', () => {
+  it('exports LogClientErrorDto as an alias for ClientErrorDto', () => {
+    expect(LogClientErrorDto).toBe(ClientErrorDto);
+  });
+
+  it('accepts and validates LogClientErrorDto with angle brackets in stack and frame source', async () => {
+    const report: LogClientErrorDto = {
+      message: 'TypeError: render<List<T>>() failed',
+      name: 'TypeError',
+      stack:
+        'TypeError: render<List<T>>()\n    at <anonymous> (app.component.ts:42:10)',
+      componentStack: '<AppComponent>\n    at <anonymous>',
+      stackFrames: [
+        {
+          functionName: '<anonymous>',
+          fileName: 'app.component.ts',
+          source: 'render<List<T>>()',
+          lineNumber: 42,
+          columnNumber: 10,
+        },
+      ],
+    };
+
+    const errors = await validate(plainToInstance(LogClientErrorDto, report));
+    expect(errors).toHaveLength(0);
+  });
+
   it('accepts a bounded crash report', async () => {
     await expect(
       errorsFor({

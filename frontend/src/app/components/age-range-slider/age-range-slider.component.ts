@@ -13,9 +13,9 @@ export interface AgeRange {
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="flex flex-col" role="group" [attr.aria-label]="'age_range' | t">
-      <span class="text-sm text-on-surface-variant pb-1" id="age-range-label">
+      <span class="text-sm text-text-secondary pb-1" id="age-range-label">
         {{ 'age_range' | t }}
-        <span class="ps-1">({{ minAge() }} – {{ maxAge() }})</span>
+        <span class="ps-1">({{ minAge() }} - {{ maxAge() }})</span>
       </span>
       <div class="relative h-8">
         <!-- min thumb -->
@@ -53,10 +53,10 @@ export interface AgeRange {
           [style.zIndex]="maxAge() > minAge() ? 20 : 10"
         />
         <!-- visual bar -->
-        <div class="absolute bottom-1 w-full h-2 bg-surface-container pointer-events-none" aria-hidden="true">
+        <div class="absolute bottom-1 w-full h-2 bg-surface-200 rounded-full pointer-events-none" aria-hidden="true">
           <div
-            class="h-full bg-primary pointer-events-none"
-            [style.left.%]="minPercent()"
+            class="h-full bg-primary rounded-full pointer-events-none"
+            [style.inset-inline-start.%]="minPercent()"
             [style.width.%]="barWidth()"
             aria-hidden="true"
           ></div>
@@ -78,18 +78,18 @@ export interface AgeRange {
         height: 22px;
         width: 22px;
         border-radius: 50%;
-        background: var(--color-primary);
+        background: rgb(var(--color-primary-rgb));
         cursor: pointer;
-        border: 2px solid var(--color-surface);
+        border: 2px solid rgb(var(--surface-500-rgb));
       }
       input[type='range']::-moz-range-thumb {
         pointer-events: auto;
         height: 22px;
         width: 22px;
         border-radius: 50%;
-        background: var(--color-primary);
+        background: rgb(var(--color-primary-rgb));
         cursor: pointer;
-        border: 2px solid var(--color-surface);
+        border: 2px solid rgb(var(--surface-500-rgb));
       }
     `,
   ],

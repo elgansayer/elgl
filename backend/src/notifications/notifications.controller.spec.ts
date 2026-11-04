@@ -29,7 +29,10 @@ describe('NotificationsController', () => {
     };
     inboxService = {
       getNotifications: vi.fn().mockResolvedValue([{ id: 'notif-1' }]),
-      getUnreadCount: vi.fn().mockResolvedValue({ unreadCount: 3 }),
+      getUnreadCount: vi.fn().mockResolvedValue({
+        unreadCount: 3,
+        byTab: { moments: 1, discovery: 1, profile: 1 },
+      }),
       markAsRead: vi.fn().mockResolvedValue(undefined),
       markAllAsRead: vi.fn().mockResolvedValue(undefined),
     };
@@ -66,6 +69,7 @@ describe('NotificationsController', () => {
     const user = { id: 'user-1' } as unknown as User;
     await expect(controller.getUnreadCount(user)).resolves.toEqual({
       unreadCount: 3,
+      byTab: { moments: 1, discovery: 1, profile: 1 },
     });
     expect(inboxService.getUnreadCount).toHaveBeenCalledWith('user-1');
   });

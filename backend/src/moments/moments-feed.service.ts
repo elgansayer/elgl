@@ -77,7 +77,6 @@ export class MomentsFeedService {
       if (
         !moment?.id ||
         seen.has(moment.id) ||
-        moment.id.startsWith('mock-moment-') ||
         moment.is_ephemeral ||
         (moment.post_type && moment.post_type !== 'moment')
       ) {

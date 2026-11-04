@@ -70,6 +70,15 @@ describe('BlocksService', () => {
       expect(result).toEqual([]);
     });
 
+    it('returns an empty page when the blocks response data is null', async () => {
+      mockQueryBuilder._response = { data: null, error: null };
+
+      const result = await service.getBlockedUsers('user-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([]);
+    });
+
     it('preserves block recency order when profile query order differs', async () => {
       const blocksBuilder = {
         select: vi.fn().mockReturnThis(),

@@ -13,9 +13,24 @@ function requireFragment(source, fragment, description) {
 
 requireFragment(styles, '--on-fill-rgb: 255 255 255', 'Light theme on-fill paper role');
 requireFragment(styles, '--on-fill-rgb: 18 21 28', 'Dark theme on-fill ink role');
-requireFragment(styles, '--primary-foreground: rgb(var(--on-fill-rgb))', 'Spartan primary foreground alias');
-requireFragment(styles, '--accent-foreground: rgb(var(--on-fill-rgb))', 'Spartan accent foreground alias');
-requireFragment(styles, '--sidebar-primary-foreground: rgb(var(--on-fill-rgb))', 'Spartan sidebar primary foreground alias');
+requireFragment(styles, '--color-primary-text-rgb: 178 74 43', 'Light theme Ember text role');
+requireFragment(styles, '--color-secondary-text-rgb: 23 119 108', 'Light theme Tide text role');
+requireFragment(styles, '--color-danger-text-rgb: 204 39 39', 'Light theme danger text role');
+requireFragment(
+  styles,
+  '--primary-foreground: rgb(var(--on-fill-rgb))',
+  'Spartan primary foreground alias',
+);
+requireFragment(
+  styles,
+  '--accent-foreground: rgb(var(--on-fill-rgb))',
+  'Spartan accent foreground alias',
+);
+requireFragment(
+  styles,
+  '--sidebar-primary-foreground: rgb(var(--on-fill-rgb))',
+  'Spartan sidebar primary foreground alias',
+);
 
 const primaryButton = styles.match(/\.app-button-primary\s*\{[\s\S]*?\}/)?.[0] ?? '';
 if (!primaryButton.includes('text-on-fill')) {
@@ -25,7 +40,8 @@ if (/\btext-white\b/.test(primaryButton)) {
   failures.push('Shared .app-button-primary must not hardcode text-white');
 }
 
-const saturatedFill = /\b(?:bg|from|to)-(?:primary|secondary|danger|success|warning|vip|accent)(?!\/)\b/;
+const saturatedFill =
+  /\b(?:bg|from|to)-(?:primary|secondary|danger|success|warning|vip|accent)(?!\/)\b/;
 const hardcodedWhite = /\btext-white\b|#[fF]{3,6}\b|rgb\(\s*255\s+255\s+255\s*\)/;
 const allowedExtensions = new Set(['.html', '.ts', '.scss', '.css']);
 
@@ -44,7 +60,9 @@ function walk(directory) {
     const lines = source.split('\n');
     lines.forEach((line, index) => {
       if (saturatedFill.test(line) && hardcodedWhite.test(line)) {
-        failures.push(`${relative(sourceRoot, path)}:${index + 1}: saturated semantic fills must use a theme-aware foreground such as text-on-fill`);
+        failures.push(
+          `${relative(sourceRoot, path)}:${index + 1}: saturated semantic fills must use a theme-aware foreground such as text-on-fill`,
+        );
       }
     });
   }
@@ -52,10 +70,36 @@ function walk(directory) {
 
 walk(primitiveRoot);
 
+const legacyTextRole = /(?<![-\w])text-(?:primary|secondary|danger)(?![\w-])/;
+
+function findLegacyForegrounds(directory) {
+  for (const name of readdirSync(directory)) {
+    const path = join(directory, name);
+    const stat = statSync(path);
+    if (stat.isDirectory()) {
+      findLegacyForegrounds(path);
+      continue;
+    }
+    if (!allowedExtensions.has(extname(name)) || name.endsWith('.spec.ts')) continue;
+
+    readFileSync(path, 'utf8')
+      .split('\n')
+      .forEach((line, index) => {
+        if (legacyTextRole.test(line)) {
+          failures.push(
+            `${relative(sourceRoot, path)}:${index + 1}: semantic fill tokens must not be used as foregrounds; use the matching *-ink role`,
+          );
+        }
+      });
+  }
+}
+
+findLegacyForegrounds(sourceRoot);
+
 if (failures.length > 0) {
   console.error('Semantic colour role check failed:');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Semantic colour role check passed. Shared semantic fills use Relay theme-aware foreground roles.');
+console.log('Semantic colour role check passed. Semantic foregrounds use Relay AA-safe roles.');

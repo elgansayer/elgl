@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import sys
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
+from uuid import uuid4
 
 from openhands_factory.exceptions import VerificationFailed
 from openhands_factory.repository_guard import ProcessResult, ProcessRunner, run_process
@@ -23,10 +26,14 @@ class VerificationCommand:
     # cgroup's memory high-water mark even though each build is healthy alone.
     exclusive: bool = False
     workspace: Path | None = None
+    read_only_inputs: tuple[Path, ...] = ()
+    neptune_binding_json: str | None = None
+    neptune_features_json: str | None = None
 
 
 _VERIFICATION_SANDBOX_SCRIPT = r"""
 set -eu
+umask 077
 workspace=$1
 repository=$2
 state_dir=$3
@@ -36,12 +43,27 @@ cypress_cache=$6
 sandbox_root=$7
 workdir=$8
 shift 8
+input_count=$1
+shift
 
 /usr/bin/mount --make-rprivate /
 /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$sandbox_root"
 staging=$sandbox_root/factory-verification
 /usr/bin/mkdir -p "$staging/workspace"
 /usr/bin/mount --bind "$workspace" "$staging/workspace"
+
+/usr/bin/mkdir -p "$staging/inputs"
+: > "$staging/input-paths"
+input_index=0
+while [ "$input_index" -lt "$input_count" ]; do
+  input_path=$1
+  shift
+  /usr/bin/mkdir -p "$staging/inputs/$input_index"
+  /usr/bin/mount --bind "$input_path" "$staging/inputs/$input_index"
+  /usr/bin/mount -o remount,bind,ro "$staging/inputs/$input_index"
+  printf '%s\n' "$input_path" >> "$staging/input-paths"
+  input_index=$((input_index + 1))
+done
 
 same_repository=false
 if [ "$repository" = "$workspace" ]; then
@@ -73,6 +95,17 @@ if [ -d "$uv_cache" ]; then
   /usr/bin/mount --bind "$uv_cache" "$staging/uv-cache"
 fi
 
+# Sources/caches were staged above. Hide login homes, sibling repositories and
+# all coordinator configuration/state before restoring only the allowed roots.
+# HOME=/tmp/home alone does not prevent absolute-path reads of login credentials.
+for private_root in /home /root /etc/repo-factory /etc/hellotalk-factory \
+  /var/lib/repo-factory /var/log/repo-factory \
+  /var/lib/hellotalk-factory /var/log/hellotalk-factory; do
+  if [ -d "$private_root" ]; then
+    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$private_root"
+  fi
+done
+
 for masked_root in /mnt /srv /media; do
   if [ "$masked_root" != "$sandbox_root" ] && [ -d "$masked_root" ]; then
     /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$masked_root"
@@ -89,6 +122,12 @@ if [ -d "$state_dir" ]; then
 fi
 if [ -d "$log_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$log_dir"
+fi
+# /run/user alone leaves root-managed Docker/containerd and service sockets
+# visible. If /run is the staging root, its initial tmpfs already hides them;
+# mounting another tmpfs here would hide our own staged sources too.
+if [ "$sandbox_root" != /run ]; then
+  /usr/bin/mount -t tmpfs -o mode=755,nosuid,nodev tmpfs /run
 fi
 /usr/bin/mkdir -p /run/user
 /usr/bin/mount -t tmpfs -o mode=755,nosuid,nodev tmpfs /run/user
@@ -110,6 +149,14 @@ if [ "$same_repository" = false ]; then
   /usr/bin/mount --bind "$staging/repository" "$repository"
   /usr/bin/mount -o remount,bind,ro "$repository"
 fi
+input_index=0
+while IFS= read -r input_path; do
+  /usr/bin/mkdir -p "$input_path"
+  /usr/bin/mount --bind "$staging/inputs/$input_index" "$input_path"
+  /usr/bin/mount -o remount,bind,ro "$input_path"
+  input_index=$((input_index + 1))
+done < "$staging/input-paths"
+
 # Vite bundles TypeScript configuration through node_modules/.vite-temp even
 # during a read-only test run. Worktrees deliberately symlink their dependencies
 # to the trusted repository cache, which is remounted read-only above. Overlay only
@@ -225,6 +272,7 @@ def run_isolated_verification_process(
     timeout: int,
     *,
     workspace: Path,
+    read_only_inputs: tuple[Path, ...] = (),
 ) -> ProcessResult:
     """Run repository-controlled checks without host credentials or network."""
 
@@ -236,6 +284,21 @@ def run_isolated_verification_process(
     state_dir = Path(os.environ.get("FACTORY_STATE_DIR", "/var/lib/hellotalk-factory"))
     log_dir = Path(os.environ.get("FACTORY_LOG_DIR", "/var/log/hellotalk-factory"))
     repository = Path(os.environ.get("FACTORY_REPOSITORY", str(resolved_workspace)))
+    for directory in read_only_inputs:
+        if (
+            not directory.is_absolute()
+            or not directory.is_dir()
+            or any(parent.is_symlink() for parent in (directory, *directory.parents))
+            or any(
+                root.resolve().is_relative_to(directory) or directory.is_relative_to(root.resolve())
+                for root in (resolved_workspace, repository)
+            )
+            or any(
+                root.resolve().is_relative_to(directory)
+                for root in (state_dir, log_dir, Path.home(), Path("/etc"), Path("/run"))
+            )
+        ):
+            raise VerificationFailed("Unsafe separate read-only verification input")
     _prepare_vite_cache_mountpoints(repository)
     service_home = state_dir / "home"
     # Dependency deployment installs Cypress as the service user with HOME set
@@ -253,6 +316,7 @@ def run_isolated_verification_process(
         repository,
         service_home,
         cypress_cache,
+        *read_only_inputs,
     )
     # Resolving a virtual environment's Python executable follows its symlink to
     # the system interpreter and loses the environment's bin directory. sys.prefix
@@ -305,6 +369,8 @@ def run_isolated_verification_process(
         _sandbox_path(cypress_cache, name="Cypress cache"),
         str(sandbox_root),
         _sandbox_path(resolved_cwd, name="working directory"),
+        str(len(read_only_inputs)),
+        *(str(path) for path in read_only_inputs),
         *arguments,
     )
     return run_process(command, resolved_workspace, timeout, environment=environment)
@@ -314,7 +380,40 @@ def _touches(changed_paths: set[Path], *prefixes: str) -> bool:
     return any(path.parts and path.parts[0] in prefixes for path in changed_paths)
 
 
-RepositoryProfile = Literal["hellotalk", "workout-agent"]
+RepositoryProfile = Literal["hellotalk", "workout-agent", "neptune"]
+
+
+def neptune_commands_for(repository: Path, changed_paths: set[Path]) -> list[VerificationCommand]:
+    """Delegate applicability to Neptune's shared local/CI plan, without network installs."""
+    if not changed_paths:
+        raise VerificationFailed("Verification requires at least one changed path")
+    for path in changed_paths:
+        if path.is_absolute() or ".." in path.parts or str(path) == ".":
+            raise VerificationFailed("Neptune changed paths must be relative files")
+    evidence = repository / ".godot" / "factory-verification" / uuid4().hex
+    arguments = [
+        "python3",
+        "tools/factory/verify.py",
+        "--toolchain",
+        str(repository / ".factory-tools" / "godot"),
+        "--evidence",
+        str(evidence),
+    ]
+    for path in sorted(changed_paths):
+        arguments.append("--changed-path=" + str(path))
+    # Reserve the existing host-heavy lane conservatively for any executable
+    # or unknown change; the delegated plan decides which tests actually apply.
+    exclusive = any(path.suffix != ".md" or path.parts[0] != "docs" for path in changed_paths)
+    return [
+        VerificationCommand(
+            "neptune-acceptance",
+            tuple(arguments),
+            repository,
+            timeout=1200,
+            exclusive=exclusive,
+            workspace=repository,
+        )
+    ]
 
 
 def workout_agent_commands_for(
@@ -382,6 +481,10 @@ def commands_for(
     changed_paths: set[Path],
     profile: RepositoryProfile = "hellotalk",
 ) -> list[VerificationCommand]:
+    if profile == "neptune":
+        return neptune_commands_for(repository, changed_paths)
+    if profile not in {"hellotalk", "workout-agent"}:
+        raise VerificationFailed("Unknown repository verification profile")
     if profile == "workout-agent":
         return workout_agent_commands_for(repository, changed_paths)
     if not changed_paths:
@@ -684,6 +787,14 @@ def commands_for(
 
 
 def verification_descriptions(profile: RepositoryProfile) -> list[str]:
+    if profile == "neptune":
+        return [
+            "python3 tools/factory/verify.py --changed-path <each changed file> "
+            "--toolchain .factory-tools/godot --evidence .godot/factory-verification/<fresh-id>",
+            "Neptune selects its required 5/8/10-check plan; "
+            "native runs require a pinned offline cache.",
+            "Local verification does not publish CI, approve a review or enable a Neptune daemon.",
+        ]
     if profile == "workout-agent":
         return [
             ".venv/bin/python tools/check_openhands_control_plane.py",
@@ -715,6 +826,87 @@ def verification_descriptions(profile: RepositoryProfile) -> list[str]:
     ]
 
 
+def _validate_neptune_receipt(output: str, command: VerificationCommand) -> None:
+    prefix = "NEPTUNE_FACTORY_VERIFICATION="
+    markers = [line[len(prefix) :] for line in output.splitlines() if line.startswith(prefix)]
+    try:
+        if len(markers) != 1:
+            raise ValueError("expected one receipt")
+        report = json.loads(markers[0])
+        if (
+            report["schema"] != "neptune.factory-verification.v1"
+            or report["conclusion"] != "success"
+        ):
+            raise ValueError("failed/incompatible receipt")
+        identity = report["identity"]
+        if not re.fullmatch(r"[0-9a-f]{40}", identity["head"]) or not re.fullmatch(
+            r"[0-9a-f]{64}", identity["selected_contents_sha256"]
+        ):
+            raise ValueError("missing source identity")
+        if command.neptune_binding_json is not None:
+            binding = json.loads(command.neptune_binding_json)
+            features = json.loads(command.neptune_features_json or "{}")
+            if (
+                report.get("task_binding") != binding
+                or identity["head"] != binding["head"]
+                or identity.get("base") != binding["base"]
+                or report.get("feature_requirements", {}) != features
+            ):
+                raise ValueError("receipt differs from accepted task/candidate")
+            feature_checks = report.get("feature_checks", {})
+            if set(feature_checks) != set(features):
+                raise ValueError("missing named feature results")
+            for name, expected_artifacts in features.items():
+                observed = feature_checks[name]
+                if (
+                    observed.get("status") != "success"
+                    or observed.get("artifacts") != expected_artifacts
+                    or observed.get("comparison", {}).get("match") is not True
+                ):
+                    raise ValueError("named comparison did not pass for accepted artifacts")
+        plan = report["plan"]
+        expected_paths = sorted(
+            {arg.split("=", 1)[1] for arg in command.arguments if arg.startswith("--changed-path=")}
+        )
+        if not expected_paths or plan["paths"] != expected_paths:
+            raise ValueError("receipt selection differs from command")
+        required = plan["required"]
+        expected = {
+            "input-tooling",
+            "film-contracts",
+            "catalogue-tests",
+            "catalogue-validation",
+            "factory-contracts",
+            "gate-contracts",
+        }
+        if plan["mode"] not in {"metadata", "runner", "gameplay"}:
+            raise ValueError("unknown test plan")
+        if plan["mode"] != "metadata":
+            expected.update({"native-install", "native-runner", "native-project"})
+        if plan["mode"] == "gameplay":
+            expected.update({"native-runtime", "native-bots"})
+        if (
+            not isinstance(required, list)
+            or len(required) != len(expected)
+            or set(required) != expected
+        ):
+            raise ValueError("empty/incomplete test plan")
+        checks = report["checks"]
+        if set(checks) != set(required):
+            raise ValueError("missing check results")
+        for check in checks.values():
+            if check["status"] != "success" or type(check["exit"]) is not int or check["exit"] != 0:
+                raise ValueError("check did not succeed")
+            if (
+                not isinstance(check["command"], list)
+                or not check["command"]
+                or any(not isinstance(arg, str) or not arg for arg in check["command"])
+            ):
+                raise ValueError("missing executable command")
+    except (ValueError, KeyError, TypeError) as error:
+        raise VerificationFailed(f"Invalid Neptune verification receipt: {error}") from error
+
+
 def run_verification(
     commands: list[VerificationCommand], runner: ProcessRunner | None = None
 ) -> None:
@@ -722,11 +914,15 @@ def run_verification(
         if runner is None:
             if command.workspace is None:
                 raise VerificationFailed("Verification command has no assigned worktree")
+            extra = (
+                {"read_only_inputs": command.read_only_inputs} if command.read_only_inputs else {}
+            )
             result = run_isolated_verification_process(
                 command.arguments,
                 command.directory,
                 command.timeout,
                 workspace=command.workspace,
+                **extra,
             )
         else:
             result = runner(command.arguments, command.directory, command.timeout)
@@ -735,3 +931,5 @@ def run_verification(
             raise VerificationFailed(
                 f"{command.name} failed with exit {result.returncode}: {output[-2000:]}"
             )
+        if command.name == "neptune-acceptance":
+            _validate_neptune_receipt(result.stdout, command)

@@ -1,6 +1,5 @@
-import { Component, DestroyRef, effect, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
-import lottie, { AnimationItem } from 'lottie-web';
 import confettiData from '../../animations/confetti.data';
 import floatData from '../../animations/float.data';
 import heartsData from '../../animations/hearts.data';
@@ -8,6 +7,7 @@ import premiumData from '../../animations/premium.data';
 import sparkleData from '../../animations/sparkle.data';
 import { GiftAnimationService, GiftAnimationType } from '../../services/gift-animation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { LottiePlayerComponent } from '../primitives/lottie-player/lottie-player.component';
 
 const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
   confetti: confettiData,
@@ -19,7 +19,7 @@ const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
 
 @Component({
   selector: 'app-gift-animation-overlay',
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmButton, LottiePlayerComponent, TranslatePipe],
   template: `
     @if (animationService.currentAnimation(); as anim) {
       <div
@@ -39,7 +39,16 @@ const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
         "
       >
         <div class="absolute inset-0 z-0 bg-surface-900/40" aria-hidden="true">
-          <div id="lottie-container" class="w-full h-full"></div>
+          <div id="lottie-container" class="w-full h-full">
+            @if (!prefersReducedMotion()) {
+              <app-lottie-player
+                class="w-full h-full"
+                [animationData]="animationData()"
+                [loop]="false"
+                [playbackKey]="anim.id"
+              />
+            }
+          </div>
         </div>
 
         <div
@@ -120,59 +129,16 @@ const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
 })
 export class GiftAnimationOverlayComponent {
   readonly animationService = inject(GiftAnimationService);
-  private readonly destroyRef = inject(DestroyRef);
+  readonly animationData = computed(() => {
+    const animationType = this.animationService.currentAnimation()?.animationType ?? 'float';
+    return DEFAULT_ANIMATION_DATA[animationType] ?? DEFAULT_ANIMATION_DATA['float'];
+  });
 
-  private lottieAnimation: AnimationItem | null = null;
-
-  constructor() {
-    this.destroyRef.onDestroy(() => this.destroyLottie());
-
-    effect(() => {
-      const anim = this.animationService.currentAnimation();
-      if (!anim) {
-        this.destroyLottie();
-        return;
-      }
-
-      if (this.prefersReducedMotion()) {
-        this.destroyLottie();
-        return;
-      }
-
-      const container = document.getElementById('lottie-container');
-      if (container) {
-        this.loadLottieAnimation(container, anim.animationType);
-      }
-    });
-  }
-
-  private prefersReducedMotion(): boolean {
+  prefersReducedMotion(): boolean {
     return (
       typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     );
-  }
-
-  private loadLottieAnimation(container: HTMLElement, animationType: GiftAnimationType): void {
-    this.destroyLottie();
-
-    const data = DEFAULT_ANIMATION_DATA[animationType] ?? DEFAULT_ANIMATION_DATA['float'];
-    if (!data) return;
-
-    this.lottieAnimation = lottie.loadAnimation({
-      container,
-      renderer: 'svg',
-      loop: false,
-      autoplay: true,
-      animationData: data,
-    });
-  }
-
-  private destroyLottie(): void {
-    if (this.lottieAnimation) {
-      this.lottieAnimation.destroy();
-      this.lottieAnimation = null;
-    }
   }
 }

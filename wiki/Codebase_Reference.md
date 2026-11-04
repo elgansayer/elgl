@@ -1020,9 +1020,6 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/feed/feed.service.ts`
 - Methods: `getFeed`, `getMomentById`, `createMoment`, `deleteMoment`
 
-### `backend/src/config/env.validation.ts`
-- *(No methods found or interface/type definition)*
-
 ### `backend/src/config/validation.schema.ts`
 - *(No methods found or interface/type definition)*
 

@@ -1,4 +1,5 @@
 <!-- @dsCard group="Screens" -->
+<!-- Relay AA text roles: Ember, Tide and danger foregrounds use their dedicated text tokens. -->
 <!doctype html>
 <html lang="en">
   <head>
@@ -300,6 +301,27 @@
         color: rgb(var(--text-primary));
       }
 
+      .edit-field-preview {
+        margin-top: 16px;
+      }
+      .edit-field-preview label {
+        display: block;
+        margin-bottom: 8px;
+        color: rgb(var(--text-secondary));
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .edit-field-preview select {
+        width: 100%;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 12px;
+        background: rgb(var(--surface-300));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: inherit;
+      }
+
       .nav-grid {
         margin-top: 12px;
         display: grid;
@@ -484,6 +506,19 @@
         <div class="meta-row">Region: Taipei</div>
         <div class="meta-row">Proficiency: B2</div>
 
+        <div class="edit-field-preview">
+          <label for="proficiency-level">Proficiency level</label>
+          <select id="proficiency-level" aria-label="Proficiency level">
+            <option>Not set</option>
+            <option>A1 - Beginner</option>
+            <option>A2 - Elementary</option>
+            <option>B1 - Intermediate</option>
+            <option selected>B2 - Upper Intermediate</option>
+            <option>C1 - Advanced</option>
+            <option>C2 - Proficient</option>
+          </select>
+        </div>
+
         <div class="nav-grid">
           <a href="#">Favourites</a>
           <a href="#">Vocabulary</a>
@@ -523,11 +558,12 @@
     </div>
 
     <p class="caption">
-      Shown in read-only view mode (not the edit form) since that's what most visitors see; the edit
-      form is a long field-by-field settings surface better covered by a future forms/inputs
-      primitives page than a screen preview. Also left out: skeleton loading state, achievements
-      widget, VIP upsell banner (only shown for non-VIP profiles - this mock profile is VIP), and
-      the business-catalogue section (conditional, empty for most users).
+      Shown primarily in read-only view mode since that's what most visitors see, with the edit
+      form's proficiency selector included to capture its CEFR choices. The remaining edit form is a
+      long field-by-field settings surface better covered by a future forms/inputs primitives page.
+      Also left out: skeleton loading state, achievements widget, VIP upsell banner (only shown for
+      non-VIP profiles - the previewed profile is VIP), and the business-catalogue section
+      (conditional, empty for most users).
     </p>
 
     <script>

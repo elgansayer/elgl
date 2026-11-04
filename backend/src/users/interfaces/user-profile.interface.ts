@@ -1,3 +1,5 @@
+import type { ProficiencyLevel } from '../proficiency-level';
+
 export interface UserProfile {
   id: string;
   display_name?: string;
@@ -58,7 +60,7 @@ export interface UserProfile {
   age?: number;
   gender?: string;
   status_visibility?: string;
-  proficiency_level?: string;
+  proficiency_level?: ProficiencyLevel | null;
   learning_goals?: string[];
   availability_morning?: boolean;
   availability_afternoon?: boolean;

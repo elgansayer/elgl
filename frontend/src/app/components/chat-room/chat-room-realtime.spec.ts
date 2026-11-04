@@ -39,6 +39,68 @@ describe('applyChatRoomRealtimeEvent', () => {
     expect(result.incomingMessageToMarkRead).toEqual(baseMessage);
   });
 
+  it('accepts a bounded gift payload from the chat realtime channel', () => {
+    const giftMessage: ChatMessage = {
+      ...baseMessage,
+      id: 'gift-message',
+      message_type: 'gift',
+      text_content: undefined,
+      gift_payload: {
+        gift_id: 'gift_rose',
+        gift_name: 'Rose',
+        gift_icon: '🌹',
+        coin_value: 10,
+        animation_type: 'float',
+      },
+    };
+
+    const result = applyChatRoomRealtimeEvent(
+      [],
+      { message: giftMessage },
+      'room-1',
+      'current-user',
+    );
+
+    expect(result.messages).toEqual([giftMessage]);
+    expect(result.incomingMessageToMarkRead).toEqual(giftMessage);
+  });
+
+  it('rejects missing, malformed, or oversized realtime gift payloads', () => {
+    const malformedPayloads: unknown[] = [
+      undefined,
+      { gift_id: 'gift_rose' },
+      {
+        gift_id: 'gift_rose',
+        gift_name: 'x'.repeat(121),
+        gift_icon: '🌹',
+        coin_value: 10,
+      },
+      {
+        gift_id: 'gift_rose',
+        gift_name: 'Rose',
+        gift_icon: '🌹',
+        coin_value: -1,
+      },
+    ];
+
+    for (const giftPayload of malformedPayloads) {
+      const result = applyChatRoomRealtimeEvent(
+        [],
+        {
+          message: {
+            ...baseMessage,
+            message_type: 'gift',
+            gift_payload: giftPayload,
+          },
+        },
+        'room-1',
+        'current-user',
+      );
+      expect(result.messages).toEqual([]);
+      expect(result.incomingMessageToMarkRead).toBeNull();
+    }
+  });
+
   it.each(['profileUpdated', 'missedCall'])(
     'accepts the %s system event published by Centrifugo without a sender id',
     (eventType) => {
@@ -131,6 +193,62 @@ describe('applyChatRoomRealtimeEvent', () => {
 
     expect(result.messages).toHaveLength(1);
     expect(result.messages[0]?.text_content).toBe('edited');
+  });
+
+  describe('link previews on edited messages', () => {
+    const oldPreview = {
+      url: 'https://example.com/old',
+      title: 'Old page',
+      description: '',
+      image: '',
+      siteName: 'Example',
+    };
+    const newPreview = { ...oldPreview, url: 'https://example.com/new', title: 'New page' };
+    const linkMessage: ChatMessage = {
+      ...baseMessage,
+      text_content: 'see https://example.com/old',
+    };
+    const withPreview: ChatMessage = { ...linkMessage, link_preview: oldPreview };
+
+    it('replaces the card when the edit points at a different link', () => {
+      const result = applyChatRoomRealtimeEvent(
+        [withPreview],
+        {
+          message: {
+            ...withPreview,
+            text_content: 'see https://example.com/new',
+            link_preview: newPreview,
+          },
+        },
+        'room-1',
+        'current-user',
+      );
+
+      expect(result.messages[0]?.link_preview).toEqual(newPreview);
+    });
+
+    it('removes the card when the backend publishes an explicit null preview', () => {
+      const result = applyChatRoomRealtimeEvent(
+        [withPreview],
+        { message: { ...linkMessage, text_content: 'no link now', link_preview: null } },
+        'room-1',
+        'current-user',
+      );
+
+      expect(result.messages[0]?.text_content).toBe('no link now');
+      expect(result.messages[0]?.link_preview).toBeNull();
+    });
+
+    it('keeps the existing card when an event omits the field, which is why edits publish null', () => {
+      const result = applyChatRoomRealtimeEvent(
+        [withPreview],
+        { message: { ...linkMessage, delivery_status: 'delivered' } },
+        'room-1',
+        'current-user',
+      );
+
+      expect(result.messages[0]?.link_preview).toEqual(oldPreview);
+    });
   });
 
   it('does not acknowledge the current user own messages', () => {

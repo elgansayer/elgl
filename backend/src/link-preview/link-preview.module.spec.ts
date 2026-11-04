@@ -1,5 +1,12 @@
-import { HttpModule } from '@nestjs/axios';
-import { MODULE_METADATA } from '@nestjs/common/constants';
+import { HttpModule, HttpService } from '@nestjs/axios';
+import { BadRequestException } from '@nestjs/common';
+import {
+  GLOBAL_MODULE_METADATA,
+  MODULE_METADATA,
+} from '@nestjs/common/constants';
+import { Test } from '@nestjs/testing';
+import { MetricsModule } from '../metrics/metrics.module';
+import { MetricsService } from '../metrics/metrics.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LinkPreviewController } from './link-preview.controller';
@@ -71,5 +78,45 @@ describe('LinkPreviewModule', () => {
     ) as unknown[];
 
     expect(exports).toContain(LinkPreviewService);
+  });
+
+  describe('metrics wiring', () => {
+    it('relies on the global MetricsModule to provide MetricsService', () => {
+      const exports = Reflect.getMetadata(
+        MODULE_METADATA.EXPORTS,
+        MetricsModule,
+      ) as unknown[];
+
+      expect(Reflect.getMetadata(GLOBAL_MODULE_METADATA, MetricsModule)).toBe(
+        true,
+      );
+      expect(exports).toContain(MetricsService);
+    });
+
+    it('resolves the scraper with the real MetricsService and exports its series', async () => {
+      const module = await Test.createTestingModule({
+        providers: [
+          LinkPreviewService,
+          MetricsService,
+          { provide: HttpService, useValue: { get: vi.fn() } },
+          { provide: 'REDIS_CLIENT', useValue: { get: vi.fn(), set: vi.fn() } },
+        ],
+      }).compile();
+      const service = module.get(LinkPreviewService);
+      const metrics = module.get(MetricsService);
+
+      await expect(
+        service.getPreview('http://169.254.169.254/latest/meta-data/'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      const exported = await metrics.getMetrics();
+      expect(exported).toContain(
+        'hellotalk_link_preview_requests_total{outcome="rejected"} 1',
+      );
+      expect(exported).toContain(
+        'hellotalk_link_preview_failures_total{reason="blocked_target"} 1',
+      );
+      expect(exported).not.toContain('169.254.169.254');
+    });
   });
 });

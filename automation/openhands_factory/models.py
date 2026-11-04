@@ -147,6 +147,8 @@ class Job:
     producer_identity: str | None = None
     initial_base_sha: str | None = None
     latest_verified_sha: str | None = None
+    verification_candidate_sha: str | None = None
+    neptune_contract_sha: str | None = None
     predecessor_pull_request: int | None = None
     successor_pull_request: int | None = None
     changed_path_fingerprint: str | None = None
@@ -181,6 +183,8 @@ class Job:
     # polling job never carries them.
     attempt_started_at: datetime | None = None
     attempt_generation: str | None = None
+    intake_blocked: bool = False
+    intake_block_reason: str | None = None
 
 
 @dataclass

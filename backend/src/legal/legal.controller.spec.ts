@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LegalController } from './legal.controller';
 import { LegalService } from './legal.service';
-import { NotFoundException } from '@nestjs/common';
 
 describe('LegalController', () => {
   let controller: LegalController;
@@ -36,6 +35,16 @@ describe('LegalController', () => {
       expect(doc.title).toBe('Privacy Policy');
       expect(doc.sections.length).toBeGreaterThan(0);
       expect(doc.lastUpdated).toBeDefined();
+    });
+  });
+
+  describe('getDocument', () => {
+    it('should return document by parameterized route', () => {
+      const termsDoc = controller.getDocument('terms-of-service');
+      expect(termsDoc.title).toBe('Terms of Service');
+
+      const privacyDoc = controller.getDocument('privacy-policy');
+      expect(privacyDoc.title).toBe('Privacy Policy');
     });
   });
 });

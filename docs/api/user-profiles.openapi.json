@@ -182,7 +182,10 @@
           "cover_photo_url": { "type": ["string", "null"], "format": "uri" },
           "native_language": { "type": ["string", "null"] },
           "target_languages": { "type": "array", "items": { "type": "string" } },
-          "proficiency_level": { "type": ["string", "null"] },
+          "proficiency_level": {
+            "type": ["string", "null"],
+            "enum": ["A1", "A2", "B1", "B2", "C1", "C2", null]
+          },
           "study_streak_days": { "type": "integer", "minimum": 0 },
           "is_vip": { "type": "boolean" },
           "profile_visibility": { "type": "string", "enum": ["everyone", "vips_only", "hidden"] }
@@ -192,6 +195,13 @@
       "UpdateProfileRequest": {
         "type": "object",
         "description": "Validated UpdateProfileDto. Unknown fields are rejected by the global ValidationPipe.",
+        "properties": {
+          "proficiency_level": {
+            "type": ["string", "null"],
+            "enum": ["A1", "A2", "B1", "B2", "C1", "C2", null],
+            "description": "Canonical CEFR level, or null to clear the saved level."
+          }
+        },
         "additionalProperties": true
       },
       "ProfileVisitor": {

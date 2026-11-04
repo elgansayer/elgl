@@ -1,4 +1,5 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { environment } from '../../environments/environment';
@@ -11,8 +12,7 @@ describe('LegalService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [LegalService],
+      providers: [provideHttpClient(), provideHttpClientTesting(), LegalService],
     });
     service = TestBed.inject(LegalService);
     httpMock = TestBed.inject(HttpTestingController);
@@ -26,9 +26,7 @@ describe('LegalService', () => {
     const mockDoc: LegalDocument = {
       title: 'Terms of Service',
       lastUpdated: '2026-08-01',
-      sections: [
-        { id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' },
-      ],
+      sections: [{ id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' }],
     };
 
     const resultPromise = service.fetchTermsOfService();
@@ -58,6 +56,28 @@ describe('LegalService', () => {
     await expect(resultPromise).resolves.toEqual(mockDoc);
   });
 
+  it('fetches dynamic legal documents by kind', async () => {
+    const mockDoc: LegalDocument = {
+      title: 'Terms of Service',
+      lastUpdated: '2026-08-01',
+      sections: [{ id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' }],
+    };
+
+    const resultPromise = service.fetchDocument('terms-of-service');
+
+    const req = httpMock.expectOne(`${baseUrl}/terms-of-service`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockDoc);
+
+    await expect(resultPromise).resolves.toEqual(mockDoc);
+  });
+
+  it('rejects empty or oversized document kind parameters', async () => {
+    await expect(service.fetchDocument('')).rejects.toThrow('Invalid legal document type');
+    await expect(service.fetchDocument('   ')).rejects.toThrow('Invalid legal document type');
+    await expect(service.fetchDocument('x'.repeat(65))).rejects.toThrow('Invalid legal document type');
+  });
+
   it('normalizes surrounding whitespace from a valid response', async () => {
     const resultPromise = service.fetchTermsOfService();
     httpMock.expectOne(`${baseUrl}/terms`).flush({
@@ -75,9 +95,7 @@ describe('LegalService', () => {
     await expect(resultPromise).resolves.toEqual({
       title: 'Terms of Service',
       lastUpdated: '2026-08-01',
-      sections: [
-        { id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' },
-      ],
+      sections: [{ id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' }],
     });
   });
 

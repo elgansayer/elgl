@@ -197,7 +197,7 @@ import { FormsModule } from '@angular/forms';
                   <a
                     [href]="resource.url"
                     target="_blank"
-                    class="text-primary underline text-sm sm:text-base font-semibold break-all"
+                    class="text-primary-ink underline text-sm sm:text-base font-semibold break-all"
                     >{{ resource.title }}</a
                   >
                   <p class="text-xs sm:text-sm text-text-secondary mt-0.5">
@@ -213,7 +213,7 @@ import { FormsModule } from '@angular/forms';
                     <span class="text-2xs sm:text-xs text-text-muted">{{ resource.category }}</span>
                     @if (resource.topic) {
                       <span
-                        class="text-2xs sm:text-xs font-semibold bg-primary/20 text-primary rounded px-1.5 py-0.5"
+                        class="text-2xs sm:text-xs font-semibold bg-primary/20 text-primary-ink rounded px-1.5 py-0.5"
                         >{{ resource.topic }}</span
                       >
                     }
@@ -241,7 +241,7 @@ import { FormsModule } from '@angular/forms';
                   <button
                     hlmBtn
                     (click)="onDelete(resource.id)"
-                    class="text-danger text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200"
+                    class="text-danger-ink text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200"
                   >
                     {{ 'resource_library.delete' | t }}
                   </button>
@@ -266,7 +266,7 @@ import { FormsModule } from '@angular/forms';
                       <a
                         [href]="resource.url"
                         target="_blank"
-                        class="text-primary underline text-sm sm:text-base font-semibold break-all"
+                        class="text-primary-ink underline text-sm sm:text-base font-semibold break-all"
                         >{{ resource.title }}</a
                       >
                       <p class="text-xs sm:text-sm text-text-secondary mt-0.5">
@@ -284,7 +284,7 @@ import { FormsModule } from '@angular/forms';
                         }}</span>
                         @if (resource.topic) {
                           <span
-                            class="text-2xs sm:text-xs font-semibold bg-primary/20 text-primary rounded px-1.5 py-0.5"
+                            class="text-2xs sm:text-xs font-semibold bg-primary/20 text-primary-ink rounded px-1.5 py-0.5"
                             >{{ resource.topic }}</span
                           >
                         }
@@ -312,7 +312,7 @@ import { FormsModule } from '@angular/forms';
                       <button
                         hlmBtn
                         (click)="onDelete(resource.id)"
-                        class="text-danger text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200"
+                        class="text-danger-ink text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200"
                       >
                         {{ 'resource_library.delete' | t }}
                       </button>

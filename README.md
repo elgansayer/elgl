@@ -170,6 +170,12 @@ cp .env.example .env
 docker compose up -d
 ```
 
+The API validates `.env` at startup and refuses to boot in production while any
+required value is missing, malformed or still set to an example value. Every
+variable is documented in `.env.example`; see
+[Backend environment configuration](docs/environment-configuration.md) for the
+validation rules, the required production variables and the rollout checklist.
+
 For development with hot reload:
 
 ```bash

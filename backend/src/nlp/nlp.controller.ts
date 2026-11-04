@@ -26,7 +26,10 @@ import { TranslateBioDto } from './dto/translate-bio.dto';
 import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
 import { TransliterateDto } from './dto/transliterate.dto';
 import { GrammarCheckService } from './grammar-check.service';
-import { GrammarExplanationService } from './grammar-explanation.service';
+import {
+  GrammarExplanationResult,
+  GrammarExplanationService,
+} from './grammar-explanation.service';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
@@ -108,10 +111,14 @@ export class NlpController {
   }
 
   /**
-   * UI translations are cached in Redis and change rarely.
-   * Edge caching reduces load on the DeepL integration.
+   * Interface translations are cached in Redis per source string, so a language
+   * is translated once and then served to every user. A cache miss spends paid
+   * DeepL quota, so each user is also limited to ten requests per ten minutes
+   * on top of the global throttle. Switching to a language already stored on the
+   * device never calls this endpoint.
    */
   @Post('translate-ui')
+  @NlpRateLimit({ maxRequests: 10, windowSeconds: 600 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   async translateUi(@Body() dto: TranslateUiDto): Promise<TranslateUiResult> {
     return await this.nlpService.translateUi(dto);
@@ -144,15 +151,11 @@ export class NlpController {
   async explainGrammar(
     @CurrentUser() user: User | null,
     @Body() dto: ExplainGrammarDto,
-  ): Promise<{
-    original: string;
-    corrected: string;
-    explanation: string;
-  } | null> {
+  ): Promise<GrammarExplanationResult | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
     await this.nlpService.checkRateLimit(user.id, profile?.is_vip ?? false);
-    return await this.grammarExplanationService.explain(dto);
+    return await this.grammarExplanationService.explain(user.id, dto);
   }
 
   /**

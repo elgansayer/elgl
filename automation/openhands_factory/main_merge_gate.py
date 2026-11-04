@@ -10,6 +10,12 @@ from pathlib import Path
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient, GitHubRunner
 from openhands_factory.models import Job, JobState
+from openhands_factory.neptune_merge import NEPTUNE_REPOSITORY
+
+# GitHub sometimes creates no push run for a new main head. main-ci-watchdog.yml
+# then dispatches the same workflow on main, which is equally canonical; only
+# accepting push left merges and deploys blocked on a546750a5 (2026-10-29).
+CANONICAL_CI_EVENTS = frozenset({"push", "workflow_dispatch"})
 
 
 @dataclass(frozen=True)
@@ -79,15 +85,13 @@ class MainBranchMergeGate(GitHubClient):
                 "--repo",
                 self.repository,
                 "--workflow",
-                "ci.yml",
+                "neptune-merge-gate.yml" if self.repository == NEPTUNE_REPOSITORY else "ci.yml",
                 "--branch",
                 self.base_branch,
-                "--event",
-                "push",
                 "--limit",
                 "50",
                 "--json",
-                "headSha,status,conclusion",
+                "headSha,status,conclusion,event",
             )
         )
         try:
@@ -100,11 +104,18 @@ class MainBranchMergeGate(GitHubClient):
         for raw in runs:
             if not isinstance(raw, dict) or str(raw.get("headSha") or "") != head_sha:
                 continue
-            return MainCiStatus(
+            if raw.get("event") not in CANONICAL_CI_EVENTS:
+                continue
+            status = MainCiStatus(
                 head_sha=head_sha,
                 status=str(raw.get("status") or "").upper(),
                 conclusion=str(raw.get("conclusion") or "").upper(),
             )
+            if self.repository == NEPTUNE_REPOSITORY and status.green:
+                gate = self.neptune_gate_for_head(head_sha)
+                if not gate.passed:
+                    return MainCiStatus(head_sha, "PENDING" if gate.pending else "COMPLETED", "")
+            return status
         return MainCiStatus(head_sha=head_sha, status="MISSING", conclusion="")
 
     def is_green(self) -> bool:

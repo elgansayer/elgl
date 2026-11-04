@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -17,6 +18,7 @@ from openhands_factory.alerts import AlertService
 from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
+from openhands_factory.design_drift import check_design_drift, drift_guidance
 from openhands_factory.exceptions import (
     AgentTaskFailure,
     FactoryError,
@@ -32,6 +34,8 @@ from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Lease, Task, changed_path_fingerprint
+from openhands_factory.neptune_intake import NeptuneIntakeUnavailable, accepted_verification
+from openhands_factory.neptune_preparation import ToolPreparationUnavailable, prepare_native
 from openhands_factory.pr_convergence import (
     ConvergenceAction,
     PullRequestCapacity,
@@ -49,6 +53,11 @@ from openhands_factory.pr_lifecycle import (
 from openhands_factory.pr_metrics import PullRequestMetricsStore
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
+from openhands_factory.retry_policy import (
+    DRIFT_GUIDED_REPAIR_KEY,
+    QUALITY_REPAIR_LIMIT_MESSAGE,
+    REPAIR_LIMIT_MESSAGE,
+)
 from openhands_factory.review_report import validate_review_report
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskClaimConflict, TaskStore
@@ -60,8 +69,19 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
 CI_POLL_INTERVAL = timedelta(minutes=1)
+
+
+class _ReconciliationLeaseLost(Exception):
+    """A control-plane observation outlived its task ownership."""
+
+
 CONFLICTING_MERGE_STATES = {"DIRTY"}
 MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
+# An unpublished job whose repairs ran out on a base this old is rebuilt once on
+# the current base instead of retrying old-main failures forever.
+STALE_UNPUBLISHED_BASE_AGE = timedelta(days=7)
+CAPPED_LABEL = "factory-capped"
+CAPPED_NOTICE_PREFIX = "OpenHands Factory parked this pull request: "
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -78,6 +98,7 @@ CODE_MUTATING_AGENT_PHASES = {
     "ci-repair",
 }
 VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
+    "missing/mismatched offline godot cache",
     "the cypress binary is missing",
     "we expected the binary to be installed here",
     "getaddrinfo eai_again",
@@ -85,6 +106,11 @@ VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
     "failed with exit 137",
     "failed with exit 143",
 )
+# A spent repair budget names its cause in the terminal error. Check names and
+# paths are untrusted and last_error keeps only its final 2000 characters, so the
+# cause is bounded to leave the opening words (and failure class) intact.
+MAX_BUDGET_CAUSE_ITEMS = 8
+MAX_BUDGET_CAUSE_ITEM_CHARS = 200
 
 # A path in one of these categories can never introduce the vulnerability
 # classes security.md's checklist scans for (hardcoded secrets, webhook/
@@ -124,6 +150,29 @@ def _is_security_review_exempt(changed_paths: set[Path]) -> bool:
     return True
 
 
+def _budget_cause_item(value: object) -> str:
+    """One bounded line of a finding code, path or check name for a terminal error."""
+    return " ".join(str(value).split())[:MAX_BUDGET_CAUSE_ITEM_CHARS]
+
+
+def _failed_checks_cause(failed_checks: frozenset[str]) -> str:
+    """Sorted failed check names, so an identical failure repeats an identical error.
+
+    Names only: no evidence text, timestamps or SHAs, which would give every retry a
+    new fingerprint and stop the chronic backoff from escalating.
+    """
+    names = sorted(name for name in map(_budget_cause_item, failed_checks) if name)
+    shown = ", ".join(names[:MAX_BUDGET_CAUSE_ITEMS])
+    if len(names) > MAX_BUDGET_CAUSE_ITEMS:
+        shown += f" (+{len(names) - MAX_BUDGET_CAUSE_ITEMS} more)"
+    return shown or "no failed check reported"
+
+
+def _last_attempt(job: Job) -> object | None:
+    """Newest provider attempt; compared by identity because history is bounded."""
+    return job.provider_history[-1] if job.provider_history else None
+
+
 class FactoryPipeline:
     def __init__(
         self,
@@ -144,6 +193,7 @@ class FactoryPipeline:
             trusted_github_actors=config.trusted_github_actors,
             require_ready_label=config.require_ready_label,
             ready_label=config.ready_label,
+            merge_review_policy=config.merge_review_policy,
         )
         self.jobs = JobStore(
             config.state_dir / "jobs.json",
@@ -226,7 +276,10 @@ class FactoryPipeline:
             maximum_agent_lease_seconds,
         )
 
-        self.health_store = AgentHealthStore(config.state_dir / "agent_health.json")
+        self.health_store = AgentHealthStore(
+            config.state_dir / "agent_health.json",
+            coordination_root=config.provider_capacity_dir if config.tests_only_merging else None,
+        )
 
         if agent_router is not None:
             self.router = agent_router
@@ -394,44 +447,131 @@ class FactoryPipeline:
                 self._publish_quarantine(job)
         active_task_ids = {task.identifier for task in tasks}
         protected = protected_task_ids or set()
-        retired_jobs: list[Job] = []
         for task_id, job in jobs.items():
-            if task_id in active_task_ids or task_id in protected or job.state in TERMINAL_STATES:
+            if task_id in protected or job.state in TERMINAL_STATES:
                 continue
-            worktree = self.config.worktree_dir / f"issue-{task_id}"
-            if worktree.exists():
-                workflow = self._workflow(self.config.repository)
-                inspection = self._workflow(worktree)
-                try:
-                    dirty = inspection.has_changes()
-                except RepositorySafetyError:
-                    # A damaged or partially-created worktree is not safe to delete silently.
-                    dirty = True
-                if dirty:
-                    recovery = self.config.recovery_dir / (
-                        f"issue-{task_id}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
-                    )
-                    workflow.archive_worktree(worktree, recovery)
-                workflow.remove_worktree(worktree, force=dirty)
-            self.tasks.release(task_id)
-            job.state = JobState.DONE
-            # This clause used to be scoped to PRE_PULL_REQUEST_STATES, so a job
-            # whose pull request was closed (not merged) while the factory was
-            # still reviewing or waiting on CI never got here at all - its
-            # worktree, and everything downstream of it, stayed on disk forever.
-            # reconcile() only resets a DONE job with this exact message back to
-            # DISCOVERED when job.pull_request is still None, which is already
-            # never true once a PR-review job reaches this branch (it is set
-            # immediately in _discover_pull_request), so this message split does
-            # not change that behaviour.
-            job.last_error = (
-                "Issue closed before pull request creation"
-                if job.task.source == "github-issue"
-                else "Pull request closed before the factory finished with it"
-            )
-            retired_jobs.append(job)
-        self.jobs.save_reconciled_jobs(retired_jobs)
+            admitted = task_id in active_task_ids
+            if admitted and not job.intake_blocked:
+                continue
+            self._reconcile_missing_intake_job(job, admitted=admitted)
         return self.jobs.load()
+
+    def _reconcile_missing_intake_job(self, snapshot: Job, *, admitted: bool = False) -> None:
+        """Confirm remote state under the same CAS lease used by execution."""
+        owner = f"{self.tasks.factory_generation}:reconcile:{uuid4().hex}"
+        try:
+            self.tasks.acquire(snapshot.task, owner)
+        except TaskClaimConflict:
+            # A worker may have started after the protected-id snapshot was taken.
+            return
+        try:
+            job = self.jobs.load().get(snapshot.task.identifier)
+            if job is None or job.state in TERMINAL_STATES:
+                return
+            previous = (job.state, job.intake_blocked, job.intake_block_reason, job.last_error)
+            job.intake_blocked = True
+            job.intake_block_reason = "Confirming GitHub state after removal from authorised intake"
+            self.jobs.save_reconciled_jobs([job])
+            try:
+                retire = self._confirm_missing_intake_state(job, owner, admitted=admitted)
+            except FactoryError:
+                retire = False
+                job.intake_blocked = True
+                job.intake_block_reason = "Remote GitHub state unconfirmed; preserving work"
+            self._renew_reconciliation_claim(job, owner)
+            if retire:
+                self._retire_confirmed_closed_job(job)
+            if previous != (job.state, job.intake_blocked, job.intake_block_reason, job.last_error):
+                job.updated_at = datetime.now(UTC)
+            # Commit before releasing ownership. A sibling execution can neither
+            # delete this worktree nor overwrite this transition during API I/O.
+            self.jobs.save_reconciled_jobs([job])
+        except _ReconciliationLeaseLost:
+            # Expired ownership is not permission to touch work or commit state.
+            LOGGER.warning("Factory reconciliation lease expired for %s", snapshot.task.identifier)
+        finally:
+            try:
+                self.tasks.release(snapshot.task.identifier, owner=owner)
+            except TaskClaimConflict:
+                LOGGER.warning(
+                    "Factory reconciliation ownership changed for %s", snapshot.task.identifier
+                )
+
+    def _renew_reconciliation_claim(self, job: Job, owner: str) -> None:
+        try:
+            self.tasks.renew(job.task.identifier, owner)
+        except ValueError as error:
+            raise _ReconciliationLeaseLost from error
+
+    def _confirm_missing_intake_state(self, job: Job, owner: str, *, admitted: bool) -> bool:
+        if not job.task.identifier.isdecimal():
+            raise FactoryError("GitHub task identifier is malformed")
+        job.intake_blocked = True
+        job.intake_block_reason = "Task remains open but is absent from authorised intake"
+        number = job.pull_request
+        if number is None and job.task.source == "github-pull-request":
+            number = int(job.task.identifier)
+        pull_state = None
+        if number is not None:
+            pull_state = self.github.remote_task_state(number, pull_request=True)
+            self._renew_reconciliation_claim(job, owner)
+            if pull_state.state == "MERGED":
+                if not (
+                    pull_state.head_sha == job.head_sha == job.latest_verified_sha
+                    and job.latest_verified_sha
+                ):
+                    job.intake_block_reason = (
+                        "Merged head differs from verified job; preserving work"
+                    )
+                    return False
+                job.pull_request = number
+                if job.state is not JobState.MERGED:
+                    job.last_error = None
+                    job.next_attempt_at = None
+                job.state = JobState.MERGED
+                job.intake_blocked = False
+                job.intake_block_reason = None
+                return False
+            if job.task.source == "github-pull-request":
+                if pull_state.state == "OPEN" and admitted:
+                    job.intake_blocked = False
+                    job.intake_block_reason = None
+                return pull_state.state == "CLOSED"
+        if job.task.source == "github-issue":
+            issue_state = self.github.remote_task_state(int(job.task.identifier))
+            self._renew_reconciliation_claim(job, owner)
+            if issue_state.state == "OPEN" and admitted:
+                job.intake_blocked = False
+                job.intake_block_reason = None
+            return issue_state.state == "CLOSED" and (
+                pull_state is None or pull_state.state == "CLOSED"
+            )
+        return False
+
+    def _retire_confirmed_closed_job(self, job: Job) -> None:
+        worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
+        if worktree.exists():
+            workflow = self._workflow(self.config.repository)
+            try:
+                dirty = self._workflow(worktree).has_changes()
+            except RepositorySafetyError:
+                dirty = True
+            if dirty:
+                recovery = self.config.recovery_dir / (
+                    f"issue-{job.task.identifier}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+                )
+                workflow.archive_worktree(worktree, recovery)
+            workflow.remove_worktree(worktree, force=dirty)
+        job.state = JobState.DONE
+        job.intake_blocked = False
+        job.intake_block_reason = None
+        job.last_error = (
+            "Issue closed before pull request creation"
+            if job.task.source == "github-issue" and job.pull_request is None
+            else "GitHub issue and its unmerged pull request confirmed closed"
+            if job.task.source == "github-issue"
+            else "Pull request closed before the factory finished with it"
+        )
 
     def _calculate_pull_request_capacity(
         self,
@@ -541,6 +681,7 @@ class FactoryPipeline:
             job
             for job in jobs.values()
             if job.state not in TERMINAL_STATES
+            and not job.intake_blocked
             and (job.next_attempt_at is None or job.next_attempt_at <= now)
         ]
         if not candidates:
@@ -555,7 +696,7 @@ class FactoryPipeline:
 
     def _run_claimed_job(self, task_id: str) -> Job | None:
         snapshot = self.jobs.load().get(task_id)
-        if snapshot is None or snapshot.state in TERMINAL_STATES:
+        if snapshot is None or snapshot.state in TERMINAL_STATES or snapshot.intake_blocked:
             return None
         lease_owner = (
             f"{self.tasks.factory_generation}:{task_id}:{snapshot.state.value}:{uuid4().hex}"
@@ -745,19 +886,23 @@ class FactoryPipeline:
                 job.pull_request,
                 ("factory-reviewed", "factory-review"),
             )
-            if job.head_sha is not None:
+            if job.head_sha is not None and not self.config.tests_only_merging:
                 self.github.publish_review_pending(
                     job.head_sha,
                     detail=f"Factory {agent_phase.value} in progress",
                 )
         baseline_fingerprint: str | None = None
+        implementation_started_with_changes = False
         workflow = self._workflow(worktree)
 
         def prepare() -> None:
-            nonlocal baseline_fingerprint
+            nonlocal baseline_fingerprint, implementation_started_with_changes
             if prepare_attempt is not None:
                 prepare_attempt()
             if require_repository_change:
+                implementation_started_with_changes = (
+                    phase == "implementation" and workflow.has_changes()
+                )
                 baseline_fingerprint = workflow.change_fingerprint()
 
         def validate() -> None:
@@ -768,6 +913,10 @@ class FactoryPipeline:
             if baseline_fingerprint is None:
                 raise RuntimeError("Repository-change validation was not prepared")
             try:
+                if implementation_started_with_changes:
+                    if workflow.has_changes():
+                        return
+                    raise AgentTaskFailure("Implementation produced no changes")
                 current_fingerprint = workflow.change_fingerprint()
             except RepositorySafetyError as error:
                 raise RuntimeError("Repository-change validation failed internally") from error
@@ -888,10 +1037,11 @@ class FactoryPipeline:
             if resolution.action is ConvergenceAction.ALREADY_MERGED:
                 if canonical is None:
                     raise FactoryError("Merged convergence result is missing its canonical PR")
-                workflow.delete_remote_branch(
-                    job.branch,
-                    job.head_sha or workflow.head_sha(),
-                )
+                if not self.config.tests_only_merging:
+                    workflow.delete_remote_branch(
+                        job.branch,
+                        job.head_sha or workflow.head_sha(),
+                    )
                 job.pull_request = canonical.number
                 job.branch = canonical.head_ref
                 job.head_sha = canonical.head_sha
@@ -914,7 +1064,7 @@ class FactoryPipeline:
             if resolution.action is ConvergenceAction.REOPEN:
                 self.github.reopen_pull_request(canonical.number)
             self.github.update_pull_request(canonical.number, title=title, body=marked_body)
-            if canonical.head_ref != current_branch:
+            if canonical.head_ref != current_branch and not self.config.tests_only_merging:
                 workflow.delete_remote_branch(current_branch, current_head)
             job.pull_request = canonical.number
             job.branch = canonical.head_ref
@@ -922,6 +1072,10 @@ class FactoryPipeline:
             return resolution.action
 
     def _advance(self, job: Job, lease_owner: str) -> None:
+        if job.intake_blocked:
+            raise ProviderCapacityUnavailable(
+                "Task is outside authorised intake", retry_after_seconds=60
+            )
         # Notification delivery is best-effort and never changes merge eligibility.
         # Retry a small number of previously-recorded lifecycle events on ordinary
         # Factory progress so a transient Telegram outage is eventually visible.
@@ -1045,10 +1199,16 @@ class FactoryPipeline:
                 lease_owner=lease_owner,
                 require_repository_change=True,
             )
-            job.state = JobState.SECURITY_REVIEW
+            job.state = (
+                JobState.VERIFYING if self.config.tests_only_merging else JobState.SECURITY_REVIEW
+            )
             return
 
         if job.state is JobState.SECURITY_REVIEW:
+            if self.config.tests_only_merging:
+                # Recover a persisted legacy phase without buying an approval.
+                job.state = JobState.VERIFYING
+                return
             try:
                 exempt = _is_security_review_exempt(workflow.changed_paths())
             except RepositorySafetyError:
@@ -1077,12 +1237,33 @@ class FactoryPipeline:
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
                 if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
-                    raise FactoryError(f"Quality gate blocked: {findings[0].code}")
+                    if self._restart_stale_unpublished(job, workflow):
+                        return
+                    drift = check_design_drift(worktree, job.task.identifier)
+                    if not drift or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+                        finding = findings[0]
+                        error = (
+                            f"{QUALITY_REPAIR_LIMIT_MESSAGE}: "
+                            f"{_budget_cause_item(finding.code)} in "
+                            f"{_budget_cause_item(finding.path)}"
+                        )
+                        # Parking publishes one notice only. Persist the diagnosis first.
+                        job.last_error = error
+                        self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                        raise FactoryError(error)
+                    job.review_findings = [f"Local verification failed:\n{drift}"]
                 job.state = JobState.QUALITY_REPAIRING
                 return
             job.quality_repairs = 0
             workflow.stage_all()
-            workflow.commit(f"fix: resolve issue {job.task.identifier}")
+            # A head the Factory already verified and pushed can re-enter VERIFYING
+            # with a clean worktree; "nothing to commit" then failed every retry
+            # (issue 9464, PR #9671, 2026-10-29). Any other clean tree still fails.
+            if (
+                job.latest_verified_sha != workflow.head_sha()
+                and job.verification_candidate_sha != workflow.head_sha()
+            ) or workflow.has_changes():
+                workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
@@ -1105,7 +1286,12 @@ class FactoryPipeline:
                     job.pull_request,
                     (
                         "OpenHands factory verified and pushed a repair to the existing "
-                        "pull request branch. Independent review is running again."
+                        "pull request branch. "
+                        + (
+                            "Applicable tests will gate merging."
+                            if self.config.tests_only_merging
+                            else "Independent review is running again."
+                        )
                     ),
                 )
                 job.state = JobState.REVIEWING
@@ -1118,8 +1304,26 @@ class FactoryPipeline:
             if not findings and not job.review_findings:
                 job.state = JobState.VERIFYING
                 return
+            drift_guided_repair_granted = False
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
-                raise FactoryError("Quality repair limit exceeded")
+                if self._restart_stale_unpublished(job, workflow):
+                    return
+                drift = check_design_drift(worktree, job.task.identifier)
+                if not self._grant_drift_guided_repair(job, drift):
+                    # Gate findings take precedence; otherwise review evidence remains.
+                    cause = (
+                        f"{_budget_cause_item(findings[0].code)} in "
+                        f"{_budget_cause_item(findings[0].path)}"
+                        if findings
+                        else "review findings"
+                    )
+                    error = f"{QUALITY_REPAIR_LIMIT_MESSAGE}: {cause}"
+                    # Parking publishes one notice only. Persist the diagnosis first.
+                    job.last_error = error
+                    self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                    raise FactoryError(error)
+                drift_guided_repair_granted = True
+                job.review_findings = [f"Local verification failed:\n{drift}"]
 
             quality_finding_text = "\n".join(
                 f"- {f.code} in {f.path}: {f.summary}\n  Evidence: {f.evidence}" for f in findings
@@ -1132,17 +1336,31 @@ class FactoryPipeline:
                 sections.append(f"Repair evidence:\n\n{review_finding_text}")
             extra = "\n\n".join(sections)
 
-            self._run_agent(
-                job,
-                worktree,
-                "quality_repair",
-                build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
-                lease_owner=lease_owner,
-                require_repository_change=True,
-            )
+            # Spend the budget when the model starts: a repair that "produced no
+            # changes" raises before any later increment, which let job 1423 make
+            # 23 quality-repair calls under a cap of 5 (2026-10-28).
+            job.quality_repairs += 1
+            last_attempt = _last_attempt(job)
+            try:
+                self._run_agent(
+                    job,
+                    worktree,
+                    "quality_repair",
+                    build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
+                    lease_owner=lease_owner,
+                    require_repository_change=True,
+                )
+            except ProviderCapacityUnavailable:
+                # No model started (every provider was busy), so nothing was
+                # spent. Job 1663 lost three of its five quality repairs to busy
+                # deferrals and parked after two real attempts (2026-10-29).
+                if _last_attempt(job) is last_attempt:
+                    job.quality_repairs -= 1
+                    if drift_guided_repair_granted:
+                        job.failure_counts.pop(DRIFT_GUIDED_REPAIR_KEY, None)
+                raise
 
             job.review_findings.clear()
-            job.quality_repairs += 1
             job.state = JobState.VERIFYING
             return
 
@@ -1192,9 +1410,9 @@ class FactoryPipeline:
             self.github.add_comment(
                 job.pull_request,
                 (
-                    "OpenHands factory selected this pull request. The factory will review the "
-                    "same branch, repair verification failures, wait for required checks, and "
-                    "merge only after the reviewed commit is still current."
+                    "OpenHands factory selected this pull request. The factory will validate "
+                    "the same branch, repair verification failures, wait for required checks, "
+                    "and merge only after the tested commit is still current."
                 ),
             )
             job.state = JobState.REVIEWING
@@ -1207,7 +1425,47 @@ class FactoryPipeline:
                     return
                 self.github.remove_issue_labels(job.pull_request, ("factory-stack-blocked",))
 
-            if self._refresh_pull_request_if_changed(job, worktree, lease_owner):
+            review_status = self._status(job) if job.pull_request is not None else None
+            if self._refresh_pull_request_if_changed(
+                job, worktree, lease_owner, known_status=review_status
+            ):
+                return
+
+            if self.config.tests_only_merging:
+                self._finish_tests_only_validation(job, workflow, lease_owner)
+                return
+
+            # Do not buy an independent review without its required CI evidence.
+            # The coordinator owns capable-host checks and retries; a restricted
+            # provider cannot correct missing CI by changing repository code.
+            if review_status is None:
+                raise FactoryError("Independent review requires a pull request with exact-head CI")
+            if review_status.ci_required_failed:
+                job.state = JobState.REPAIRING
+                return
+            if review_status.ci_required_pending or not review_status.ci_required_passed:
+                # Keep the review handoff durable. CI_PENDING would wait on the
+                # review status which only this phase can produce after CI passes.
+                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+                return
+
+            if self.config.merge_review_policy == "ci-gated":
+                # Exact-head required CI is the merge gate. Buy no review
+                # conversation and publish no review status; CI_PENDING re-reads
+                # GitHub and a moved head returns to verification as before.
+                if job.pull_request is None:
+                    raise FactoryError("Pull request number is missing")
+                job.review_findings.clear()
+                if job.head_sha is None:
+                    job.head_sha = workflow.head_sha()
+                self.github.mark_ready(job.pull_request)
+                self._record_pr_lifecycle(
+                    job,
+                    "ci-gated",
+                    "Required CI passed on this exact head; the ci-gated merge policy "
+                    "skips the independent AI review.",
+                )
+                job.state = JobState.CI_PENDING
                 return
 
             # The worktree persists across retries of this state, so a review report
@@ -1226,7 +1484,12 @@ class FactoryPipeline:
                 job,
                 worktree,
                 "review",
-                build_phase_prompt(prompt_dir, "review", job.task),
+                build_phase_prompt(
+                    prompt_dir,
+                    "review",
+                    job.task,
+                    coordinator_verification=self._review_verification_snapshot(job, review_status),
+                ),
                 lease_owner=lease_owner,
                 prepare_attempt=clear_review_report,
                 validate_output=require_valid_review_report,
@@ -1344,7 +1607,7 @@ class FactoryPipeline:
             elif (
                 status.checks_passed
                 and status.mergeable == "MERGEABLE"
-                and status.merge_state_status in {"CLEAN", "BEHIND"}
+                and status.merge_state_status in self._allowed_merge_states
             ):
                 # Persist a visible queue transition before the merge attempt. The
                 # MERGE_QUEUED worker re-reads GitHub immediately before using an
@@ -1354,11 +1617,7 @@ class FactoryPipeline:
                 self._record_pr_lifecycle(
                     job,
                     "merge-queued",
-                    (
-                        "All required checks passed, GitHub reports the reviewed head as "
-                        "non-conflicting "
-                        "and mergeable, and the Factory queued an exact-head squash merge."
-                    ),
+                    self._merge_queue_detail,
                 )
                 job.state = JobState.MERGE_QUEUED
             else:
@@ -1405,10 +1664,25 @@ class FactoryPipeline:
                 f"Mergeability: {status.mergeable}\n"
                 f"Merge state: {status.merge_state_status or 'not reported'}"
             )
-            if job.last_error:
+            if job.last_error and "design sync drift" not in job.last_error.lower():
                 repair_context += (
                     f"\n\nPrevious local Factory failure for this same head:\n{job.last_error}"
                 )
+            # GitHub names this gate only as `constitution`; run it here so the
+            # agent is told which preview or manifest item to change.
+            drift = None
+            if not (base_conflict or stale_base) and (
+                drift := check_design_drift(worktree, job.task.identifier)
+            ):
+                repair_context += f"\n\n{drift}"
+            if status.failed_checks and not (base_conflict or stale_base):
+                try:
+                    excerpts = self.github.failed_check_excerpts(status.head_sha)
+                except (FactoryError, ValueError, KeyError):
+                    LOGGER.warning("Could not read CI logs for %s", job.pull_request, exc_info=True)
+                    excerpts = ""
+                if excerpts:
+                    repair_context += f"\n\nFailed CI job log excerpts:\n\n{excerpts}"
             # A large share of CI repairs are a workspace's own formatter or
             # auto-fixable lint rule drifting, not something that needs an
             # agent's judgement. Try that for free first; only spend an LLM
@@ -1425,6 +1699,7 @@ class FactoryPipeline:
                 attempt_mechanical_repair(worktree, workflow.changed_paths())
             mechanically_repaired = not (base_conflict or stale_base) and workflow.has_changes()
             model_repair_started = False
+            drift_guided_repair_granted = False
             if has_unmerged_paths or (
                 not (base_conflict or stale_base) and not mechanically_repaired
             ):
@@ -1434,21 +1709,38 @@ class FactoryPipeline:
                 if job.repair_attempts >= 5:
                     if self._rebuild_capped_conflict(job, lease_owner, base_conflict or stale_base):
                         return
-                    raise FactoryError("Repair limit exceeded")
+                    if not self._grant_drift_guided_repair(job, drift):
+                        error = (
+                            f"{REPAIR_LIMIT_MESSAGE}: {_failed_checks_cause(status.failed_checks)}"
+                        )
+                        # Parking publishes one notice only. Persist the diagnosis first.
+                        job.last_error = error
+                        self._park_capped_pull_request(job, "its CI-repair budget is spent")
+                        raise FactoryError(error)
+                    drift_guided_repair_granted = True
                 # Spend the budget when the model starts, not when a push lands.
                 # A repair that fails local verification never pushes, and a
                 # still-conflicting PR then routes QUALITY_REPAIRING back to
                 # REPAIRING, so counting only pushes left this loop unbounded.
                 job.repair_attempts += 1
                 model_repair_started = True
-                self._run_agent(
-                    job,
-                    worktree,
-                    "repair",
-                    build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
-                    lease_owner=lease_owner,
-                    require_repository_change=True,
-                )
+                last_attempt = _last_attempt(job)
+                try:
+                    self._run_agent(
+                        job,
+                        worktree,
+                        "repair",
+                        build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
+                        lease_owner=lease_owner,
+                        require_repository_change=True,
+                    )
+                except ProviderCapacityUnavailable:
+                    # Busy deferrals are not repairs; see the quality-repair site.
+                    if _last_attempt(job) is last_attempt:
+                        job.repair_attempts -= 1
+                        if drift_guided_repair_granted:
+                            job.failure_counts.pop(DRIFT_GUIDED_REPAIR_KEY, None)
+                    raise
             verified_paths = self._verify_or_schedule_quality_repair(job, workflow)
             if verified_paths is None:
                 return
@@ -1465,7 +1757,12 @@ class FactoryPipeline:
                     else "fix: repair CI for"
                 )
             )
-            workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
+            if (
+                self.config.neptune_intake_dir is None
+                or workflow.has_changes()
+                or job.verification_candidate_sha != workflow.head_sha()
+            ):
+                workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
@@ -1488,7 +1785,12 @@ class FactoryPipeline:
                     job.pull_request,
                     (
                         "OpenHands factory repaired the branch after verification or CI "
-                        "feedback. The branch is returning to review before merge."
+                        "feedback. "
+                        + (
+                            "Applicable tests will gate merging."
+                            if self.config.tests_only_merging
+                            else "The branch is returning to review before merge."
+                        )
                     ),
                 )
             job.state = JobState.REVIEWING
@@ -1500,11 +1802,7 @@ class FactoryPipeline:
             self._record_pr_lifecycle(
                 job,
                 "merge-queued",
-                (
-                    "All required checks passed, GitHub reports the reviewed head as "
-                    "non-conflicting "
-                    "and mergeable, and the Factory queued an exact-head squash merge."
-                ),
+                self._merge_queue_detail,
             )
             status = self._status(job)
             if status.state == "MERGED":
@@ -1516,7 +1814,9 @@ class FactoryPipeline:
                 job.state = JobState.MERGED
             elif self._recover_closed_pull_request(job, status):
                 return
-            elif job.head_sha != status.head_sha:
+            elif job.head_sha != status.head_sha or (
+                self.config.tests_only_merging and job.latest_verified_sha != status.head_sha
+            ):
                 self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif (
                 status.checks_pending
@@ -1527,7 +1827,7 @@ class FactoryPipeline:
             elif (
                 not status.checks_passed
                 or status.mergeable != "MERGEABLE"
-                or status.merge_state_status not in {"CLEAN", "BEHIND"}
+                or status.merge_state_status not in self._allowed_merge_states
             ):
                 job.state = JobState.REPAIRING
             else:
@@ -1543,7 +1843,11 @@ class FactoryPipeline:
                     self._record_pr_lifecycle(
                         job,
                         "merged",
-                        "GitHub confirmed the Factory exact-head squash merge completed.",
+                        (
+                            "GitHub confirmed the Factory exact-head merge completed."
+                            if self.config.tests_only_merging
+                            else "GitHub confirmed the Factory exact-head squash merge completed."
+                        ),
                     )
                     job.state = JobState.MERGED
                 elif confirmed.head_sha != job.head_sha:
@@ -1554,7 +1858,7 @@ class FactoryPipeline:
             self._record_pr_lifecycle(
                 job,
                 "merged",
-                "GitHub confirmed that the reviewed pull request is merged.",
+                "GitHub confirmed that this pull request is merged.",
             )
             if job.pull_request is not None:
                 self.github.add_comment(
@@ -1588,6 +1892,62 @@ class FactoryPipeline:
             detail=detail,
         )
 
+    @property
+    def _allowed_merge_states(self) -> frozenset[str]:
+        return frozenset({"CLEAN"} if self.config.tests_only_merging else {"CLEAN", "BEHIND"})
+
+    @property
+    def _merge_queue_detail(self) -> str:
+        if self.config.tests_only_merging:
+            return (
+                "Applicable exact-head/current-base tests passed. The Factory queued native "
+                "auto-merge with a merge commit and retained branch; no approval is required."
+            )
+        return (
+            "All required checks passed, GitHub reports the reviewed head as non-conflicting "
+            "and mergeable, and the Factory queued an exact-head squash merge."
+        )
+
+    def _finish_tests_only_validation(
+        self, job: Job, workflow: GitWorkflow, lease_owner: str
+    ) -> None:
+        """Use the persisted REVIEWING state as a deterministic handoff for Neptune."""
+
+        status = self._status(job)
+        if status.state == "MERGED":
+            job.state = JobState.MERGED
+            return
+        if self._recover_closed_pull_request(job, status):
+            return
+        if status.head_sha != job.head_sha or workflow.head_sha() != status.head_sha:
+            self._refresh_pull_request_for_review(job, workflow.repository, lease_owner, status)
+            return
+        if self._review_needs_base_update(job, workflow, status):
+            if self._update_pull_request_branch(job, status):
+                job.state = JobState.CI_PENDING
+            return
+        if workflow.has_changes():
+            job.state = JobState.VERIFYING
+            return
+        if status.ci_required_failed or status.failed_checks:
+            job.state = JobState.REPAIRING
+            return
+        if job.latest_verified_sha != status.head_sha:
+            verified_paths = self._verify_pull_request_for_review(job, workflow, status)
+            if verified_paths is None:
+                return
+            self._record_verified_head(job, lease_owner, verified_paths)
+        if job.pull_request is None:
+            raise FactoryError("Tests-only handoff is missing its pull request")
+        self.github.mark_ready(job.pull_request)
+        self.github.add_comment(
+            job.pull_request,
+            "Factory verification completed for the recorded head. Applicable protected "
+            "exact-head/current-base CI gates merging; no AI or human approval is required.",
+        )
+        job.review_findings.clear()
+        job.state = JobState.CI_PENDING
+
     def _discover_pull_request(
         self,
         job: Job,
@@ -1610,7 +1970,7 @@ class FactoryPipeline:
             branch=job.task.pr_branch,
             lease_owner=lease_owner,
             comment=(
-                "OpenHands factory is independently reviewing this pull request. It will "
+                "OpenHands factory is validating this pull request. It will "
                 "run verification, repair failures if needed, and merge once its checks "
                 "pass and the reviewed commit is still current."
             ),
@@ -1689,6 +2049,8 @@ class FactoryPipeline:
     def _review_needs_base_update(
         self, job: Job, workflow: GitWorkflow, status: PullRequestStatus
     ) -> bool:
+        if self.config.tests_only_merging:
+            return not workflow.contains_current_base()
         # BEHIND is GitHub's explicit strict-base requirement. BLOCKED/UNKNOWN
         # can instead mean that our own independent review is still missing.
         if status.merge_state_status == "BEHIND":
@@ -1740,11 +2102,12 @@ class FactoryPipeline:
             predecessor_pull_request=job.predecessor_pull_request,
         )
         self._copy_claim_metadata(job, bound)
-        self.router.observe_review_head(job)
-        self.github.publish_review_pending(
-            job.head_sha,
-            detail="Factory pull request verification in progress",
-        )
+        if not self.config.tests_only_merging:
+            self.router.observe_review_head(job)
+            self.github.publish_review_pending(
+                job.head_sha,
+                detail="Factory pull request verification in progress",
+            )
         self.github.add_comment(job.pull_request, comment)
         status = self._status(job)
         # GitHub's aggregate state masks base staleness behind required-check
@@ -1852,11 +2215,12 @@ class FactoryPipeline:
 
         workflow.prepare_pull_request_worktree(worktree, job.branch)
         job.head_sha = self._workflow(worktree).head_sha()
-        self.router.observe_review_head(job)
-        self.github.publish_review_pending(
-            job.head_sha,
-            detail="Factory pull request refresh in progress",
-        )
+        if not self.config.tests_only_merging:
+            self.router.observe_review_head(job)
+            self.github.publish_review_pending(
+                job.head_sha,
+                detail="Factory pull request refresh in progress",
+            )
         job.review_findings.clear()
         status = known_status or self._status(job)
         if self._review_needs_base_update(job, self._workflow(worktree), status):
@@ -1883,26 +2247,62 @@ class FactoryPipeline:
         self._record_verified_head(job, lease_owner, verified_paths)
         job.state = JobState.REVIEWING
 
+    @staticmethod
+    def _review_verification_snapshot(job: Job, status: PullRequestStatus | None) -> str:
+        """Give restricted reviewers API evidence without credentials or new authority."""
+        matching = bool(
+            status
+            and status.number == job.pull_request
+            and status.head_sha == job.head_sha == job.latest_verified_sha
+        )
+        passed = bool(
+            matching
+            and status
+            and status.state == "OPEN"
+            and status.ci_required_passed
+            and not status.ci_required_pending
+            and not status.ci_required_failed
+        )
+        return json.dumps(
+            {
+                "source": "coordinator GitHub status observation",
+                "pull_request": job.pull_request,
+                "job_head_sha": job.head_sha,
+                "latest_verified_sha": job.latest_verified_sha,
+                "observed_head_sha": status.head_sha if status else None,
+                "required_ci_passed_for_verified_head": passed,
+                "required_ci_pending": status.ci_required_pending if status else None,
+                "required_ci_failed": status.ci_required_failed if status else None,
+                "workflow_run_ids": sorted(status.workflow_run_ids)[:16] if status else [],
+                "scope": "CI status metadata, not independent acceptance or a new review approval",
+            },
+            indent=2,
+        )
+
     def _refresh_pull_request_if_changed(
         self,
         job: Job,
         worktree: Path,
         lease_owner: str,
+        *,
+        known_status: PullRequestStatus | None = None,
     ) -> bool:
         """Refresh PR evidence before using or pushing it against a changed head."""
         if job.pull_request is None:
             return False
 
-        status = self._status(job)
+        status = known_status or self._status(job)
         if status.state == "MERGED":
             job.state = JobState.MERGED
             return True
         if self._recover_closed_pull_request(job, status):
             return True
-        needs_base_refresh = status.merge_state_status == "BEHIND" or (
-            status.merge_state_status == "UNKNOWN"
-            and not self._workflow(worktree).contains_current_base()
-        )
+        # Use the same base policy as review intake. A transient UNKNOWN must
+        # not archive unverified review repairs from an already tested head when
+        # non-strict merging permits that head to remain on its original base.
+        needs_base_refresh = self._review_needs_base_update(job, self._workflow(worktree), status)
+        if self.config.tests_only_merging and "Neptune current base" in status.failed_checks:
+            needs_base_refresh = True
         needs_conflict_repair = (
             status.mergeable == "CONFLICTING"
             or status.merge_state_status in CONFLICTING_MERGE_STATES
@@ -1911,6 +2311,30 @@ class FactoryPipeline:
             return False
 
         self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
+        return True
+
+    def _restart_stale_unpublished(self, job: Job, workflow: GitWorkflow) -> bool:
+        """Rebuild unpublished work on the current base when it cannot progress.
+
+        Nothing is committed before verification passes, so an unpublished job's
+        HEAD is still its original base. Jobs claimed in August and September kept
+        failing on defects main had long since fixed (2026-10-28). Back in
+        DISCOVERED the worktree is archived and recreated on the current base; the
+        age threshold allows at most one rebuild per week and job. Callers use it
+        only once repairs are spent or verification infrastructure failed.
+        """
+        if (
+            job.task.source == "github-pull-request"
+            or job.pull_request is not None
+            or job.latest_verified_sha is not None
+            or workflow.head_age() < STALE_UNPUBLISHED_BASE_AGE
+        ):
+            return False
+        LOGGER.info("Rebuilding unpublished task %s on the current base", job.task.identifier)
+        job.initial_base_sha = None
+        job.quality_repairs = 0
+        job.review_findings.clear()
+        job.state = JobState.DISCOVERED
         return True
 
     def _rebuild_capped_conflict(self, job: Job, lease_owner: str, conflicting: bool) -> bool:
@@ -1952,6 +2376,68 @@ class FactoryPipeline:
         job.state = JobState.DISCOVERED
         return True
 
+    def _merge_newer_base_for_drift(self, job: Job, workflow: GitWorkflow) -> bool:
+        """Re-verify a capped drift failure once per newer base before parking.
+
+        The drift checker runs from the job's own worktree, so a PR verified
+        against a base older than #9718 could never see its own uncommitted
+        preview fix (issues 1436 and 1716, 2026-10-30). Merging the current base
+        costs no model call and happens at most once per base advance.
+        """
+        if job.pull_request is None:
+            return False
+        try:
+            if workflow.contains_current_base() or workflow.merging_current_base():
+                return False
+            workflow.merge_base_for_repair()
+        except RepositorySafetyError:
+            LOGGER.warning("Could not merge the current base into task %s", job.task.identifier)
+            return False
+        LOGGER.info("Merged the current base into task %s before re-verifying", job.task.identifier)
+        return True
+
+    def _grant_drift_guided_repair(self, job: Job, drift: str | None) -> bool:
+        """Allow one repair past the cap when design drift is the failure.
+
+        Jobs 1450 and 9460 spent their whole budget on design-sync drift before
+        the agent was told which preview or manifest item to change, then parked
+        on their first run with that guidance (2026-10-29). The gate is
+        unchanged; this only lets the explicit steps be tried once per job.
+        """
+        if not drift or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+            return False
+        job.failure_counts[DRIFT_GUIDED_REPAIR_KEY] = 1
+        LOGGER.info("Granting task %s one design-drift-guided repair", job.task.identifier)
+        return True
+
+    def _park_capped_pull_request(self, job: Job, reason: str) -> None:
+        """Stop a PR the Factory can no longer repair from holding WIP capacity.
+
+        Capped PRs kept the factory lane at 9/8, pausing all new intake for a
+        day while none of them could change (2026-10-29). The parked label only
+        removes the PR from WIP counts: it stays open, CI and independent review
+        still gate it, and it can still merge if its checks are fixed.
+        """
+        if job.pull_request is None:
+            return
+        number = job.pull_request
+        try:
+            self.github.add_issue_labels(number, (CAPPED_LABEL,))
+            if not any(
+                comment.body.startswith(CAPPED_NOTICE_PREFIX)
+                for comment in self.github.list_issue_comments(number)
+            ):
+                evidence = (job.last_error or "no failure recorded")[-1500:]
+                self.github.add_comment(
+                    number,
+                    f"{CAPPED_NOTICE_PREFIX}{reason}. It no longer counts against the "
+                    "Factory's open pull request limits; CI and independent review "
+                    "still gate any merge.\n\nLast failure:\n```\n"
+                    f"{evidence}\n```",
+                )
+        except FactoryError:
+            LOGGER.warning("Could not park capped pull request %s", number, exc_info=True)
+
     def _recover_closed_pull_request(self, job: Job, status: PullRequestStatus) -> bool:
         """Recover Factory-owned work without reopening external contributors' PRs."""
 
@@ -1975,7 +2461,9 @@ class FactoryPipeline:
             job.pull_request,
             ("factory-reviewed", "factory-review"),
         )
-        if job.head_sha is not None:
+        if self.config.tests_only_merging:
+            job.latest_verified_sha = None
+        if job.head_sha is not None and not self.config.tests_only_merging:
             self.github.publish_review_pending(
                 job.head_sha,
                 detail="Factory base branch update in progress",
@@ -2025,30 +2513,62 @@ class FactoryPipeline:
         status = self.github.pull_request_status(parent)
         return parent if status.state == "OPEN" else None
 
-    def _verify(self, workflow: GitWorkflow) -> set[Path]:
+    def _verify(self, workflow: GitWorkflow, *, job: Job | None = None) -> set[Path]:
         changed = workflow.changed_paths()
         if not changed:
             raise FactoryError("No changed paths were found")
+        bound = self.config.neptune_intake_dir is not None
+        if bound:
+            if job is None:
+                raise NeptuneIntakeUnavailable("missing assigned job")
+            # Local candidate commit is a checkpoint, never verification or publication.
+            if workflow.has_changes():
+                workflow.stage_all()
+                workflow.commit("fix: checkpoint Neptune candidate " + job.task.identifier)
+            job.verification_candidate_sha = workflow.head_sha()
+            self.jobs.save_job(job)
         commands = commands_for(workflow.repository, changed, self.config.repository_profile)
         # Memory-heavy Angular commands and fixed-port browser commands are
         # serialized across workers. The remaining checks can run at full worker
         # parallelism. Running shared checks first means cheap failures are judged
         # before spending minutes in the host-wide verification slot.
-        shared = [command for command in commands if not command.exclusive]
-        exclusive = [command for command in commands if command.exclusive]
+        shared = [] if bound else [command for command in commands if not command.exclusive]
+        exclusive = commands if bound else [command for command in commands if command.exclusive]
+
+        def verify_exclusive() -> None:
+            selected = exclusive
+            if bound:
+                assert job is not None
+                with accepted_verification(
+                    self.config, job, workflow.repository, changed
+                ) as accepted:
+                    self.jobs.save_job(job)
+                    selected = accepted.commands(selected)
+                    selected = prepare_native(self.config, workflow.repository, changed, selected)
+                    run_verification(selected)
+                return
+            if self.config.repository_profile == "neptune":
+                selected = prepare_native(self.config, workflow.repository, changed, selected)
+            run_verification(selected)
+
         try:
             run_verification(shared)
             if not exclusive:
                 return changed
             if self.verification_slots is None:
-                run_verification(exclusive)
+                # Standalone coordinators must use the same host gate too.
+                if self.host_resource_slots is None:
+                    verify_exclusive()
+                else:
+                    with self.host_resource_slots.exclusive():
+                        verify_exclusive()
                 return changed
             with self.verification_slots:
                 if self.host_resource_slots is None:
-                    run_verification(exclusive)
+                    verify_exclusive()
                 else:
                     with self.host_resource_slots.exclusive():
-                        run_verification(exclusive)
+                        verify_exclusive()
             return changed
         finally:
             workflow.discard_transient_build_metadata()
@@ -2060,20 +2580,51 @@ class FactoryPipeline:
     ) -> set[Path] | None:
         """Route deterministic verification failures into bounded agent repair."""
         try:
-            changed = self._verify(workflow)
+            changed = (
+                self._verify(workflow, job=job)
+                if self.config.neptune_intake_dir
+                else self._verify(workflow)
+            )
         except VerificationFailed as error:
             detail = str(error)
-            if any(
+            if isinstance(error, (ToolPreparationUnavailable, NeptuneIntakeUnavailable)) or any(
                 marker in detail.lower() for marker in VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS
             ):
                 # Host/cache/resource failures cannot be corrected by editing the
                 # pull request. Preserve the current pipeline state so the durable
                 # retry policy backs off and retries the same verification without
                 # spending an agent call or introducing unrelated code churn.
+                # Unpublished work on a weeks-old base is the exception: main may
+                # have removed the cause (network font inlining, 2026-10-28), so
+                # rebuild it rather than retry the same failure forever.
+                if self._restart_stale_unpublished(job, workflow):
+                    return None
                 raise
+            guidance = drift_guidance(detail, job.task.identifier)
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
-                raise
-            evidence = detail[-1800:]
+                if self._restart_stale_unpublished(job, workflow):
+                    return None
+                if not guidance or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+                    if guidance and self._merge_newer_base_for_drift(job, workflow):
+                        return None
+                    self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                    raise
+                job.review_findings = [
+                    "Local verification failed. Repair the repository and keep all "
+                    f"Factory safety controls intact:\n{guidance}"
+                ]
+                job.state = JobState.QUALITY_REPAIRING
+                return None
+            # Formatter and auto-fixable lint failures need no model (job 1195
+            # spent repairs on prettier whitespace). Re-verify on the next pass if
+            # the fixers changed anything; an unchanged tree falls through to the
+            # bounded agent repair, so this cannot loop.
+            before = workflow.change_fingerprint()
+            attempt_mechanical_repair(workflow.repository, workflow.changed_paths())
+            if workflow.change_fingerprint() != before:
+                LOGGER.info("Mechanically repaired task %s; verifying again", job.task.identifier)
+                return None
+            evidence = guidance or detail[-1800:]
             job.review_findings = [
                 "Local verification failed. Repair the repository and keep all "
                 f"Factory safety controls intact:\n{evidence}"
@@ -2128,6 +2679,15 @@ class FactoryPipeline:
         )
         if not provenance:
             provenance = "- Provider provenance will be recorded before review."
+        execution = (
+            "This pull request was implemented and verified by the bounded factory. "
+            "Applicable exact-head/current-base tests gate native automatic merging; "
+            "no AI or human approving review is required."
+            if self.config.tests_only_merging
+            else "This pull request was implemented, security reviewed, and locally verified by "
+            "the bounded OpenHands factory. Independent review runs on this same branch before "
+            "merge, and GitHub required checks remain authoritative."
+        )
         predecessor = (
             f"Supersedes #{job.predecessor_pull_request}\n"
             if job.predecessor_pull_request is not None
@@ -2141,16 +2701,19 @@ class FactoryPipeline:
             f"Changed-Path-Fingerprint: {job.changed_path_fingerprint or 'pending'}\n"
             f"{predecessor}\n"
             "## Factory execution\n\n"
-            "This pull request was implemented, security reviewed, and locally verified by "
-            "the bounded OpenHands factory. Independent review runs on this same branch before "
-            "merge, and GitHub required checks remain authoritative.\n\n"
+            f"{execution}\n\n"
             "## Agent provenance\n\n"
             f"{provenance}\n\n"
-            f"Reviewed head SHA: `{job.head_sha or 'pending'}`\n"
+            f"{'Tested' if self.config.tests_only_merging else 'Reviewed'} head SHA: "
+            f"`{job.head_sha or 'pending'}`\n"
         )
 
     def architect_due(self) -> bool:
         """Whether enough time has passed to run another weekly gap-analysis cycle."""
+        if self.config.tests_only_merging:
+            # The initial Neptune profile admits labelled, bounded tasks only.
+            # Backlog generation/maintenance must not become an extra provider job.
+            return False
         state = read_json(self._architect_state_path(), {})
         if not isinstance(state, dict):
             return True
@@ -2172,6 +2735,8 @@ class FactoryPipeline:
         it does not. If it fails or times out, the cooldown already recorded below
         means it simply tries again next interval rather than hot-looping.
         """
+        if self.config.tests_only_merging:
+            raise FactoryError("Neptune bootstrap does not run autonomous backlog generation")
         attempted_at = datetime.now(UTC)
         self._write_architect_state(
             {
@@ -2243,7 +2808,10 @@ class FactoryPipeline:
             if proposals:
                 self._create_deduplicated_issues(proposals)
             if review_workflow.has_changes():
-                self._verify(review_workflow)
+                if self.config.neptune_intake_dir:
+                    self._verify(review_workflow, job=job)
+                else:
+                    self._verify(review_workflow)
                 review_workflow.stage_all()
                 review_workflow.commit(f"docs: weekly architect gap analysis ({date_id})")
                 review_workflow.push(branch)

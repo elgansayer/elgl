@@ -179,4 +179,18 @@ describe('TokenisedTextComponent selection flashcards', () => {
 
     expect(component.flashcardSelection()?.text).toBe('hola');
   });
+
+  it('exposes Create Flashcard dialog title, confirm action, and accessible labels', () => {
+    const fixture = TestBed.createComponent(TokenisedTextComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    expect(component.flashcardActionLabel()).toBe('context_menu.createFlashcard');
+
+    component.openFlashcardSelection({ text: 'palabra', context: 'una palabra' });
+    fixture.detectChanges();
+
+    expect(component.flashcardActionLabel()).toBe('context_menu.createFlashcard: palabra');
+    expect(component.flashcardDialogState()).toBe('open');
+  });
 });

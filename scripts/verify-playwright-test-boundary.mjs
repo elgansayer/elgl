@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,6 +20,54 @@ const IGNORED_SCAN_PATHS = new Set([
   'scripts/verify-playwright-test-boundary.mjs',
   'scripts/verify-playwright-test-boundary.test.mjs',
 ]);
+
+const PLAYWRIGHT_TEST_FILE_PATTERN = /\.(?:spec|test)\.[cm]?[jt]sx?$/;
+// Playwright discovers specs from disk, not from the git index. Listing untracked files that Git
+// does not ignore lets the check reject a spec written during a QA run before it is committed.
+// Untracked output makes the listing unbounded, so the buffer is far above the 1 MiB default.
+const WORKING_TREE_LISTING = ['ls-files', '-z', '--cached', '--others', '--exclude-standard'];
+const WORKING_TREE_LISTING_MAX_BYTES = 64 * 1024 * 1024;
+const RUNNER_GLOBAL_REPLACEMENTS = new Map([
+  ['describe', 'test.describe'],
+  ['it', 'test'],
+  ['beforeAll', 'test.beforeAll'],
+  ['beforeEach', 'test.beforeEach'],
+  ['afterAll', 'test.afterAll'],
+  ['afterEach', 'test.afterEach'],
+]);
+const RUNNER_MODIFIERS = [
+  'only',
+  'skip',
+  'todo',
+  'each',
+  'for',
+  'concurrent',
+  'sequential',
+  'shuffle',
+  'runIf',
+  'skipIf',
+  'fails',
+  'failing',
+];
+const RUNNER_NAMESPACES = ['vi', 'jest'];
+const FOREIGN_RUNNER_MODULES = ['vitest', '@jest/globals', 'node:test'];
+// Comments and string literals, matched left to right so a quote inside a comment (or the other
+// way round) cannot start the wrong token.
+const COMMENT_OR_STRING_PATTERN =
+  /\/\*[\s\S]*?\*\/|\/\/[^\n]*|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\[\s\S]|[^`\\])*`/g;
+const NOT_A_MEMBER = String.raw`(?<![\w$])(?<!\.\s*)`;
+const FOREIGN_RUNNER_IMPORT_PATTERN = new RegExp(
+  String.raw`\b(?:from|import|require)\s*\(?\s*(['"])(${FOREIGN_RUNNER_MODULES.join('|')})\1`,
+  'g',
+);
+const RUNNER_GLOBAL_CALL_PATTERN = new RegExp(
+  String.raw`${NOT_A_MEMBER}(${[...RUNNER_GLOBAL_REPLACEMENTS.keys()].join('|')})(?![\w$])(?:\s*\.\s*(?:${RUNNER_MODIFIERS.join('|')})(?![\w$]))*\s*\(`,
+  'g',
+);
+const RUNNER_NAMESPACE_PATTERN = new RegExp(
+  String.raw`${NOT_A_MEMBER}(${RUNNER_NAMESPACES.join('|')})\s*\.\s*[A-Za-z_$]`,
+  'g',
+);
 const COMMAND_SOURCE_PREFIXES = [
   '.github/workflows/',
   '.agents/automations/',
@@ -689,6 +737,79 @@ function scanBrittleE2eLoginHelpers(files) {
   return violations;
 }
 
+function maskSource(source, keepStrings) {
+  return source.replace(COMMENT_OR_STRING_PATTERN, (token) =>
+    keepStrings && !token.startsWith('/') ? token : token.replace(/[^\n]/g, ' '),
+  );
+}
+
+function isLocallyBound(name, code) {
+  const identifier = String.raw`(?<![\w$.])${name}(?![\w$])`;
+  return [
+    String.raw`\b(?:const|let|var|function|class)\s+${identifier}`,
+    String.raw`\b(?:const|let|var)\s*\{[^}]*${identifier}[^}]*\}\s*=`,
+    String.raw`\bimport\s*(?:[\w$]+\s*,\s*)?\{[^}]*${identifier}[^}]*\}\s*from`,
+    String.raw`\bimport\s+${identifier}`,
+  ].some((pattern) => new RegExp(pattern).test(code));
+}
+
+function findBareRunnerGlobals(code, pattern, describeViolation) {
+  const findings = [];
+  const reported = new Set();
+
+  for (const match of code.matchAll(pattern)) {
+    const name = match[1];
+    if (reported.has(name) || isLocallyBound(name, code)) {
+      continue;
+    }
+    reported.add(name);
+    findings.push({ index: match.index, message: describeViolation(name) });
+  }
+
+  return findings;
+}
+
+function findForeignRunnerImports(sourceWithStrings) {
+  return [...sourceWithStrings.matchAll(FOREIGN_RUNNER_IMPORT_PATTERN)].map((match) => ({
+    index: match.index,
+    message: `imports ${match[2]}; Playwright specs must import test and expect from @playwright/test only`,
+  }));
+}
+
+function scanE2eRunnerGlobals(files) {
+  const violations = [];
+
+  for (const [rawPath, content] of Object.entries(files)) {
+    const path = normalizePath(rawPath);
+    if (!path.startsWith('e2e/tests/') || !PLAYWRIGHT_TEST_FILE_PATTERN.test(path)) {
+      continue;
+    }
+
+    const code = maskSource(content, false);
+    const findings = [
+      ...findForeignRunnerImports(maskSource(content, true)),
+      ...findBareRunnerGlobals(
+        code,
+        RUNNER_GLOBAL_CALL_PATTERN,
+        (name) =>
+          `calls ${name}() as a bare runner global; Playwright does not define it and fails with "ReferenceError: ${name} is not defined". Use ${RUNNER_GLOBAL_REPLACEMENTS.get(name)}() from @playwright/test`,
+      ),
+      ...findBareRunnerGlobals(
+        code,
+        RUNNER_NAMESPACE_PATTERN,
+        (name) =>
+          `uses the ${name} test-runner namespace; Playwright does not define it and fails with "ReferenceError: ${name} is not defined". Use page.route() to intercept network calls and plain closures to record calls`,
+      ),
+    ].sort((left, right) => left.index - right.index);
+
+    for (const { index, message } of findings) {
+      violations.push(`${path}:${content.slice(0, index).split('\n').length} ${message}`);
+    }
+  }
+
+  return violations;
+}
+
 export function analysePlaywrightBoundary({ files, e2ePackageJson, e2eConfig }) {
   return [
     ...validateE2ePackage(e2ePackageJson),
@@ -697,13 +818,25 @@ export function analysePlaywrightBoundary({ files, e2ePackageJson, e2eConfig }) 
     ...scanWrongRunnerInvocations(files),
     ...scanFrontendSpecs(files),
     ...scanBrittleE2eLoginHelpers(files),
+    ...scanE2eRunnerGlobals(files),
   ];
 }
 
-function readTrackedFiles(repoRoot) {
-  const output = execFileSync('git', ['ls-files', '-z'], {
+export function shouldReadTrackedFile(path) {
+  const extension = extname(path);
+  const automationMarkdown = extension === '.md' && isCommandSource(path);
+  return (
+    SCRIPT_EXTENSIONS.has(extension) ||
+    PLAYWRIGHT_TEST_FILE_PATTERN.test(path) ||
+    automationMarkdown
+  );
+}
+
+function readWorkingTreeFiles(repoRoot) {
+  const output = execFileSync('git', WORKING_TREE_LISTING, {
     cwd: repoRoot,
     encoding: 'utf8',
+    maxBuffer: WORKING_TREE_LISTING_MAX_BYTES,
   });
 
   const files = {};
@@ -712,16 +845,16 @@ function readTrackedFiles(repoRoot) {
       continue;
     }
     const path = normalizePath(rawPath);
-    const extension = extname(path);
-    const automationMarkdown = extension === '.md' && isCommandSource(path);
-    if (
-      !SCRIPT_EXTENSIONS.has(extension) &&
-      !/\.(?:spec|test)\.ts$/.test(path) &&
-      !automationMarkdown
-    ) {
+    if (!shouldReadTrackedFile(path)) {
       continue;
     }
-    files[path] = readFileSync(resolve(repoRoot, path), 'utf8');
+    const absolutePath = resolve(repoRoot, path);
+    // The index keeps listing a file deleted from disk until the deletion is staged. Playwright
+    // cannot discover it, so there is nothing to check.
+    if (!statSync(absolutePath, { throwIfNoEntry: false })?.isFile()) {
+      continue;
+    }
+    files[path] = readFileSync(absolutePath, 'utf8');
   }
   return files;
 }
@@ -729,7 +862,7 @@ function readTrackedFiles(repoRoot) {
 function main() {
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   const repoRoot = resolve(scriptDir, '..');
-  const files = readTrackedFiles(repoRoot);
+  const files = readWorkingTreeFiles(repoRoot);
   const violations = analysePlaywrightBoundary({
     files,
     e2ePackageJson: readFileSync(resolve(repoRoot, 'e2e/package.json'), 'utf8'),

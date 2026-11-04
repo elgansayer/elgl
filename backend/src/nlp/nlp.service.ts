@@ -7,6 +7,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createHash } from 'node:crypto';
 import { Language } from 'node-nlp';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
@@ -23,7 +24,6 @@ import {
   TranscribeVoiceResult,
   WordBreakdownItem,
 } from './interfaces/nlp-results.interface';
-import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
 
@@ -34,6 +34,19 @@ export class NlpService {
 
   /** Default timeout for external API calls (10 seconds). */
   private static readonly EXTERNAL_API_TIMEOUT_MS = 10_000;
+
+  /** Interface locales whose dictionary is already English and needs no provider call. */
+  private static readonly UI_PASSTHROUGH_LOCALES: ReadonlySet<string> = new Set(
+    ['en', 'en-gb', 'en-us'],
+  );
+  /** Shared translation-memory entries are pure functions of (locale, text), so they may live a week. */
+  private static readonly UI_TRANSLATION_TTL_SECONDS = 604_800;
+  /** DeepL accepts at most 50 texts and 128 KiB of request body per call. */
+  private static readonly UI_PROVIDER_MAX_TEXTS = 50;
+  private static readonly UI_PROVIDER_MAX_BODY_BYTES = 100 * 1024;
+  private static readonly UI_PROVIDER_CONCURRENCY = 4;
+  /** Interpolation tokens such as {{count}} that the web client substitutes by exact name. */
+  private static readonly UI_PLACEHOLDER_PATTERN = /\{\{[^{}]+\}\}/g;
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -70,6 +83,87 @@ export class NlpService {
       : signal;
 
     return fetch(url, { ...init, signal: combinedSignal });
+  }
+
+  private static isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private static isUnknownArray(value: unknown): value is unknown[] {
+    return Array.isArray(value);
+  }
+
+  private static readDeepLTranslation(payload: unknown): string | null {
+    if (
+      !NlpService.isRecord(payload) ||
+      !NlpService.isUnknownArray(payload.translations)
+    ) {
+      return null;
+    }
+
+    const translation = payload.translations[0];
+    if (
+      !NlpService.isRecord(translation) ||
+      typeof translation.text !== 'string'
+    ) {
+      return null;
+    }
+
+    const text = translation.text.trim();
+    return text || null;
+  }
+
+  private static readAzureDetectedLanguage(payload: unknown): string | null {
+    if (!NlpService.isUnknownArray(payload)) return null;
+
+    const detection = payload[0];
+    if (
+      !NlpService.isRecord(detection) ||
+      typeof detection.language !== 'string'
+    ) {
+      return null;
+    }
+
+    const language = detection.language.trim();
+    return language || null;
+  }
+
+  private static readAzureDictionaryTarget(payload: unknown): string | null {
+    if (!NlpService.isUnknownArray(payload)) return null;
+
+    const lookup = payload[0];
+    if (
+      !NlpService.isRecord(lookup) ||
+      typeof lookup.displayTarget !== 'string'
+    ) {
+      return null;
+    }
+
+    const target = lookup.displayTarget.trim();
+    return target || null;
+  }
+
+  private static readAzureExplanation(payload: unknown): string | null {
+    if (!NlpService.isUnknownArray(payload)) return null;
+
+    const result = payload[0];
+    if (
+      !NlpService.isRecord(result) ||
+      !NlpService.isUnknownArray(result.translations)
+    ) {
+      return null;
+    }
+
+    const translation = result.translations[0];
+    if (
+      !NlpService.isRecord(translation) ||
+      typeof translation.text !== 'string'
+    ) {
+      return null;
+    }
+
+    const text = translation.text.trim();
+    return text || null;
   }
 
   detectLanguage(text: string): { language: string; confidence: number } {
@@ -145,15 +239,9 @@ export class NlpService {
         );
 
         if (res.ok) {
-          const jsonResponse = (await res.json()) as unknown as {
-            translations: Array<{ text: string }>;
-          };
-          if (
-            jsonResponse?.translations &&
-            jsonResponse.translations.length > 0
-          ) {
-            const translatedText = jsonResponse.translations[0].text;
-
+          const payload: unknown = await res.json();
+          const translatedText = NlpService.readDeepLTranslation(payload);
+          if (translatedText) {
             // Generate transliteration via reverse look-up from DeepL
             let transliteration = translatedText;
             try {
@@ -173,10 +261,11 @@ export class NlpService {
                 },
               );
               if (translitRes.ok) {
-                const translitData = (await translitRes.json()) as {
-                  translations: Array<{ text: string }>;
-                };
-                transliteration = translitData.translations[0].text;
+                const transliterationPayload: unknown =
+                  await translitRes.json();
+                transliteration =
+                  NlpService.readDeepLTranslation(transliterationPayload) ??
+                  transliteration;
               }
             } catch {
               // Keep the translated text as transliteration fallback
@@ -239,10 +328,9 @@ export class NlpService {
         );
 
         if (detectRes.ok) {
-          const detectData = (await detectRes.json()) as unknown as Array<{
-            language: string;
-          }>;
-          const detectedLang = detectData?.[0]?.language || 'en';
+          const detectionPayload: unknown = await detectRes.json();
+          const detectedLang =
+            NlpService.readAzureDetectedLanguage(detectionPayload) ?? 'en';
 
           // Use Azure's dictionary lookup for grammar correction (works best for common languages)
           const dictRes = await NlpService.fetchWithTimeout(
@@ -258,10 +346,9 @@ export class NlpService {
           );
 
           if (dictRes.ok) {
-            const dictData = (await dictRes.json()) as unknown as Array<{
-              displayTarget?: string;
-            }>;
-            const correctedText = dictData?.[0]?.displayTarget || orig;
+            const dictionaryPayload: unknown = await dictRes.json();
+            const correctedText =
+              NlpService.readAzureDictionaryTarget(dictionaryPayload) ?? orig;
             const errorsFound = orig === correctedText ? 0 : 1;
 
             // Generate explanation using Azure's translation
@@ -283,11 +370,9 @@ export class NlpService {
                 },
               );
               if (explainRes.ok) {
-                const explainData = (await explainRes.json()) as Array<{
-                  translations: Array<{ text: string }>;
-                }>;
+                const explanationPayload: unknown = await explainRes.json();
                 explanation =
-                  explainData[0]?.translations[0]?.text ||
+                  NlpService.readAzureExplanation(explanationPayload) ??
                   'Corrected via Azure AI';
               }
             } catch {
@@ -315,54 +400,6 @@ export class NlpService {
       explanation:
         'Grammar checking service is temporarily unavailable. Your text appears correct.',
       errors_found: 0,
-    };
-  }
-
-  async explainGrammar(
-    userId: string,
-    isVip: boolean,
-    dto: ExplainGrammarDto,
-  ): Promise<{ original: string; corrected: string; explanation: string }> {
-    await this.checkRateLimit(userId, isVip);
-
-    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
-    if (!deepLKey) {
-      throw new BadRequestException('DeepL API key not configured');
-    }
-
-    const prompt = `Explain the grammar difference between the original sentence and the corrected sentence. Original: "${dto.original}" Corrected: "${dto.corrected}". Provide a brief explanation in English.`;
-    const res = await NlpService.fetchWithTimeout(
-      'https://api-free.deepl.com/v2/translate',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `DeepL-Auth-Key ${deepLKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: [prompt],
-          target_lang: 'EN',
-        }),
-      },
-    );
-    if (!res.ok) {
-      const errorBody = await res.text();
-      throw new BadRequestException(
-        `DeepL API error: ${res.status} ${errorBody}`,
-      );
-    }
-    const json = (await res.json()) as {
-      translations: Array<{ text: string }>;
-    };
-    if (!json?.translations?.length) {
-      throw new BadRequestException('DeepL returned no translations');
-    }
-    const explanation = json.translations[0].text;
-
-    return {
-      original: dto.original,
-      corrected: dto.corrected,
-      explanation,
     };
   }
 
@@ -625,9 +662,19 @@ export class NlpService {
     );
   }
 
+  /**
+   * Translates the client's English interface dictionary into `target_language`.
+   *
+   * Translations are cached per source string (locale plus a hash of the text),
+   * not per submitted dictionary. The cache is shared by every user, so keying it
+   * by the caller's dictionary would let any authenticated user decide what other
+   * users read for a locale. Addressing entries by their source text means a caller
+   * can only ever populate the entry for text they actually sent.
+   */
   async translateUi(dto: TranslateUiDto): Promise<TranslateUiResult> {
-    const targetLang = dto.target_language || 'en-GB';
-    if (targetLang === 'en-GB' || targetLang === 'en') {
+    const targetLang = dto.target_language;
+    const locale = targetLang.toLowerCase();
+    if (NlpService.UI_PASSTHROUGH_LOCALES.has(locale)) {
       return {
         target_language: targetLang,
         translations: dto.dictionary,
@@ -635,77 +682,315 @@ export class NlpService {
       };
     }
 
-    const redis = this.supabaseService.getRedisClient();
-    const cacheKey = `ui_dict:${targetLang}`;
+    const startedAt = Date.now();
+    const sources = [
+      ...new Set(
+        Object.values(dto.dictionary).filter((text) => text.trim().length > 0),
+      ),
+    ];
+    const translated = await this.readCachedUiTranslations(locale, sources);
+    const cacheHits = translated.size;
+    const missing = sources.filter((source) => !translated.has(source));
 
-    try {
-      const cachedDict = await redis.get(cacheKey);
-      if (cachedDict) {
-        const parsed = JSON.parse(cachedDict) as Record<string, string>;
-        return {
-          target_language: targetLang,
-          translations: { ...dto.dictionary, ...parsed },
-          cached: true,
-        };
-      }
-    } catch {
-      // Redis fallback if offline or unavailable during tests
-    }
-
-    // No cache hit, so translate the full dictionary via DeepL. This supports
-    // ANY target language dynamically, with 0 hard-coded UI strings.
-    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
-    if (!deepLKey) {
-      throw new BadRequestException('DeepL API key not configured');
-    }
-
-    const keys = Object.keys(dto.dictionary);
-    const values = keys.map((key) => dto.dictionary[key]);
-
-    const res = await NlpService.fetchWithTimeout(
-      'https://api-free.deepl.com/v2/translate',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `DeepL-Auth-Key ${deepLKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: values,
-          target_lang: targetLang.toUpperCase(),
-        }),
-      },
-    );
-
-    if (!res.ok) {
-      const errorBody = await res.text();
-      throw new BadRequestException(
-        `DeepL API error: ${res.status} ${errorBody}`,
+    let providerRequests = 0;
+    if (missing.length > 0) {
+      providerRequests = await this.translateMissingUiTexts(
+        locale,
+        targetLang,
+        missing,
+        translated,
       );
     }
 
-    const jsonResponse = (await res.json()) as {
-      translations: Array<{ text: string }>;
-    };
+    // fromEntries defines own properties, so a dictionary key can never reach a prototype.
+    const translations = Object.fromEntries(
+      Object.entries(dto.dictionary).map(([key, text]) => [
+        key,
+        translated.get(text) ?? text,
+      ]),
+    );
 
-    const translatedDict: Record<string, string> = {};
-    keys.forEach((key, index) => {
-      translatedDict[key] =
-        jsonResponse.translations?.[index]?.text ?? dto.dictionary[key];
-    });
-
-    try {
-      await redis.set(cacheKey, JSON.stringify(translatedDict));
-      await redis.expire(cacheKey, 604800); // 7 days cache
-    } catch {
-      // Redis error handling during tests
-    }
+    this.logger.log(
+      `ui_translation locale=${locale} entries=${Object.keys(dto.dictionary).length} ` +
+        `unique=${sources.length} cacheHits=${cacheHits} cacheMisses=${missing.length} ` +
+        `providerRequests=${providerRequests} durationMs=${Date.now() - startedAt}`,
+    );
 
     return {
       target_language: targetLang,
-      translations: { ...dto.dictionary, ...translatedDict },
-      cached: false,
+      translations,
+      cached: missing.length === 0,
     };
+  }
+
+  private uiTranslationCacheKey(locale: string, source: string): string {
+    const digest = createHash('sha256').update(source, 'utf8').digest('hex');
+    return `ui_str:${locale}:${digest}`;
+  }
+
+  private async readCachedUiTranslations(
+    locale: string,
+    sources: string[],
+  ): Promise<Map<string, string>> {
+    const hits = new Map<string, string>();
+    if (sources.length === 0) {
+      return hits;
+    }
+
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      const values = await redis.mget(
+        ...sources.map((source) => this.uiTranslationCacheKey(locale, source)),
+      );
+      values.forEach((value, index) => {
+        if (typeof value === 'string' && value.length > 0) {
+          hits.set(sources[index], value);
+        }
+      });
+    } catch (error) {
+      // Redis being unavailable only costs provider calls; it must not block a language switch.
+      this.logUiCacheFailure('read', error);
+    }
+
+    return hits;
+  }
+
+  private async cacheUiTranslations(
+    locale: string,
+    sources: string[],
+    texts: string[],
+  ): Promise<void> {
+    try {
+      const pipeline = this.supabaseService.getRedisClient().pipeline();
+      sources.forEach((source, index) => {
+        pipeline.set(
+          this.uiTranslationCacheKey(locale, source),
+          texts[index],
+          'EX',
+          NlpService.UI_TRANSLATION_TTL_SECONDS,
+        );
+      });
+      await pipeline.exec();
+    } catch (error) {
+      this.logUiCacheFailure('write', error);
+    }
+  }
+
+  private logUiCacheFailure(operation: 'read' | 'write', error: unknown): void {
+    const reason = error instanceof Error ? error.name : 'unknown';
+    this.logger.warn(
+      `ui_translation_cache_failure operation=${operation} reason=${reason}`,
+    );
+  }
+
+  /** Splits texts into provider-sized batches without exceeding the text or body limits. */
+  private static batchUiTexts(texts: string[]): string[][] {
+    const batches: string[][] = [];
+    let current: string[] = [];
+    let currentBytes = 0;
+
+    for (const text of texts) {
+      // JSON-encoded size plus the separating comma, so escapes are counted too.
+      const size = Buffer.byteLength(JSON.stringify(text), 'utf8') + 1;
+      const full =
+        current.length >= NlpService.UI_PROVIDER_MAX_TEXTS ||
+        currentBytes + size > NlpService.UI_PROVIDER_MAX_BODY_BYTES;
+      if (current.length > 0 && full) {
+        batches.push(current);
+        current = [];
+        currentBytes = 0;
+      }
+      current.push(text);
+      currentBytes += size;
+    }
+
+    if (current.length > 0) {
+      batches.push(current);
+    }
+    return batches;
+  }
+
+  private async translateMissingUiTexts(
+    locale: string,
+    targetLang: string,
+    missing: string[],
+    translated: Map<string, string>,
+  ): Promise<number> {
+    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
+    if (!deepLKey) {
+      this.logger.warn(
+        `ui_translation_unavailable locale=${locale} reason=provider-not-configured`,
+      );
+      throw new ServiceUnavailableException(
+        'Interface translation is temporarily unavailable',
+      );
+    }
+
+    const batches = NlpService.batchUiTexts(missing);
+    for (
+      let start = 0;
+      start < batches.length;
+      start += NlpService.UI_PROVIDER_CONCURRENCY
+    ) {
+      // A failed batch rejects the whole call, but batches that already succeeded stay
+      // cached, so a retry only pays for what is still missing.
+      await Promise.all(
+        batches
+          .slice(start, start + NlpService.UI_PROVIDER_CONCURRENCY)
+          .map((batch) =>
+            this.translateUiBatch(
+              deepLKey,
+              locale,
+              targetLang,
+              batch,
+              translated,
+            ),
+          ),
+      );
+    }
+
+    return batches.length;
+  }
+
+  private async translateUiBatch(
+    deepLKey: string,
+    locale: string,
+    targetLang: string,
+    batch: string[],
+    translated: Map<string, string>,
+  ): Promise<void> {
+    let response: Response;
+    try {
+      response = await NlpService.fetchWithTimeout(
+        NlpService.deepLTranslateUrl(deepLKey),
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `DeepL-Auth-Key ${deepLKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: batch,
+            target_lang: targetLang.toUpperCase(),
+          }),
+        },
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.name : 'unknown';
+      this.logger.warn(
+        `ui_translation_provider_exception provider=deepl locale=${locale} reason=${reason}`,
+      );
+      throw new ServiceUnavailableException(
+        'Interface translation is temporarily unavailable',
+      );
+    }
+
+    if (!response.ok) {
+      // Provider response bodies are never forwarded or logged: they can echo request text.
+      this.logger.warn(
+        `ui_translation_provider_failure provider=deepl locale=${locale} status=${response.status}`,
+      );
+      if (response.status === 400) {
+        throw new BadRequestException(
+          'Interface language is not supported for automatic translation',
+        );
+      }
+      throw new ServiceUnavailableException(
+        'Interface translation is temporarily unavailable',
+      );
+    }
+
+    const texts = await this.readUiProviderTexts(response, batch.length);
+    if (!texts) {
+      this.logger.warn(
+        `ui_translation_provider_failure provider=deepl locale=${locale} status=invalid-response`,
+      );
+      throw new ServiceUnavailableException(
+        'Interface translation is temporarily unavailable',
+      );
+    }
+
+    // The client substitutes {{tokens}} by exact name, so a translation that renamed, dropped
+    // or added one would render raw braces. Keep the English source for those strings.
+    const safeTexts = batch.map((source, index) =>
+      NlpService.keepsPlaceholders(source, texts[index])
+        ? texts[index]
+        : source,
+    );
+    const rejected = safeTexts.filter(
+      (text, index) => text !== texts[index],
+    ).length;
+    if (rejected > 0) {
+      this.logger.warn(
+        `ui_translation_placeholder_mismatch provider=deepl locale=${locale} count=${rejected}`,
+      );
+    }
+
+    batch.forEach((source, index) => translated.set(source, safeTexts[index]));
+    await this.cacheUiTranslations(locale, batch, safeTexts);
+  }
+
+  /** DeepL free-plan keys end in ":fx" and must use the free host; paid keys use the standard one. */
+  private static deepLTranslateUrl(apiKey: string): string {
+    const host = apiKey.endsWith(':fx')
+      ? 'https://api-free.deepl.com'
+      : 'https://api.deepl.com';
+    return `${host}/v2/translate`;
+  }
+
+  private static placeholdersOf(text: string): string[] {
+    return (text.match(NlpService.UI_PLACEHOLDER_PATTERN) ?? []).sort();
+  }
+
+  /** True when the translation carries exactly the interpolation tokens of its source. */
+  private static keepsPlaceholders(
+    source: string,
+    translation: string,
+  ): boolean {
+    const expected = NlpService.placeholdersOf(source);
+    const actual = NlpService.placeholdersOf(translation);
+    return (
+      expected.length === actual.length &&
+      expected.every((token, index) => token === actual[index])
+    );
+  }
+
+  private async readUiProviderTexts(
+    response: Response,
+    expected: number,
+  ): Promise<string[] | null> {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      return null;
+    }
+
+    if (
+      !payload ||
+      typeof payload !== 'object' ||
+      !('translations' in payload) ||
+      !Array.isArray(payload.translations) ||
+      payload.translations.length !== expected
+    ) {
+      return null;
+    }
+
+    const items: unknown[] = payload.translations;
+    const texts: string[] = [];
+    for (const item of items) {
+      if (
+        !item ||
+        typeof item !== 'object' ||
+        !('text' in item) ||
+        typeof item.text !== 'string' ||
+        item.text.length === 0
+      ) {
+        return null;
+      }
+      texts.push(item.text);
+    }
+    return texts;
   }
 
   async translateBio(
@@ -765,113 +1050,122 @@ export class NlpService {
     await this.checkRateLimit(userId, isVip);
 
     // Detect source language if not provided
-    const detected =
-      dto.source_language || this.detectLanguage(dto.text).language;
     const cleanWord = dto.text.trim();
+    const detected =
+      dto.source_language || this.detectLanguage(cleanWord).language;
 
+    let translatedText = cleanWord;
     const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
-    if (!deepLKey) {
-      throw new BadRequestException('DeepL API key not configured');
+
+    // Translate the original text via DeepL if available, else graceful degradation
+    if (deepLKey) {
+      try {
+        const res = await NlpService.fetchWithTimeout(
+          'https://api-free.deepl.com/v2/translate',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `DeepL-Auth-Key ${deepLKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: [cleanWord],
+              target_lang: dto.target_language.toUpperCase(),
+              source_lang: detected.toUpperCase(),
+              tag_handling: 'xml',
+            }),
+          },
+        );
+
+        if (res.ok) {
+          const payload: unknown = await res.json();
+          translatedText =
+            NlpService.readDeepLTranslation(payload) ?? translatedText;
+        }
+      } catch {
+        // Fallback to source text on network failure
+      }
     }
-
-    // Translate the original text via DeepL
-    const res = await NlpService.fetchWithTimeout(
-      'https://api-free.deepl.com/v2/translate',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `DeepL-Auth-Key ${deepLKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: [cleanWord],
-          target_lang: dto.target_language.toUpperCase(),
-          source_lang: detected.toUpperCase(),
-          tag_handling: 'xml',
-        }),
-      },
-    );
-
-    if (!res.ok) {
-      const errorBody = await res.text();
-      throw new BadRequestException(
-        `DeepL API error: ${res.status} ${errorBody}`,
-      );
-    }
-
-    const jsonResponse = (await res.json()) as unknown as {
-      translations: Array<{ text: string }>;
-    };
-    const translatedText = jsonResponse.translations[0].text;
 
     let correctedText = cleanWord;
     let explanation = '';
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
 
-    // Obtain grammar‑style correction via Azure (mirrors the way
-    // grammarCheck works but does not count a second API call)
+    // Obtain grammar-style correction via Azure if configured
     if (azureKey) {
-      const detectRes = await NlpService.fetchWithTimeout(
-        'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
-        {
-          method: 'POST',
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify([{ Text: cleanWord }]),
-        },
-      );
-      const detectData = (await detectRes.json()) as Array<{
-        language: string;
-      }>;
-      const detectedLang = detectData?.[0]?.language || 'en';
-
-      const dictRes = await NlpService.fetchWithTimeout(
-        `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
-        {
-          method: 'POST',
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify([{ Text: cleanWord }]),
-        },
-      );
-      const dictData = (await dictRes.json()) as Array<{
-        displayTarget?: string;
-      }>;
-      correctedText = dictData?.[0]?.displayTarget || cleanWord;
-
-      const explainRes = await NlpService.fetchWithTimeout(
-        `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
-        {
-          method: 'POST',
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify([
-            {
-              Text: `Grammar correction: "${cleanWord}" → "${correctedText}"`,
+      try {
+        const detectRes = await NlpService.fetchWithTimeout(
+          'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
+          {
+            method: 'POST',
+            headers: {
+              'Ocp-Apim-Subscription-Key': azureKey,
+              'Content-Type': 'application/json',
             },
-          ]),
-        },
-      );
-      if (explainRes.ok) {
-        const explainData = (await explainRes.json()) as Array<{
-          translations: Array<{ text: string }>;
-        }>;
-        explanation =
-          explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
-      } else {
-        explanation = 'Corrected via Azure AI';
+            body: JSON.stringify([{ Text: cleanWord }]),
+          },
+        );
+        if (detectRes.ok) {
+          const detectPayload: unknown = await detectRes.json();
+          const detectedLang =
+            NlpService.readAzureDetectedLanguage(detectPayload) ?? detected;
+
+          const dictRes = await NlpService.fetchWithTimeout(
+            `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
+            {
+              method: 'POST',
+              headers: {
+                'Ocp-Apim-Subscription-Key': azureKey,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify([{ Text: cleanWord }]),
+            },
+          );
+          if (dictRes.ok) {
+            const dictionaryPayload: unknown = await dictRes.json();
+            correctedText =
+              NlpService.readAzureDictionaryTarget(dictionaryPayload) ??
+              cleanWord;
+          }
+
+          const explainRes = await NlpService.fetchWithTimeout(
+            `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
+            {
+              method: 'POST',
+              headers: {
+                'Ocp-Apim-Subscription-Key': azureKey,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify([
+                {
+                  Text: `Grammar correction: "${cleanWord}" → "${correctedText}"`,
+                },
+              ]),
+            },
+          );
+          if (explainRes.ok) {
+            const explanationPayload: unknown = await explainRes.json();
+            explanation =
+              NlpService.readAzureExplanation(explanationPayload) ??
+              'Corrected via Azure AI';
+          }
+        }
+      } catch {
+        // Fallback gracefully on Azure API failure
       }
     }
 
-    // Build word‑level corrections to match Tandem‑style structured UI (every word)
-    const originalWords = cleanWord.split(/\s+/);
-    const correctedWords = correctedText.split(/\s+/);
+    // Build word-level structured corrections using Intl.Segmenter
+    const segmenter = new Intl.Segmenter(detected || 'en', {
+      granularity: 'word',
+    });
+    const originalSegments = Array.from(segmenter.segment(cleanWord)).filter(
+      (s) => s.isWordLike,
+    );
+    const correctedSegments = Array.from(
+      segmenter.segment(correctedText),
+    ).filter((s) => s.isWordLike);
+
     const wordCorrections: Array<{
       original: string;
       corrected: string;
@@ -879,23 +1173,21 @@ export class NlpService {
       offset: number;
       isCorrect: boolean;
     }> = [];
-    let currentPos = 0;
-    for (let i = 0; i < originalWords.length; i++) {
-      const origWord = originalWords[i];
-      const startIndex = cleanWord.indexOf(origWord, currentPos);
-      const corrWord = correctedWords[i] ?? origWord;
+
+    for (let i = 0; i < originalSegments.length; i++) {
+      const origSeg = originalSegments[i];
+      const corrSeg = correctedSegments[i];
+      const origWord = origSeg.segment;
+      const corrWord = corrSeg?.segment ?? origWord;
       const isCorrect = origWord === corrWord;
+
       wordCorrections.push({
         original: origWord,
         corrected: corrWord,
         explanation: isCorrect ? '' : explanation,
-        offset: startIndex >= 0 ? startIndex : currentPos,
+        offset: origSeg.index,
         isCorrect,
       });
-      currentPos =
-        startIndex >= 0
-          ? startIndex + origWord.length
-          : currentPos + origWord.length;
     }
 
     return {

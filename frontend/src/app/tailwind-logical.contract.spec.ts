@@ -32,6 +32,19 @@ describe('Tailwind logical layout contract', () => {
     expect(styles).toContain("@config '../tailwind.config.js';");
   });
 
+  it('exports the Tailwind config in the frontend package module format', async () => {
+    const configModule = await import('../../tailwind.config.js');
+
+    expect(configModule.default).toMatchObject({
+      darkMode: 'class',
+      content: ['./src/**/*.{html,ts,scss}'],
+    });
+    expect(configModule.default.plugins).toHaveLength(1);
+    expect(readFrontendFile('tailwind.config.d.ts')).toContain(
+      "import type { Config } from 'tailwindcss';",
+    );
+  });
+
   it('keeps production styles independent of remote font stylesheets', () => {
     const styles = readFrontendFile('src/styles.scss');
     const serviceWorkerConfig = readFrontendFile('ngsw-config.json');
@@ -48,6 +61,19 @@ describe('Tailwind logical layout contract', () => {
     expect(config).toContain("content: ['./src/**/*.{html,ts,scss}']");
   });
 
+  it('defines inline safe-area spacing with logical utilities and properties', () => {
+    const config = readFrontendFile('tailwind.config.js');
+
+    expect(config).toContain("'.ps-safe'");
+    expect(config).toContain("'.pe-safe'");
+    expect(config).toContain('paddingInlineStart');
+    expect(config).toContain('paddingInlineEnd');
+    expect(config).toContain('"[dir=\'rtl\'] .ps-safe"');
+    expect(config).toContain('"[dir=\'rtl\'] .pe-safe"');
+    expect(config).not.toMatch(/\.(?:pl|pr)-safe/);
+    expect(config).not.toMatch(/\bpadding(?:Left|Right)\b/);
+  });
+
   it('enforces logical directional utilities in the canonical static-analysis path', () => {
     const packageJson = JSON.parse(readFrontendFile('package.json')) as {
       scripts?: Record<string, string>;
@@ -58,6 +84,7 @@ describe('Tailwind logical layout contract', () => {
     expect(rtlCheck).toContain('pl-|pr-|ml-|mr-|left-|right-');
     expect(rtlCheck).toContain('margin-left|margin-right|padding-left|padding-right');
     expect(rtlCheck).toContain('ps/pe/ms/me/border-s/border-e');
+    expect(rtlCheck).toContain('tailwind.config.js');
     expect(lintCheck).toContain('check:rtl-logical');
   });
 });

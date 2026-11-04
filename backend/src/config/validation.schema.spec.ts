@@ -148,4 +148,138 @@ describe('validationSchema', () => {
       validationSchema.validate({ LIVEKIT_URL: 'ftp://example.com' }).error,
     ).toBeDefined();
   });
+
+  describe('previously undeclared variables', () => {
+    const base = { TRANSFER_SECRET: 'test-transfer-secret' };
+
+    it('defaults the Cloudflare trust flags to off', () => {
+      const { error, value } = validationSchema.validate(base);
+
+      expect(error).toBeUndefined();
+      expect(value.TRUST_CLOUDFLARE_CONNECTING_IP).toBe('false');
+      expect(value.TRUST_CLOUDFLARE_NETWORK_METADATA).toBe('false');
+    });
+
+    it('accepts only the exact strings the network abuse guard understands', () => {
+      expect(
+        validationSchema.validate({
+          ...base,
+          TRUST_CLOUDFLARE_CONNECTING_IP: 'true',
+          TRUST_CLOUDFLARE_NETWORK_METADATA: 'true',
+        }).error,
+      ).toBeUndefined();
+
+      for (const spelling of ['TRUE', '1', 'yes', 'on', '']) {
+        expect(
+          validationSchema.validate({
+            ...base,
+            TRUST_CLOUDFLARE_CONNECTING_IP: spelling,
+          }).error,
+        ).toBeDefined();
+        expect(
+          validationSchema.validate({
+            ...base,
+            TRUST_CLOUDFLARE_NETWORK_METADATA: spelling,
+          }).error,
+        ).toBeDefined();
+      }
+    });
+
+    it('validates the optional Centrifugo health probe override', () => {
+      expect(validationSchema.validate(base).value.CENTRIFUGO_API_URL).toBe(
+        undefined,
+      );
+      expect(
+        validationSchema.validate({ ...base, CENTRIFUGO_API_URL: '' }).error,
+      ).toBeUndefined();
+      expect(
+        validationSchema.validate({
+          ...base,
+          CENTRIFUGO_API_URL: 'http://websocket:8000',
+        }).error,
+      ).toBeUndefined();
+      expect(
+        validationSchema.validate({ ...base, CENTRIFUGO_API_URL: 'nope' })
+          .error,
+      ).toBeDefined();
+    });
+
+    it('rejects blank LLM overrides that consumers would send to the provider', () => {
+      expect(
+        validationSchema.validate({ ...base, LLM_MODEL: '' }).error,
+      ).toBeDefined();
+      expect(
+        validationSchema.validate({ ...base, LLM_API_URL: '' }).error,
+      ).toBeDefined();
+      expect(
+        validationSchema.validate({ ...base, LLM_API_URL: 'not a url' }).error,
+      ).toBeDefined();
+
+      const { error, value } = validationSchema.validate({
+        ...base,
+        LLM_MODEL: 'gpt-4o-mini',
+        LLM_API_URL: 'https://api.openai.com/v1/chat/completions',
+      });
+      expect(error).toBeUndefined();
+      expect(value.LLM_MODEL).toBe('gpt-4o-mini');
+    });
+
+    it('treats blank Datadog settings as disabled and validates configured ones', () => {
+      expect(
+        validationSchema.validate({
+          ...base,
+          DD_AGENT_HOST: '',
+          DD_DOGSTATSD_PORT: '',
+          DD_API_KEY: '',
+          DD_ENV: '',
+        }).error,
+      ).toBeUndefined();
+
+      const { error, value } = validationSchema.validate({
+        ...base,
+        DD_AGENT_HOST: 'datadog',
+        DD_DOGSTATSD_PORT: '8125',
+        DD_API_KEY: 'dd-key',
+        DD_ENV: 'staging',
+      });
+      expect(error).toBeUndefined();
+      expect(value.DD_DOGSTATSD_PORT).toBe(8125);
+
+      expect(
+        validationSchema.validate({ ...base, DD_AGENT_HOST: 'http://datadog' })
+          .error,
+      ).toBeDefined();
+      expect(
+        validationSchema.validate({ ...base, DD_DOGSTATSD_PORT: '70000' })
+          .error,
+      ).toBeDefined();
+    });
+  });
+
+  describe('port ranges', () => {
+    const base = { TRANSFER_SECRET: 'test-transfer-secret' };
+
+    it.each([
+      'PORT',
+      'MAIL_PORT',
+      'LIVEKIT_TURN_TLS_PORT',
+      'LIVEKIT_TURN_UDP_PORT',
+    ])('rejects an out-of-range or fractional %s', (key) => {
+      expect(
+        validationSchema.validate({ ...base, [key]: '65536' }).error,
+      ).toBeDefined();
+      expect(
+        validationSchema.validate({ ...base, [key]: '-1' }).error,
+      ).toBeDefined();
+      expect(
+        validationSchema.validate({ ...base, [key]: '80.5' }).error,
+      ).toBeDefined();
+      expect(
+        validationSchema.validate({ ...base, [key]: 'abc' }).error,
+      ).toBeDefined();
+      expect(
+        validationSchema.validate({ ...base, [key]: '65535' }).error,
+      ).toBeUndefined();
+    });
+  });
 });

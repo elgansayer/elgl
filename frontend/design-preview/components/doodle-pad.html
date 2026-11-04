@@ -9,6 +9,7 @@
       :root {
         color-scheme: light dark;
         font-family: system-ui, sans-serif;
+        --danger-text: 204 39 39;
       }
       * {
         box-sizing: border-box;
@@ -54,6 +55,7 @@
       }
       .viewport.dark {
         color-scheme: dark;
+        --danger-text: 255 107 107;
       }
       .card {
         display: grid;
@@ -167,7 +169,7 @@
         color: CanvasText;
       }
       .secondary.danger {
-        color: LinkText;
+        color: rgb(var(--danger-text));
       }
       .primary {
         border: 1px solid Highlight;

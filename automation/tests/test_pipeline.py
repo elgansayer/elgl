@@ -1,3 +1,5 @@
+import json
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -17,10 +19,28 @@ from openhands_factory.exceptions import (
     VerificationFailed,
 )
 from openhands_factory.git_workflow import GitWorkflow
-from openhands_factory.github import IssueComment, PullRequestMatch, PullRequestStatus
+from openhands_factory.github import (
+    IssueComment,
+    PullRequestMatch,
+    PullRequestStatus,
+    RemoteTaskState,
+)
 from openhands_factory.models import Job, JobState, Task
-from openhands_factory.pipeline import FactoryPipeline, _is_security_review_exempt
-from openhands_factory.pr_convergence import PullRequestRecord
+from openhands_factory.pipeline import (
+    CAPPED_NOTICE_PREFIX,
+    MAX_BUDGET_CAUSE_ITEM_CHARS,
+    MAX_BUDGET_CAUSE_ITEMS,
+    MAX_CONSECUTIVE_QUALITY_REPAIRS,
+    FactoryPipeline,
+    _failed_checks_cause,
+    _is_security_review_exempt,
+)
+from openhands_factory.pr_convergence import (
+    ConvergenceAction,
+    PullRequestIdentity,
+    PullRequestRecord,
+)
+from openhands_factory.quality_gate import QualityFinding
 from openhands_factory.repository_guard import ensure_push_target
 from openhands_factory.state import atomic_write_json, read_json
 
@@ -52,6 +72,8 @@ class GitHub:
         self.updated_pull_requests: list[tuple[int, str, str]] = []
         self.superseded_pull_requests: list[tuple[int, int | None, str]] = []
         self.equivalent_pull_requests: list[PullRequestMatch] = []
+        self.remote_states: dict[tuple[int, bool], RemoteTaskState] = {}
+        self.remote_state_calls: list[tuple[int, bool]] = []
 
     def ensure_factory_labels(self) -> None:
         return None
@@ -174,11 +196,18 @@ class GitHub:
     def publish_review_pending(self, head_sha: str, *, detail: str) -> None:
         self.pending_reviews.append(head_sha)
 
+    def failed_check_excerpts(self, head_sha: str) -> str:
+        return self.ci_excerpts if hasattr(self, "ci_excerpts") else ""
+
     def pull_request_status(self, pull_request: int) -> PullRequestStatus:
         return self.statuses.pop(0)
 
     def close_issue(self, issue: int) -> None:
         self.closed.append(issue)
+
+    def remote_task_state(self, number: int, *, pull_request: bool = False) -> RemoteTaskState:
+        self.remote_state_calls.append((number, pull_request))
+        return self.remote_states.get((number, pull_request), RemoteTaskState(number, "OPEN"))
 
 
 class Conversations:
@@ -320,6 +349,388 @@ def _seed_prompts(directory: Path) -> None:
         "architect",
     ):
         (directory / f"{name}.md").write_text(f"{name} instructions", encoding="utf-8")
+
+
+class NeptuneGitHub(GitHub):
+    """Stateful API double for dispatcher/restart contracts, not live evidence."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.current = PullRequestStatus(
+            99,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "a" * 40,
+            True,
+            False,
+            ci_required_passed=True,
+            base_sha="b" * 40,
+        )
+        self.merges: list[tuple[int, str]] = []
+        self.ready: list[int] = []
+        self.lose_merge_response = False
+
+    def pull_request_status(self, pull_request: int) -> PullRequestStatus:
+        return replace(self.current, number=pull_request)
+
+    def merge_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
+        self.merges.append((pull_request, expected_head_sha))
+        self.current = replace(self.current, state="MERGED")
+        if self.lose_merge_response:
+            raise FactoryError("merge response lost after remote success")
+
+    def mark_ready(self, pull_request: int) -> None:
+        self.ready.append(pull_request)
+
+    def request_review(self, pull_request: int) -> None:
+        pytest.fail("Neptune must not request mandatory review")
+
+    def publish_review_status(self, *args: object, **kwargs: object) -> None:
+        pytest.fail("Neptune must not publish approval")
+
+    def publish_review_pending(self, *args: object, **kwargs: object) -> None:
+        pytest.fail("Neptune must not publish a pending approval dependency")
+
+
+def _neptune_dispatcher(
+    factory_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[FactoryPipeline, NeptuneGitHub, list[str]]:
+    github = NeptuneGitHub()
+    phases: list[str] = []
+
+    def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
+        worktree.mkdir(parents=True, exist_ok=True)
+        return "factory/42-fix-build"
+
+    def agent(
+        pipeline: FactoryPipeline,
+        job: Job,
+        worktree: Path,
+        phase: str,
+        prompt: str,
+        **kwargs: object,
+    ) -> None:
+        assert phase not in {"review", "security"}
+        phases.append(phase)
+
+    monkeypatch.setattr(GitWorkflow, "prepare_worktree", prepare)
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_pull_request_worktree",
+        lambda workflow, path, branch: path.mkdir(parents=True, exist_ok=True),
+    )
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "contains_current_base", lambda workflow: True)
+    monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
+    monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: None)
+    monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "a" * 40)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.prepare_native",
+        lambda _config, _workspace, _changed, commands: commands,
+        raising=False,
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.check_quality_gate", lambda *args: [])
+    monkeypatch.setattr(FactoryPipeline, "_run_agent", agent)
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+    return pipeline, github, phases
+
+
+def _run_neptune_until(
+    pipeline: FactoryPipeline,
+    state: JobState,
+    steps: int = 8,
+) -> Job:
+    for _ in range(steps):
+        job = pipeline.run_once()
+        assert job is not None
+        assert job.last_error is None
+        if job.state is state:
+            return job
+    pytest.fail(f"Neptune dispatcher did not reach {state}")
+
+
+def test_neptune_issue_pipeline_requires_tests_but_no_approving_report(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, github, phases = _neptune_dispatcher(neptune_config, monkeypatch)
+    job = _run_neptune_until(pipeline, JobState.DONE)
+    assert job.latest_verified_sha == "a" * 40
+    assert pipeline.health_store.path == neptune_config.provider_capacity_dir / "agent_health.json"
+    assert phases == ["implementation"]
+    assert github.merges == [(99, "a" * 40)]
+    assert github.ready == [99]
+    assert github.closed == [42]
+    assert not github.reviewed
+    assert not github.pending_reviews
+    assert not any("factory-reviewed" in labels for _, labels in github.labels)
+    assert [event["event"] for event in pipeline.pr_lifecycle.snapshot()] == [
+        "merge-queued",
+        "merged",
+    ]
+    body = github.created_pull_requests[0][2]
+    assert "no AI or human approving review is required" in body
+    assert "security reviewed" not in body
+
+
+def test_neptune_legacy_security_state_resumes_into_verification(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, _, phases = _neptune_dispatcher(neptune_config, monkeypatch)
+    job = _run_neptune_until(pipeline, JobState.IMPLEMENTING)
+    job.state = JobState.SECURITY_REVIEW
+    pipeline.jobs.save_job(job)
+    result = pipeline.run_job("42")
+    assert result is not None and result.state is JobState.VERIFYING
+    assert phases == []
+
+
+def test_neptune_dirty_worktree_returns_to_verification(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, github, _ = _neptune_dispatcher(neptune_config, monkeypatch)
+    _run_neptune_until(pipeline, JobState.REVIEWING)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    result = pipeline.run_job("42")
+    assert result is not None and result.state is JobState.VERIFYING
+    assert github.ready == []
+    assert github.merges == []
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_neptune_pending_or_failed_required_gate_never_enters_merge_queue(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    failed: bool,
+) -> None:
+    pipeline, github, _ = _neptune_dispatcher(neptune_config, monkeypatch)
+    _run_neptune_until(pipeline, JobState.CI_PENDING)
+    github.current = replace(
+        github.current,
+        checks_passed=False,
+        checks_pending=not failed,
+        ci_required_passed=False,
+        ci_required_pending=not failed,
+        ci_required_failed=failed,
+        failed_checks=frozenset({"Neptune merge gate"}) if failed else frozenset(),
+    )
+    result = pipeline.run_job("42")
+    assert result is not None
+    assert result.state is (JobState.REPAIRING if failed else JobState.CI_PENDING)
+    assert github.merges == []
+
+
+def test_neptune_requires_current_base_even_when_legacy_non_strict_option_is_set(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, github, phases = _neptune_dispatcher(neptune_config, monkeypatch)
+    job = _run_neptune_until(pipeline, JobState.REVIEWING)
+    pipeline.config.require_green_main_between_merges = False
+    monkeypatch.setattr(GitWorkflow, "contains_current_base", lambda workflow: False)
+    github.current = replace(
+        github.current,
+        checks_passed=False,
+        ci_required_passed=False,
+        ci_required_failed=True,
+        failed_checks=frozenset({"Neptune current base"}),
+        merge_state_status="BLOCKED",
+    )
+    result = pipeline.run_job("42")
+    assert result is not None and result.state is JobState.CI_PENDING
+    assert result.latest_verified_sha is None
+    assert github.updated_branches == [(99, job.head_sha)]
+    assert github.merges == []
+    assert phases == ["implementation"]
+
+
+def test_neptune_resume_after_lost_merge_response_does_not_repeat_provider_or_merge(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, github, phases = _neptune_dispatcher(neptune_config, monkeypatch)
+    _run_neptune_until(pipeline, JobState.MERGE_QUEUED)
+    github.lose_merge_response = True
+    interrupted = pipeline.run_job("42")
+    assert interrupted is not None and interrupted.last_error
+    assert interrupted.state is JobState.MERGE_QUEUED
+    restarted = FactoryPipeline(neptune_config, github=github)  # type: ignore[arg-type]
+    recovered = restarted.run_job("42")
+    assert recovered is not None and recovered.state is JobState.MERGED
+    completed = restarted.run_job("42")
+    assert completed is not None and completed.state is JobState.DONE
+    assert github.merges == [(99, "a" * 40)]
+    assert phases == ["implementation"]
+    assert len(github.created_pull_requests) == 1
+
+
+def test_neptune_provider_deferral_preserves_implementation_and_task_attempt_budget(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, github, _ = _neptune_dispatcher(neptune_config, monkeypatch)
+    _run_neptune_until(pipeline, JobState.IMPLEMENTING)
+
+    def unavailable(*args: object, **kwargs: object) -> None:
+        raise ProviderCapacityUnavailable("subscription quota cooling down", 123)
+
+    monkeypatch.setattr(FactoryPipeline, "_run_agent", unavailable)
+    result = pipeline.run_job("42")
+    assert result is not None and result.state is JobState.IMPLEMENTING
+    assert result.attempts == 0
+    assert result.next_attempt_at is not None and result.next_attempt_at > datetime.now(UTC)
+    assert result.latest_verified_sha is None
+    assert github.created_pull_requests == []
+    assert github.merges == []
+
+
+def test_neptune_local_verification_failure_cannot_publish_a_pr(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, github, phases = _neptune_dispatcher(neptune_config, monkeypatch)
+    _run_neptune_until(pipeline, JobState.VERIFYING)
+
+    def fail(*args: object) -> None:
+        raise VerificationFailed("required native test count is zero")
+
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", fail)
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    result = pipeline.run_job("42")
+    assert result is not None and result.state is JobState.QUALITY_REPAIRING
+    assert "native test count is zero" in " ".join(result.review_findings)
+    assert result.latest_verified_sha is None
+    assert github.created_pull_requests == []
+    assert github.merges == []
+    assert phases == ["implementation"]
+
+
+@pytest.mark.parametrize("typed_preparation_failure", [False, True])
+def test_neptune_tool_preparation_backoff_resumes_same_verification_without_ai_repair(
+    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch, typed_preparation_failure: bool
+) -> None:
+    pipeline, github, phases = _neptune_dispatcher(neptune_config, monkeypatch)
+    before = _run_neptune_until(pipeline, JobState.VERIFYING)
+    branch, head = before.branch, before.head_sha
+
+    def fail(*_args: object) -> None:
+        if typed_preparation_failure:
+            from openhands_factory.neptune_preparation import ToolPreparationUnavailable
+
+            raise ToolPreparationUnavailable("owned_missing_tool")
+        raise VerificationFailed(
+            "Missing/mismatched offline Godot cache; provision it before verification"
+        )
+
+    monkeypatch.setattr(pipeline, "_restart_stale_unpublished", lambda *_args: False)
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda _workflow: "unchanged")
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *_args: None)
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", fail)
+    failed = pipeline.run_job("42")
+    assert failed is not None and failed.state is JobState.VERIFYING
+    assert failed.branch == branch and failed.head_sha == head
+    assert failed.quality_repairs == 0 and failed.review_findings == []
+    assert failed.last_failure_kind == "infrastructure" and failed.next_attempt_at is not None
+    assert (
+        phases == ["implementation"] and github.created_pull_requests == [] and github.merges == []
+    )
+    fresh = FactoryPipeline(neptune_config, github=github)  # type: ignore[arg-type]
+    restored = fresh.jobs.load()["42"]
+    assert restored.next_attempt_at == failed.next_attempt_at
+    restored.next_attempt_at = datetime.now(UTC) - timedelta(seconds=1)
+    fresh.jobs.save_job(restored)
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda _commands: None)
+    continued = fresh.run_job("42")
+    assert continued is not None and continued.state is JobState.PR_DRAFT
+    assert continued.branch == branch and phases == ["implementation"]
+
+
+def test_neptune_queued_head_must_still_have_matching_verification(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, github, _ = _neptune_dispatcher(neptune_config, monkeypatch)
+    # A legacy/incomplete queue record has no canonical verification receipt.
+    # Do not erase only the jobs.json copy of a valid TaskStore receipt: restart
+    # reconciliation is supposed to restore that authoritative evidence.
+    job = Job(
+        task=github.tasks[0],
+        state=JobState.MERGE_QUEUED,
+        branch="factory/42-fix-build",
+        pull_request=99,
+        head_sha="a" * 40,
+    )
+    (neptune_config.worktree_dir / "issue-42").mkdir(parents=True)
+    pipeline.jobs.save_job(job)
+    result = pipeline.run_job("42")
+    assert result is not None and result.state is JobState.REVIEWING
+    assert github.merges == []
+
+
+def test_neptune_bootstrap_never_dispatches_extra_backlog_analysis(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, _, phases = _neptune_dispatcher(neptune_config, monkeypatch)
+    assert not pipeline.architect_due()
+    with pytest.raises(FactoryError, match="bootstrap does not run"):
+        pipeline.run_architect_cycle()
+    assert phases == []
+
+
+def test_neptune_reconciles_merged_canonical_pr_without_deleting_replay_work(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, github, _ = _neptune_dispatcher(neptune_config, monkeypatch)
+    job = Job(task=github.tasks[0], branch="factory/42-replay", head_sha="a" * 40)
+    identity = PullRequestIdentity.for_task(
+        job.task,
+        branch="factory/42-original",
+        base_ref="main",
+        change_fingerprint="verified-change",
+        touched_paths={Path("README.md")},
+    )
+    github.inventory = [
+        PullRequestRecord.from_payload(
+            {
+                "number": 98,
+                "title": "Existing change",
+                "body": identity.markers(),
+                "state": "MERGED",
+                "headRefName": "factory/42-original",
+                "headRefOid": "c" * 40,
+                "baseRefName": "main",
+            }
+        )
+    ]
+    monkeypatch.setattr(
+        GitWorkflow, "committed_change_fingerprint", lambda workflow: "verified-change"
+    )
+
+    def forbidden(*args: object) -> None:
+        pytest.fail("Neptune must preserve the replay branch for recovery")
+
+    monkeypatch.setattr(GitWorkflow, "delete_remote_branch", forbidden)
+    action = pipeline._ensure_pull_request(
+        job,
+        pipeline._workflow(neptune_config.repository),
+        title="Replay",
+        body="Fixes #42",
+    )
+    assert action is ConvergenceAction.ALREADY_MERGED
+    assert job.pull_request == 98
+    assert github.created_pull_requests == []
 
 
 def config(tmp_path: Path) -> FactoryConfig:
@@ -484,6 +895,7 @@ def test_refresh_releases_closed_issue_before_pull_request(
         GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.tasks = []
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
 
     refreshed = pipeline.refresh()
 
@@ -526,6 +938,7 @@ def test_refresh_migrates_a_quarantined_closed_issue_into_normal_completion(
     worktree.mkdir(parents=True)
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     github.tasks = []
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
 
     refreshed = pipeline.refresh()
 
@@ -548,6 +961,7 @@ def test_refresh_releases_a_closed_issue_during_security_review(
         GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.tasks = []
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
 
     refreshed = pipeline.refresh()
 
@@ -576,12 +990,244 @@ def test_refresh_releases_a_pull_request_closed_while_under_review(
         GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.pull_requests = []
+    github.remote_states[(40, True)] = RemoteTaskState(40, "CLOSED", "a" * 40)
 
     refreshed = pipeline.refresh()
 
     assert refreshed["40"].state is JobState.DONE
     assert refreshed["40"].last_error == "Pull request closed before the factory finished with it"
     assert removed == [worktree]
+
+
+@pytest.mark.parametrize("source", ["github-issue", "github-pull-request"])
+def test_missing_intake_preserves_and_suspends_open_work(tmp_path, source):
+    github = GitHub()
+    task = Task("42", "Owned work", "Body", source, 5, pr_branch="owned/work")
+    github.tasks = [task] if source == "github-issue" else []
+    github.pull_requests = [task] if source == "github-pull-request" else []
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.state = JobState.REVIEWING
+    job.provider_history = [{"provider": "codex", "success": True}]
+    job.failure_counts = {"test-failure": 2}
+    pipeline.jobs.save_reconciled_jobs([job])
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    evidence = worktree / "unfinished.txt"
+    evidence.write_text("preserve this work")
+    github.tasks = []
+    github.pull_requests = []
+
+    refreshed = pipeline.refresh()["42"]
+
+    assert refreshed.state is JobState.REVIEWING
+    assert refreshed.intake_blocked
+    assert evidence.read_text() == "preserve this work"
+    assert refreshed.provider_history == job.provider_history
+    assert refreshed.failure_counts == job.failure_counts
+    assert pipeline.run_job("42") is None
+    assert pipeline.jobs.load()["42"].attempt_started_at is None
+    # Restoring eligibility resumes the same phase without resetting evidence.
+    github.tasks = [task] if source == "github-issue" else []
+    github.pull_requests = [task] if source == "github-pull-request" else []
+    resumed = pipeline.refresh()["42"]
+    assert not resumed.intake_blocked
+    assert resumed.intake_block_reason is None
+    assert resumed.state is JobState.REVIEWING
+    assert resumed.provider_history == job.provider_history
+
+
+@pytest.mark.parametrize("failure", ["HTTP401", "HTTP403", "HTTP404", "network failure"])
+def test_unconfirmed_remote_state_preserves_work_and_other_eligible_tasks(
+    tmp_path, monkeypatch, failure
+):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    original = pipeline.refresh()["42"]
+    original.state = JobState.IMPLEMENTING
+    original.last_error = "Original diagnostic"
+    pipeline.jobs.save_reconciled_jobs([original])
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    (worktree / "evidence").write_text("retained")
+    github.tasks = [Task("43", "Independent work", "Body", "github-issue", 5)]
+
+    def unavailable(*args, **kwargs):
+        assert pipeline.jobs.load()["42"].intake_blocked
+        raise FactoryError(failure)
+
+    monkeypatch.setattr(github, "remote_task_state", unavailable)
+    jobs = pipeline.refresh()
+    assert jobs["42"].intake_blocked
+    assert jobs["42"].state is JobState.IMPLEMENTING
+    assert jobs["42"].last_error == "Original diagnostic"
+    assert (worktree / "evidence").read_text() == "retained"
+    assert not jobs["43"].intake_blocked
+    assert jobs["43"].state is JobState.DISCOVERED
+
+
+@pytest.mark.parametrize("source", ["github-issue", "github-pull-request"])
+def test_native_merge_of_verified_head_enters_existing_cleanup_without_new_agent(tmp_path, source):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.task = replace(job.task, source=source)
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    job.head_sha = job.latest_verified_sha = "a" * 40
+    job.provider_history = [{"provider": "codex", "phase": "code-review", "success": True}]
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, "MERGED", "a" * 40)
+
+    merged = pipeline.refresh()["42"]
+    assert merged.state is JobState.MERGED
+    assert not merged.intake_blocked
+    assert merged.last_error is None
+    assert github.remote_state_calls == [(99, True)]
+    completed = pipeline.run_job("42")
+    assert completed.state is JobState.DONE
+    assert completed.last_error is None
+    assert completed.provider_history == job.provider_history
+    assert pipeline.run_job("42") is None
+
+
+@pytest.mark.parametrize("verified", [None, "b" * 40])
+def test_unverified_merged_head_is_preserved_without_false_credit(tmp_path, verified):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    job.head_sha = "a" * 40
+    job.latest_verified_sha = verified
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, "MERGED", "a" * 40)
+
+    preserved = pipeline.refresh()["42"]
+    assert preserved.state is JobState.CI_PENDING
+    assert preserved.intake_blocked
+    assert "verified" in preserved.intake_block_reason
+    assert pipeline.run_job("42") is None
+
+
+def test_readmission_cannot_approve_an_unverified_merged_head(tmp_path):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    job.head_sha = "a" * 40
+    job.latest_verified_sha = "b" * 40
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, "MERGED", "a" * 40)
+    assert pipeline.refresh()["42"].intake_blocked
+    github.tasks = [job.task]
+
+    reobserved = pipeline.refresh()["42"]
+    assert reobserved.intake_blocked
+    assert reobserved.latest_verified_sha == "b" * 40
+    assert pipeline.run_job("42") is None
+
+
+def test_reconciliation_cannot_take_a_live_execution_lease(tmp_path):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    pipeline.tasks.acquire(job.task, "actual-live-owner")
+    github.tasks = []
+    # No protected-id hint: the real task claim is the fence.
+    pipeline.refresh()
+    assert github.remote_state_calls == []
+    assert pipeline.tasks.leases()[job.task.logical_key].owner == "actual-live-owner"
+    assert not pipeline.jobs.load()["42"].intake_blocked
+
+
+def test_dispatch_cannot_race_reconciliation_during_remote_query(tmp_path, monkeypatch):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    original = pipeline.refresh()["42"]
+    github.tasks = []
+
+    def blocked_query(number, **kwargs):
+        assert pipeline.run_job("42") is None
+        assert pipeline.jobs.load()["42"].attempt_started_at is None
+        return RemoteTaskState(number, "OPEN")
+
+    monkeypatch.setattr(github, "remote_task_state", blocked_query)
+    pipeline.refresh()
+    assert pipeline.jobs.load()["42"].state is original.state
+    assert pipeline.jobs.load()["42"].intake_blocked
+
+
+@pytest.mark.parametrize("issue_state,pull_state", [("CLOSED", "OPEN"), ("OPEN", "CLOSED")])
+def test_closed_issue_or_pull_request_alone_does_not_discard_the_other_open_work(
+    tmp_path, issue_state, pull_state
+):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, pull_state, "a" * 40)
+    github.remote_states[(42, False)] = RemoteTaskState(42, issue_state)
+    paused = pipeline.refresh()["42"]
+    assert paused.intake_blocked
+    assert paused.state is JobState.CI_PENDING
+
+
+def test_reopened_closed_issue_keeps_known_pull_request_for_supported_recovery(tmp_path):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, "CLOSED", "a" * 40)
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
+    assert pipeline.refresh()["42"].state is JobState.DONE
+    github.tasks = [job.task]
+    resumed = pipeline.refresh()["42"]
+    assert resumed.state is JobState.CI_PENDING
+    assert resumed.pull_request == 99
+    assert not resumed.intake_blocked
+
+
+def test_lease_loss_after_remote_observation_cannot_remove_or_finish_work(tmp_path, monkeypatch):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    pipeline.refresh()
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    (worktree / "retained").write_text("unfinished")
+    github.tasks = []
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
+
+    def expired(*args, **kwargs):
+        raise ValueError("expired ownership")
+
+    monkeypatch.setattr(pipeline.tasks, "renew", expired)
+    job = pipeline.refresh()["42"]
+    assert job.intake_blocked
+    assert job.state is JobState.DISCOVERED
+    assert (worktree / "retained").read_text() == "unfinished"
+
+
+def test_unchanged_intake_poll_does_not_reset_age_or_retry_evidence(tmp_path):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    pipeline.refresh()
+    github.tasks = []
+    first = pipeline.refresh()["42"]
+    second = pipeline.refresh()["42"]
+    assert second.intake_blocked
+    assert second.updated_at == first.updated_at
+    assert second.failure_counts == first.failure_counts
 
 
 @pytest.mark.parametrize(
@@ -660,9 +1306,39 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(99, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
-        PullRequestStatus(99, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
-        PullRequestStatus(99, "MERGED", False, "UNKNOWN", "", "abcdef1234567", True, False),
+        PullRequestStatus(
+            99,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
+        PullRequestStatus(
+            99,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
+        PullRequestStatus(
+            99,
+            "MERGED",
+            False,
+            "UNKNOWN",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
     ]
 
     def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
@@ -1081,14 +1757,384 @@ def test_non_strict_base_policy_does_not_reuse_unproven_or_strict_candidates(
     assert pipeline._review_needs_base_update(job, GitWorkflow(tmp_path, "main"), status)
 
 
+@pytest.mark.parametrize(
+    "case",
+    [
+        "matching",
+        "wrong-pr",
+        "stale-remote",
+        "stale-verified",
+        "pending",
+        "failed",
+        "missing",
+        "closed",
+    ],
+)
+def test_coordinator_review_snapshot_never_upgrades_unproven_ci(case):
+    job = Job(
+        Task("77", "Review candidate", "", "github-pull-request", 1),
+        pull_request=77,
+        head_sha="candidate",
+        latest_verified_sha="candidate",
+    )
+    status = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "MERGEABLE",
+        "",
+        "candidate",
+        False,
+        True,
+        ci_required_passed=True,
+        workflow_run_ids=frozenset({"456", "123"}),
+    )
+    if case == "wrong-pr":
+        status = replace(status, number=78)
+    elif case == "stale-remote":
+        status = replace(status, head_sha="moved")
+    elif case == "stale-verified":
+        job.latest_verified_sha = "old"
+    elif case == "pending":
+        status = replace(status, ci_required_pending=True)
+    elif case == "failed":
+        status = replace(status, ci_required_failed=True)
+    elif case == "missing":
+        status = None
+    elif case == "closed":
+        status = replace(status, state="CLOSED")
+    evidence = json.loads(FactoryPipeline._review_verification_snapshot(job, status))
+    assert evidence["required_ci_passed_for_verified_head"] is (case == "matching")
+    assert evidence["latest_verified_sha"] == job.latest_verified_sha
+    assert evidence["workflow_run_ids"] == ([] if case == "missing" else ["123", "456"])
+    assert "approval" in evidence["scope"]
+
+
+@pytest.mark.parametrize("case", ["missing", "pending", "failed", "contradictory-pending"])
+def test_independent_review_preflight_spends_no_provider_call_for_unready_ci(
+    tmp_path, monkeypatch, case
+):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    status = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "MERGEABLE",
+        "",
+        "candidate",
+        False,
+        True,
+        ci_required_passed=case == "contradictory-pending",
+        ci_required_pending=case in {"pending", "contradictory-pending"},
+        ci_required_failed=case == "failed",
+    )
+    github.statuses = [status]
+    pipeline = FactoryPipeline(factory_config, github=github)
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    pipeline.jobs.save(
+        {
+            "77": Job(
+                Task("77", "Await actual CI", "", "github-pull-request", 1),
+                state=JobState.REVIEWING,
+                branch="fix/candidate",
+                pull_request=77,
+                head_sha="candidate",
+                latest_verified_sha="candidate",
+            )
+        }
+    )
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("CI is not ready")
+    )
+    result = pipeline.run_job("77")
+    assert result is not None and result.last_error is None
+    assert result.state is (JobState.REPAIRING if case == "failed" else JobState.REVIEWING)
+    assert (result.next_attempt_at is not None) is (case != "failed")
+    assert result.provider_history == []
+    assert github.reviewed == []
+    assert github.statuses == []
+
+
+def test_ci_preflight_resumes_review_after_controller_restart_without_waiting_on_itself(
+    tmp_path, monkeypatch
+):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    head = "abcdef1234567"
+    pending = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "MERGEABLE",
+        "",
+        head,
+        False,
+        True,
+        ci_required_pending=True,
+    )
+    github.statuses = [
+        pending,
+        replace(pending, ci_required_pending=False, ci_required_passed=True),
+    ]
+    prompts = []
+
+    class CapturingReview(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=CapturingReview())
+    pipeline.jobs.save(
+        {
+            "77": Job(
+                Task("77", "CI before review", "", "github-pull-request", 1),
+                state=JobState.REVIEWING,
+                branch="fix/candidate",
+                pull_request=77,
+                head_sha=head,
+                latest_verified_sha=head,
+            )
+        }
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.CI_POLL_INTERVAL", timedelta(0))
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: head)
+    waiting = pipeline.run_job("77")
+    assert waiting is not None and waiting.state is JobState.REVIEWING
+    assert prompts == [] and waiting.provider_history == []
+    resumed = FactoryPipeline(factory_config, github=github, conversations=CapturingReview())
+    reviewed = resumed.run_job("77")
+    assert reviewed is not None and reviewed.last_error is None
+    assert reviewed.state is JobState.CI_PENDING
+    assert len(prompts) == 1
+    assert len(reviewed.provider_history) == 1
+    assert github.reviewed == [head]
+    assert github.statuses == []
+
+
+def test_review_dispatch_carries_the_same_status_used_for_exact_head_refresh(tmp_path, monkeypatch):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    head = "abcdef1234567"
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            head,
+            False,
+            True,
+            ci_required_passed=True,
+            workflow_run_ids=frozenset({"41403266809"}),
+        )
+    ]
+    prompts = []
+
+    class CapturingReview(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    job = Job(
+        Task(
+            "77",
+            "Review verified source",
+            "Issue says CI was never observed",
+            "github-pull-request",
+            1,
+        ),
+        state=JobState.REVIEWING,
+        branch="fix/candidate",
+        pull_request=77,
+        head_sha=head,
+        latest_verified_sha=head,
+    )
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=CapturingReview())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: head)
+    result = pipeline.run_job("77")
+    assert result is not None and result.last_error is None
+    assert result.state is JobState.CI_PENDING
+    assert len(prompts) == 1
+    observation = prompts[0].split("## Coordinator verification observation\n", 1)[1]
+    assert '"required_ci_passed_for_verified_head": true' in observation
+    assert '"observed_head_sha": "abcdef1234567"' in observation
+    assert "41403266809" in observation
+    assert "Inspect the mandatory workflow coverage and source/tests" in observation
+    assert prompts[0].index("## End untrusted task and evidence data") < prompts[0].index(
+        "## Coordinator verification observation"
+    )
+    assert github.statuses == []  # Exactly one observation; no duplicate polling.
+
+
+@pytest.mark.parametrize("merge_state", ["UNKNOWN", "BLOCKED", "UNSTABLE"])
+def test_review_repair_survives_base_advance_verification_failure_and_restart(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, merge_state: str
+) -> None:
+    factory_config = config(tmp_path)
+    factory_config.require_green_main_between_merges = False
+    worktree = factory_config.worktree_dir / "issue-77"
+    source = tmp_path / "source"
+    _initialise_implementation_worktree(source)
+    factory_config.repository = source
+    remote = tmp_path / "remote.git"
+
+    def git(*arguments: str, cwd: Path = worktree) -> str:
+        return subprocess.run(
+            ("git", *arguments), cwd=cwd, check=True, capture_output=True, text=True
+        ).stdout.strip()
+
+    worktree.parent.mkdir(parents=True)
+    git("worktree", "add", "--detach", str(worktree), cwd=source)
+    tracked = worktree / "tracked.txt"
+    git("init", "--bare", str(remote))
+    git("remote", "add", "origin", str(remote))
+    git("push", "origin", "main")
+    git("switch", "-c", "fix/review-repair")
+    tracked.write_text("candidate\n", encoding="utf-8")
+    git("add", "tracked.txt")
+    git("commit", "-m", "fix: original candidate")
+    old_head = git("rev-parse", "HEAD")
+    git("push", "origin", "HEAD:fix/review-repair")
+    (source / "base-only.txt").write_text("unrelated main advance\n", encoding="utf-8")
+    git("add", "base-only.txt", cwd=source)
+    git("commit", "-m", "fix: advance base during review", cwd=source)
+    git("push", "origin", "main", cwd=source)
+    tracked.write_text("recovered review repair\n", encoding="utf-8")
+    status = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "MERGEABLE",
+        "",
+        old_head,
+        False,
+        True,
+        merge_state_status=merge_state,
+        ci_required_passed=True,
+    )
+    github = GitHub()
+    github.statuses = [status, status]
+    history = [{"phase": "code-review", "success": True, "mutated_code": True}]
+    job = Job(
+        Task("77", "Keep review repairs", "", "github-pull-request", 1),
+        state=JobState.VERIFYING,
+        branch="fix/review-repair",
+        pull_request=77,
+        head_sha=old_head,
+        latest_verified_sha=old_head,
+        provider_history=history,
+    )
+    pipeline = FactoryPipeline(factory_config, github=github)
+    pipeline.jobs.save({"77": job})
+
+    def interrupted_verify(workflow: GitWorkflow) -> set[Path]:
+        assert tracked.read_text() == "recovered review repair\n"
+        raise VerificationFailed("verification failed: no space left on device")
+
+    monkeypatch.setattr(pipeline, "_verify", interrupted_verify)
+    failed = pipeline.run_job("77")
+    assert failed is not None and failed.state is JobState.VERIFYING
+    assert "no space left on device" in (failed.last_error or "")
+    assert tracked.read_text() == "recovered review repair\n"
+    assert git("rev-parse", "HEAD") == old_head
+    assert github.updated_branches == []
+
+    # A fresh controller reads the persisted state and the same real worktree.
+    resumed = FactoryPipeline(factory_config, github=github)
+    monkeypatch.setattr(resumed, "_verify", lambda workflow: workflow.changed_paths())
+    result = resumed.run_job("77")
+    assert result is not None and result.last_error is None
+    assert result.state is JobState.REVIEWING
+    assert result.head_sha == git("rev-parse", "HEAD") != old_head
+    assert result.latest_verified_sha == result.head_sha
+    assert git("show", "origin/fix/review-repair:tracked.txt") == "recovered review repair"
+    assert git("status", "--porcelain") == ""
+    assert result.provider_history == history
+    assert github.reviewed == []  # Mutating approval is never republished for the repair.
+    assert github.updated_branches == []
+    assert not factory_config.recovery_dir.exists()
+
+
+@pytest.mark.parametrize("tests_only", [False, True])
+@pytest.mark.parametrize("kind", ["strict-base", "external-head", "conflict"])
+def test_recovery_still_fences_remote_changes_and_required_base_refresh(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tests_only: bool, kind: str
+) -> None:
+    factory_config = config(tmp_path)
+    factory_config.require_green_main_between_merges = True
+    monkeypatch.setattr(FactoryConfig, "tests_only_merging", property(lambda self: tests_only))
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "CONFLICTING" if kind == "conflict" else "MERGEABLE",
+            "",
+            "external-head" if kind == "external-head" else "old-head",
+            False,
+            True,
+            merge_state_status="UNKNOWN",
+            ci_required_passed=True,
+        )
+    ]
+    pipeline = FactoryPipeline(factory_config, github=github)
+    job = Job(
+        Task("77", "Fence changed remote", "", "github-pull-request", 1),
+        state=JobState.VERIFYING,
+        head_sha="old-head",
+        pull_request=77,
+    )
+    monkeypatch.setattr(GitWorkflow, "contains_current_base", lambda workflow: False)
+    refreshed = []
+    monkeypatch.setattr(
+        pipeline,
+        "_refresh_pull_request_for_review",
+        lambda current, worktree, owner, status: refreshed.append(status.head_sha),
+    )
+    assert pipeline._refresh_pull_request_if_changed(job, tmp_path, "test-owner")
+    assert refreshed == ["external-head" if kind == "external-head" else "old-head"]
+    assert github.reviewed == []
+
+
 def test_pull_request_review_can_push_repair_commits_to_its_own_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
     ]
     pushed: list[str] = []
 
@@ -1199,6 +2245,48 @@ def test_verified_repair_of_existing_pull_request_returns_to_review_without_new_
     assert result.pull_request == 77
     assert result.head_sha == "repaired-head"
     assert github.comments[-1][0] == 77
+
+
+@pytest.mark.parametrize(("latest_verified_sha", "commits"), [("verified-head", 0), (None, 1)])
+def test_a_clean_worktree_commits_only_when_its_head_was_not_already_verified(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    latest_verified_sha: str | None,
+    commits: int,
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", True, "MERGEABLE", "", "verified-head", True, False)
+    ]
+    (factory_config.worktree_dir / "issue-77").mkdir(parents=True)
+    job = Job(
+        task=Task("77", "Finish placeholder surfaces", "Body", "github-issue", 10),
+        state=JobState.VERIFYING,
+        branch="factory/77-finish",
+        pull_request=77,
+        head_sha="verified-head",
+        latest_verified_sha=latest_verified_sha,
+    )
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+    pipeline.jobs.save({"77": job})
+    committed: list[str] = []
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
+    monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: committed.append(message))
+    monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "verified-head")
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
+
+    result = pipeline.run_job("77")
+
+    assert result is not None and result.last_error is None
+    assert len(committed) == commits
+    assert result.state is JobState.REVIEWING
 
 
 @pytest.mark.parametrize("initial_state", [JobState.CI_PENDING, JobState.MERGE_QUEUED])
@@ -1441,7 +2529,7 @@ def test_verifying_external_closed_pull_request_finishes_without_reopening(tmp_p
     assert github.reopened_pull_requests == []
 
 
-def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
+def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> Job:
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
     _seed_prompts(worktree / "automation/prompts")
@@ -1531,8 +2619,145 @@ def test_exhausted_repair_budget_still_blocks_another_model_start(tmp_path, monk
         pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("budget bypass")
     )
     result = pipeline.run_job("77")
-    assert result.last_error == "Repair limit exceeded"
+    assert result.last_error == "Repair limit exceeded: backend / lint"
     assert result.repair_attempts == 5
+
+
+def _spent_repair_budget_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_checks: frozenset[str],
+) -> FactoryPipeline:
+    """A CI-repair job at the model budget that GitHub still reports as not mergeable."""
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    github.statuses = [replace(github.statuses[0], failed_checks=failed_checks)]
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("budget bypass")
+    )
+    return pipeline
+
+
+@pytest.mark.parametrize(
+    ("failed_checks", "expected"),
+    [
+        (
+            frozenset({"frontend / unit", "backend / lint", "CI / required"}),
+            "Repair limit exceeded: CI / required, backend / lint, frontend / unit",
+        ),
+        (frozenset(), "Repair limit exceeded: no failed check reported"),
+    ],
+)
+def test_spent_repair_budget_lists_the_sorted_failed_checks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_checks: frozenset[str],
+    expected: str,
+) -> None:
+    pipeline = _spent_repair_budget_pipeline(tmp_path, monkeypatch, failed_checks)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.last_error == expected
+    assert result.repair_attempts == 5
+    assert result.provider_history == []
+    notice = next(
+        body for _, body in pipeline.github.comments if body.startswith(CAPPED_NOTICE_PREFIX)
+    )
+    assert f"Last failure:\n```\n{expected}\n```" in notice
+
+
+def test_repeated_spent_repair_budget_keeps_one_fingerprint_and_escalates_backoff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    failed_checks = frozenset({"frontend / unit", "backend / lint"})
+    pipeline = _spent_repair_budget_pipeline(tmp_path, monkeypatch, failed_checks)
+    status = pipeline.github.statuses[0]
+
+    results = []
+    for _ in range(pipeline.config.max_consecutive_failures):
+        pipeline.github.statuses = [status]
+        result = pipeline.run_job("77")
+        assert result is not None
+        results.append(result)
+
+    assert {result.last_error for result in results} == {
+        "Repair limit exceeded: backend / lint, frontend / unit"
+    }
+    assert len({result.last_failure_fingerprint for result in results}) == 1
+    assert [result.repeated_failure_count for result in results] == [1, 2, 3]
+    assert all(result.last_failure_kind == "budget" for result in results)
+    final = results[-1]
+    assert final.next_attempt_at is not None
+    # Reaching the repeated-failure threshold applies the 30 minute chronic floor.
+    assert final.next_attempt_at - final.updated_at >= timedelta(minutes=30)
+
+
+def test_failed_check_cause_is_sorted_single_line_and_bounded() -> None:
+    many = frozenset(f"check-{index:02d}" for index in range(MAX_BUDGET_CAUSE_ITEMS + 3))
+    assert _failed_checks_cause(many) == (
+        ", ".join(f"check-{index:02d}" for index in range(MAX_BUDGET_CAUSE_ITEMS)) + " (+3 more)"
+    )
+
+    hostile = _failed_checks_cause(frozenset({"first\nsecond\t" + "x" * 500}))
+    assert "\n" not in hostile and "\t" not in hostile
+    assert len(hostile) == MAX_BUDGET_CAUSE_ITEM_CHARS
+
+    assert _failed_checks_cause(frozenset({"", "  \n"})) == "no failed check reported"
+
+    # The opening words must survive the 2000 characters kept in last_error.
+    worst = _failed_checks_cause(frozenset(f"{index:03d}" + "y" * 400 for index in range(40)))
+    assert len(f"Repair limit exceeded: {worst}") < 2000
+
+
+def test_exhausted_repair_budget_parks_the_pull_request_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    job.predecessor_pull_request = 41
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("budget bypass")
+    )
+
+    github.statuses.append(github.statuses[0])
+    first = pipeline.run_job("77")
+    assert first is not None
+    first.next_attempt_at = None
+    pipeline.jobs.save({"77": first})
+    second = pipeline.run_job("77")
+
+    assert second is not None
+    assert second.last_error is not None
+    assert second.last_error.startswith("Repair limit exceeded: ")
+    pull_request = job.pull_request
+    assert (pull_request, ("factory-capped",)) in github.labels
+    notices = [
+        body
+        for number, body in github.comments
+        if number == pull_request and body.startswith("OpenHands Factory parked")
+    ]
+    assert len(notices) == 1
+    assert "CI-repair budget is spent" in notices[0]
 
 
 @pytest.mark.parametrize("status_kind", ["merged", "new-head", "green", "pending"])
@@ -1625,9 +2850,98 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     assert result.repair_attempts == 1
 
 
+def test_ci_repair_prompt_includes_the_failed_job_log_excerpts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.ci_excerpts = "### backend / unit\n FAIL  src/chat/search.spec.ts > keeps filters"
+    job = _repairing_job(factory_config, github)
+    prompts: list[str] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift", lambda worktree, task_id: None
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(VerificationFailed("stop after the prompt")),
+    )
+
+    pipeline.run_job("77")
+
+    assert len(prompts) == 1
+    assert "Failed CI job log excerpts:" in prompts[0]
+    assert "FAIL  src/chat/search.spec.ts > keeps filters" in prompts[0]
+
+
+def test_ci_repair_is_told_which_design_preview_or_manifest_item_to_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.last_error = "Design sync drift verification failed:\n- screen.chat: noisy tail"
+    prompts: list[str] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift",
+        lambda worktree, task_id: f"edit frontend/design-preview/screens/chat.html for {task_id}",
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(VerificationFailed("stop after the prompt")),
+    )
+
+    pipeline.run_job("77")
+
+    assert len(prompts) == 1
+    assert f"edit frontend/design-preview/screens/chat.html for {job.task.identifier}" in prompts[0]
+    # The raw gate output is replaced by the guidance, not repeated beside it.
+    assert "noisy tail" not in prompts[0]
+
+
+def _without_mechanical_repair(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.attempt_mechanical_repair",
+        lambda repository, changed_paths: None,
+    )
+
+
 def test_repair_verification_failure_enters_quality_repair_without_backoff(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    _without_mechanical_repair(monkeypatch)
     factory_config = config(tmp_path)
     github = GitHub()
     job = _repairing_job(factory_config, github)
@@ -1653,6 +2967,88 @@ def test_repair_verification_failure_enters_quality_repair_without_backoff(
     assert "design-sync-drift" in result.review_findings[0]
 
 
+def test_local_design_drift_failure_becomes_explicit_quality_repair_steps(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _without_mechanical_repair(monkeypatch)
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    failure = (
+        "design-sync-drift failed with exit 1: ok 1 - passing self-test\n"
+        "Design sync drift verification failed:\n"
+        "- screen.chat: mapped implementation changed without its mapped preview\n"
+        "    changed: frontend/src/app/pages/chat/chat.page.html\n"
+        "    update the preview to match: frontend/design-preview/screens/chat.html\n"
+        '    or, if the visual contract is unchanged, record why in the "screen.chat" item\n'
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(VerificationFailed(failure)),
+    )
+    result = pipeline.run_job("77")
+    assert result is not None and result.state is JobState.QUALITY_REPAIRING
+    assert "edit frontend/design-preview/screens/chat.html" in result.review_findings[0]
+    assert 'only the "screen.chat" item' in result.review_findings[0]
+    assert "passing self-test" not in result.review_findings[0]
+
+
+def test_capped_drift_failure_merges_a_newer_base_once_before_parking(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.quality_repairs = 5
+    job.failure_counts["design-drift-guided-repair"] = 1
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    failure = (
+        "Design sync drift verification failed:\n"
+        "- screen.chat: mapped implementation changed without its mapped preview\n"
+        "    changed: frontend/src/app/pages/chat/chat.page.html\n"
+        "    update the preview to match: frontend/design-preview/screens/chat.html\n"
+    )
+    monkeypatch.setattr(
+        pipeline, "_verify", lambda workflow: (_ for _ in ()).throw(VerificationFailed(failure))
+    )
+    monkeypatch.setattr(pipeline, "_restart_stale_unpublished", lambda *args: False)
+    merges: list[str] = []
+
+    class Workflow:
+        def contains_current_base(self) -> bool:
+            return False
+
+        def merging_current_base(self) -> bool:
+            return bool(merges)
+
+        def merge_base_for_repair(self) -> bool:
+            merges.append("origin/main")
+            return False
+
+    workflow = Workflow()
+
+    assert pipeline._verify_or_schedule_quality_repair(job, workflow) is None  # type: ignore[arg-type]
+    assert merges == ["origin/main"]
+    assert not github.labels
+
+    with pytest.raises(VerificationFailed):
+        pipeline._verify_or_schedule_quality_repair(job, workflow)  # type: ignore[arg-type]
+    assert merges == ["origin/main"]
+    assert (job.pull_request, ("factory-capped",)) in github.labels
+
+
 def _failing_model_repair_pipeline(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[FactoryPipeline, GitHub, list[Task]]:
@@ -1675,8 +3071,8 @@ def _failing_model_repair_pipeline(
     pipeline.jobs.save({"77": job})
     monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
-    fingerprints = iter(range(1_000))
-    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    # Only a model call changes the tree; the stubbed mechanical fixers never do.
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: str(len(agent_calls)))
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
     monkeypatch.setattr(
         GitWorkflow, "push", lambda workflow, branch: pytest.fail("unverified repair pushed")
@@ -1720,10 +3116,10 @@ def test_unpushed_repair_loop_stops_at_the_model_budget(
         pipeline.jobs.save(jobs)
         result = pipeline.run_job("77")
         assert result is not None
-        if result.last_error == "Repair limit exceeded":
+        if (result.last_error or "").startswith("Repair limit exceeded"):
             break
 
-    assert result is not None and result.last_error == "Repair limit exceeded"
+    assert result is not None and result.last_error == "Repair limit exceeded: backend / lint"
     assert len(agent_calls) == 5
     assert result.repair_attempts == 5
 
@@ -2001,7 +3397,17 @@ def test_review_report_is_removed_before_repository_change_detection(
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False)
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        )
     ]
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
@@ -2088,7 +3494,17 @@ def test_review_proceeds_and_clears_stack_label_once_parent_merges(
     github = GitHub()
     github.statuses = [
         PullRequestStatus(90, "MERGED", False, "UNKNOWN", "", "parent-sha", True, False),
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
     ]
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
@@ -2131,7 +3547,17 @@ def test_valid_rejected_review_routes_to_quality_repair(
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False)
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        )
     ]
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
@@ -2768,6 +4194,7 @@ def test_no_change_task_failure_is_bounded_without_disabling_provider(
     job.state = JobState.IMPLEMENTING
     pipeline.jobs.save({"42": job})
     _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
 
@@ -2792,10 +4219,134 @@ def test_no_change_task_failure_is_bounded_without_disabling_provider(
     assert not any("already satisfied" in body for _, body in github.comments)
 
 
+def _initialise_implementation_worktree(worktree: Path) -> Path:
+    worktree.mkdir(parents=True)
+
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ("git", *arguments),
+            cwd=worktree,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    git("init", "--initial-branch=main")
+    git("config", "user.name", "Factory Test")
+    git("config", "user.email", "factory-test@example.invalid")
+    tracked = worktree / "tracked.txt"
+    tracked.write_text("base\n", encoding="utf-8")
+    git("add", "tracked.txt")
+    git("commit", "-m", "test: seed implementation worktree")
+    return tracked
+
+
+@pytest.mark.parametrize("untracked", [False, True])
+def test_interrupted_implementation_with_leftover_edit_advances_after_no_op_provider(
+    tmp_path: Path, untracked: bool
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    tracked = _initialise_implementation_worktree(worktree)
+    if untracked:
+        (worktree / "untracked.txt").write_text("untracked leftover\n", encoding="utf-8")
+    else:
+        tracked.write_text("leftover implementation\n", encoding="utf-8")
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    advanced = pipeline.run_job("42")
+
+    assert advanced is not None
+    assert advanced.state is JobState.SECURITY_REVIEW
+    assert advanced.last_error is None
+
+
+def test_interrupted_implementation_leftover_edit_advances_under_tests_only_merging(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    monkeypatch.setattr(FactoryConfig, "tests_only_merging", property(lambda self: True))
+    worktree = factory_config.worktree_dir / "issue-42"
+    tracked = _initialise_implementation_worktree(worktree)
+    tracked.write_text("leftover implementation\n", encoding="utf-8")
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    advanced = pipeline.run_job("42")
+
+    assert advanced is not None
+    assert advanced.state is JobState.VERIFYING
+    assert advanced.last_error is None
+
+
+def test_interrupted_implementation_cleaned_up_by_provider_still_fails(
+    tmp_path: Path,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    tracked = _initialise_implementation_worktree(worktree)
+    tracked.write_text("leftover implementation\n", encoding="utf-8")
+
+    class RevertingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            tracked.write_text("base\n", encoding="utf-8")
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=RevertingConversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.state is JobState.IMPLEMENTING
+    assert "Implementation produced no changes" in (failed.last_error or "")
+
+
+def test_clean_implementation_still_rejects_no_op_provider(tmp_path: Path) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    _initialise_implementation_worktree(worktree)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.state is JobState.IMPLEMENTING
+    assert "Implementation produced no changes" in (failed.last_error or "")
+
+
 def test_local_verification_failure_routes_into_quality_repair(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _without_mechanical_repair(monkeypatch)
     factory_config = config(tmp_path)
     worktree = factory_config.worktree_dir / "issue-42"
     worktree.mkdir(parents=True)
@@ -2856,6 +4407,561 @@ def test_local_verification_failure_routes_into_quality_repair(
     assert verified.quality_repairs == 0
 
 
+def test_quality_repair_that_changes_nothing_still_spends_the_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    conversations = Conversations()
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=conversations,  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Repair quality", "Body", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/42-repair-quality",
+        quality_repairs=4,
+        review_findings=["backend-test failed with exit 1"],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [],
+    )
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.quality_repairs == 5
+    assert "produced no changes" in (failed.last_error or "")
+    calls = len(failed.provider_history)
+
+    failed.next_attempt_at = None
+    pipeline.jobs.save({"42": failed})
+    capped = pipeline.run_job("42")
+
+    assert capped is not None
+    assert capped.last_error == "Quality repair limit exceeded: review findings"
+    assert len(capped.provider_history) == calls
+
+
+def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    prompts: list[str] = []
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(42, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, False),
+        PullRequestStatus(42, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, False),
+        PullRequestStatus(42, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, False),
+    ]
+
+    class TrackingConversations(Conversations):
+        def run(
+            self,
+            task: Task,
+            workspace: Path,
+            prompt: str,
+            *,
+            timeout_seconds: float | None = None,
+        ) -> ConversationResult:
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Repair quality", "Body", "github-issue", 0),
+        state=JobState.VERIFYING,
+        branch="factory/42-repair-quality",
+        pull_request=42,
+        head_sha="reviewed-head",
+        quality_repairs=5,
+    )
+    pipeline.jobs.save({"42": job})
+    fingerprints = iter(("before-repair", "after-repair"))
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
+    drift_output = (
+        "design-sync-drift failed with exit 1:\n"
+        "- screen.chat: mapped implementation changed without its preview\n"
+        "  changed: frontend/src/app/chat/chat.component.ts\n"
+        "  update the preview to match: frontend/design-preview/screens/chat.html\n"
+    )
+    monkeypatch.setattr(
+        FactoryPipeline,
+        "_verify",
+        lambda pipeline, workflow: (_ for _ in ()).throw(VerificationFailed(drift_output)),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift",
+        lambda worktree, task_id: "edit frontend/design-preview/screens/chat.html",
+    )
+
+    scheduled = pipeline.run_job("42")
+
+    assert scheduled is not None
+    assert scheduled.state is JobState.QUALITY_REPAIRING
+    assert prompts == []
+    assert "design-drift-guided-repair" not in scheduled.failure_counts
+
+    guided = pipeline.run_job("42")
+
+    assert guided is not None
+    assert len(prompts) == 1
+    assert "edit frontend/design-preview/screens/chat.html" in prompts[0]
+    assert guided.failure_counts["design-drift-guided-repair"] == 1
+    assert guided.state is JobState.VERIFYING
+    assert pipeline.jobs.load()["42"].failure_counts["design-drift-guided-repair"] == 1
+
+    capped = pipeline.run_job("42")
+
+    assert capped is not None
+    assert "design-sync-drift failed" in (capped.last_error or "")
+    assert len(prompts) == 1
+    assert (42, ("factory-capped",)) in github.labels
+
+
+def test_capped_ci_repair_without_design_drift_gets_no_extra_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    job.predecessor_pull_request = 41
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.check_design_drift", lambda *args: None)
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("unexpected model")
+    )
+
+    capped = pipeline.run_job("77")
+
+    assert capped is not None and capped.last_error == "Repair limit exceeded: backend / lint"
+    assert "design-drift-guided-repair" not in capped.failure_counts
+
+
+def test_capped_ci_repair_gets_one_design_drift_guided_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    job.predecessor_pull_request = 41
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    github.statuses.append(github.statuses[0])
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift",
+        lambda worktree, task_id: "edit frontend/design-preview/screens/chat.html",
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    contexts: list[str] = []
+
+    def agent(current, worktree, phase, prompt, **kwargs):
+        contexts.append(prompt)
+        raise FactoryError("stop after the guided repair")
+
+    monkeypatch.setattr(pipeline, "_run_agent", agent)
+
+    guided = pipeline.run_job("77")
+
+    assert guided is not None
+    assert len(contexts) == 1
+    assert "edit frontend/design-preview/screens/chat.html" in contexts[0]
+    assert guided.failure_counts["design-drift-guided-repair"] == 1
+    assert guided.repair_attempts == 6
+
+    guided.next_attempt_at = None
+    guided.state = JobState.REPAIRING
+    pipeline.jobs.save({"77": guided})
+    capped = pipeline.run_job("77")
+
+    assert capped is not None and capped.last_error == "Repair limit exceeded: backend / lint"
+    assert len(contexts) == 1
+    assert (job.pull_request, ("factory-capped",)) in github.labels
+
+
+def test_busy_provider_does_not_consume_capped_ci_drift_guided_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    job.predecessor_pull_request = 41
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift", lambda *args: "repair the preview"
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline,
+        "_run_agent",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            ProviderCapacityUnavailable("All eligible providers are busy")
+        ),
+    )
+
+    deferred = pipeline.run_job("77")
+
+    assert deferred is not None
+    assert deferred.repair_attempts == 5
+    assert "design-drift-guided-repair" not in deferred.failure_counts
+
+
+def test_busy_provider_does_not_consume_capped_quality_drift_guided_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Repair quality", "Body", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/42-repair-quality",
+        quality_repairs=5,
+        review_findings=["design drift"],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift", lambda *args: "repair the preview"
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "_run_agent",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            ProviderCapacityUnavailable("All eligible providers are busy")
+        ),
+    )
+
+    deferred = pipeline.run_job("42")
+
+    assert deferred is not None
+    assert deferred.quality_repairs == 5
+    assert "design-drift-guided-repair" not in deferred.failure_counts
+
+
+def test_busy_provider_deferral_does_not_spend_the_ci_repair_budget(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 4
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.check_design_drift", lambda *args: None)
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline,
+        "_run_agent",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            ProviderCapacityUnavailable("All eligible providers are busy")
+        ),
+    )
+
+    deferred = pipeline.run_job("77")
+
+    assert deferred is not None
+    assert deferred.repair_attempts == 4
+    assert deferred.attempts == 0
+
+
+@pytest.mark.parametrize("started", [False, True])
+def test_busy_provider_deferral_does_not_spend_the_quality_repair_budget(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, started: bool
+) -> None:
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Repair quality", "Body", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/42-repair-quality",
+        quality_repairs=4,
+        review_findings=["backend-test failed with exit 1"],
+        # A full, bounded history: a started attempt evicts the oldest entry,
+        # so the length alone cannot tell a started model from a busy one.
+        provider_history=[{"phase": "quality-repair"} for _ in range(3)],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
+
+    def agent(current, *args, **kwargs):
+        if started:
+            current.provider_history.append({"phase": "quality-repair"})
+            del current.provider_history[0]
+            raise ProviderCapacityUnavailable("All eligible providers failed")
+        raise ProviderCapacityUnavailable("All eligible providers are busy")
+
+    monkeypatch.setattr(pipeline, "_run_agent", agent)
+
+    deferred = pipeline.run_job("42")
+
+    assert deferred is not None
+    assert deferred.quality_repairs == (5 if started else 4)
+    assert deferred.state is JobState.QUALITY_REPAIRING
+
+
+@pytest.mark.parametrize(
+    ("state", "pull_request", "age_days", "rebuilt"),
+    [
+        (JobState.QUALITY_REPAIRING, None, 40, True),
+        (JobState.VERIFYING, None, 40, True),
+        (JobState.QUALITY_REPAIRING, None, 2, False),
+        (JobState.QUALITY_REPAIRING, 77, 40, False),
+    ],
+)
+def test_spent_quality_budget_rebuilds_only_unpublished_work_on_a_stale_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    state: JobState,
+    pull_request: int | None,
+    age_days: int,
+    rebuilt: bool,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Rebuild stale work", "Body", "github-issue", 0),
+        state=state,
+        branch="factory/42-rebuild-stale-work",
+        pull_request=pull_request,
+        quality_repairs=5,
+        review_findings=["frontend-build failed with exit 1"],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=age_days))
+    monkeypatch.setattr(FactoryPipeline, "_verify", lambda pipeline, workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [
+            QualityFinding("credential-artifact", Path(".claude/x"), None, "summary", "evidence")
+        ],
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert result.provider_history == []
+    if rebuilt:
+        assert result.state is JobState.DISCOVERED
+        assert result.quality_repairs == 0
+        assert result.review_findings == []
+        assert result.last_error is None
+    else:
+        assert result.state is state
+        assert result.quality_repairs == 5
+        assert result.last_error is not None
+
+
+def _spent_quality_budget_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    findings: list[QualityFinding],
+    review_findings: list[str],
+) -> FactoryPipeline:
+    """A published job whose quality-repair budget is spent, on a current PR head."""
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, True)
+    ]
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save(
+        {
+            "42": Job(
+                Task("42", "Publish the fix", "Body", "github-issue", 0),
+                state=JobState.QUALITY_REPAIRING,
+                branch="factory/42-publish-the-fix",
+                pull_request=77,
+                head_sha="reviewed-head",
+                quality_repairs=MAX_CONSECUTIVE_QUALITY_REPAIRS,
+                review_findings=review_findings,
+            )
+        }
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: findings,
+    )
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("quality budget bypass")
+    )
+    return pipeline
+
+
+def test_spent_quality_budget_names_the_first_gate_finding_of_a_published_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _spent_quality_budget_pipeline(
+        tmp_path,
+        monkeypatch,
+        findings=[
+            QualityFinding(
+                "unsafe-type-escape",
+                Path("backend/src/chat/chat.service.ts"),
+                12,
+                "Type escape",
+                "const raw = payload as any; // token=topsecret",
+            ),
+            QualityFinding("skipped-test", Path("backend/src/chat/chat.spec.ts"), 3, "Skip", "x"),
+        ],
+        review_findings=["Review rejected: the review text must not leak into the error"],
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert result.last_error == (
+        "Quality repair limit exceeded: unsafe-type-escape in backend/src/chat/chat.service.ts"
+    )
+    assert result.state is JobState.QUALITY_REPAIRING
+    assert result.quality_repairs == MAX_CONSECUTIVE_QUALITY_REPAIRS
+    assert result.provider_history == []
+    expected = result.last_error
+    notice = next(
+        body for _, body in pipeline.github.comments if body.startswith(CAPPED_NOTICE_PREFIX)
+    )
+    assert f"Last failure:\n```\n{expected}\n```" in notice
+
+
+def test_spent_quality_budget_with_only_review_findings_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _spent_quality_budget_pipeline(
+        tmp_path,
+        monkeypatch,
+        findings=[],
+        review_findings=["Review rejected: the endpoint trusts a client-supplied user id"],
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert result.last_error == "Quality repair limit exceeded: review findings"
+    assert result.state is JobState.QUALITY_REPAIRING
+    assert result.quality_repairs == MAX_CONSECUTIVE_QUALITY_REPAIRS
+    assert result.provider_history == []
+
+
+def test_spent_quality_budget_found_during_verification_names_the_gate_finding(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    github = GitHub()
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save(
+        {
+            "42": Job(
+                Task("42", "Publish the fix", "Body", "github-issue", 0),
+                state=JobState.VERIFYING,
+                branch="factory/42-publish-the-fix",
+                pull_request=77,
+                head_sha="reviewed-head",
+                quality_repairs=MAX_CONSECUTIVE_QUALITY_REPAIRS,
+            )
+        }
+    )
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, True)
+    ]
+    monkeypatch.setattr(
+        FactoryPipeline,
+        "_verify_or_schedule_quality_repair",
+        lambda pipeline, job, workflow: {Path("backend/src/chat/chat.service.ts")},
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [
+            QualityFinding(
+                "unsafe-type-escape",
+                Path("backend/src/chat/chat.service.ts"),
+                12,
+                "Type escape",
+                "const raw = payload as any; // token=topsecret",
+            )
+        ],
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.check_design_drift", lambda *args: None)
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("quality budget bypass")
+    )
+
+    result = pipeline.run_job("42")
+
+    expected = (
+        "Quality repair limit exceeded: unsafe-type-escape in backend/src/chat/chat.service.ts"
+    )
+    assert result is not None
+    assert result.last_error == expected
+    assert result.quality_repairs == MAX_CONSECUTIVE_QUALITY_REPAIRS
+    assert result.provider_history == []
+    notice = next(body for _, body in github.comments if body.startswith(CAPPED_NOTICE_PREFIX))
+    assert f"Last failure:\n```\n{expected}\n```" in notice
+
+
 @pytest.mark.parametrize(
     "failure",
     [
@@ -2883,6 +4989,7 @@ def test_verification_infrastructure_failure_retries_without_agent_repair(
     )
     pipeline.jobs.save({"42": job})
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
     monkeypatch.setattr(
         "openhands_factory.pipeline.run_verification",
         lambda commands: (_ for _ in ()).throw(VerificationFailed(failure)),
@@ -2897,10 +5004,93 @@ def test_verification_infrastructure_failure_retries_without_agent_repair(
     assert failed.next_attempt_at is not None
 
 
+def test_infrastructure_failure_on_stale_unpublished_base_rebuilds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Rebuild on current fonts", "Body", "github-issue", 0),
+        state=JobState.VERIFYING,
+        branch="factory/42-rebuild-on-current-fonts",
+        quality_repairs=2,
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=40))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed(
+                "frontend-build failed with exit 1: getaddrinfo EAI_AGAIN fonts.googleapis.com"
+            )
+        ),
+    )
+
+    rebuilt = pipeline.run_job("42")
+
+    assert rebuilt is not None
+    assert rebuilt.state is JobState.DISCOVERED
+    assert rebuilt.quality_repairs == 0
+    assert rebuilt.provider_history == []
+
+
+def test_auto_fixable_verification_failure_is_reverified_without_a_model(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Fix formatting for free", "Body", "github-issue", 0),
+        state=JobState.VERIFYING,
+        branch="factory/42-fix-formatting-for-free",
+        quality_repairs=1,
+    )
+    pipeline.jobs.save({"42": job})
+    fixed: list[set[Path]] = []
+    fingerprints = iter(("before-fix", "after-fix"))
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("backend/x.ts")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.attempt_mechanical_repair",
+        lambda repository, changed_paths: fixed.append(changed_paths),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed("backend-lint:check failed with exit 1: prettier/prettier")
+        ),
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert fixed == [{Path("backend/x.ts")}]
+    assert result.state is JobState.VERIFYING
+    assert result.quality_repairs == 1
+    assert result.review_findings == []
+    assert result.provider_history == []
+
+
 def test_external_pull_request_verification_failure_enters_repair_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _without_mechanical_repair(monkeypatch)
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
@@ -2957,6 +5147,7 @@ def test_refresh_preserves_backing_off_failed_job_whose_issue_is_still_open(
     job.state = JobState.IMPLEMENTING
     pipeline.jobs.save({"42": job})
     _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
 
     for _ in range(4):
@@ -3501,5 +5692,5 @@ def test_a_rebuilt_job_is_not_rebuilt_again(
     result = pipeline.run_job("77")
 
     assert result is not None
-    assert result.last_error == "Repair limit exceeded"
+    assert result.last_error == "Repair limit exceeded: no failed check reported"
     assert github.superseded_pull_requests == []

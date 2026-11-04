@@ -2,7 +2,7 @@
   class="p-4 bg-surface-200 rounded-lg shadow-sm border border-surface-100"
   [dir]="i18n.direction()"
 >
-  <h2 class="text-xl font-bold mb-4 text-primary">{{ 'topics.title' | t }}</h2>
+  <h2 class="text-xl font-bold mb-4 text-primary-ink">{{ 'topics.title' | t }}</h2>
   <div class="flex flex-col gap-2">
     @for (topic of topics(); track topic.id) {
       <div class="flex justify-between items-center bg-surface-300 p-3 rounded-md">

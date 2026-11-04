@@ -3,6 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { ThemeService } from './theme.service';
 
+function contrastRatio(first: [number, number, number], second: [number, number, number]): number {
+  const luminance = ([red, green, blue]: [number, number, number]) => {
+    const linearise = (channel: number) => {
+      const value = channel / 255;
+      return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * linearise(red) + 0.7152 * linearise(green) + 0.0722 * linearise(blue);
+  };
+  const lighter = Math.max(luminance(first), luminance(second));
+  const darker = Math.min(luminance(first), luminance(second));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 describe('ThemeService', () => {
   let service: ThemeService;
 
@@ -33,6 +46,7 @@ describe('ThemeService', () => {
     vi.spyOn(document.documentElement.classList, 'toggle');
     document.documentElement.style.removeProperty('--color-primary');
     document.documentElement.style.removeProperty('--color-primary-rgb');
+    document.documentElement.style.removeProperty('--color-primary-text-rgb');
 
     TestBed.configureTestingModule({});
   });
@@ -40,6 +54,7 @@ describe('ThemeService', () => {
   afterEach(() => {
     document.documentElement.style.removeProperty('--color-primary');
     document.documentElement.style.removeProperty('--color-primary-rgb');
+    document.documentElement.style.removeProperty('--color-primary-text-rgb');
     vi.restoreAllMocks();
     document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
@@ -117,6 +132,42 @@ describe('ThemeService', () => {
     expect(document.documentElement.style.getPropertyValue('--color-primary-rgb')).toBe(
       '51 102 204',
     );
+    expect(document.documentElement.style.getPropertyValue('--color-primary-text-rgb')).toBe(
+      '51 102 204',
+    );
+  });
+
+  it('derives an AA-safe light text role from a bright custom accent', () => {
+    service = TestBed.inject(ThemeService);
+
+    service.setPrimaryAccentColor('#abcdef');
+    TestBed.flushEffects();
+
+    expect(document.documentElement.style.getPropertyValue('--color-primary-rgb')).toBe(
+      '171 205 239',
+    );
+    expect(document.documentElement.style.getPropertyValue('--color-primary-text-rgb')).toBe(
+      '37 116 194',
+    );
+    expect(contrastRatio([37, 116, 194], [246, 247, 250])).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('uses the custom primary as text in dark mode and restores the derived light role', () => {
+    service = TestBed.inject(ThemeService);
+    service.setPrimaryAccentColor('#abcdef');
+    service.setTheme('dark');
+    TestBed.flushEffects();
+
+    expect(document.documentElement.style.getPropertyValue('--color-primary-text-rgb')).toBe(
+      '171 205 239',
+    );
+
+    service.setTheme('light');
+    TestBed.flushEffects();
+
+    expect(document.documentElement.style.getPropertyValue('--color-primary-text-rgb')).toBe(
+      '37 116 194',
+    );
   });
 
   it('should discard an invalid stored primary accent', () => {
@@ -142,6 +193,7 @@ describe('ThemeService', () => {
     expect(window.localStorage.removeItem).toHaveBeenCalledWith('app_primary_accent_color');
     expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('');
     expect(document.documentElement.style.getPropertyValue('--color-primary-rgb')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--color-primary-text-rgb')).toBe('');
   });
 
   it('should reset accent when a profile colour is invalid', () => {
@@ -162,10 +214,7 @@ describe('ThemeService', () => {
     TestBed.flushEffects();
 
     expect(service.primaryAccentColor()).toBe('#abcdef');
-    expect(window.localStorage.setItem).toHaveBeenCalledWith(
-      'app_primary_accent_color',
-      '#abcdef',
-    );
+    expect(window.localStorage.setItem).toHaveBeenCalledWith('app_primary_accent_color', '#abcdef');
     expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#abcdef');
   });
 

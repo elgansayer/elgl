@@ -35,11 +35,13 @@ def test_current_main_ci_requires_success_for_exact_head(tmp_path: Path) -> None
                             "headSha": "older-head",
                             "status": "completed",
                             "conclusion": "success",
+                            "event": "push",
                         },
                         {
                             "headSha": "main-head",
                             "status": "completed",
                             "conclusion": "success",
+                            "event": "push",
                         },
                     ]
                 ),
@@ -55,8 +57,22 @@ def test_current_main_ci_requires_success_for_exact_head(tmp_path: Path) -> None
     assert status.green is True
     assert "--workflow" in runner.calls[1]
     assert "ci.yml" in runner.calls[1]
-    assert "--event" in runner.calls[1]
-    assert "push" in runner.calls[1]
+    assert "--event" not in runner.calls[1]
+    assert "headSha,status,conclusion,event" in runner.calls[1]
+
+
+def _gate_for(tmp_path: Path, runs: list[dict[str, str]]) -> MainBranchMergeGate:
+    runner = Runner([ProcessResult(0, "main-head\n", ""), ProcessResult(0, json.dumps(runs), "")])
+    return MainBranchMergeGate("owner/repo", tmp_path, "secret", runner)
+
+
+def test_watchdog_dispatched_main_ci_counts_but_pull_request_runs_do_not(tmp_path: Path) -> None:
+    run = {"headSha": "main-head", "status": "completed", "conclusion": "success"}
+    assert _gate_for(tmp_path, [{**run, "event": "workflow_dispatch"}]).is_green() is True
+    assert _gate_for(tmp_path, [{**run, "event": "pull_request"}]).is_green() is False
+    assert _gate_for(tmp_path, [run]).is_green() is False
+    failed_rerun = {**run, "conclusion": "failure", "event": "workflow_dispatch"}
+    assert _gate_for(tmp_path, [failed_rerun, {**run, "event": "push"}]).is_green() is False
 
 
 def test_current_main_ci_fails_closed_when_exact_head_has_no_run(tmp_path: Path) -> None:
@@ -71,6 +87,7 @@ def test_current_main_ci_fails_closed_when_exact_head_has_no_run(tmp_path: Path)
                             "headSha": "older-head",
                             "status": "completed",
                             "conclusion": "success",
+                            "event": "push",
                         }
                     ]
                 ),
@@ -95,6 +112,7 @@ def test_current_main_ci_fails_closed_when_run_is_pending(tmp_path: Path) -> Non
                             "headSha": "main-head",
                             "status": "in_progress",
                             "conclusion": "",
+                            "event": "push",
                         }
                     ]
                 ),
@@ -125,3 +143,74 @@ def test_merge_batch_allows_only_one_merge_from_green_main() -> None:
     gated = gate_merge_batch([merge_one, review, merge_two], main_ci_green=True)
 
     assert gated == [merge_one, review]
+
+
+def _neptune_main_gate(
+    tmp_path: Path, checks: list[dict[str, object]]
+) -> tuple[MainBranchMergeGate, Runner]:
+    import base64
+
+    head = "a" * 40
+    encoded = "\n".join(base64.b64encode(json.dumps(check).encode()).decode() for check in checks)
+    runner = Runner(
+        [
+            ProcessResult(0, head, ""),
+            ProcessResult(
+                0,
+                json.dumps(
+                    [
+                        {
+                            "headSha": head,
+                            "event": "push",
+                            "status": "completed",
+                            "conclusion": "success",
+                        }
+                    ]
+                ),
+                "",
+            ),
+            ProcessResult(0, encoded, ""),
+        ]
+    )
+    return MainBranchMergeGate("elgansayer/Neptune-Bomberman", tmp_path, "secret", runner), runner
+
+
+def test_neptune_main_uses_actual_workflow_and_literal_app_pinned_gate(tmp_path: Path) -> None:
+    check = {
+        "name": "Neptune merge gate",
+        "head_sha": "a" * 40,
+        "app": {"id": 15368},
+        "status": "completed",
+        "conclusion": "success",
+    }
+    for checks in ([check], [{**check, "id": 1}, {**check, "id": 2}]):
+        gate, runner = _neptune_main_gate(tmp_path, checks)
+        assert gate.is_green()
+        assert "neptune-merge-gate.yml" in runner.calls[1]
+        assert "--paginate" in runner.calls[2]
+
+
+def test_neptune_successful_main_workflow_cannot_hide_missing_or_skipped_gate(
+    tmp_path: Path,
+) -> None:
+    check = {
+        "name": "Neptune merge gate",
+        "head_sha": "a" * 40,
+        "app": {"id": 15368},
+        "status": "completed",
+        "conclusion": "success",
+    }
+    for changes in (
+        {"conclusion": "skipped"},
+        {"conclusion": "failure"},
+        {"status": "in_progress"},
+        {"app": {"id": 1}},
+        {"head_sha": "b" * 40},
+        {"name": "CI / required"},
+    ):
+        gate, _ = _neptune_main_gate(tmp_path, [{**check, **changes}])
+        assert not gate.is_green(), changes
+    gate, _ = _neptune_main_gate(tmp_path, [])
+    assert not gate.is_green()
+    gate, _ = _neptune_main_gate(tmp_path, [check, {**check, "conclusion": "skipped"}])
+    assert not gate.is_green()

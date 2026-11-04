@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Location } from '@angular/common';
+import { provideRouter } from '@angular/router';
 import { signal, Pipe, PipeTransform } from '@angular/core';
 import { AppearanceSettingsComponent } from './appearance-settings.component';
 import { I18nService } from '../../../services/i18n.service';
@@ -101,6 +102,7 @@ describe('AppearanceSettingsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AppearanceSettingsComponent],
       providers: [
+        provideRouter([]),
         { provide: I18nService, useValue: i18nServiceMock },
         { provide: ThemeService, useValue: themeServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
@@ -165,14 +167,45 @@ describe('AppearanceSettingsComponent', () => {
     expect(locationMock.back).toHaveBeenCalled();
   });
 
-  it('should change UI language', () => {
-    component.changeUiLanguage('es');
-    expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
-  });
+  describe('interface language', () => {
+    const languageLink = (): HTMLAnchorElement | null =>
+      fixture.nativeElement.querySelector('a[href="/settings/language"]');
 
-  it('should change language from the select value change', () => {
-    component.onLanguageValueChange('es');
-    expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
+    it('links to the dedicated language settings page instead of switching inline', () => {
+      expect(languageLink()).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('select')).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-select')).toBeNull();
+    });
+
+    it('reflects the active interface language in the link row', () => {
+      expect(languageLink()?.textContent).toContain('settings.languageSelectLabel');
+      expect(languageLink()?.textContent).toContain('English');
+
+      i18nServiceMock.currentLang?.set('es');
+      fixture.detectChanges();
+
+      expect(component.currentLanguage().code).toBe('es');
+      expect(languageLink()?.textContent).toContain('Español');
+    });
+
+    it('falls back to the raw code for a locale outside the catalogue', () => {
+      i18nServiceMock.currentLang?.set('xx');
+      fixture.detectChanges();
+
+      expect(component.currentLanguage()).toMatchObject({ code: 'xx', nativeName: 'xx' });
+      expect(languageLink()?.textContent).toContain('xx');
+    });
+
+    it('hides the decorative flag and arrow from assistive technology and mirrors the arrow in RTL', () => {
+      const hidden = Array.from(languageLink()?.querySelectorAll('[aria-hidden="true"]') ?? []);
+
+      expect(hidden).toHaveLength(2);
+      expect(hidden[1].classList.contains('rtl:rotate-180')).toBe(true);
+    });
+
+    it('never calls the legacy fail-open loader from this page', () => {
+      expect(i18nServiceMock.setLanguage).not.toHaveBeenCalled();
+    });
   });
 
   it('should set accent colour when VIP', () => {

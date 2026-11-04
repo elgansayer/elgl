@@ -56,8 +56,12 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'cd ../backend && npm run build && node dist/main',
+      command: 'cd ../backend && npm run build && npm run start:prod',
       url: backendHealthUrl,
+      env: {
+        NODE_ENV: 'test',
+        FRONTEND_URL: frontendUrl,
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 180000,
     },

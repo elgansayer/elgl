@@ -69,5 +69,7 @@ jobs:
                 if [ -z "$number" ] || [ -z "$head_sha" ]; then
                   continue
                 fi
-                gh pr merge "$number" --repo "${GITHUB_REPOSITORY}" --squash --delete-branch --match-head-commit "$head_sha"
+                # With a merge queue gh enqueues this exact head instead of merging.
+                # Head branches are deleted by the repository's delete-on-merge setting.
+                gh pr merge "$number" --repo "${GITHUB_REPOSITORY}" --squash --match-head-commit "$head_sha"
               done

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Query,
+  ServiceUnavailableException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -70,6 +71,11 @@ const userProfileSchema = {
       is_partner_of_week: { type: 'boolean', example: false },
       distance_metres: { type: 'number', nullable: true, example: 1500 },
       proficiency_level: { type: 'string', nullable: true, example: 'B1' },
+      match_reasons: {
+        type: 'array',
+        items: { type: 'string' },
+        example: ['language_exchange', 'shared_interests'],
+      },
     },
   },
 };
@@ -114,6 +120,14 @@ export class DiscoveryController {
     status: 401,
     description: 'Unauthorized - missing or invalid JWT.',
   })
+  @ApiResponse({
+    status: 403,
+    description: 'The requested discovery filter requires VIP access.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Partner discovery is temporarily unavailable.',
+  })
   async findPartners(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
@@ -126,6 +140,11 @@ export class DiscoveryController {
       profile,
       query,
     );
+    if (result.marker.degraded && result.data.length === 0) {
+      throw new ServiceUnavailableException(
+        'Partner discovery is temporarily unavailable',
+      );
+    }
     return result.data;
   }
 
@@ -293,6 +312,10 @@ export class DiscoveryController {
   @ApiResponse({
     status: 401,
     description: 'Unauthorized - missing or invalid JWT.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Language pair discovery is temporarily unavailable.',
   })
   async findByLanguagePair(
     @CurrentUser() user: User | null,

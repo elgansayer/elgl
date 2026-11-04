@@ -9,12 +9,17 @@ name: Stale snapshot guard
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  # A required check must also report on merge-queue commits, which are the
+  # PR applied to the latest main and can reintroduce a rollback the PR alone
+  # did not show.
+  merge_group:
 
 # No cancel-in-progress: the Factory adds and removes review labels, and a
 # cancelled run is reported as a failed check that sends PRs to repair.
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   stale-snapshot:
@@ -35,10 +40,22 @@ jobs:
 
       - name: Detect rollbacks to older base versions
         env:
+          GH_TOKEN: ${{ github.token }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           INTENTIONAL_REVERT: ${{ contains(github.event.pull_request.labels.*.name, 'intentional-revert') }}
+          GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          GROUP_HEAD_REF: ${{ github.event.merge_group.head_ref }}
         run: |
           set -euo pipefail
           allow=()
+          base="origin/$BASE_REF"
+          if [ -n "$GROUP_BASE_SHA" ]; then
+            base="$GROUP_BASE_SHA"
+            # Queue refs are gh-readonly-queue/<base>/pr-<number>-<sha>.
+            pr=$(sed -nE 's#.*/pr-([0-9]+)-[0-9a-f]+$#\1#p' <<<"$GROUP_HEAD_REF")
+            if [ -n "$pr" ] && gh api "repos/$GITHUB_REPOSITORY/issues/$pr/labels" --jq '.[].name' | grep -qx intentional-revert; then
+              INTENTIONAL_REVERT=true
+            fi
+          fi
           if [ "$INTENTIONAL_REVERT" = "true" ]; then allow=(--allow); fi
-          python3 scripts/check-stale-snapshot.py --base "origin/$BASE_REF" --head HEAD "${allow[@]}"
+          python3 scripts/check-stale-snapshot.py --base "$base" --head HEAD "${allow[@]}"

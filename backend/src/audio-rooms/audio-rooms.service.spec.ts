@@ -3,8 +3,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { AudioRoomsService } from './audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -18,6 +20,10 @@ import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
 const mockCreateRoom = vi.fn().mockResolvedValue({});
+const mockListParticipants = vi
+  .fn()
+  .mockResolvedValue([{ identity: 'Co Host_user-2' }]);
+const mockUpdateParticipant = vi.fn().mockResolvedValue({});
 const mockAddGrant = vi.fn();
 const mockToJwt = vi.fn().mockResolvedValue('mock-livekit-jwt');
 
@@ -25,6 +31,8 @@ vi.mock('livekit-server-sdk', () => ({
   RoomServiceClient: vi.fn().mockImplementation(function () {
     return {
       createRoom: mockCreateRoom,
+      listParticipants: mockListParticipants,
+      updateParticipant: mockUpdateParticipant,
     };
   }),
   AccessToken: vi.fn().mockImplementation(function () {
@@ -45,6 +53,10 @@ describe('AudioRoomsService', () => {
 
   beforeEach(async () => {
     mockCreateRoom.mockClear().mockResolvedValue({});
+    mockListParticipants
+      .mockClear()
+      .mockResolvedValue([{ identity: 'Co Host_user-2' }]);
+    mockUpdateParticipant.mockClear().mockResolvedValue({});
     mockAddGrant.mockClear();
     mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
     mockGenerateTranscriptFromAudioUrl = vi.fn();
@@ -55,17 +67,22 @@ describe('AudioRoomsService', () => {
       update: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
       or: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       range: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: 'room-1' },
+        error: null,
+      }),
       single: vi.fn(),
     };
 
     mockSupabaseClient = {
       from: vi.fn().mockReturnValue(mockQueryBuilder),
+      rpc: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -690,6 +707,90 @@ describe('AudioRoomsService', () => {
       });
       expect(result.id).toBe('room-1');
     });
+
+    it('should allow co-host to approve speaker', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        co_host_id: 'co-host-1',
+        raised_hands: ['user-2'],
+        speakers: ['host-1'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      const result = await service.approveSpeaker('co-host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        raised_hands: [],
+        speakers: ['host-1', 'user-2'],
+      });
+      expect(result.id).toBe('room-1');
+    });
+  });
+
+  describe('dismissRaisedHand', () => {
+    it('should throw NotFoundException if room not found', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: null,
+      });
+
+      await expect(
+        service.dismissRaisedHand('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(new NotFoundException('Room not found'));
+    });
+
+    it('should throw ForbiddenException if user is not host or co-host', async () => {
+      const roomRow: any = { id: 'room-1', host_id: 'host-1' };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.dismissRaisedHand('other-user', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException('Only the host can dismiss raised hands.'),
+      );
+    });
+
+    it('should remove user from raised_hands and publish event', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        raised_hands: ['user-2', 'user-3'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await service.dismissRaisedHand('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        raised_hands: ['user-3'],
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'raise_hand_dismissed',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+    });
   });
 
   describe('demoteSpeaker', () => {
@@ -1061,13 +1162,9 @@ describe('AudioRoomsService', () => {
         target_user_id: 'user-3',
       });
 
-      // Flush microtasks so the room lookup and DB update settle and the first
-      // publish (co_host_removed) has been initiated but not yet completed.
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
-
-      expect(publishMock).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => {
+        expect(publishMock).toHaveBeenCalledTimes(1);
+      });
       expect(publishMock).toHaveBeenCalledWith('room_room-1', {
         type: 'co_host_removed',
         target_user_id: 'user-2',
@@ -1434,84 +1531,467 @@ describe('AudioRoomsService', () => {
 
   describe('tipHost', () => {
     it('should throw NotFoundException when room not found', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: null,
-        error: null,
+        error: { message: 'room not found', code: 'P0001' },
       });
 
       await expect(
         service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
-      ).rejects.toThrow(new NotFoundException('Room not found'));
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when tipping yourself', async () => {
-      const roomRow: any = {
-        id: 'room-1',
-        host_id: 'host-1',
-        is_active: true,
-      };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: roomRow,
-        error: null,
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'sender cannot tip self', code: 'P0001' },
       });
 
       await expect(
         service.tipHost('host-1', { room_id: 'room-1', amount_coins: 10 }),
-      ).rejects.toThrow(new BadRequestException('You cannot tip yourself'));
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when insufficient coins', async () => {
-      const roomRow: any = {
-        id: 'room-1',
-        host_id: 'host-1',
-        is_active: true,
-      };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: roomRow,
-        error: null,
-      });
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 5 },
-        error: null,
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'insufficient coins', code: 'P0001' },
       });
 
       await expect(
         service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
-      ).rejects.toThrow('Insufficient coins');
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it('should process tip and return success details', async () => {
-      const roomRow: any = {
-        id: 'room-1',
-        host_id: 'host-1',
-        is_active: true,
-      };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: roomRow,
-        error: null,
+    it('forbids authenticated users who have not joined the room', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: {
+          message: 'sender is not a room participant',
+          code: 'P0001',
+        },
       });
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 100, display_name: 'Alice' },
-        error: null,
-      });
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 50 },
-        error: null,
-      });
-      const tipRow = { id: 'tip-1', amount_coins: 10 };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: tipRow,
+
+      await expect(
+        service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('should process one atomic tip and publish the authoritative event', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: [
+          {
+            tip_id: 'tip-1',
+            amount_coins: 10,
+            receiver_id: 'host-1',
+            sender_new_balance: 90,
+            receiver_new_balance: 60,
+            sender_name: 'Alice',
+            receiver_name: 'Host User',
+            created: true,
+          },
+        ],
         error: null,
       });
 
       const result = await service.tipHost('user-1', {
         room_id: 'room-1',
         amount_coins: 10,
+        idempotency_key: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
       });
 
-      expect(result.tip_id).toBe('tip-1');
-      expect(result.receiver_new_balance).toBe(60);
-      expect(mockQueryBuilder.update).toHaveBeenCalledTimes(2);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'transfer_audio_room_tip',
+        {
+          p_room_id: 'room-1',
+          p_sender_id: 'user-1',
+          p_amount: 10,
+          p_idempotency_key: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
+        },
+      );
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'host_tip',
+        tip: {
+          tip_id: 'tip-1',
+          amount_coins: 10,
+          sender_user_id: 'user-1',
+          sender_name: 'Alice',
+          receiver_user_id: 'host-1',
+          receiver_name: 'Host User',
+        },
+      });
+      expect(result).toEqual({
+        tip_id: 'tip-1',
+        amount_coins: 10,
+        receiver_id: 'host-1',
+        sender_new_balance: 90,
+      });
+    });
+
+    it('rejects reuse of an idempotency key for another tip subject', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'tip idempotency subject mismatch', code: 'P0001' },
+      });
+
+      await expect(
+        service.tipHost('user-1', {
+          room_id: 'room-1',
+          amount_coins: 50,
+          idempotency_key: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('keeps a persisted tip retryable when realtime delivery fails', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: [
+          {
+            tip_id: 'tip-1',
+            amount_coins: 10,
+            receiver_id: 'host-1',
+            sender_new_balance: 90,
+            receiver_new_balance: 60,
+            sender_name: 'Alice',
+            receiver_name: 'Host User',
+            created: false,
+          },
+        ],
+        error: null,
+      });
+      vi.mocked(centrifugoService.publish).mockResolvedValueOnce(false);
+
+      await expect(
+        service.tipHost('user-1', {
+          room_id: 'room-1',
+          amount_coins: 10,
+          idempotency_key: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
+        }),
+      ).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('rejects malformed RPC output without publishing', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: [{ tip_id: 'tip-1', amount_coins: -1 }],
+        error: null,
+      });
+
+      await expect(
+        service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
+      ).rejects.toThrow(ServiceUnavailableException);
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('notes', () => {
+    const activeRoomRow: Partial<AudioRoomRecord> = {
+      id: 'room-1',
+      host_id: 'host-1',
+      co_host_id: 'cohost-1',
+      speakers: ['speaker-1'],
+      is_active: true,
+    };
+
+    describe('addNote', () => {
+      it('should throw BadRequestException if content is empty or whitespace', async () => {
+        await expect(
+          service.addNote('room-1', 'host-1', { content: '   ' }),
+        ).rejects.toThrow(
+          new BadRequestException('Note content cannot be empty'),
+        );
+      });
+
+      it('should throw BadRequestException if room is not active', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: { ...activeRoomRow, is_active: false },
+          error: null,
+        });
+
+        await expect(
+          service.addNote('room-1', 'host-1', {
+            content: 'Valid note content',
+          }),
+        ).rejects.toThrow(new BadRequestException('Room is not active'));
+      });
+
+      it('should throw ForbiddenException if user is neither host nor speaker', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await expect(
+          service.addNote('room-1', 'listener-1', {
+            content: 'Valid note content',
+          }),
+        ).rejects.toThrow(
+          new ForbiddenException('Only host or speakers can post notes.'),
+        );
+      });
+
+      it('should allow host to add note and publish centrifugo event', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+        const createdNote = {
+          id: 'note-1',
+          room_id: 'room-1',
+          author_id: 'host-1',
+          author_name: 'Host User',
+          content: 'Grammar discussion topic',
+          vocabulary: null,
+          created_at: '2026-08-07T00:00:00Z',
+        };
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: createdNote,
+          error: null,
+        });
+
+        const result = await service.addNote('room-1', 'host-1', {
+          content: '  Grammar discussion topic  ',
+        });
+
+        expect(result.content).toBe('Grammar discussion topic');
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note',
+          note: createdNote,
+        });
+      });
+
+      it('should allow speaker to add note with vocabulary', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+        const createdNote = {
+          id: 'note-2',
+          room_id: 'room-1',
+          author_id: 'speaker-1',
+          author_name: 'Speaker One',
+          content: 'Subjunctive mood examples',
+          vocabulary: 'tenga, sea, vaya',
+          created_at: '2026-08-07T00:00:00Z',
+        };
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: createdNote,
+          error: null,
+        });
+
+        const result = await service.addNote('room-1', 'speaker-1', {
+          content: 'Subjunctive mood examples',
+          vocabulary: ' tenga, sea, vaya ',
+        });
+
+        expect(result.vocabulary).toBe('tenga, sea, vaya');
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note',
+          note: createdNote,
+        });
+      });
+
+      it('should allow co-host to add note', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+        const createdNote = {
+          id: 'note-3',
+          room_id: 'room-1',
+          author_id: 'cohost-1',
+          author_name: 'Co Host',
+          content: 'Vocabulary list',
+          vocabulary: 'palabra',
+          created_at: '2026-08-07T00:00:00Z',
+        };
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: createdNote,
+          error: null,
+        });
+
+        const result = await service.addNote('room-1', 'cohost-1', {
+          content: 'Vocabulary list',
+          vocabulary: 'palabra',
+        });
+
+        expect(result.author_id).toBe('cohost-1');
+      });
+
+      it('should throw Error if database insertion fails', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: null,
+          error: { message: 'Database insert failure' },
+        });
+
+        await expect(
+          service.addNote('room-1', 'host-1', { content: 'Test note' }),
+        ).rejects.toThrow('Failed to add note: Database insert failure');
+      });
+    });
+
+    describe('getNotes', () => {
+      it('should fetch notes for room with bounded limit', async () => {
+        const notes = [
+          {
+            id: 'note-1',
+            room_id: 'room-1',
+            author_id: 'host-1',
+            author_name: 'Host User',
+            content: 'Note 1',
+            created_at: '2026-08-07T00:00:00Z',
+          },
+        ];
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: notes,
+          error: null,
+        });
+
+        const result = await service.getNotes('room-1', 200);
+        expect(mockQueryBuilder.limit).toHaveBeenCalledWith(100);
+        expect(result).toHaveLength(1);
+        expect(result[0].content).toBe('Note 1');
+      });
+
+      it('should throw Error when fetching notes fails', async () => {
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: null,
+          error: { message: 'Fetch error' },
+        });
+
+        await expect(service.getNotes('room-1')).rejects.toThrow(
+          'Failed to fetch notes: Fetch error',
+        );
+      });
+    });
+
+    describe('deleteNote', () => {
+      const existingNote = {
+        id: 'note-1',
+        room_id: 'room-1',
+        author_id: 'author-1',
+        content: 'To be deleted',
+      };
+
+      it('should throw NotFoundException if note does not exist', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: null,
+          error: null,
+        });
+
+        await expect(
+          service.deleteNote('room-1', 'note-nonexistent', 'author-1'),
+        ).rejects.toThrow(new NotFoundException('Note not found'));
+      });
+
+      it('should throw NotFoundException if note belongs to another room', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: { ...existingNote, room_id: 'other-room' },
+          error: null,
+        });
+
+        await expect(
+          service.deleteNote('room-1', 'note-1', 'author-1'),
+        ).rejects.toThrow(new NotFoundException('Note not found in this room'));
+      });
+
+      it('should throw ForbiddenException if user is neither author, host, nor cohost', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await expect(
+          service.deleteNote('room-1', 'note-1', 'other-user'),
+        ).rejects.toThrow(
+          new ForbiddenException('Not authorised to delete this note.'),
+        );
+      });
+
+      it('should allow note author to delete note and broadcast', async () => {
+        mockQueryBuilder.error = null;
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await service.deleteNote('room-1', 'note-1', 'author-1');
+
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note_deleted',
+          note_id: 'note-1',
+          room_id: 'room-1',
+        });
+      });
+
+      it('should allow host to delete note created by another user', async () => {
+        mockQueryBuilder.error = null;
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await service.deleteNote('room-1', 'note-1', 'host-1');
+
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note_deleted',
+          note_id: 'note-1',
+          room_id: 'room-1',
+        });
+      });
+
+      it('should allow co-host to delete note created by another user', async () => {
+        mockQueryBuilder.error = null;
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await service.deleteNote('room-1', 'note-1', 'cohost-1');
+
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note_deleted',
+          note_id: 'note-1',
+          room_id: 'room-1',
+        });
+      });
+
+      it('should throw Error if database deletion fails', async () => {
+        mockQueryBuilder.error = { message: 'Database delete failed' };
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await expect(
+          service.deleteNote('room-1', 'note-1', 'author-1'),
+        ).rejects.toThrow('Failed to delete note: Database delete failed');
+        mockQueryBuilder.error = null;
+      });
     });
   });
 });

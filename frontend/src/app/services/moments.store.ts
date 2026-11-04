@@ -57,6 +57,8 @@ export interface MomentRecord {
   likes_count: number;
   comments_count: number;
   created_at: string;
+  /** Normalised hashtags derived from text_content. Only present on For You responses. */
+  hashtags?: string[];
   author?: {
     id: string;
     display_name?: string;
@@ -80,9 +82,7 @@ export class MomentsStore {
   private baseUrl = `${environment.apiUrl}/moments`;
 
   readonly feed = signal<MomentRecord[]>([]);
-  readonly activeFilter = signal<
-    'All' | 'Classmates' | 'Following' | 'For You'
-  >('All');
+  readonly activeFilter = signal<'All' | 'Classmates' | 'Following' | 'For You'>('All');
   readonly isLoading = signal<boolean>(false);
 
   private getHeaders() {
@@ -174,14 +174,8 @@ export class MomentsStore {
     }
   }
 
-  async loadMomentLikes(
-    momentId: string,
-    offset = 0,
-    limit = 50,
-  ): Promise<MomentLikeUser[]> {
-    const params = new HttpParams()
-      .set('offset', String(offset))
-      .set('limit', String(limit));
+  async loadMomentLikes(momentId: string, offset = 0, limit = 50): Promise<MomentLikeUser[]> {
+    const params = new HttpParams().set('offset', String(offset)).set('limit', String(limit));
 
     return await firstValueFrom(
       this.http.get<MomentLikeUser[]>(`${this.baseUrl}/${momentId}/likes`, {
@@ -199,9 +193,7 @@ export class MomentsStore {
         }),
       );
       this.feed.update((moments) =>
-        moments.map((m) =>
-          m.id === momentId ? { ...m, comments: list } : m,
-        ),
+        moments.map((m) => (m.id === momentId ? { ...m, comments: list } : m)),
       );
       return list;
     } catch (e) {
@@ -224,13 +216,9 @@ export class MomentsStore {
     },
   ): Promise<MomentComment> {
     const created = await firstValueFrom(
-      this.http.post<MomentComment>(
-        `${this.baseUrl}/${momentId}/comments`,
-        payload,
-        {
-          headers: this.getHeaders(),
-        },
-      ),
+      this.http.post<MomentComment>(`${this.baseUrl}/${momentId}/comments`, payload, {
+        headers: this.getHeaders(),
+      }),
     );
     this.feed.update((list) =>
       list.map((m) => {

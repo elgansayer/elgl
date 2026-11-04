@@ -136,7 +136,7 @@
             </div>
           }
           @if (visitorsError()) {
-            <div class="text-xs text-danger">{{ visitorsError() }}</div>
+            <div class="text-xs text-danger-ink">{{ visitorsError() }}</div>
           }
           @if (!visitorsLoading() && !visitorsError() && visitors().length > 0) {
             <div class="flex flex-wrap gap-2">
@@ -183,7 +183,7 @@
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
             {{ 'profile.statTarget' | t }}
           </p>
-          <p class="text-sm font-bold uppercase text-primary">
+          <p class="text-sm font-bold uppercase text-primary-ink">
             {{ profile()?.target_languages?.join(', ') }}
           </p>
         </div>
@@ -203,7 +203,7 @@
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
             {{ 'profile.correctorScore' | t }}
           </p>
-          <p class="text-sm font-bold text-primary">
+          <p class="text-sm font-bold text-primary-ink">
             @if (profile()?.corrector_score != null) {
               {{ profile()?.corrector_score }} / 5
             } @else {
@@ -312,7 +312,7 @@
 
       @if (errorMessage()) {
         <div
-          class="mt-4 rounded-card border border-danger/30 bg-danger/10 ps-3 pe-3 pt-2 pb-2 text-sm text-danger"
+          class="mt-4 rounded-card border border-danger/30 bg-danger/10 ps-3 pe-3 pt-2 pb-2 text-sm text-danger-ink"
         >
           {{ errorMessage() }}
         </div>
@@ -337,7 +337,7 @@
             {{ 'profile.aboutMe' | t }}
           </h3>
           @if (profile()?.status_text) {
-            <p class="mt-1 text-sm font-medium text-primary">
+            <p class="mt-1 text-sm font-medium text-primary-ink">
               {{ profile()?.status_text }}
             </p>
           }
@@ -405,7 +405,7 @@
                 [href]="profile()?.website_url"
                 target="_blank"
                 rel="noopener"
-                class="mt-1 block text-sm text-primary underline"
+                class="mt-1 block text-sm text-primary-ink underline"
                 >{{ profile()?.website_url }}</a
               >
             }
@@ -444,7 +444,7 @@
           } @else {
             <app-button-secondary
               (clicked)="blockProfile()"
-              customClass="text-xs text-danger"
+              customClass="text-xs text-danger-ink"
               [ariaLabel]="'profile.blockUser' | t"
             >
               {{ 'profile.blockUser' | t }}
@@ -588,18 +588,20 @@
               'profile.proficiencyLabel' | t
             }}</label>
             <hlm-native-select
-              [(ngModel)]="proficiencyLevel"
+              [ngModel]="proficiencyLevel()"
+              (ngModelChange)="onProficiencyLevelChange($event)"
               name="proficiencyLevel"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'profile.proficiencyLabel' | t"
             >
-              <option value="A1">A1</option>
-              <option value="A2">A2</option>
-              <option value="B1">B1</option>
-              <option value="B2">B2</option>
-              <option value="C1">C1</option>
-              <option value="C2">C2</option>
+              <option value="">{{ 'profile.proficiencyUnset' | t }}</option>
+              <option value="A1">{{ 'profile.proficiencyA1' | t }}</option>
+              <option value="A2">{{ 'profile.proficiencyA2' | t }}</option>
+              <option value="B1">{{ 'profile.proficiencyB1' | t }}</option>
+              <option value="B2">{{ 'profile.proficiencyB2' | t }}</option>
+              <option value="C1">{{ 'profile.proficiencyC1' | t }}</option>
+              <option value="C2">{{ 'profile.proficiencyC2' | t }}</option>
             </hlm-native-select>
           </div>
 
@@ -744,7 +746,7 @@
                 name="incognitoVisits"
                 [disabled]="!profile()?.is_vip"
                 aria-describedby="incognito-visits-hint"
-                class="h-5 w-5 shrink-0 rounded border-surface-300 text-primary focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+                class="h-5 w-5 shrink-0 rounded border-surface-300 text-primary-ink focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </label>
           </div>

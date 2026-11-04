@@ -9,19 +9,19 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { SupabaseService } from '../supabase/supabase.service';
+import { SupabaseService, ChatMessageRow } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
+import { extractFirstHttpUrl } from '../link-preview/link-url';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import {
   LearnerKnowledgeService,
   LearnerKnowledgeProfile,
 } from '../learner-knowledge/learner-knowledge.service';
-import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendTypingDto } from './dto/send-typing.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -31,7 +31,6 @@ import {
   CorrectionPayload,
   ChatMessage,
   ChatRoomRecord,
-  FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import {
   ChatMessageEvent,
@@ -52,9 +51,42 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+function escapeLikePattern(value: string): string {
+  return value
+    .replaceAll('\\', '\\\\')
+    .replaceAll('%', '\\%')
+    .replaceAll('_', '\\_')
+    .replaceAll('*', '\\*')
+    .replaceAll('"', '\\"');
+}
+
 interface DeletedAwareMessage extends ChatMessage {
   is_deleted?: boolean;
   deleted_for_user_ids?: string[] | null;
+}
+
+interface SearchMembershipRow {
+  room_id: string;
+  is_locked?: boolean | null;
+}
+
+interface SearchMessageRow {
+  id: string;
+  room_id: string;
+  sender_id: string;
+  message_type: string;
+  text_content?: string | null;
+  is_encrypted?: boolean;
+  encrypted_payload?: string | null;
+  is_read: boolean;
+  created_at: string;
+  expires_at?: string | null;
+  is_deleted_for_everyone?: boolean;
+  deleted_for_user_ids?: string[] | null;
+  sender?: {
+    id: string;
+    display_name?: string | null;
+  } | null;
 }
 
 interface GroupMember {
@@ -374,6 +406,29 @@ export class ChatService {
     return { unreadCount };
   }
 
+  /**
+   * Best-effort OpenGraph enrichment for the first URL in a text message.
+   *
+   * Previews are enrichment only, so every validation, network or parsing
+   * failure resolves to `null` and never blocks message delivery. Shared by
+   * direct sends, group sends, edits and forwards so they all pick the same
+   * URL and degrade the same way.
+   */
+  protected async resolveLinkPreview(
+    text: string | null | undefined,
+  ): Promise<LinkPreview | null> {
+    const url = text ? extractFirstHttpUrl(text) : null;
+    if (!url) {
+      return null;
+    }
+
+    try {
+      return (await this.linkPreviewService.getPreview(url)) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async sendMessage(
     senderId: string,
     dto: SendMessageDto,
@@ -416,7 +471,7 @@ export class ChatService {
     }
 
     // Spam detection for text messages
-    if (dto.message_type === 'text' && dto.text_content) {
+    if (!dto.is_encrypted && dto.message_type === 'text' && dto.text_content) {
       const isSpam = this.spamDetectionService.isSpam(dto.text_content);
       if (isSpam) {
         throw new BadRequestException(
@@ -439,6 +494,8 @@ export class ChatService {
         status_reply_payload: dto.status_reply_payload ?? null,
         is_view_once: dto.message_type === 'view_once_media' ? true : false,
         delivery_status: 'sent',
+        is_encrypted: dto.is_encrypted ?? false,
+        encrypted_payload: dto.encrypted_payload ?? null,
       })
       .select(
         `
@@ -463,17 +520,10 @@ export class ChatService {
     void this.xpService.awardXpForActivity(senderId, 'send_message');
 
     // ---------- Link preview scraping ----------
-    let linkPreview: LinkPreview | null = null;
-    try {
-      if (dto.message_type === 'text' && dto.text_content) {
-        const urlMatch = dto.text_content.match(/https?:\/\/[^\s]+/);
-        if (urlMatch) {
-          linkPreview = await this.linkPreviewService.getPreview(urlMatch[0]);
-        }
-      }
-    } catch {
-      // ignore any error; just continue without preview
-    }
+    const linkPreview =
+      !dto.is_encrypted && dto.message_type === 'text'
+        ? await this.resolveLinkPreview(dto.text_content)
+        : null;
 
     // ---------- Auto‑generate explanation for correction if missing ----------
     let messageForPublish: ChatMessage = linkPreview
@@ -505,19 +555,21 @@ export class ChatService {
       message: messageForPublish,
     });
 
-    const preview = dto.text_content
-      ? dto.text_content.substring(0, 120)
-      : dto.message_type === 'voice'
-        ? '🎤 Voice message'
-        : dto.message_type === 'correction'
-          ? '📝 Correction'
-          : dto.message_type === 'doodle'
-            ? '🎨 Doodle'
-            : dto.message_type === 'correction_request'
-              ? '✏️ Correction request'
-              : dto.message_type === 'status_reply'
-                ? '✉️ Status reply'
-                : '';
+    const preview = dto.is_encrypted
+      ? '🔒 Encrypted message'
+      : dto.text_content
+        ? dto.text_content.substring(0, 120)
+        : dto.message_type === 'voice'
+          ? '🎤 Voice message'
+          : dto.message_type === 'correction'
+            ? '📝 Correction'
+            : dto.message_type === 'doodle'
+              ? '🎨 Doodle'
+              : dto.message_type === 'correction_request'
+                ? '✏️ Correction request'
+                : dto.message_type === 'status_reply'
+                  ? '✉️ Status reply'
+                  : '';
 
     // Emit push notification event
     if (receiverId) {
@@ -538,7 +590,7 @@ export class ChatService {
     this.eventEmitter.emit('message.sent', { userId: senderId });
 
     // ---------- Parse @mentions and emit notifications ----------
-    if (dto.message_type === 'text' && dto.text_content) {
+    if (!dto.is_encrypted && dto.message_type === 'text' && dto.text_content) {
       const mentionRegex = /@([\wÀ-ɏ؀-ۿ]+)/g;
       const mentionedNames = [...dto.text_content.matchAll(mentionRegex)].map(
         (m) => m[1],
@@ -694,38 +746,12 @@ export class ChatService {
     return messages;
   }
 
-  async addFavourite(userId: string, dto: AddFavouriteDto): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-
-    // Get the message to favourite
-    const messageResponse = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('id', dto.message_id)
-      .single();
-
-    if (messageResponse.error || !messageResponse.data) {
-      throw new Error('Message not found');
-    }
-
-    const message = messageResponse.data;
-
-    // Store the favourite
-    const { error } = await supabase.from('favourites').insert({
-      user_id: userId,
-      item_type: 'message',
-      item_payload: message,
-      notes: dto.note_text || null,
-    });
-
-    if (error) {
-      throw new Error('Failed to add favourite');
-    }
-  }
-
   /**
-   * Search messages across ALL rooms the user is a member of.
-   * Uses pg_trgm for fuzzy text search on text_content.
+   * Search messages across the rooms the user is a member of.
+   *
+   * Hidden (locked) chats are a private per-member preference whose content is revealed only
+   * after the client unlock flow clears the persisted lock, exactly as `getRooms` and the unread
+   * count treat them. They are never searchable while that lock remains set.
    */
   async searchAllMessages(
     userId: string,
@@ -736,17 +762,24 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
     const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
-    // Get all room IDs the user is a member of
+    // Get all rooms the user is a member of, with the per-member hidden-chat flag
     const { data: memberRooms, error: memberErr } = await supabase
       .from('chat_room_members')
-      .select('room_id')
+      .select('room_id, is_locked')
       .eq('user_id', userId);
 
-    if (memberErr || !memberRooms || memberRooms.length === 0) {
+    if (memberErr) {
+      this.logger.error('chat.message_search_membership_lookup_failed');
+      throw new ServiceUnavailableException();
+    }
+
+    if (!memberRooms || memberRooms.length === 0) {
       return [];
     }
 
-    let roomIds = memberRooms.map((r: { room_id: string }) => r.room_id);
+    let roomIds = memberRooms
+      .filter((r: SearchMembershipRow) => r.is_locked !== true)
+      .map((r: SearchMembershipRow) => r.room_id);
 
     // If a specific roomId is provided, limit to that room only
     if (roomId) {
@@ -754,73 +787,95 @@ export class ChatService {
       roomIds = [roomId];
     }
 
+    // Every joined room is hidden: a successful empty result, never a leak of hidden chats
+    if (roomIds.length === 0) return [];
+
     const trimmedTerm = term.trim();
     if (trimmedTerm.length < 2) return [];
+    const escapedTerm = escapeLikePattern(trimmedTerm);
 
-    let query = supabase
-      .from('chat_messages')
-      .select(
-        `
-        *,
+    const projection = `
+        id,
+        room_id,
+        sender_id,
+        message_type,
+        text_content,
+        is_encrypted,
+        encrypted_payload,
+        is_read,
+        created_at,
+        expires_at,
+        is_deleted_for_everyone,
+        deleted_for_user_ids,
         sender:users!chat_messages_sender_id_fkey (
           id,
-          display_name,
-          avatar_url
+          display_name
         )
-      `,
-      )
-      .in('room_id', roomIds)
-      .ilike('text_content', `%${trimmedTerm}%`)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      `;
+    const buildVisibleQuery = () => {
+      let query = supabase
+        .from('chat_messages')
+        .select(projection)
+        .in('room_id', roomIds)
+        .eq('is_deleted_for_everyone', false)
+        .not('deleted_for_user_ids', 'cs', `{${userId}}`);
 
-    if (blockedIds.length > 0) {
-      query = query.not('sender_id', 'in', blockedIds);
+      if (blockedIds.length > 0) {
+        query = query.not('sender_id', 'in', `(${blockedIds.join(',')})`);
+      }
+      return query;
+    };
+
+    const encryptedCandidateLimit = Math.min(limit * 4, 200);
+    const [plaintextResponse, encryptedResponse] = await Promise.all([
+      buildVisibleQuery()
+        .eq('is_encrypted', false)
+        .ilike('text_content', `%${escapedTerm}%`)
+        .order('created_at', { ascending: false })
+        .limit(limit),
+      buildVisibleQuery()
+        .eq('is_encrypted', true)
+        .order('created_at', { ascending: false })
+        .limit(encryptedCandidateLimit),
+    ]);
+
+    if (plaintextResponse.error || encryptedResponse.error) {
+      this.logger.error('chat.message_search_query_failed');
+      throw new ServiceUnavailableException();
     }
 
-    const response = await query;
-    if (response.error || !response.data) {
+    if (!plaintextResponse.data && !encryptedResponse.data) {
       return [];
     }
 
-    const messages: DeletedAwareMessage[] = response.data;
-
-    // Filter out deleted messages
-    return messages.filter((msg) => {
-      if (msg.is_deleted) return false;
-      if (
-        Array.isArray(msg.deleted_for_user_ids) &&
-        msg.deleted_for_user_ids.includes(userId)
-      )
-        return false;
-      return true;
-    });
-  }
-
-  async getFavourites(userId: string): Promise<FavouriteRecord[]> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('favourites')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (response.error || !response.data) {
-      return [];
+    const messages = new Map<string, SearchMessageRow>();
+    for (const message of [
+      ...(plaintextResponse.data ?? []),
+      ...(encryptedResponse.data ?? []),
+    ]) {
+      messages.set(message.id, message);
     }
-    return response.data;
-  }
 
-  async deleteFavourite(userId: string, favouriteId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('favourites')
-      .delete()
-      .eq('id', favouriteId)
-      .eq('user_id', userId);
-
-    if (error) throw new Error('Failed to delete favourite');
+    return [...messages.values()]
+      .sort((left, right) => right.created_at.localeCompare(left.created_at))
+      .filter(
+        (msg) =>
+          !msg.is_deleted_for_everyone &&
+          !msg.deleted_for_user_ids?.includes(userId),
+      )
+      .map((msg) => ({
+        id: msg.id,
+        room_id: msg.room_id,
+        sender_id: msg.sender_id,
+        message_type: msg.message_type,
+        text_content: msg.text_content,
+        is_encrypted: msg.is_encrypted,
+        encrypted_payload: msg.encrypted_payload,
+        is_read: msg.is_read,
+        created_at: msg.created_at,
+        expires_at: msg.expires_at,
+        sender: msg.sender,
+      }));
   }
 
   async getSuggestedReplies(
@@ -1577,6 +1632,13 @@ export class ChatService {
       throw new BadRequestException('Only text messages can be edited');
     }
 
+    const wasEncrypted = originalMsg.is_encrypted === true;
+    if (wasEncrypted && dto.is_encrypted !== true) {
+      throw new BadRequestException(
+        'An encrypted message cannot be downgraded to plaintext.',
+      );
+    }
+
     // Check edit time window
     if (createdAt) {
       const editWindowMinutes = this.configService.get<number>(
@@ -1605,13 +1667,21 @@ export class ChatService {
       throw new ForbiddenException('You are not a member of this room');
     }
 
+    const updatePayload: Partial<ChatMessageRow> = {
+      text_content: dto.text_content,
+      is_edited: true,
+      edited_at: new Date().toISOString(),
+    };
+    if (dto.is_encrypted !== undefined) {
+      updatePayload.is_encrypted = dto.is_encrypted;
+    }
+    if (dto.encrypted_payload !== undefined) {
+      updatePayload.encrypted_payload = dto.encrypted_payload;
+    }
+
     const { data: updatedMsg, error: updateErr } = await supabase
       .from('chat_messages')
-      .update({
-        text_content: dto.text_content,
-        is_edited: true,
-        edited_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', messageId)
       .select(
         `
@@ -1631,11 +1701,23 @@ export class ChatService {
       );
     }
 
+    // The preview describes the first URL of the edited text. Realtime clients
+    // merge this event over their local copy of the message, so the field is
+    // always published explicitly: `null` clears a card whose link was removed
+    // or failed to resolve, instead of leaving the previous preview on screen.
+    const linkPreview = dto.is_encrypted
+      ? null
+      : await this.resolveLinkPreview(dto.text_content);
+    const editedMessage: ChatMessage = {
+      ...updatedMsg,
+      link_preview: linkPreview,
+    };
+
     await this.centrifugoService.publish(`chat:${roomId}`, {
-      message: updatedMsg,
+      message: editedMessage,
     });
 
-    return updatedMsg;
+    return editedMessage;
   }
 
   async deleteMessage(
@@ -1915,6 +1997,13 @@ export class ChatService {
       membersByRoom.get(member.room_id)!.push({ user_id: member.user_id });
     }
 
+    // The forwarded text is identical in every target room, so scrape its
+    // preview once instead of once per room.
+    const forwardedPreview =
+      validMembershipRoomIds.size > 0 && originalMsg.message_type === 'text'
+        ? await this.resolveLinkPreview(originalMsg.text_content)
+        : null;
+
     // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
     // Promise.allSettled mapped execution to drastically reduce database latency during fan-out inserts.
     // Expected impact: N sequential database roundtrips become 1 concurrent block.
@@ -1972,7 +2061,10 @@ export class ChatService {
           return; // Skip on insert failure
         }
 
-        const forwardedMsg = insertResponse.data as ChatMessage;
+        const insertedMsg: ChatMessage = insertResponse.data;
+        const forwardedMsg: ChatMessage = forwardedPreview
+          ? { ...insertedMsg, link_preview: forwardedPreview }
+          : insertedMsg;
 
         // Publish to Centrifugo channel for the target room
         await this.centrifugoService.publish(`chat:${targetRoomId}`, {

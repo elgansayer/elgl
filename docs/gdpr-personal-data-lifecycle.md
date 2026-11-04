@@ -30,7 +30,7 @@ Historical rows that contained public archive URLs are invalidated by migration 
 
 The export treats each configured dataset as required. A provider/query failure fails the whole request instead of silently replacing missing data with `null` or an empty array. Collection tables are paged in 500-row batches and capped at 50,000 rows per dataset; reaching the cap fails the request rather than returning an archive that looks complete but is truncated. Deck junction rows are fetched in bounded deck-ID chunks.
 
-The archive currently contains the profile, Moments and comments, sent chat messages, flashcards/decks and deck membership, favourites, coin purchases, escrow transactions, gift transactions, unlocked sticker packs, reading progress, and user-created reading resources. Existing economy scrubbers continue to redact counterparty/payment secrets while preserving the requesting user's own data.
+The archive currently contains the profile, Moments, Moment comments and Moment likes (each read by the `user_id` column, see [Moments schema contract](./moments-schema.md)), sent chat messages, flashcards/decks and deck membership, favourites, coin purchases, escrow transactions, gift transactions, unlocked sticker packs, reading progress, and user-created reading resources. Existing economy scrubbers continue to redact counterparty/payment secrets while preserving the requesting user's own data.
 
 ## Retention
 
@@ -49,7 +49,7 @@ Archive metadata is retained with the account for audit/state purposes and casca
 
 Relevant Redis safety/discovery caches are invalidated after the database update succeeds. A persistence failure fails closed and does not report deletion as scheduled.
 
-`POST /api/privacy/cancel-deletion` clears the deletion markers. The existing `AccountDeletionCron` finds accounts whose grace period has elapsed and invokes permanent deletion.
+`POST /api/privacy/cancel-deletion` clears the deletion markers. The existing `AccountDeletionCron` finds accounts whose grace period has elapsed and invokes permanent deletion. `DataRetentionService.finaliseAccountDeletions` is the fallback for accounts that are still pending later in the day: it anonymises the profile instead of deleting it, so it erases Moments data (votes, answers, likes, comments authored by or addressed to the user, Moments and follow edges) explicitly and leaves the account pending for a retry if any step fails. See [Retention and deletion](./moments-schema.md#retention-and-deletion).
 
 `public.users.id` references `auth.users.id` with `ON DELETE CASCADE`, but that relationship does not delete the auth principal when the profile is deleted. Migration `20260824220500_harden_gdpr_archives.sql` therefore installs an `AFTER DELETE` security-definer trigger on `public.users` that deletes the matching `auth.users` row. This ensures the automated permanent deletion path removes the login-capable principal in the same transaction rather than leaving an orphaned Supabase Auth account.
 

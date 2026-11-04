@@ -29,6 +29,23 @@ REPOSITORY_ROOT = Path(__file__).parents[2]
             ],
             False,
         ),
+        ([{"event": "workflow_dispatch", "status": "completed", "conclusion": "success"}], True),
+        ([{"event": "pull_request", "status": "completed", "conclusion": "success"}], False),
+        ([{"event": None, "status": "completed", "conclusion": "success"}], False),
+        (
+            [
+                {"event": "pull_request", "status": "completed", "conclusion": "failure"},
+                {"event": "workflow_dispatch", "status": "completed", "conclusion": "success"},
+            ],
+            True,
+        ),
+        (
+            [
+                {"event": "workflow_dispatch", "status": "completed", "conclusion": "failure"},
+                {"status": "completed", "conclusion": "success"},
+            ],
+            False,
+        ),
     ],
 )
 def test_deployment_requires_latest_exact_commit_ci(tmp_path, evidence, allowed):
@@ -38,7 +55,8 @@ def test_deployment_requires_latest_exact_commit_ci(tmp_path, evidence, allowed)
     commit = "a" * 40
     if isinstance(evidence, list):
         evidence = [
-            {"headSha": commit, **item} if isinstance(item, dict) else item for item in evidence
+            {"headSha": commit, "event": "push", **item} if isinstance(item, dict) else item
+            for item in evidence
         ]
     fake_gh = tmp_path / "gh"
     expected_arguments = [
@@ -50,14 +68,12 @@ def test_deployment_requires_latest_exact_commit_ci(tmp_path, evidence, allowed)
         "ci.yml",
         "--branch",
         "main",
-        "--event",
-        "push",
         "--commit",
         commit,
         "--limit",
         "20",
         "--json",
-        "headSha,status,conclusion",
+        "headSha,status,conclusion,event",
     ]
     output = "{" if evidence == "malformed" else json.dumps(evidence)
     fake_gh.write_text(

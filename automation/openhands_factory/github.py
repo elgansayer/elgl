@@ -13,6 +13,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Literal, Protocol
 
 from openhands_factory.exceptions import FactoryError
@@ -23,10 +24,53 @@ from openhands_factory.models import (
     logical_task_key,
     supersession_references,
 )
+from openhands_factory.neptune_merge import (
+    NEPTUNE_GATE,
+    NEPTUNE_REPOSITORY,
+    NeptuneGate,
+    neptune_gate,
+    required_neptune_checks,
+    validate_neptune_protection,
+)
 from openhands_factory.pr_convergence import PullRequestRecord
 from openhands_factory.repository_guard import ProcessResult, run_process
 
-REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", "factory/independent-review"})
+INDEPENDENT_REVIEW_CHECK = "factory/independent-review"
+REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", INDEPENDENT_REVIEW_CHECK})
+CI_GATED_MERGE_CHECKS = frozenset({"CI / required"})
+
+
+def required_merge_checks(merge_review_policy: str) -> frozenset[str]:
+    if merge_review_policy == "ci-gated":
+        return CI_GATED_MERGE_CHECKS
+    if merge_review_policy == "independent-review":
+        return REQUIRED_FACTORY_MERGE_CHECKS
+    raise ValueError(f"Unknown merge review policy: {merge_review_policy!r}")
+
+
+MAX_FAILED_JOB_EXCERPTS = 4
+_LOG_TIMESTAMP = re.compile(r"^\d{4}-\d\d-\d\dT[\d:.]+Z ")
+_LOG_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_LOG_NOISE = re.compile(r"^\s*\* \[new (branch|tag)\]|^##\[(group|endgroup)\]|^\s*$")
+_LOG_KEY = re.compile(r"^##\[error\]|^\s*(FAIL|not ok)\b|^\s*[\u2715\u00d7\u25cf] ")
+
+
+def failed_log_excerpt(log: str, lines: int = 25, limit: int = 2000) -> str:
+    """Keep a job's failure markers plus the lines leading up to its last error.
+
+    Test runners print the failing test names (FAIL, ●, not ok) and assertion
+    errors far above the final exit-code line, so both are kept.
+    """
+    cleaned = [_LOG_ANSI.sub("", _LOG_TIMESTAMP.sub("", line)) for line in log.splitlines()]
+    cleaned = [line for line in cleaned if not _LOG_NOISE.search(line)]
+    errors = [index for index, line in enumerate(cleaned) if line.startswith("##[error]")]
+    end = errors[-1] + 1 if errors else len(cleaned)
+    tail = cleaned[max(0, end - lines) : end]
+    key = [line[:300] for line in cleaned[: max(0, end - lines)] if _LOG_KEY.search(line)][:10]
+    excerpt = "\n".join([*key, *(["..."] if key else []), *tail])
+    return excerpt[-limit:]
+
+
 _PENDING_CHECK_STATES = frozenset({"QUEUED", "IN_PROGRESS", "PENDING", "WAITING", "EXPECTED"})
 LOGGER = logging.getLogger(__name__)
 
@@ -74,6 +118,8 @@ class PullRequestStatus:
     ci_required_passed: bool = False
     ci_required_pending: bool = False
     ci_required_failed: bool = False
+    base_sha: str = ""
+    auto_merge_enabled: bool = False
 
 
 @dataclass(frozen=True)
@@ -82,6 +128,13 @@ class IssueComment:
     author: str
     body: str
     created_at: str
+
+
+@dataclass(frozen=True)
+class RemoteTaskState:
+    number: int
+    state: Literal["OPEN", "CLOSED", "MERGED"]
+    head_sha: str = ""
 
 
 @dataclass(frozen=True)
@@ -133,6 +186,34 @@ def issue_priority(labels: set[str]) -> int:
     return 10
 
 
+_MERGE_QUEUE_STATE_QUERY = """
+query($owner: String!, $name: String!, $number: Int!, $branch: String!) {
+  repository(owner: $owner, name: $name) {
+    mergeQueue(branch: $branch) { id }
+    ref(qualifiedName: $branch) { target { ... on Commit { committedDate } } }
+    pullRequest(number: $number) {
+      id
+      isInMergeQueue
+      timelineItems(itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT], last: 1) {
+        nodes { ... on RemovedFromMergeQueueEvent { createdAt reason beforeCommit { oid } } }
+      }
+    }
+  }
+}
+"""
+_ENQUEUE_PULL_REQUEST_MUTATION = """
+mutation($id: ID!, $head: GitObjectID!) {
+  enqueuePullRequest(input: {pullRequestId: $id, expectedHeadOid: $head}) {
+    mergeQueueEntry { id }
+  }
+}
+"""
+
+
+def _parse_github_time(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 class GitHubClient:
     def __init__(
         self,
@@ -145,7 +226,9 @@ class GitHubClient:
         trusted_github_actors: Collection[str] = (),
         require_ready_label: bool = False,
         ready_label: str = "factory-ready",
+        merge_review_policy: str = "independent-review",
     ) -> None:
+        self.required_merge_checks = required_merge_checks(merge_review_policy)
         self.repository = repository
         self.workspace = workspace
         self.base_branch = base_branch
@@ -334,6 +417,14 @@ class GitHubClient:
             }
             if "factory-skip" in labels:
                 continue
+            if (
+                self.repository.casefold() == NEPTUNE_REPOSITORY.casefold()
+                and self.require_ready_label
+                and self.ready_label not in labels
+            ):
+                # Bootstrap must not adopt another agent's in-progress external
+                # PR merely because the repository owner authored it.
+                continue
             if labels.intersection(COMPATIBILITY_LANE_LABELS):
                 # Major dependency upgrades are staged by the dependency
                 # compatibility lanes; the review lane takes routine updates.
@@ -464,7 +555,9 @@ class GitHubClient:
                         "mergedAt": merged_at,
                     }
             try:
-                records.append(PullRequestRecord.from_payload(item))
+                records.append(
+                    PullRequestRecord.from_payload(item, required_checks=self.required_merge_checks)
+                )
             except (TypeError, ValueError) as error:
                 raise FactoryError(
                     "GitHub pull-request inventory contains invalid identity"
@@ -767,6 +860,7 @@ class GitHubClient:
             "factory-reviewed": "0e8a16",
             "factory-stack-blocked": "fbca04",
             "factory-quarantined": "b60205",
+            "factory-capped": "c5def5",
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
             "architect-proposed": "5319e7",
@@ -804,6 +898,35 @@ class GitHubClient:
         self._run(tuple(arguments))
 
     def remove_issue_labels(self, issue: int, labels: Sequence[str]) -> None:
+        if not labels:
+            return
+        # gh issue edit resolves every requested label definition, including
+        # unattached legacy names which the repository may never have defined.
+        # Read all attachments first; remove only the requested ones that exist.
+        output = self._run(
+            (
+                "gh",
+                "api",
+                "--paginate",
+                f"repos/{self.repository}/issues/{issue}/labels?per_page=100",
+                "--jq",
+                ".[] | @base64",
+            )
+        )
+        requested = {label.casefold() for label in labels}
+        attached: dict[str, str] = {}
+        for encoded in output.splitlines():
+            try:
+                item = json.loads(base64.b64decode(encoded, validate=True).decode("utf-8"))
+            except (ValueError, UnicodeError) as error:
+                raise FactoryError("GitHub issue label encoding is malformed") from error
+            name = item.get("name") if isinstance(item, dict) else None
+            if not isinstance(name, str) or not name:
+                raise FactoryError("GitHub issue label attachment is malformed")
+            if name.casefold() in requested:
+                attached[name.casefold()] = name
+        if not attached:
+            return
         arguments = [
             "gh",
             "issue",
@@ -812,9 +935,53 @@ class GitHubClient:
             "--repo",
             self.repository,
         ]
-        for label in labels:
+        for label in attached.values():
             arguments.extend(("--remove-label", label))
         self._run(tuple(arguments))
+
+    def remote_task_state(self, number: int, *, pull_request: bool = False) -> RemoteTaskState:
+        """Confirm lifecycle independently from filtered intake and CI readiness."""
+        if type(number) is not int or number <= 0:
+            raise FactoryError("GitHub task number must be a positive integer")
+        endpoint = "pulls" if pull_request else "issues"
+        selector = (
+            "{number,state,merged,head_sha:.head.sha}"
+            if pull_request
+            else '{number,state,is_pull_request:has("pull_request")}'
+        )
+        output = self._run(
+            ("gh", "api", f"repos/{self.repository}/{endpoint}/{number}", "--jq", selector),
+            timeout=30,
+        )
+        try:
+            item = json.loads(output)
+        except ValueError as error:
+            raise FactoryError("GitHub remote task state is malformed") from error
+        if (
+            not isinstance(item, dict)
+            or type(item.get("number")) is not int
+            or item["number"] != number
+            or not isinstance(item.get("state"), str)
+            or item["state"] not in {"open", "closed"}
+        ):
+            raise FactoryError("GitHub remote task identity or state is malformed")
+        if not pull_request:
+            if item.get("is_pull_request") is not False:
+                raise FactoryError("Expected an issue, received ambiguous GitHub task kind")
+            return RemoteTaskState(number, "OPEN" if item["state"] == "open" else "CLOSED")
+        head = item.get("head_sha")
+        merged = item.get("merged")
+        if (
+            type(merged) is not bool
+            or not isinstance(head, str)
+            or re.fullmatch(r"[0-9a-f]{40}", head) is None
+            or (merged and item["state"] != "closed")
+        ):
+            raise FactoryError("GitHub pull request lifecycle evidence is malformed")
+        state: Literal["OPEN", "CLOSED", "MERGED"] = (
+            "MERGED" if merged else "OPEN" if item["state"] == "open" else "CLOSED"
+        )
+        return RemoteTaskState(number, state, head)
 
     def list_quarantined_issues(self, limit: int = 10_000) -> list[int]:
         output = self._run(
@@ -905,6 +1072,58 @@ class GitHubClient:
             requeued.append(issue)
         return requeued
 
+    def failed_check_excerpts(self, head_sha: str) -> str:
+        """Return the closing log lines of each failed CI job for one head.
+
+        CI repairs were told only check names such as `constitution` or
+        `backend / unit`, never the failure itself (2026-10-29). Bounded to a
+        few jobs and lines so the prompt stays small.
+        """
+        runs = json.loads(
+            self._run(
+                (
+                    "gh",
+                    "run",
+                    "list",
+                    "--repo",
+                    self.repository,
+                    "--commit",
+                    head_sha,
+                    "--status",
+                    "failure",
+                    "--json",
+                    "databaseId",
+                    "--limit",
+                    "5",
+                )
+            )
+            or "[]"
+        )
+        jobs: list[tuple[int, str]] = []
+        for run in runs:
+            payload = json.loads(
+                self._run(
+                    (
+                        "gh",
+                        "api",
+                        f"repos/{self.repository}/actions/runs/{run['databaseId']}/jobs"
+                        "?filter=latest&per_page=100",
+                    )
+                )
+            )
+            jobs.extend(
+                (job["id"], job["name"])
+                for job in payload.get("jobs", [])
+                if job.get("conclusion") == "failure"
+            )
+        # The aggregate gate only restates which jobs failed.
+        specific = [job for job in jobs if not job[1].endswith("required")] or jobs
+        sections = []
+        for job_id, name in specific[:MAX_FAILED_JOB_EXCERPTS]:
+            log = self._run(("gh", "api", f"repos/{self.repository}/actions/jobs/{job_id}/logs"))
+            sections.append(f"### {name}\n{failed_log_excerpt(log)}")
+        return "\n\n".join(sections)
+
     def add_comment(self, number: int, body: str) -> None:
         """Publish a bounded lifecycle update on an issue or pull request."""
         self._run(
@@ -946,20 +1165,23 @@ class GitHubClient:
             raise FactoryError(f"Could not parse pull request URL: {url}") from error
 
     def update_pull_request(self, pull_request: int, *, title: str, body: str) -> None:
-        self._run(
-            (
-                "gh",
-                "pr",
-                "edit",
-                str(pull_request),
-                "--repo",
-                self.repository,
-                "--title",
-                title,
-                "--body",
-                body,
+        # gh 2.46 `pr edit` queries retired Projects (classic) fields before it
+        # writes. REST avoids that unrelated failure; JSON preserves literal
+        # newlines and untrusted body text without shell interpolation.
+        with NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".json") as payload:
+            json.dump({"title": title, "body": body}, payload)
+            payload.flush()
+            self._run(
+                (
+                    "gh",
+                    "api",
+                    "--method",
+                    "PATCH",
+                    f"repos/{self.repository}/pulls/{pull_request}",
+                    "--input",
+                    payload.name,
+                )
             )
-        )
 
     def supersede_pull_request(
         self,
@@ -968,7 +1190,7 @@ class GitHubClient:
         canonical: int | None,
         reason: str,
     ) -> None:
-        """Close and delete one non-canonical PR branch before replacement proceeds."""
+        """Close a non-canonical PR, retaining Neptune's branches for stack recovery."""
 
         self.add_issue_labels(pull_request, ("superseded", "duplicate"))
         canonical_text = f" Canonical pull request: #{canonical}." if canonical is not None else ""
@@ -977,17 +1199,10 @@ class GitHubClient:
             f"Factory convergence closed this non-canonical pull request: {reason}."
             f"{canonical_text}",
         )
-        self._run(
-            (
-                "gh",
-                "pr",
-                "close",
-                str(pull_request),
-                "--repo",
-                self.repository,
-                "--delete-branch",
-            )
-        )
+        arguments = ["gh", "pr", "close", str(pull_request), "--repo", self.repository]
+        if self.repository.casefold() != NEPTUNE_REPOSITORY.casefold():
+            arguments.append("--delete-branch")
+        self._run(tuple(arguments))
 
     def mark_ready(self, pull_request: int) -> None:
         self._run(
@@ -1035,8 +1250,69 @@ class GitHubClient:
         )
 
     def merge_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
-        """Squash-merge only the exact reviewed head without bypassing GitHub rules."""
+        """Merge an exact head using its repository's ordinary protected policy.
 
+        Neptune uses tests-only native auto-merge with merge commits and retained
+        branches. Existing profiles still require review and squash/delete.
+        With a merge queue on their base branch, enqueue the exact head instead;
+        GitHub merges it once CI passes on top of the latest main. The pipeline
+        keeps polling MERGE_QUEUED, so an already-queued PR is left alone. A head
+        the queue removed is re-queued only after main has moved, so a group that
+        fails deterministically costs one CI run per main change, not a loop.
+        """
+
+        if self.repository.casefold() == NEPTUNE_REPOSITORY.casefold():
+            self._merge_neptune_pull_request(pull_request, expected_head_sha)
+            return
+        owner, name = self.repository.split("/", 1)
+        output = self._run(
+            (
+                "gh",
+                "api",
+                "graphql",
+                "-f",
+                f"query={_MERGE_QUEUE_STATE_QUERY}",
+                "-f",
+                f"owner={owner}",
+                "-f",
+                f"name={name}",
+                "-F",
+                f"number={pull_request}",
+                "-f",
+                f"branch={self.base_branch}",
+            )
+        )
+        repository = json.loads(output)["data"]["repository"]
+        if repository.get("mergeQueue") is not None:
+            item = repository["pullRequest"]
+            if item["isInMergeQueue"]:
+                return
+            removals = item["timelineItems"]["nodes"]
+            removal = removals[-1] if removals else None
+            base_moved_at = repository["ref"]["target"]["committedDate"]
+            if (
+                removal is not None
+                and (removal.get("beforeCommit") or {}).get("oid") == expected_head_sha
+                and _parse_github_time(base_moved_at) <= _parse_github_time(removal["createdAt"])
+            ):
+                raise FactoryError(
+                    f"Merge queue removed #{pull_request} at {expected_head_sha[:12]} "
+                    f"({removal.get('reason') or 'no reason given'}); waiting for main to move"
+                )
+            self._run(
+                (
+                    "gh",
+                    "api",
+                    "graphql",
+                    "-f",
+                    f"query={_ENQUEUE_PULL_REQUEST_MUTATION}",
+                    "-f",
+                    f"id={item['id']}",
+                    "-f",
+                    f"head={expected_head_sha}",
+                )
+            )
+            return
         self._run(
             (
                 "gh",
@@ -1047,6 +1323,46 @@ class GitHubClient:
                 self.repository,
                 "--squash",
                 "--delete-branch",
+                "--match-head-commit",
+                expected_head_sha,
+            )
+        )
+
+    def _merge_neptune_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
+        """Queue native tests-only auto-merge, preserving branch and stack ancestry."""
+
+        status = self.pull_request_status(pull_request)
+        if status.head_sha != expected_head_sha:
+            raise FactoryError("Neptune merge head changed; revalidate the new head")
+        if status.state == "MERGED":
+            return
+        if (
+            status.state != "OPEN"
+            or status.is_draft
+            or status.mergeable != "MERGEABLE"
+            or status.merge_state_status != "CLEAN"
+            or not status.checks_passed
+        ):
+            raise FactoryError("Neptune merge requires passing exact-head/current-base tests")
+        settings = json.loads(self._run(("gh", "api", f"repos/{self.repository}")))
+        protection = json.loads(
+            self._run(
+                ("gh", "api", f"repos/{self.repository}/branches/{self.base_branch}/protection")
+            )
+        )
+        validate_neptune_protection(settings, protection)
+        if status.auto_merge_enabled:
+            return
+        self._run(
+            (
+                "gh",
+                "pr",
+                "merge",
+                str(pull_request),
+                "--repo",
+                self.repository,
+                "--auto",
+                "--merge",
                 "--match-head-commit",
                 expected_head_sha,
             )
@@ -1136,6 +1452,8 @@ class GitHubClient:
         )
 
     def pull_request_status(self, pull_request: int) -> PullRequestStatus:
+        if self.repository.casefold() == NEPTUNE_REPOSITORY.casefold():
+            return self._neptune_pull_request_status(pull_request)
         output = self._run(
             (
                 "gh",
@@ -1151,6 +1469,14 @@ class GitHubClient:
         )
         item = json.loads(output)
         check_rollup = item.get("statusCheckRollup", [])
+        if INDEPENDENT_REVIEW_CHECK not in self.required_merge_checks:
+            # A retired review status (often left pending) must not hold a
+            # CI-verified head; it is neither required nor counted.
+            check_rollup = [
+                check
+                for check in check_rollup
+                if str(check.get("name") or check.get("context") or "") != INDEPENDENT_REVIEW_CHECK
+            ]
         review_decision = str(item.get("reviewDecision") or "")
         human_review_blocked = review_decision.upper() == "CHANGES_REQUESTED"
         conclusions: list[str] = []
@@ -1182,15 +1508,15 @@ class GitHubClient:
             for check in check_rollup
         )
         ci_required_failed = "CI / required" in failed_checks
-        missing_required = REQUIRED_FACTORY_MERGE_CHECKS - observed_checks
+        missing_required = self.required_merge_checks - observed_checks
         if missing_required:
             # GitHub creates workflow check-runs asynchronously. Treat an absent
             # canonical gate as pending rather than allowing a temporary partial
             # rollup to enter the scheduled merge queue.
             pending = True
-        required_passed = REQUIRED_FACTORY_MERGE_CHECKS.issubset(successful_checks)
+        required_passed = self.required_merge_checks.issubset(successful_checks)
         unsuccessful_required = (
-            REQUIRED_FACTORY_MERGE_CHECKS.intersection(observed_checks) - successful_checks
+            self.required_merge_checks.intersection(observed_checks) - successful_checks
         )
         failed_checks |= frozenset(unsuccessful_required)
         terminal_checks_passed = all(
@@ -1214,7 +1540,9 @@ class GitHubClient:
             checks_pending=pending or human_review_blocked,
             failed_checks=failed_checks,
             merge_state_status=str(item.get("mergeStateStatus") or "UNKNOWN").upper(),
-            workflow_run_ids=PullRequestRecord.from_payload(item).workflow_run_ids,
+            workflow_run_ids=PullRequestRecord.from_payload(
+                item, required_checks=self.required_merge_checks
+            ).workflow_run_ids,
             ci_required_passed=(
                 "CI / required" in successful_checks
                 and not ci_required_pending
@@ -1222,4 +1550,108 @@ class GitHubClient:
             ),
             ci_required_pending=ci_required_pending,
             ci_required_failed=ci_required_failed,
+        )
+
+    def neptune_gate_for_head(
+        self, head: str, required: frozenset[str] = frozenset({NEPTUNE_GATE})
+    ) -> NeptuneGate:
+        """Read the same app-pinned literal check evidence for PR or main heads."""
+        output = self._run(
+            (
+                "gh",
+                "api",
+                "--paginate",
+                f"repos/{self.repository}/commits/{head}/check-runs?filter=latest&per_page=100",
+                "--jq",
+                ".check_runs[] | @base64",
+            )
+        )
+        # Use the repository's existing per-record pagination convention. The
+        # installed gh 2.46 has --paginate, but not newer --slurp support.
+        checks = []
+        for encoded in output.splitlines():
+            try:
+                checks.append(json.loads(base64.b64decode(encoded, validate=True).decode("utf-8")))
+            except (ValueError, UnicodeError) as error:
+                raise FactoryError("Neptune check-run encoding is malformed") from error
+        return neptune_gate([{"check_runs": checks}], head, required)
+
+    def _neptune_pull_request_status(self, pull_request: int) -> PullRequestStatus:
+        owner, name = self.repository.split("/", 1)
+        query = """
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      number state isDraft mergeable mergeStateStatus reviewDecision
+      headRefOid baseRefName baseRefOid isCrossRepository
+      autoMergeRequest { enabledAt }
+    }
+  }
+}
+"""
+        payload = json.loads(
+            self._run(
+                (
+                    "gh",
+                    "api",
+                    "graphql",
+                    "-f",
+                    f"query={query}",
+                    "-f",
+                    f"owner={owner}",
+                    "-f",
+                    f"name={name}",
+                    "-F",
+                    f"number={pull_request}",
+                )
+            )
+        )
+        item = payload["data"]["repository"]["pullRequest"]
+        # Restrict the preparatory boundary to the existing protected main branch.
+        # Stacked children must be retargeted and retested after their parent merges.
+        if self.base_branch != "main" or item.get("baseRefName") != self.base_branch:
+            raise FactoryError("Neptune merge requires retargeting to protected main")
+        if item.get("isCrossRepository") is not False:
+            raise FactoryError("Neptune factory only merges same-repository worker branches")
+        head = str(item.get("headRefOid") or "")
+        if not re.fullmatch(r"[0-9a-f]{40}", head):
+            raise FactoryError("Neptune PR is missing an exact head SHA")
+        current_base = json.loads(
+            self._run(("gh", "api", f"repos/{self.repository}/git/ref/heads/main"))
+        )["object"]["sha"]
+        if not isinstance(current_base, str) or not re.fullmatch(r"[0-9a-f]{40}", current_base):
+            raise FactoryError("Neptune main is missing an exact base SHA")
+        comparison = json.loads(
+            self._run(("gh", "api", f"repos/{self.repository}/compare/{current_base}...{head}"))
+        )
+        current = item.get("baseRefOid") == current_base and comparison.get("status") in {
+            "ahead",
+            "identical",
+        }
+        required = (
+            required_neptune_checks(comparison)
+            if current and item.get("state") == "OPEN"
+            else frozenset({NEPTUNE_GATE})
+        )
+        gate = self.neptune_gate_for_head(head, required)
+        failed = set(gate.failed_checks)
+        if not current:
+            failed.add("Neptune current base")
+        return PullRequestStatus(
+            number=int(item["number"]),
+            state=str(item["state"]),
+            is_draft=bool(item["isDraft"]),
+            mergeable=str(item.get("mergeable") or "UNKNOWN"),
+            review_decision=str(item.get("reviewDecision") or ""),
+            head_sha=head,
+            checks_passed=gate.passed and current and item.get("mergeStateStatus") == "CLEAN",
+            checks_pending=gate.pending and current,
+            failed_checks=frozenset(failed),
+            merge_state_status=str(item.get("mergeStateStatus") or "UNKNOWN"),
+            workflow_run_ids=frozenset(),
+            ci_required_passed=gate.passed and current,
+            ci_required_pending=gate.pending and current,
+            ci_required_failed=bool(failed),
+            base_sha=current_base,
+            auto_merge_enabled=item.get("autoMergeRequest") is not None,
         )

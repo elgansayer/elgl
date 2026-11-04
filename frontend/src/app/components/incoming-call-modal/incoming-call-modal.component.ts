@@ -93,7 +93,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  class="w-6 h-6 sm:w-8 sm:h-8 text-danger"
+                  class="w-6 h-6 sm:w-8 sm:h-8 text-danger-ink"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"

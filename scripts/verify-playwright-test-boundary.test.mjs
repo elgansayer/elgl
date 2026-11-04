@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 
-import { analysePlaywrightBoundary } from './verify-playwright-test-boundary.mjs';
+import {
+  analysePlaywrightBoundary,
+  shouldReadTrackedFile,
+} from './verify-playwright-test-boundary.mjs';
 
 const validPackage = JSON.stringify({
   scripts: { test: 'npx playwright test' },
@@ -510,4 +517,340 @@ test('rejects the legacy login selector in non-authentication specs even if the 
   assert.deepEqual(violations, [
     'e2e/tests/chat-messaging.spec.ts targets the legacy input[name="email"] login selector outside an authentication spec',
   ]);
+});
+
+test('accepts specs that use only Playwright runner APIs', () => {
+  assert.deepEqual(
+    analyse({
+      'e2e/tests/chat-messaging.spec.ts': [
+        "import { expect, test } from '@playwright/test';",
+        '',
+        "test.describe('chat', () => {",
+        '  test.beforeEach(async ({ page }) => {',
+        "    await page.goto('/chat');",
+        '  });',
+        '',
+        "  test('sends a message', async () => {",
+        '    expect(payload).toEqual({ id: expect.any(String) });',
+        '  });',
+        '});',
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('ignores runner names that only appear in comments or string literals', () => {
+  assert.deepEqual(
+    analyse({
+      'e2e/tests/notes.spec.ts': [
+        "import { test } from '@playwright/test';",
+        '// describe(...) and it(...) belong to Vitest, not Playwright',
+        '/* beforeEach(() => vi.fn()) */',
+        "test('mentions runner names in text', async ({ page }) => {",
+        "  await page.getByText('describe(it) and jest.fn()').click();",
+        '  const note = `it (the page) loads; vi.spyOn(x)`;',
+        '});',
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('rejects the bare describe global that aborts the whole Playwright suite', () => {
+  const violations = analyse({
+    'e2e/tests/adversarial/bare-describe.spec.ts': [
+      "import { expect, test } from '@playwright/test';",
+      '',
+      "describe('bare describe', () => {",
+      "  test('valid sibling', async () => {",
+      '    expect(true).toBe(true);',
+      '  });',
+      '});',
+    ].join('\n'),
+  });
+
+  assert.deepEqual(violations, [
+    'e2e/tests/adversarial/bare-describe.spec.ts:3 calls describe() as a bare runner global; Playwright does not define it and fails with "ReferenceError: describe is not defined". Use test.describe() from @playwright/test',
+  ]);
+});
+
+test('reports each bare runner global once per file at its first line', () => {
+  const violations = analyse({
+    'e2e/tests/generated.spec.ts': [
+      "import { test } from '@playwright/test';",
+      "describe.only('a', () => {",
+      '  beforeEach(() => {});',
+      "  it('first', () => {});",
+      "  it.todo('second', () => {});",
+      '  afterAll(() => {});',
+      '});',
+      "describe('b', () => {});",
+    ].join('\n'),
+  });
+
+  assert.equal(violations.length, 4);
+  assert.ok(violations.every((violation) => violation.startsWith('e2e/tests/generated.spec.ts:')));
+  assert.match(violations[0], /:2 calls describe\(\) .* Use test\.describe\(\) /);
+  assert.match(violations[1], /:3 calls beforeEach\(\) .* Use test\.beforeEach\(\) /);
+  assert.match(violations[2], /:4 calls it\(\) .* Use test\(\) /);
+  assert.match(violations[3], /:6 calls afterAll\(\) .* Use test\.afterAll\(\) /);
+});
+
+test('rejects Vitest and Jest namespaces that Playwright does not define', () => {
+  const violations = analyse({
+    'e2e/tests/runner-namespaces.spec.ts': [
+      "import { test } from '@playwright/test';",
+      'const handler = vi.fn();',
+      "jest.spyOn(console, 'log');",
+    ].join('\n'),
+  });
+
+  assert.deepEqual(violations, [
+    'e2e/tests/runner-namespaces.spec.ts:2 uses the vi test-runner namespace; Playwright does not define it and fails with "ReferenceError: vi is not defined". Use page.route() to intercept network calls and plain closures to record calls',
+    'e2e/tests/runner-namespaces.spec.ts:3 uses the jest test-runner namespace; Playwright does not define it and fails with "ReferenceError: jest is not defined". Use page.route() to intercept network calls and plain closures to record calls',
+  ]);
+});
+
+test('rejects Vitest, Jest and node:test imports in Playwright specs', () => {
+  const violations = analyse({
+    'e2e/tests/vitest-copy.spec.ts': "import { describe, expect, it } from 'vitest';",
+    'e2e/tests/jest-copy.test.ts': "const { it } = require('@jest/globals');",
+    'e2e/tests/node-copy.spec.ts': 'import { describe } from "node:test";',
+  });
+
+  assert.deepEqual(violations, [
+    'e2e/tests/vitest-copy.spec.ts:1 imports vitest; Playwright specs must import test and expect from @playwright/test only',
+    'e2e/tests/jest-copy.test.ts:1 imports @jest/globals; Playwright specs must import test and expect from @playwright/test only',
+    'e2e/tests/node-copy.spec.ts:1 imports node:test; Playwright specs must import test and expect from @playwright/test only',
+  ]);
+});
+
+test('accepts runner names that a spec binds locally to Playwright APIs', () => {
+  assert.deepEqual(
+    analyse({
+      'e2e/tests/aliases.spec.ts': [
+        "import { test } from '@playwright/test';",
+        'const { describe } = test;',
+        'const it = test;',
+        "describe('aliased', () => {",
+        "  it('runs', async () => {});",
+        '});',
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('does not mistake member access for a bare runner global', () => {
+  assert.deepEqual(
+    analyse({
+      'e2e/tests/members.spec.ts': [
+        "import { test } from '@playwright/test';",
+        "test.describe.serial('serial', () => {});",
+        'test',
+        "  .describe('chained', () => {});",
+        'test.',
+        "  describe('dot then newline', () => {});",
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('does not treat property access on an identifier named it as a runner call', () => {
+  assert.deepEqual(
+    analyse({
+      'e2e/tests/labels.spec.ts': [
+        "import { test } from '@playwright/test';",
+        "const labels = [' a '].map((it) => it.trim());",
+        'const lengths = labels.map((it) => it.name.length);',
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('reports accurate line numbers after multi-line comments and template literals', () => {
+  const violations = analyse({
+    'e2e/tests/lines.spec.ts': [
+      "import { test } from '@playwright/test';",
+      '/*',
+      ' * describe(',
+      ' */',
+      'const text = `first',
+      'it (second)`;',
+      "describe('real', () => {});",
+    ].join('\r\n'),
+  });
+
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /^e2e\/tests\/lines\.spec\.ts:7 calls describe\(\) /);
+});
+
+test('leaves Vitest suites and non-test files outside e2e/tests alone', () => {
+  assert.deepEqual(
+    analyse({
+      'frontend/src/app/app.spec.ts': "describe('app', () => { it('works', () => {}); });",
+      'e2e/backend-readiness.test.mjs': [
+        "import { describe, it } from 'node:test';",
+        "describe('readiness', () => { it('polls', () => {}); });",
+      ].join('\n'),
+      'e2e/tests/helpers/session.ts': "describe('a helper is not a test file', () => {});",
+    }),
+    [],
+  );
+});
+
+test('checks every file suffix that Playwright discovers as a test', () => {
+  const suffixes = [
+    'spec.ts',
+    'test.ts',
+    'spec.js',
+    'test.mjs',
+    'spec.cjs',
+    'spec.tsx',
+    'test.mts',
+    'spec.cts',
+    'spec.jsx',
+  ];
+  const files = Object.fromEntries(
+    suffixes.map((suffix) => [`e2e/tests/generated.${suffix}`, "describe('x', () => {});"]),
+  );
+
+  assert.equal(analyse(files).length, suffixes.length);
+});
+
+test('reads tracked scripts and every Playwright test-file suffix', () => {
+  for (const path of [
+    'e2e/tests/generated.spec.mts',
+    'e2e/tests/generated.test.tsx',
+    'scripts/qa.sh',
+    '.github/workflows/e2e.yml',
+  ]) {
+    assert.equal(shouldReadTrackedFile(path), true, path);
+  }
+
+  for (const path of ['docs/playwright-test-boundary.md', 'e2e/tests/fixtures/avatar.png']) {
+    assert.equal(shouldReadTrackedFile(path), false, path);
+  }
+});
+
+const verifier = resolve(import.meta.dirname, 'verify-playwright-test-boundary.mjs');
+const bareDescribeSpec = [
+  "import { expect, test } from '@playwright/test';",
+  '',
+  "describe('written by a QA run', () => {",
+  "  test('valid sibling', async () => {",
+  '    expect(true).toBe(true);',
+  '  });',
+  '});',
+].join('\n');
+const playwrightSpec = [
+  "import { expect, test } from '@playwright/test';",
+  '',
+  "test.describe('written by a QA run', () => {",
+  "  test('runs', async () => {",
+  '    expect(true).toBe(true);',
+  '  });',
+  '});',
+].join('\n');
+
+// A real repository, because the point of these tests is which files Git lists, not how they are
+// analysed. GIT_* variables are dropped so a run inside a git hook cannot reach the outer repo.
+function workingTreeFixture(t) {
+  const root = mkdtempSync(resolve(tmpdir(), 'playwright-boundary-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const environment = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')),
+  );
+
+  function git(...args) {
+    const result = spawnSync('git', args, { cwd: root, encoding: 'utf8', env: environment });
+    assert.equal(result.status, 0, result.stderr);
+  }
+  function write(path, content) {
+    mkdirSync(dirname(resolve(root, path)), { recursive: true });
+    writeFileSync(resolve(root, path), content);
+  }
+
+  git('init', '-q');
+  mkdirSync(resolve(root, 'scripts'));
+  copyFileSync(verifier, resolve(root, 'scripts/verify-playwright-test-boundary.mjs'));
+  write('e2e/package.json', validPackage);
+  write('e2e/playwright.config.ts', validConfig);
+  write('e2e/tests/tracked.spec.ts', playwrightSpec);
+  git('add', '.');
+
+  function run() {
+    return spawnSync(process.execPath, ['scripts/verify-playwright-test-boundary.mjs'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: environment,
+    });
+  }
+  return { git, run, write, root };
+}
+
+test('rejects a bare describe in a spec that is not tracked yet', (t) => {
+  const { run, write } = workingTreeFixture(t);
+  write('e2e/tests/untracked-bare-describe.spec.ts', bareDescribeSpec);
+
+  const result = run();
+
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /Playwright test-boundary verification failed/);
+  assert.match(
+    result.stderr,
+    /- e2e\/tests\/untracked-bare-describe\.spec\.ts:3 calls describe\(\) as a bare runner global; .*Use test\.describe\(\) from @playwright\/test/,
+  );
+});
+
+test('accepts untracked specs that use only the Playwright runner API', (t) => {
+  const { run, write } = workingTreeFixture(t);
+  write('e2e/tests/untracked.spec.ts', playwrightSpec);
+
+  const result = run();
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Playwright test boundary verified/);
+});
+
+test('checks untracked automation commands as well as untracked specs', (t) => {
+  const { run, write } = workingTreeFixture(t);
+  write('scripts/qa-run.sh', 'npx playwright test\n');
+
+  const result = run();
+
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(
+    result.stderr,
+    /scripts\/qa-run\.sh:1 invokes Playwright without the e2e working directory or explicit e2e config/,
+  );
+});
+
+test('skips a tracked spec that was deleted from disk instead of crashing', (t) => {
+  const { git, run, write, root } = workingTreeFixture(t);
+  write('e2e/tests/broken.spec.ts', bareDescribeSpec);
+  git('add', '.');
+  rmSync(resolve(root, 'e2e/tests/broken.spec.ts'));
+
+  const result = run();
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stderr, /ENOENT/);
+  assert.match(result.stdout, /Playwright test boundary verified/);
+});
+
+test('does not scan dependency trees that Git ignores', (t) => {
+  const { run, write } = workingTreeFixture(t);
+  write('.gitignore', 'node_modules/\n');
+  write(
+    'node_modules/some-package/package.json',
+    JSON.stringify({ scripts: { test: 'playwright test' } }),
+  );
+
+  const result = run();
+
+  assert.equal(result.status, 0, result.stderr);
 });

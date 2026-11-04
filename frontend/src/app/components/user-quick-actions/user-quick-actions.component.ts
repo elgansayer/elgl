@@ -48,7 +48,7 @@ import { UserQuickActionsService } from '../../services/user-quick-actions.servi
 
       @if (actions.errorKey(userId()); as errorKey) {
         <p
-          class="error-message mt-1 text-end text-xs text-danger"
+          class="error-message mt-1 text-end text-xs text-danger-ink"
           role="status"
           aria-live="polite"
         >

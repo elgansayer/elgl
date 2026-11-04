@@ -30,6 +30,9 @@
         --primary: 198 82 48;
         --secondary: 26 132 120;
         --danger: 217 58 58;
+        --primary-text: 178 74 43;
+        --secondary-text: 23 119 108;
+        --danger-text: 204 39 39;
         --success: 25 134 84;
         --warning: 161 108 9;
         --vip: 153 111 16;
@@ -59,6 +62,9 @@
         --primary: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
         --success: 52 211 153;
         --warning: 242 179 61;
         --vip: 232 184 75;
@@ -235,7 +241,7 @@
       }
       .btn.ghost {
         background: transparent;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .btn.vip {
         background: rgb(var(--vip));
@@ -285,7 +291,7 @@
       .field .error {
         font-weight: 400;
         font-size: 12px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .field.invalid input {
         border-color: rgb(var(--danger));
@@ -304,12 +310,12 @@
       .chip.on {
         background: rgb(var(--primary) / 0.14);
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .chip.tide {
         background: rgb(var(--secondary) / 0.14);
         border-color: rgb(var(--secondary));
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .badge {
         display: inline-flex;
@@ -399,7 +405,7 @@
         border: 1px solid;
       }
       .alert.error {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.5);
         background: rgb(var(--danger) / 0.08);
       }
@@ -456,6 +462,7 @@
         .chip,
         .badge,
         .card,
+        .gift-bubble,
         .specimen {
           border: 1px solid CanvasText;
         }
@@ -498,6 +505,32 @@
         font-weight: 700;
         text-decoration: underline;
       }
+      .gift-bubble {
+        align-self: flex-start;
+        display: inline-flex;
+        min-width: 144px;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px;
+        border-radius: 16px;
+        border: 1px solid rgb(var(--vip) / 0.3);
+        background: linear-gradient(
+          135deg,
+          rgb(var(--vip) / 0.2),
+          rgb(var(--surface-200)),
+          rgb(var(--accent) / 0.2)
+        );
+        box-shadow: 0 4px 14px rgb(var(--shadow) / 0.08);
+      }
+      .gift-bubble .gift-icon {
+        font-size: 36px;
+      }
+      .gift-bubble .coin {
+        color: rgb(var(--vip));
+        font-size: 10px;
+        font-weight: 700;
+      }
       .thread {
         display: flex;
         flex-direction: column;
@@ -514,12 +547,12 @@
         border: 1px solid;
       }
       .sys.tide {
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
         border-color: rgb(var(--secondary) / 0.3);
         background: rgb(var(--secondary) / 0.1);
       }
       .sys.danger {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.3);
         background: rgb(var(--danger) / 0.1);
       }
@@ -730,7 +763,7 @@
       .react[aria-pressed='true'] {
         border-color: rgb(var(--primary));
         background: rgb(var(--primary) / 0.12);
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
         font-weight: 700;
       }
       .quick-emoji {
@@ -766,7 +799,7 @@
         height: 16px;
       }
       .tick.read svg {
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .tick.muted-tick svg {
         color: rgb(var(--text-muted));
@@ -809,7 +842,7 @@
       }
       .radio-row label.on {
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
         font-weight: 700;
       }
       .dot {
@@ -853,7 +886,7 @@
         color: rgb(var(--text-primary));
       }
       .menu button.destructive {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .menu button.cancel {
         background: rgb(var(--surface-300));
@@ -889,6 +922,14 @@
         flex-direction: column;
         gap: 2px;
         font-size: 13px;
+      }
+      .link-card .sr-only {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
       }
       .tokens {
         font-size: 18px;
@@ -1023,7 +1064,7 @@
       }
       .guide h4 {
         margin: 0 0 4px;
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
         font-size: 13px;
       }
       .reply-quote {
@@ -1093,7 +1134,7 @@
         font-style: italic;
       }
       .diff del {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         text-decoration: line-through;
       }
       .diff ins {
@@ -1395,6 +1436,14 @@
               </div>
               <div class="meta">10:07</div>
             </div>
+            <div class="state-label">Gift payload · inline status</div>
+            <div class="gift-bubble" role="status" aria-label="Chén Wěi sent you Rose for 10 coins">
+              <span class="gift-icon pulse" aria-hidden="true">🌹</span>
+              <span class="title">Rose</span>
+              <span class="coin">🪙 10 coins</span>
+            </div>
+            <div class="state-label">Gift payload unavailable</div>
+            <div class="alert warning" role="status">Gift details unavailable</div>
             <div class="state-label">Doodle</div>
             <div class="bubble me" style="padding: 4px">
               <div
@@ -1417,7 +1466,8 @@
         </div>
         <footer>
           States: text · mention · forwarded · voice (playing speed, transcribing, transcript) ·
-          correction · doodle · link preview · delivery sent/delivered/read · blocked (hidden)
+          correction · gift payload · gift unavailable · reduced motion · doodle · link preview ·
+          delivery sent/delivered/read · blocked (hidden)
         </footer>
       </section>
 
@@ -1583,9 +1633,9 @@
             ><button type="button" role="radio" aria-checked="false">All chats</button>
           </div>
           <div class="pills" role="radiogroup">
-            <span class="chip on">All</span><span class="chip">text</span
-            ><span class="chip">voice</span><span class="chip">correction</span
-            ><span class="chip">doodle</span><span class="chip">gift</span>
+            <span class="chip on">All</span><span class="chip">Text</span
+            ><span class="chip">Voice</span><span class="chip">Corrections</span
+            ><span class="chip">Doodles</span><span class="chip">Gifts</span>
           </div>
           <div class="list">
             <div class="stack" style="gap: 2px">
@@ -1604,15 +1654,15 @@
           </div>
           <div class="state-label">Searching · no results · error</div>
           <div class="muted" role="status">Searching…</div>
-          <div class="muted" role="status">No results</div>
+          <div class="muted" role="status">No messages found.</div>
           <div class="alert error row" role="alert">
-            <span class="grow">Error</span
+            <span class="grow">Search is unavailable. Try again.</span
             ><button class="btn secondary-btn" type="button">Retry</button>
           </div>
         </div>
         <footer>
           States: results (within / global with room tag) · type filter · searching · no results ·
-          error+retry. ⚠ chatSearch.* keys have no English translation yet
+          error+retry. Search labels and states use the production English translation contract.
         </footer>
       </section>
 
@@ -1823,7 +1873,7 @@
             ><button type="button">Translate</button><button type="button">Simplify</button
             ><button type="button">Transliterate</button><button type="button">Speak</button
             ><button type="button">Correct</button><button type="button">Request correction</button
-            ><button type="button">Explanation</button><button type="button">Favourite</button>
+            ><button type="button">Explain this</button><button type="button">Favourite</button>
             <hr />
             <button type="button" class="destructive">Report</button
             ><button type="button" class="destructive">Block</button>
@@ -1845,10 +1895,43 @@
               ><button class="btn" type="button">Close</button>
             </div>
           </div>
+          <div class="state-label">
+            Grammar explanation dialog · opened by Explain this on corrected text · result
+          </div>
+          <div class="dialog stack" role="dialog" aria-label="Grammar explanation">
+            <div class="title">Grammar explanation</div>
+            <p class="muted" style="margin: 0">
+              An AI-generated breakdown of what changed and why. It may contain mistakes.
+            </p>
+            <div class="card">
+              <div class="muted">Original sentence</div>
+              <div dir="auto">I has a cat</div>
+              <div class="muted">Improved sentence</div>
+              <div dir="auto">I have a cat</div>
+            </div>
+            <p style="margin: 0" aria-live="polite" dir="auto">
+              Use "have" with "I" because "has" is the third person singular form.
+            </p>
+            <div class="row" style="justify-content: flex-end">
+              <button class="btn" type="button">Close</button>
+            </div>
+          </div>
+          <div class="state-label">Grammar explanation dialog · error (request failed)</div>
+          <div class="dialog stack" role="dialog" aria-label="Grammar explanation">
+            <div class="title">Grammar explanation</div>
+            <div class="alert error" role="alert">
+              This correction could not be explained. Check your connection and try again.
+            </div>
+            <div class="row" style="justify-content: flex-end">
+              <button class="btn secondary-btn" type="button">Retry</button
+              ><button class="btn" type="button">Close</button>
+            </div>
+          </div>
         </div>
         <footer>
-          Long-press / right-click / button opens · text-only actions hidden for non-text · Simplify
-          &amp; Explanation dialogs: loading · result · rate_limit/auth/empty/request errors
+          Long-press / right-click / button opens · text-only actions hidden for non-text · Explain
+          this appears on corrected text only · Simplify &amp; Grammar explanation dialogs: loading ·
+          result · rate_limit/auth/empty/request errors, each with its own message
         </footer>
       </section>
 
@@ -1867,7 +1950,8 @@
                 ><strong dir="auto">やさしい日本語で読むニュース</strong
                 ><span class="secondary" dir="auto"
                   >Short news stories written in simple Japanese for learners.</span
-                ><span class="muted" dir="ltr">www3.nhk.or.jp</span>
+                ><span class="muted" dir="ltr">www3.nhk.or.jp</span
+                ><span class="sr-only">Opens in a new tab</span>
               </div>
             </div>
           </div>
@@ -1875,12 +1959,14 @@
           <div class="link-card">
             <div class="txt">
               <strong dir="auto">Duolingo vs. tandem learning</strong
-              ><span class="muted" dir="ltr">example.com</span>
+              ><span class="muted" dir="ltr">example.com</span
+              ><span class="sr-only">Opens in a new tab</span>
             </div>
           </div>
         </div>
         <footer>
-          States: with image · image error fallback · unsafe URL → hidden · no-referrer
+          States: with image · image error fallback · unsafe URL → hidden · no-referrer · screen
+          readers hear "Opens in a new tab" inside the link name
         </footer>
       </section>
 
@@ -1898,14 +1984,14 @@
             ><span class="tok known">します</span>。
           </div>
           <div class="translit" dir="ltr">watashi wa mainichi toshokan de benkyō shimasu.</div>
-          <div class="state-label">Save selection as flashcard</div>
+          <div class="state-label">Create Flashcard from selection</div>
           <div class="dialog stack">
-            <div class="title">Save</div>
+            <div class="title">Create Flashcard</div>
             <div class="secondary" lang="ja">図書館で勉強</div>
-            <p class="alert error" role="alert">Something went wrong. Please try again.</p>
+            <p class="alert error" role="alert">Failed to create flashcard. Please try again.</p>
             <div class="row" style="justify-content: flex-end">
               <button class="btn secondary-btn" type="button">Cancel</button
-              ><button class="btn" type="button" aria-busy="true" disabled>Saving...</button>
+              ><button class="btn" type="button" aria-busy="true" disabled>Creating flashcard...</button>
             </div>
           </div>
         </div>
@@ -1989,12 +2075,12 @@
             <div class="state-label">Preview → uploading</div>
             <div class="native-audio">▶ 0:00 / 0:14</div>
             <button class="btn" type="button">📤 Send voice note</button>
-            <button class="btn secondary-btn" type="button" disabled>⏳ Uploading…</button>
+            <button class="btn secondary-btn" type="button" disabled>⏳ Uploading...</button>
           </div>
         </div>
         <footer>
-          States: idle · recording · preview/send · uploading (disabled). Copy note: the "Uploading
-          to Cloudflare R2..." string exposes infrastructure - recommend "Uploading…"
+          States: idle · recording · preview/send · uploading (disabled). Copy rule: the uploading
+          label never names the storage provider.
         </footer>
       </section>
 
@@ -2033,7 +2119,7 @@
               <i style="height: 20%"></i><i style="height: 20%"></i><i style="height: 20%"></i
               ><i style="height: 20%"></i>
             </div>
-            <span class="time" style="color: rgb(var(--danger))">Unable to play this audio</span>
+            <span class="time" style="color: rgb(var(--danger-text))">Unable to play this audio</span>
           </div>
         </div>
         <footer>
@@ -2104,7 +2190,7 @@
                 min-height: 36px;
                 font-size: 13px;
                 border-color: rgb(var(--primary));
-                color: rgb(var(--primary));
+                color: rgb(var(--primary-text));
               "
             >
               ⏹️ Stop reading
@@ -2112,8 +2198,8 @@
           </div>
         </div>
         <footer>
-          States: idle · speaking (aria-pressed). Note: translation strings already contain the
-          emoji, so the template's own icon span duplicates it - drop one
+          States: idle · speaking (aria-pressed). The button draws its icon once in an
+          <code>aria-hidden</code> span; the translated labels are plain text with no emoji.
         </footer>
       </section>
 
@@ -2253,7 +2339,7 @@
           <div class="state-label">Running · run error</div>
           <div class="aside">
             <button class="btn vip" type="button" disabled aria-busy="true">Loading...</button
-            ><span class="muted" role="status" style="color: rgb(var(--danger))">Error</span
+            ><span class="muted" role="status" style="color: rgb(var(--danger-text))">Error</span
             ><button class="btn vip" type="button">Retry · 🪙 20</button>
           </div>
           <div class="state-label">Result</div>
@@ -2270,7 +2356,7 @@
           <div class="state-label">Catalogue loading · error</div>
           <div class="aside"><span class="muted">Loading...</span></div>
           <div class="aside row">
-            <span class="grow" style="color: rgb(var(--danger))">Error</span
+            <span class="grow" style="color: rgb(var(--danger-text))">Error</span
             ><button class="btn secondary-btn" type="button">Retry</button>
           </div>
         </div>

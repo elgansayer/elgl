@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import os
+import stat
 import time
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -17,6 +21,19 @@ from openhands_factory.models import ProviderName
 from openhands_factory.state import atomic_write_json, read_json
 
 DEFAULT_MAX_PROVIDER_LEASE_SECONDS = 24 * 60 * 60
+MAX_RENEWABLE_LEASE_SECONDS = 60
+
+
+@dataclass(frozen=True)
+class RenewableCapacityLease:
+    """Persistable ownership handle; no provider credential or model invocation."""
+
+    provider: str
+    owner: str
+    token: str
+    store_path: str
+    lease_seconds: int
+    protocol_version: int = 1
 
 
 def _is_capacity_payload(value: object) -> bool:
@@ -107,6 +124,27 @@ class ProviderCapacityStore:
             validator=_is_capacity_payload,
         )
 
+    @staticmethod
+    def _is_unexpired(entry: dict[str, object], now: datetime) -> bool:
+        expires_at = entry.get("expires_at")
+        acquired_at = entry.get("acquired_at")
+        if not isinstance(expires_at, str) or not isinstance(acquired_at, str):
+            return False
+        try:
+            expiry = datetime.fromisoformat(expires_at)
+            acquired = datetime.fromisoformat(acquired_at)
+        except ValueError:
+            return False
+        return (
+            expiry.tzinfo is not None and acquired.tzinfo is not None and acquired <= now < expiry
+        )
+
+    @staticmethod
+    def _has_writer_metadata(entry: dict[str, object]) -> bool:
+        # This validates record shape, not whether a recorded PID is live.
+        owner, pid = entry.get("owner"), entry.get("pid")
+        return isinstance(owner, str) and type(pid) is int and pid > 0
+
     def acquire(
         self,
         provider: ProviderName | str,
@@ -117,6 +155,24 @@ class ProviderCapacityStore:
         lease_seconds: int,
     ) -> float:
         """Acquire capacity and return seconds spent waiting for a slot."""
+        return self._acquire(
+            provider,
+            limit=limit,
+            owner=owner,
+            wait_seconds=wait_seconds,
+            lease_seconds=lease_seconds,
+        )
+
+    def _acquire(
+        self,
+        provider: ProviderName | str,
+        *,
+        limit: int,
+        owner: str,
+        wait_seconds: int,
+        lease_seconds: int,
+        token: str | None = None,
+    ) -> float:
         if lease_seconds <= 0 or lease_seconds > self.max_lease_seconds:
             raise ValueError("lease_seconds must be positive and no greater than max_lease_seconds")
         started = time.monotonic()
@@ -127,21 +183,40 @@ class ProviderCapacityStore:
                 provider_key = provider.value if isinstance(provider, ProviderName) else provider
                 entries = providers.setdefault(provider_key, [])
                 now = datetime.now(UTC)
+                # A reader's renewal bound is not proof that foreign work
+                # stopped. Beyond that bound, legacy admission requires the
+                # owner/PID metadata that our writers always persist. Incomplete
+                # corrupt time envelopes must not reserve capacity indefinitely.
+                # PID is record shape, never a liveness/adoption authority.
                 active = self._active_entries(entries, now)
-                if len(active) < limit:
-                    active.append(
-                        {
-                            "owner": owner,
-                            "pid": os.getpid(),
-                            "factory_generation": self.factory_generation,
-                            "acquired_at": now.isoformat(),
-                            "expires_at": (now + timedelta(seconds=lease_seconds)).isoformat(),
-                        }
+                occupied = [
+                    entry
+                    for entry in entries
+                    if self._is_unexpired(entry, now)
+                    and (
+                        self.factory_generation is None
+                        or entry.get("factory_generation") == self.factory_generation
                     )
-                    providers[provider_key] = active
+                    and (token is not None or entry in active or self._has_writer_metadata(entry))
+                ]
+                duplicate_owner = token is not None and any(
+                    entry.get("owner") == owner for entry in occupied
+                )
+                if len(occupied) < limit and not duplicate_owner:
+                    entry: dict[str, object] = {
+                        "owner": owner,
+                        "pid": os.getpid(),
+                        "factory_generation": self.factory_generation,
+                        "acquired_at": now.isoformat(),
+                        "expires_at": (now + timedelta(seconds=lease_seconds)).isoformat(),
+                    }
+                    if token is not None:
+                        entry.update({"lease_protocol": 1, "lease_token": token})
+                    occupied.append(entry)
+                    providers[provider_key] = occupied
                     self._save(providers)
                     return time.monotonic() - started
-                providers[provider_key] = active
+                providers[provider_key] = occupied
                 self._save(providers)
             if time.monotonic() >= deadline:
                 raise ProviderCapacityUnavailable(
@@ -149,6 +224,96 @@ class ProviderCapacityStore:
                     retry_after_seconds=max(wait_seconds, 1),
                 )
             time.sleep(min(1, max(deadline - time.monotonic(), 0.05)))
+
+    def acquire_renewable(
+        self,
+        provider: ProviderName | str,
+        *,
+        limit: int,
+        owner: str,
+        wait_seconds: int = 0,
+        lease_seconds: int = MAX_RENEWABLE_LEASE_SECONDS,
+    ) -> RenewableCapacityLease:
+        """Reserve a short renewable slot visible to existing bounded readers.
+
+        Every participating reader must accept at least ``lease_seconds``. Keep
+        the existing provider key and shared directory; this grants no allowance.
+        """
+        key = provider.value if isinstance(provider, ProviderName) else provider
+        handle = RenewableCapacityLease(
+            key, owner, str(uuid.uuid4()), str(self.path.resolve()), lease_seconds
+        )
+        self._validate_handle(handle)
+        self._acquire(
+            provider,
+            limit=limit,
+            owner=owner,
+            wait_seconds=wait_seconds,
+            lease_seconds=lease_seconds,
+            token=handle.token,
+        )
+        return handle
+
+    def _validate_handle(self, handle: RenewableCapacityLease) -> None:
+        if (
+            self.factory_generation is not None
+            or type(handle.protocol_version) is not int
+            or handle.protocol_version != 1
+            or not isinstance(handle.provider, str)
+            or not handle.provider
+            or not isinstance(handle.owner, str)
+            or not handle.owner
+            or not isinstance(handle.token, str)
+            or not handle.token
+            or handle.store_path != str(self.path.resolve())
+            or type(handle.lease_seconds) is not int
+            or not 0
+            < handle.lease_seconds
+            <= min(self.max_lease_seconds, MAX_RENEWABLE_LEASE_SECONDS)
+        ):
+            raise ValueError("Invalid renewable capacity lease handle or incompatible store bound")
+
+    @staticmethod
+    def _owns_entry(entry: dict[str, object], handle: RenewableCapacityLease) -> bool:
+        return (
+            entry.get("owner") == handle.owner
+            and entry.get("lease_token") == handle.token
+            and entry.get("lease_protocol") == handle.protocol_version
+        )
+
+    def renew(self, handle: RenewableCapacityLease) -> None:
+        """Atomically refresh a live slot, never reacquiring an expired/lost one."""
+        self._validate_handle(handle)
+        with self.lock:
+            providers = self._load()
+            now = datetime.now(UTC)
+            entries = providers.get(handle.provider, [])
+            active = self._active_entries(entries, now)
+            owned = [entry for entry in active if self._owns_entry(entry, handle)]
+            if len(owned) != 1:
+                raise ProviderCapacityUnavailable(
+                    "Renewable provider lease expired or ownership lost; stop the participant",
+                    retry_after_seconds=1,
+                )
+            # Refresh the legacy time envelope too, so old readers count a
+            # heartbeat after the session has outlived their maximum duration.
+            owned[0]["acquired_at"] = now.isoformat()
+            owned[0]["expires_at"] = (now + timedelta(seconds=handle.lease_seconds)).isoformat()
+            providers[handle.provider] = entries
+            self._save(providers)
+
+    def release_renewable(self, handle: RenewableCapacityLease) -> bool:
+        """Release only this ownership token; stale cleanup cannot free a successor."""
+        self._validate_handle(handle)
+        with self.lock:
+            providers = self._load()
+            entries = providers.get(handle.provider, [])
+            remaining = [entry for entry in entries if not self._owns_entry(entry, handle)]
+            if len(remaining) == len(entries):
+                return False
+            providers[handle.provider] = remaining
+            self._save(providers)
+            return True
 
     def release(self, provider: ProviderName | str, *, owner: str) -> None:
         with self.lock:
@@ -170,6 +335,78 @@ class ProviderCapacityStore:
                 provider: len(self._active_entries(entries, now))
                 for provider, entries in providers.items()
             }
+
+    def audit_renewable_leases(
+        self, handles: list[RenewableCapacityLease]
+    ) -> tuple[dict[str, int], list[bool], dict[str, int]]:
+        """Observe exact ownership in one current primary, never a backup.
+
+        This is point-in-time evidence, not permission to adopt or dispatch.
+        Unlike ordinary recoverable state reads, a stale backup cannot establish
+        that a released token is still owned. Missing/unsafe/corrupt state fails.
+        """
+        for handle in handles:
+            self._validate_handle(handle)
+        with self.lock.acquire(timeout=2):
+            descriptor = os.open(self.path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(descriptor, "rb") as stream:
+                info = os.fstat(stream.fileno())
+                if (
+                    not stat.S_ISREG(info.st_mode)
+                    or info.st_uid != os.geteuid()
+                    or stat.S_IMODE(info.st_mode) & 0o077
+                    or info.st_nlink != 1
+                    or info.st_size > 1024 * 1024
+                ):
+                    raise ValueError("Capacity audit needs a bounded private regular primary")
+                raw = stream.read(1024 * 1024 + 1)
+            if len(raw) > 1024 * 1024:
+                raise ValueError("Capacity audit primary is too large")
+            payload = json.loads(raw, object_pairs_hook=_unique_audit_fields)
+            if not _is_capacity_payload(payload):
+                raise ValueError("Invalid current capacity audit primary")
+            providers = payload["providers"]
+            if any(
+                not isinstance(entries, list)
+                or any(not isinstance(entry, dict) for entry in entries)
+                for entries in providers.values()
+            ):
+                raise ValueError("Invalid current capacity audit entries")
+            for entries in providers.values():
+                for entry in entries:
+                    acquired = datetime.fromisoformat(entry["acquired_at"])
+                    expiry = datetime.fromisoformat(entry["expires_at"])
+                    if acquired.tzinfo is None or expiry.tzinfo is None or expiry <= acquired:
+                        raise ValueError("Invalid capacity audit time envelope")
+            now = datetime.now(UTC)
+            active = {
+                provider: self._active_entries(entries, now)
+                for provider, entries in providers.items()
+            }
+            return (
+                {provider: len(entries) for provider, entries in active.items()},
+                [
+                    sum(
+                        self._owns_entry(entry, handle) for entry in active.get(handle.provider, [])
+                    )
+                    == 1
+                    for handle in handles
+                ],
+                {
+                    provider: sum(self._is_unexpired(entry, now) for entry in entries)
+                    - len(active[provider])
+                    for provider, entries in providers.items()
+                },
+            )
+
+
+def _unique_audit_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate capacity audit field")
+        result[key] = value
+    return result
 
 
 @contextmanager

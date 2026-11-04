@@ -30,6 +30,9 @@
         --primary: 198 82 48;
         --secondary: 26 132 120;
         --danger: 217 58 58;
+        --primary-text: 178 74 43;
+        --secondary-text: 23 119 108;
+        --danger-text: 204 39 39;
         --success: 25 134 84;
         --warning: 161 108 9;
         --vip: 153 111 16;
@@ -59,6 +62,9 @@
         --primary: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
         --success: 52 211 153;
         --warning: 242 179 61;
         --vip: 232 184 75;
@@ -235,7 +241,7 @@
       }
       .btn.ghost {
         background: transparent;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .btn.vip {
         background: rgb(var(--vip));
@@ -285,7 +291,7 @@
       .field .error {
         font-weight: 400;
         font-size: 12px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .field.invalid input {
         border-color: rgb(var(--danger));
@@ -304,12 +310,12 @@
       .chip.on {
         background: rgb(var(--primary) / 0.14);
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .chip.tide {
         background: rgb(var(--secondary) / 0.14);
         border-color: rgb(var(--secondary));
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .badge {
         display: inline-flex;
@@ -399,7 +405,7 @@
         border: 1px solid;
       }
       .alert.error {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.5);
         background: rgb(var(--danger) / 0.08);
       }
@@ -534,6 +540,23 @@
         width: 44px;
         height: 44px;
         font-size: 18px;
+      }
+      /* Lucide glyphs (ng-icons): 20px, then 24px from the sm breakpoint, stroke follows the control. */
+      .round svg {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      @media (min-width: 640px) {
+        .round svg {
+          width: 24px;
+          height: 24px;
+        }
       }
       .ring {
         box-shadow: 0 0 0 6px rgb(var(--secondary) / 0.35);
@@ -930,30 +953,72 @@
             <div class="timer" role="timer">12:47</div>
             <div class="controls" style="margin-block-start: auto">
               <div class="ctl">
-                <button class="round" aria-label="Mute">🎙️</button><span>Mute</span>
+                <button class="round" aria-label="Mute">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 19v3" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <rect x="9" y="2" width="6" height="13" rx="3" />
+                  </svg></button
+                ><span>Mute</span>
               </div>
               <div class="ctl">
-                <button class="round" aria-label="Speaker">🔊</button><span>Speaker</span>
+                <button class="round" aria-label="Speaker">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
+                    />
+                    <line x1="22" x2="16" y1="9" y2="15" />
+                    <line x1="16" x2="22" y1="9" y2="15" />
+                  </svg></button
+                ><span>Speaker</span>
               </div>
               <div class="ctl">
-                <button class="round end" aria-label="Hang Up">☎️</button><span>Hang Up</span>
+                <button class="round end" aria-label="Hang Up">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M10.1 13.9a14 14 0 0 0 3.732 2.668 1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2 18 18 0 0 1-12.728-5.272"
+                    />
+                    <path d="M22 2 2 22" />
+                    <path
+                      d="M4.76 13.582A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 .244.473"
+                    />
+                  </svg></button
+                ><span>Hang Up</span>
               </div>
             </div>
           </div>
-          <span class="state-label">Muted · speaker off</span>
+          <span class="state-label">Muted · speaker on</span>
           <div class="controls">
             <div class="ctl">
-              <button class="round on" aria-pressed="true">🔇</button><span>Unmute</span>
+              <button class="round on" aria-pressed="true" aria-label="Unmute">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 19v3" />
+                  <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33" />
+                  <path d="M16.95 16.95A7 7 0 0 1 5 12v-2" />
+                  <path d="M18.89 13.23A7 7 0 0 0 19 12v-2" />
+                  <path d="m2 2 20 20" />
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+                </svg></button
+              ><span>Unmute</span>
             </div>
-            <div class="ctl"><button class="round">🔈</button><span>Speaker</span></div>
+            <div class="ctl">
+              <button class="round" aria-label="Speaker">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
+                  />
+                  <path d="M16 9a5 5 0 0 1 0 6" />
+                  <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
+                </svg></button
+              ><span>Speaker</span>
+            </div>
           </div>
         </div>
         <footer>
-          States: in-call with duration · muted · speaker on/off · hang up.
-          <span class="note-flag"
-            >Runtime shows Material icon ligature text (mic_off, volume_up) - needs an icon font or
-            SVG.</span
-          >
+          States: in-call with duration · muted · speaker on/off · hang up. Glyphs are the Lucide
+          <code>mic</code> / <code>mic-off</code>, <code>volume-x</code> / <code>volume-2</code> and
+          <code>phone-off</code> from ng-icons, 20px on mobile and 24px from the
+          <code>sm</code> breakpoint; the buttons keep their translated accessible names.
         </footer>
       </section>
 
@@ -1113,15 +1178,17 @@
           <div class="card stack">
             <div class="title">Which tense next?</div>
             <div class="row">
-              <span class="grow secondary">Past</span><span class="muted">62%</span>
+              <span class="grow secondary">Past</span><span class="muted">62% · 8</span>
             </div>
             <div class="progress"><span style="width: 62%"></span></div>
+            <button class="btn secondary-btn block">Vote for Past</button>
             <div class="row">
-              <span class="grow secondary">Future</span><span class="muted">38%</span>
+              <span class="grow secondary">Future</span><span class="muted">38% · 5</span>
             </div>
             <div class="progress">
               <span style="width: 38%; background: rgb(var(--secondary))"></span>
             </div>
+            <button class="btn secondary-btn block">Vote for Future</button>
             <span class="muted">13 vote(s)</span>
           </div>
           <span class="state-label">Loading · empty</span>
@@ -1318,11 +1385,7 @@
           </div>
         </div>
         <footer>
-          States: host + co-host · invite co-host · loading · error/retry<br /><span
-            class="note-flag"
-            >i18n gap: splitScreen.loadingHost / loadingCoHost; "(Host)"/"(Co-Host)" suffixes are
-            hard-coded English.</span
-          >
+          States: host + co-host · invite co-host · loading · error/retry
         </footer>
       </section>
 
@@ -1598,7 +1661,7 @@
             <div class="row">
               <span
                 class="grow"
-                style="font-size: 12px; font-weight: 700; color: rgb(var(--danger))"
+                style="font-size: 12px; font-weight: 700; color: rgb(var(--danger-text))"
                 ><span class="live-dot pulse"></span>Live Now</span
               ><button class="btn tide">Join Party</button>
             </div>
@@ -1688,7 +1751,7 @@
                 </button>
               </div>
               <div class="row">
-                <button class="btn ghost grow">Cancel</button
+                <button class="btn secondary-btn grow">Cancel</button
                 ><button class="btn vip grow">Send 50 🪙</button>
               </div>
             </div>
@@ -1696,7 +1759,7 @@
         </div>
         <footer>
           States: preset selected · custom amount · send disabled when amount &gt; balance · sending
-          ("...")<br /><span class="note-flag"
+          ("Sending...", close and cancel disabled)<br /><span class="note-flag"
             >i18n gap: tipPresetLabel, tipCustomAmountLabel, tipCustomPlaceholder and aria labels
             lack English copy.</span
           >
@@ -1734,10 +1797,11 @@
             </li>
           </ul>
           <form class="stack" onsubmit="return false;">
+            <label class="field" for="shared-note-content">Note content</label>
             <textarea
+              id="shared-note-content"
               rows="2"
-              aria-label="Note"
-              placeholder="Write a note for the room…"
+              aria-describedby="shared-note-content-help"
               style="
                 border-radius: 12px;
                 border: 1px solid rgb(var(--surface-700));
@@ -1747,18 +1811,28 @@
                 font: inherit;
               "
             ></textarea>
-            <label class="field">Vocabulary<input placeholder="Comma-separated words" /></label>
+            <span id="shared-note-content-help" class="muted"
+              >Type key vocabulary or discussion topics.</span
+            >
+            <label class="field" for="shared-note-vocabulary"
+              >Key vocabulary (optional)<input
+                id="shared-note-vocabulary"
+                aria-describedby="shared-note-vocabulary-help"
+            /></label>
+            <span id="shared-note-vocabulary-help" class="muted"
+              >Separate words or phrases with commas, for example hello, good morning.</span
+            >
             <button class="btn" disabled>Post</button>
           </form>
+          <p class="muted" style="margin: 0">
+            Listener state: Only hosts and speakers can post notes in this room.
+          </p>
           <span class="state-label">Loading · error · empty</span>
           <p class="muted" style="margin: 0">Loading… · Something went wrong · No notes yet.</p>
         </div>
         <footer>
-          States: list with vocabulary chips · loading · error · empty · posting (disabled)<br /><span
-            class="note-flag"
-            >i18n gap: all voices.notes.* and global.* keys are missing from every locale - copy
-            shown is proposed.</span
-          >
+          States: host/speaker form · listener read-only · author/host delete · loading · error ·
+          empty · posting (disabled)
         </footer>
       </section>
 
@@ -1821,10 +1895,8 @@
         </div>
         <footer>
           States: list · hosting badge · language filters · loading skeleton · load error · empty ·
-          guided tour steps<br /><span class="note-flag"
-            >Bug: classroomsMarketplace.title stores HTML entities ("&amp;#127979;&amp;#65039;")
-            which render literally through interpolation - store the emoji character instead.</span
-          >
+          guided tour steps. The title string stores the emoji character itself (U+1F3EB), because
+          interpolation prints HTML entities literally.
         </footer>
       </section>
 

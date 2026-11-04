@@ -5,9 +5,16 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
-from openhands_factory.agents.base import AgentPhase, AgentRequest, ProviderHealth, ProviderStatus
+from openhands_factory.agents.base import (
+    AgentFailure,
+    AgentPhase,
+    AgentRequest,
+    ProviderHealth,
+    ProviderStatus,
+)
 from openhands_factory.agents.cli import CLIProvider, JsonAuthProbeMixin
 from openhands_factory.agents.process import ProcessResult
+from openhands_factory.agents.terminal_output import claude_outcome
 
 # Planning/architecture/implementation are build-critical and keep maximum
 # reasoning effort. Quality-repair, code-review, ci-repair, and general-action are
@@ -38,6 +45,11 @@ class ClaudeCodeProvider(JsonAuthProbeMixin, CLIProvider):
     default_model = "sonnet"
     default_credential_paths = (".claude", ".claude.json")
     default_runtime_paths = (".local/bin", ".local/share/claude", ".npm-global")
+
+    def interpret_process_result(
+        self, result: ProcessResult
+    ) -> tuple[str | None, AgentFailure | None]:
+        return claude_outcome(result)
 
     @staticmethod
     def _full_prompt(request: AgentRequest) -> str:
@@ -71,8 +83,6 @@ class ClaudeCodeProvider(JsonAuthProbeMixin, CLIProvider):
             model,
             "--effort",
             effort,
-            "--output-format",
-            "text",
             "--no-session-persistence",
             "--safe-mode",
             "--permission-mode",
@@ -82,4 +92,13 @@ class ClaudeCodeProvider(JsonAuthProbeMixin, CLIProvider):
             command.extend(("--append-system-prompt", request.system_prompt))
         if request.read_only_reference is not None:
             command.extend(("--add-dir", str(request.read_only_reference.resolve())))
-        return [*command, *self.extra_args]
+        # This supported print-mode flag is hidden from normal CLI help. Keep
+        # the configured cap last so optional arguments cannot silently replace it.
+        return [
+            *command,
+            *self.extra_args,
+            "--output-format",
+            "json",
+            "--max-turns",
+            str(self.max_turns),
+        ]

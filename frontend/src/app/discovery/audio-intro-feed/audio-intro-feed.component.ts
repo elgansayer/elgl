@@ -32,14 +32,14 @@ import { UserProfile } from '../../services/user.service';
             aria-live="polite"
           >
             <span
-              class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary motion-reduce:animate-none"
+              class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary-ink motion-reduce:animate-none"
               aria-hidden="true"
             ></span>
             <span class="sr-only">{{ 'common.loading' | t }}</span>
           </div>
         } @else if (loadError()) {
           <div class="flex flex-col items-center gap-3 px-4 py-10 text-center" role="alert">
-            <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+            <p class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
             <button hlmBtn type="button" variant="secondary" size="touch" (click)="retryLoad()">
               {{ 'common.retry' | t }}
             </button>
@@ -103,16 +103,16 @@ import { UserProfile } from '../../services/user.service';
                     type="button"
                     size="icon-touch"
                     (click)="togglePlay(user.id, user.audio_intro_url)"
-                    class="ms-auto shrink-0 rounded-full"
+                    class="ms-auto shrink-0 rounded-full text-on-fill"
                     [attr.aria-label]="
                       playingId() === user.id ? ('audioIntro.pause' | t) : ('audioIntro.play' | t)
                     "
                     [attr.aria-describedby]="'audio-intro-user-' + user.id"
                   >
                     @if (playingId() === user.id) {
-                      <span class="i-ph-pause-fill text-lg" aria-hidden="true"></span>
+                      <span class="i-ph-pause-fill text-lg text-on-fill" aria-hidden="true"></span>
                     } @else {
-                      <span class="i-ph-play-fill text-lg" aria-hidden="true"></span>
+                      <span class="i-ph-play-fill text-lg text-on-fill" aria-hidden="true"></span>
                     }
                   </button>
                 }
@@ -130,7 +130,7 @@ import { UserProfile } from '../../services/user.service';
         }
 
         @if (playbackError()) {
-          <p class="border-t border-surface-100 px-4 py-3 text-sm text-danger" role="alert">
+          <p class="border-t border-surface-100 px-4 py-3 text-sm text-danger-ink" role="alert">
             {{ 'audioPlayer.error' | t }}
           </p>
         }

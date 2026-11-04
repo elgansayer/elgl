@@ -46,6 +46,20 @@ Register Lucide glyphs with `provideIcons` at the narrowest practical applicatio
 - Arbitrary routine icon sizes such as `size-[18px]` or inline `width`/`height` styling.
 - Hardcoded physical-direction assumptions for semantic navigation controls.
 - Styling generated Spartan Brain internals to bypass Helm/Relay ownership.
+- Icon-font ligature text such as Material Icons `mic_off`, `volume_up` or `call_end`. No icon font is shipped, so the name prints as visible words. `frontend/src/app/icon-font-ligatures.contract.spec.ts` fails if a Material icon-font class returns to application source.
+- Emoji baked into a translated label that the template already pairs with its own icon (every `nav.*` label, `moments.readAloud`, `moments.stopReading`). The icon renders twice and the emoji leaks into the accessible name, so labels stay plain text and the template owns the icon.
+
+## Call and live-room controls
+
+Call controls use these Lucide glyphs, registered with `provideIcons` on the owning component:
+
+| Control    | Default state    | Toggled state   |
+| ---------- | ---------------- | --------------- |
+| Microphone | `lucideMic`      | `lucideMicOff`  |
+| Speaker    | `lucideVolumeX`  | `lucideVolume2` |
+| Hang up    | `lucidePhoneOff` | not applicable  |
+
+The glyph sits above or beside a visible translated label, is `aria-hidden="true"`, and the owning button keeps its translated accessible name. `ng-icon` is `1em` square, so size the glyph through font size (`text-xl`, then `sm:text-2xl`, which are the 20px and 24px steps) rather than with a width utility. `frontend/design-preview/features/calls-live.html` shows the glyphs in the `components/voip-active-call` specimen.
 
 ## Migration examples
 

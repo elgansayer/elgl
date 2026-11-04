@@ -111,7 +111,12 @@ class PullRequestRecord:
     is_cross_repository: bool = False
 
     @classmethod
-    def from_payload(cls, value: Mapping[str, object]) -> PullRequestRecord:
+    def from_payload(
+        cls,
+        value: Mapping[str, object],
+        *,
+        required_checks: Collection[str] = _REQUIRED_CHECKS,
+    ) -> PullRequestRecord:
         def text(name: str, default: str = "") -> str:
             item = value.get(name)
             return item if isinstance(item, str) else default
@@ -165,8 +170,8 @@ class PullRequestRecord:
                         workflow_runs.add(match.group("run"))
 
         checks_passed = (
-            _REQUIRED_CHECKS.issubset(successful_checks)
-            and _REQUIRED_CHECKS.issubset(observed_checks)
+            set(required_checks).issubset(successful_checks)
+            and set(required_checks).issubset(observed_checks)
             and bool(terminal_states)
             and all(result in _SUCCESSFUL_CHECK_STATES for result in terminal_states)
             and not pending
@@ -457,7 +462,12 @@ def resolve_pull_request(
     # factory_owned rather than an inlined copy of its branch/fork test: reopening a PR
     # hands it the same in-place update, force-sync, and delete authority as REUSE, so
     # this must not drift if that ownership boundary is ever tightened.
-    reusable_closed = [record for record in closed if record.factory_owned]
+    # A retired one is not: reopened, it keeps the labels that review and the
+    # duplicate guard skip, and the job's own rebuilt push trips the moved-branch
+    # check on every retry (issues 1397, 1428, 1436, 1450 and 1584, 2026-10-29).
+    reusable_closed = [
+        record for record in closed if record.factory_owned and not record.labels & RETIRED_LABELS
+    ]
     if reusable_closed:
         canonical = min(reusable_closed, key=lambda item: _canonical_key(identity, item))
         return PullRequestResolution(
@@ -465,9 +475,13 @@ def resolve_pull_request(
             canonical,
             reason="a closed Factory pull request can be updated and reopened",
         )
-    if closed:
+    # A maintainer-retired PR (the same labels discovery treats as a predecessor)
+    # no longer competes for the task. Issue 1403 retried 95 times against #8199,
+    # a closed wrong-diff PR, because only unlabelled closures should block.
+    blocking_closed = [record for record in closed if not record.labels & RETIRED_LABELS]
+    if blocking_closed:
         numbers = ", ".join(
-            f"#{record.number}" for record in sorted(closed, key=lambda x: x.number)
+            f"#{record.number}" for record in sorted(blocking_closed, key=lambda x: x.number)
         )
         return PullRequestResolution(
             ConvergenceAction.BLOCKED,
@@ -599,7 +613,9 @@ def _duplicate_excess(records: Sequence[PullRequestRecord], attribute: str) -> i
 # A major dependency queued behind its lane's single active candidate waits by
 # design (scripts/dependency-compatibility-lanes.mjs) and consumes no factory
 # work, so it must not hold lane or component WIP and stall all new dispatch.
-PARKED_LABELS = frozenset({"compat:queued"})
+# A factory-capped PR has spent its repair budgets and likewise consumes none.
+PARKED_LABELS = frozenset({"compat:queued", "factory-capped"})
+RETIRED_LABELS = frozenset({"duplicate", "factory-skip", "superseded"})
 
 
 def calculate_capacity(

@@ -17,19 +17,21 @@ from openhands_factory.architecture_guard import (
     check_retired_swarm,
 )
 from openhands_factory.config import FactoryConfig
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.generation import generation_snapshot
-from openhands_factory.github import REQUIRED_FACTORY_MERGE_CHECKS
+from openhands_factory.github import required_merge_checks
 from openhands_factory.jobs import JobStore
 from openhands_factory.legacy_runtime import detect_legacy_runtime
 from openhands_factory.models import JobState
+from openhands_factory.neptune_merge import validate_neptune_protection
 from openhands_factory.provider_profiles import openai_credentials_available
-from openhands_factory.secure_tools import (
+from openhands_factory.state import read_json
+from openhands_factory.worker_container import (
     namespace_error,
     podman_configuration_error,
     podman_run_arguments,
     resource_limit_error,
 )
-from openhands_factory.state import read_json
 
 
 @dataclass(frozen=True)
@@ -369,6 +371,47 @@ def _is_exact_owner_pull_request_bypass(
     )
 
 
+def _neptune_merge_policy_check(config: FactoryConfig) -> Check:
+    environment = {
+        "GH_TOKEN": config.github_token.get_secret_value(),
+        "HOME": os.environ.get("HOME", "/var/empty"),
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "LANG": os.environ.get("LANG", "C.UTF-8"),
+    }
+    payloads: list[object] = []
+    for endpoint in (
+        f"repos/{config.github_repository}",
+        f"repos/{config.github_repository}/branches/main/protection",
+    ):
+        try:
+            result = subprocess.run(
+                ("gh", "api", endpoint),
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+                env=environment,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return Check("github-merge-policy", False, "Neptune settings probe did not complete")
+        if result.returncode != 0:
+            return Check("github-merge-policy", False, "Neptune settings/protection probe failed")
+        try:
+            payloads.append(json.loads(result.stdout))
+        except ValueError:
+            return Check("github-merge-policy", False, "Neptune settings response was not JSON")
+    try:
+        validate_neptune_protection(*payloads)
+    except FactoryError as error:
+        return Check("github-merge-policy", False, str(error))
+    return Check(
+        "github-merge-policy",
+        True,
+        "Neptune: app-pinned current-base required tests, zero approvals, "
+        "protected native auto-merge",
+    )
+
+
 def github_merge_policy_check(config: FactoryConfig) -> Check:
     """Prove GitHub enforces the Factory's fail-closed merge statuses.
 
@@ -379,6 +422,8 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
     identity that published each context.
     """
 
+    if config.tests_only_merging:
+        return _neptune_merge_policy_check(config)
     environment = {
         "GH_TOKEN": config.github_token.get_secret_value(),
         "HOME": os.environ.get("HOME", "/var/empty"),
@@ -440,7 +485,9 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
             if isinstance(context, str) and context:
                 required_contexts.add(context)
 
-    missing = sorted(REQUIRED_FACTORY_MERGE_CHECKS - required_contexts)
+    required_checks = required_merge_checks(config.merge_review_policy)
+    review_required = "factory/independent-review" in required_checks
+    missing = sorted(required_checks - required_contexts)
     details_by_id = {
         ruleset_id: details
         for ruleset_id in rules_by_id
@@ -491,12 +538,15 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
             manual_review_rulesets.append(ruleset_id)
 
     passed = (
-        pull_request_required and not missing and bool(baseline_rulesets) and bool(review_rulesets)
+        pull_request_required
+        and not missing
+        and bool(baseline_rulesets)
+        and (bool(review_rulesets) or not review_required)
     )
     detail_parts = [
         f"pull-request-rule={'present' if pull_request_required else 'missing'}",
         (
-            "required-statuses=" + ",".join(sorted(REQUIRED_FACTORY_MERGE_CHECKS))
+            "required-statuses=" + ",".join(sorted(required_checks))
             if not missing
             else "missing-statuses=" + ",".join(missing)
         ),
@@ -508,6 +558,8 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
         (
             "review-ruleset=" + ",".join(str(value) for value in review_rulesets)
             if review_rulesets
+            else "review-ruleset=not-required (ci-gated)"
+            if not review_required
             else "no active independent-review ruleset with an allowed bypass policy"
         ),
         (
@@ -802,10 +854,13 @@ def agent_provider_checks(config: FactoryConfig) -> list[Check]:
         )
         for name in configured
     }
-    breakers = AgentHealthStore(config.state_dir / "agent_health.json").load(breaker_defaults)
+    breakers = AgentHealthStore(
+        config.state_dir / "agent_health.json",
+        coordination_root=config.provider_capacity_dir if config.tests_only_merging else None,
+    ).load(breaker_defaults)
     generation = generation_snapshot(config.state_dir).get("identifier")
     active = ProviderCapacityStore(
-        config.state_dir,
+        config.provider_capacity_dir if config.tests_only_merging else config.state_dir,
         factory_generation=generation if isinstance(generation, str) else None,
         max_lease_seconds=maximum_agent_lease_seconds(config),
     ).snapshot()
@@ -988,7 +1043,9 @@ def opencode_api_check(config: FactoryConfig) -> Check | None:
     return Check("opencode-go-api", True, config.opencode_model)
 
 
-def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
+def run_doctor(
+    config: FactoryConfig, *, online: bool = False, include_runtime: bool = True
+) -> list[Check]:
     """Return diagnostics only. Doctor never pages operators."""
     checks: list[Check] = []
     architecture = check_factory_architecture(config.factory_architecture)
@@ -1034,6 +1091,11 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     checks.extend(disk_space_checks(config))
     scripts = (
         (
+            config.repository / "tools/factory/verify.py",
+            config.repository / "tools/merge_gate/run.py",
+        )
+        if config.tests_only_merging
+        else (
             config.repository / "tools/check_openhands_control_plane.py",
             config.repository / "tools/test_openhands_control_plane.py",
         )
@@ -1046,9 +1108,10 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     for script in scripts:
         checks.append(Check(f"script:{script.name}", script.is_file(), str(script)))
     checks.append(leaked_port_environment_check())
-    checks.append(daemon_health_check(config))
-    checks.extend(job_health_checks(config))
-    checks.append(no_pr_progress_check(config))
+    if include_runtime:
+        checks.append(daemon_health_check(config))
+        checks.extend(job_health_checks(config))
+        checks.append(no_pr_progress_check(config))
     if online:
         checks.append(github_repository_access_check(config))
         checks.append(github_merge_policy_check(config))
@@ -1056,7 +1119,7 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
             checks.append(api_check)
     systemd_unit = (
         config.prompt_dir.parents[1] / "config/systemd/repo-factory@.service"
-        if config.repository_profile == "workout-agent"
+        if config.repository_profile in {"workout-agent", "neptune"}
         else config.repository / "config/systemd/hellotalk-factory.service"
     )
     try:

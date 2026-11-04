@@ -1,6 +1,7 @@
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { Component, signal, computed, inject, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +11,7 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-lesson-manager',
-  imports: [HlmTextarea, HlmInput, HlmButton, CommonModule, FormsModule, TranslatePipe],
+  imports: [HlmTextarea, HlmInput, HlmButton, CommonModule, FormsModule, TranslatePipe, ...HlmDialogImports],
   templateUrl: './lesson-manager.component.html',
 })
 export class LessonManagerComponent {
@@ -31,6 +32,11 @@ export class LessonManagerComponent {
   isSaving = signal(false);
   isUploading = signal(false);
 
+  readonly pendingDeleteLesson = signal<Lesson | null>(null);
+  readonly deleteDialogState = computed<HlmDialogState>(() =>
+    this.pendingDeleteLesson() ? 'open' : 'closed',
+  );
+
   form = {
     title: '',
     description: '',
@@ -43,6 +49,28 @@ export class LessonManagerComponent {
 
   refresh(): void {
     this.refreshTrigger.update((v) => v + 1);
+  }
+
+  requestDelete(lesson: Lesson): void {
+    this.pendingDeleteLesson.set(lesson);
+  }
+
+  cancelDelete(): void {
+    this.pendingDeleteLesson.set(null);
+  }
+
+  onDeleteDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.pendingDeleteLesson()) {
+      this.cancelDelete();
+    }
+  }
+
+  async confirmDelete(): Promise<void> {
+    const lesson = this.pendingDeleteLesson();
+    if (!lesson) return;
+    this.pendingDeleteLesson.set(null);
+    await this.lessonService.deleteLesson(lesson.id);
+    this.refresh();
   }
 
   startCreate(): void {
@@ -120,10 +148,7 @@ export class LessonManagerComponent {
   }
 
   async delete(lesson: Lesson): Promise<void> {
-    const confirmMsg = this.i18n.translate('admin.lessons.delete_confirm');
-    if (!confirm(confirmMsg)) return;
-    await this.lessonService.deleteLesson(lesson.id);
-    this.refresh();
+    this.requestDelete(lesson);
   }
 
   private getFile(event: Event): File | null {

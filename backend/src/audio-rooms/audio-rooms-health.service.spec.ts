@@ -103,4 +103,113 @@ describe('AudioRoomsHealthService', () => {
       expect(typeof state.livekit.degraded).toBe('boolean');
     });
   });
+
+  describe('Centrifugo probe target', () => {
+    let fetchMock: Mock;
+
+    beforeEach(() => {
+      fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+      vi.stubGlobal('fetch', fetchMock);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    function configure(values: Record<string, string | undefined>): void {
+      mockConfigService.get.mockImplementation((key: string) => values[key]);
+    }
+
+    async function runInitialChecks(): Promise<void> {
+      service.onModuleInit();
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    it('probes the canonical CENTRIFUGO_URL when no override is configured', async () => {
+      configure({
+        LIVEKIT_URL: 'https://mock.livekit.cloud',
+        CENTRIFUGO_URL: 'http://websocket:8000',
+        CENTRIFUGO_API_KEY: 'api-key',
+      });
+
+      await runInitialChecks();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://websocket:8000/api/health',
+        expect.objectContaining({
+          headers: { Authorization: 'apikey api-key' },
+        }),
+      );
+      expect(service.isServiceAvailable('centrifugo')).toBe(true);
+    });
+
+    it('prefers an explicit CENTRIFUGO_API_URL override', async () => {
+      configure({
+        LIVEKIT_URL: 'https://mock.livekit.cloud',
+        CENTRIFUGO_URL: 'http://websocket:8000',
+        CENTRIFUGO_API_URL: 'http://centrifugo-admin:9000',
+      });
+
+      await runInitialChecks();
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://centrifugo-admin:9000/api/health',
+        expect.any(Object),
+      );
+    });
+
+    it('treats a blank override as unset', async () => {
+      configure({
+        LIVEKIT_URL: 'https://mock.livekit.cloud',
+        CENTRIFUGO_URL: 'http://websocket:8000',
+        CENTRIFUGO_API_URL: '',
+      });
+
+      await runInitialChecks();
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://websocket:8000/api/health',
+        expect.any(Object),
+      );
+    });
+
+    it('reports a configuration problem instead of probing a guessed host', async () => {
+      configure({ LIVEKIT_URL: 'https://mock.livekit.cloud' });
+
+      await runInitialChecks();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      const { centrifugo } = service.getDegradationState();
+      expect(centrifugo.healthy).toBe(false);
+      expect(centrifugo.degraded).toBe(true);
+      expect(centrifugo.errorMessage).toBe('CENTRIFUGO_URL is not configured');
+    });
+
+    it('does not expose probe exception details in the public health state', async () => {
+      configure({
+        LIVEKIT_URL: 'https://mock.livekit.cloud',
+        CENTRIFUGO_URL: 'http://centrifugo-control-plane:8000',
+        CENTRIFUGO_API_KEY: 'centrifugo-secret-api-key',
+      });
+      fetchMock.mockRejectedValueOnce(
+        new Error(
+          'request to http://centrifugo-control-plane:8000 failed with centrifugo-secret-api-key',
+        ),
+      );
+
+      await runInitialChecks();
+
+      const { centrifugo } = service.getDegradationState();
+      expect(centrifugo.healthy).toBe(false);
+      expect(centrifugo.degraded).toBe(true);
+      expect(centrifugo.errorMessage).toBeUndefined();
+      expect(JSON.stringify(centrifugo)).not.toContain(
+        'centrifugo-control-plane',
+      );
+      expect(JSON.stringify(centrifugo)).not.toContain(
+        'centrifugo-secret-api-key',
+      );
+    });
+  });
 });

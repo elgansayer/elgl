@@ -312,15 +312,49 @@ describe('LongPressContextMenuComponent', () => {
 
     expect(component.canExplainCorrection()).toBe(true);
     const menu = document.body.querySelector('[role="dialog"]');
-    expect(menu?.textContent).toContain('Explanation');
+    expect(menu?.textContent).toContain('Explain this');
+    expect(menu?.textContent).not.toContain('context_menu.');
     expect(menu?.querySelectorAll('button')).toHaveLength(7);
 
     fixture.componentRef.setInput('correctionOriginal', '');
     await fixture.whenStable();
     expect(component.canExplainCorrection()).toBe(false);
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).not.toContain(
+      'Explain this',
+    );
     expect(document.body.querySelector('[role="dialog"]')?.querySelectorAll('button')).toHaveLength(
       6,
     );
+  });
+
+  it('should not offer a grammar explanation on a plain text message', async () => {
+    fixture.componentRef.setInput('correctionOriginal', 'I has a cat');
+    fixture.componentRef.setInput('correctionCorrected', 'I have a cat');
+    component.menuVisible.set(true);
+    await fixture.whenStable();
+
+    expect(component.canExplainCorrection()).toBe(false);
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).not.toContain(
+      'Explain this',
+    );
+  });
+
+  it('should open the grammar explanation from the visible Explain this action', async () => {
+    fixture.componentRef.setInput('messageType', 'correction');
+    fixture.componentRef.setInput('correctionOriginal', 'I has a cat');
+    fixture.componentRef.setInput('correctionCorrected', 'I have a cat');
+    component.menuVisible.set(true);
+    await fixture.whenStable();
+
+    const action = Array.from(
+      document.body.querySelector('[role="dialog"]')?.querySelectorAll('button') ?? [],
+    ).find((button) => button.textContent?.trim() === 'Explain this');
+    action?.click();
+    await fixture.whenStable();
+
+    expect(component.menuVisible()).toBe(false);
+    expect(component.explanationOpen()).toBe(true);
+    expect(nlpService.explainGrammar).toHaveBeenCalledOnce();
   });
 
   it('should request an explanation with the exact correction pair and close the context menu', async () => {
@@ -340,6 +374,164 @@ describe('LongPressContextMenuComponent', () => {
       expect.any(AbortSignal),
     );
     expect(component.explanationText()).toBe('Use have with I.');
+  });
+
+  const configureCorrection = (): void => {
+    fixture.componentRef.setInput('messageType', 'correction');
+    fixture.componentRef.setInput('correctionOriginal', 'I has a cat');
+    fixture.componentRef.setInput('correctionCorrected', 'I have a cat');
+  };
+
+  const explanationDialog = (): Element | undefined =>
+    Array.from(document.body.querySelectorAll('[role="dialog"]')).find((element) =>
+      element.textContent?.includes('Grammar explanation'),
+    );
+
+  it.each([
+    ['rate_limit', 'You have made too many explanation requests. Please wait and try again.'],
+    ['auth', 'Sign in again to explain this correction.'],
+    ['empty', 'No explanation was returned. Please try again.'],
+    ['request', 'This correction could not be explained. Check your connection and try again.'],
+  ] as const)(
+    'should render the %s explanation failure and keep the dialog open',
+    async (kind, message) => {
+      nlpService.explainGrammar.mockRejectedValue(new NlpRequestError(kind, 'Request failed'));
+      configureCorrection();
+
+      component.openExplanation();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.explanationOpen()).toBe(true);
+      expect(component.explanationError()).toBe(kind);
+      const alert = document.body.querySelector(`[role="alert"][data-error-kind="${kind}"]`);
+      expect(alert?.textContent).toContain(message);
+      expect(alert?.textContent).not.toContain('Something went wrong');
+    },
+  );
+
+  it('should treat an unexpected failure as a retryable request error', async () => {
+    nlpService.explainGrammar.mockRejectedValue(new TypeError('Failed to fetch'));
+    configureCorrection();
+
+    component.openExplanation();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.explanationError()).toBe('request');
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(
+      'This correction could not be explained.',
+    );
+  });
+
+  it('should title the dialog and disclose that the breakdown is AI-generated', async () => {
+    configureCorrection();
+
+    component.openExplanation();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const dialog = explanationDialog();
+    expect(dialog?.querySelector('h2')?.textContent).toContain('Grammar explanation');
+    expect(dialog?.textContent).toContain(
+      'An AI-generated breakdown of what changed and why. It may contain mistakes.',
+    );
+    expect(dialog?.textContent).not.toContain('Explain grammar rule, nuance');
+    expect(dialog?.textContent).toContain('Original sentence');
+    expect(dialog?.textContent).toContain('Improved sentence');
+    expect(dialog?.textContent).toContain('Use have with I.');
+  });
+
+  it('should keep one live region while the explanation moves from loading to result', async () => {
+    const pending = deferred<{ original: string; corrected: string; explanation: string }>();
+    nlpService.explainGrammar.mockReturnValue(pending.promise);
+    configureCorrection();
+
+    component.openExplanation();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const region = explanationDialog()?.querySelector('[aria-live="polite"]');
+    expect(region?.getAttribute('aria-busy')).toBe('true');
+    expect(region?.textContent).toContain('Explaining this correction...');
+
+    pending.resolve({
+      original: 'I has a cat',
+      corrected: 'I have a cat',
+      explanation: 'Use have with I.',
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(explanationDialog()?.querySelector('[aria-live="polite"]')).toBe(region);
+    expect(region?.getAttribute('aria-busy')).toBe('false');
+    expect(region?.textContent).toContain('Use have with I.');
+    expect(region?.textContent).not.toContain('Explaining this correction...');
+  });
+
+  it('should let each sentence and the explanation pick their own text direction', async () => {
+    nlpService.explainGrammar.mockResolvedValue({
+      original: 'انا ذهب',
+      corrected: 'أنا ذهبت',
+      explanation: 'Use the past tense.',
+    });
+    fixture.componentRef.setInput('messageType', 'correction');
+    fixture.componentRef.setInput('correctionOriginal', 'انا ذهب');
+    fixture.componentRef.setInput('correctionCorrected', 'أنا ذهبت');
+
+    component.openExplanation();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const texts = Array.from(explanationDialog()?.querySelectorAll('p[dir="auto"]') ?? []).map(
+      (element) => element.textContent?.trim(),
+    );
+    expect(texts).toEqual(['انا ذهب', 'أنا ذهبت', 'Use the past tense.']);
+  });
+
+  it('should recover from a failure through Retry and then offer only Close', async () => {
+    nlpService.explainGrammar.mockRejectedValueOnce(
+      new NlpRequestError('request', 'Service unavailable', 503),
+    );
+    configureCorrection();
+
+    component.openExplanation();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const buttonLabels = (): (string | undefined)[] =>
+      Array.from(explanationDialog()?.querySelectorAll('button') ?? []).map((button) =>
+        button.textContent?.trim(),
+      );
+    expect(buttonLabels()).toEqual(['Retry', 'Close']);
+
+    const retry = Array.from(explanationDialog()?.querySelectorAll('button') ?? []).find(
+      (button) => button.textContent?.trim() === 'Retry',
+    );
+    retry?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(nlpService.explainGrammar).toHaveBeenCalledTimes(2);
+    expect(component.explanationError()).toBeNull();
+    expect(explanationDialog()?.querySelector('[role="alert"]')).toBeNull();
+    expect(explanationDialog()?.textContent).toContain('Use have with I.');
+    expect(buttonLabels()).toEqual(['Close']);
+  });
+
+  it('should close the explanation from the Close button', async () => {
+    configureCorrection();
+    component.openExplanation();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const close = Array.from(explanationDialog()?.querySelectorAll('button') ?? []).find(
+      (button) => button.textContent?.trim() === 'Close',
+    );
+    close?.click();
+    await fixture.whenStable();
+
+    expect(component.explanationOpen()).toBe(false);
   });
 
   it('should classify rate-limit failures without closing the explanation dialog', async () => {

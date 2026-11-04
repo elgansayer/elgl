@@ -36,7 +36,7 @@
     <div class="p-5 overflow-y-auto overscroll-contain">
       @if (errorMessage()) {
         <div
-          class="bg-danger/10 border border-danger/20 text-danger px-4 py-3 rounded-card mb-5 text-sm font-medium"
+          class="bg-danger/10 border border-danger/20 text-danger-ink px-4 py-3 rounded-card mb-5 text-sm font-medium"
           role="alert"
         >
           {{ errorMessage() }}
@@ -75,7 +75,7 @@
               <label
                 [class]="
                   reportForm.category().value() === cat.value
-                    ? 'bg-danger/10 border-danger/50 text-danger'
+                    ? 'bg-danger/10 border-danger/50 text-danger-ink'
                     : 'bg-surface-100/60 border-surface-100 text-text-secondary hover:bg-surface-100'
                 "
                 class="flex items-start p-4 rounded-card border cursor-pointer transition-all duration-200"

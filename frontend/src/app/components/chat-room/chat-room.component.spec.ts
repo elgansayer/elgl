@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -13,6 +13,11 @@ import { VocabularyStore } from '../../services/vocabulary.store';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
+import { FavouriteService } from '../../services/favourite.service';
+import { toastsSignal } from '../../services/toast.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
+import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
   return {
@@ -36,10 +41,10 @@ describe('ChatRoomComponent (threaded replies)', () => {
     getGroupMembers: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
     sendMessage: ReturnType<typeof vi.fn>;
-    addFavourite: ReturnType<typeof vi.fn>;
     lockChat: ReturnType<typeof vi.fn>;
     unlockChat: ReturnType<typeof vi.fn>;
     translateText: ReturnType<typeof vi.fn>;
+    markMessageStatus: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof signal>;
@@ -48,17 +53,20 @@ describe('ChatRoomComponent (threaded replies)', () => {
     appLocked: ReturnType<typeof signal>;
   };
   let mockTextToSpeechService: { speak: ReturnType<typeof vi.fn> };
+  let mockFavouriteService: { addFavourite: ReturnType<typeof vi.fn> };
+  const unreadCounterMock = { decrement: vi.fn() };
 
   beforeEach(async () => {
+    unreadCounterMock.decrement.mockReset();
     mockChatService = {
       getRooms: vi.fn().mockResolvedValue([]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
       getMessages: vi.fn().mockResolvedValue([]),
       sendMessage: vi.fn().mockResolvedValue(makeMessage({ id: 'm2' })),
-      addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),
+      markMessageStatus: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockCentrifugeService = {
@@ -66,6 +74,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
       connect: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn().mockReturnValue({}),
       unsubscribe: vi.fn(),
+      listen: vi.fn().mockReturnValue(() => undefined),
     };
 
     mockAuthService = {
@@ -87,6 +96,8 @@ describe('ChatRoomComponent (threaded replies)', () => {
     };
 
     const mockVocabularyStore = {
+      // Rendering a text bubble tokenises it and colours each word by status.
+      getWordStatus: vi.fn().mockReturnValue({ level: 0, colorClass: '', colourClass: '' }),
       translateWordOrSentence: vi.fn(),
       saveWord: vi.fn(),
       updateSrsLevel: vi.fn(),
@@ -113,6 +124,11 @@ describe('ChatRoomComponent (threaded replies)', () => {
       speak: vi.fn(),
     };
 
+    mockFavouriteService = {
+      addFavourite: vi.fn().mockResolvedValue({ success: true }),
+    };
+    toastsSignal.set([]);
+
     await TestBed.configureTestingModule({
       imports: [ChatRoomComponent],
       providers: [
@@ -125,7 +141,17 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: VocabularyStore, useValue: mockVocabularyStore },
         { provide: NetworkStatusService, useValue: mockNetworkStatusService },
         { provide: TextToSpeechService, useValue: mockTextToSpeechService },
+        { provide: FavouriteService, useValue: mockFavouriteService },
+        {
+          provide: PersonalChatEncryptionService,
+          useValue: {
+            isRoomE2eeCapable: vi.fn().mockResolvedValue(false),
+            decryptMessage: vi.fn(),
+            clearKey: vi.fn(),
+          },
+        },
         I18nService,
+        { provide: UnreadCounterService, useValue: unreadCounterMock },
       ],
     }).compileComponents();
 
@@ -137,6 +163,112 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('bookmarking a message', () => {
+    afterEach(() => {
+      toastsSignal.set([]);
+    });
+
+    it('saves the message through the canonical favourites client without a generated note', async () => {
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+
+      expect(mockFavouriteService.addFavourite).toHaveBeenCalledTimes(1);
+      expect(mockFavouriteService.addFavourite).toHaveBeenCalledWith({ message_id: 'm-saved' });
+    });
+
+    it('never persists the private room identifier or English text as a note', async () => {
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+
+      const [dto] = mockFavouriteService.addFavourite.mock.calls[0];
+      expect(Object.keys(dto)).toEqual(['message_id']);
+      expect(JSON.stringify(dto)).not.toContain('room-1');
+    });
+
+    it('confirms success with a translated toast instead of a raw i18n key', async () => {
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+
+      const i18n = TestBed.inject(I18nService);
+      const [toast] = toastsSignal();
+      expect(toast.type).toBe('success');
+      expect(toast.message).toBe(i18n.translate('chatRoom.bookmarkSuccess'));
+      expect(toast.message).not.toContain('chatRoom.');
+    });
+
+    it('reports failure with a translated error toast and keeps the message unchanged', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      mockFavouriteService.addFavourite.mockRejectedValueOnce(new Error('offline'));
+      const message = makeMessage({ id: 'm-saved' });
+      component.messages.set([message]);
+
+      await component.bookmark(message);
+
+      const i18n = TestBed.inject(I18nService);
+      const [toast] = toastsSignal();
+      expect(toast.type).toBe('error');
+      expect(toast.message).toBe(i18n.translate('chatRoom.bookmarkError'));
+      expect(toast.message).not.toContain('chatRoom.');
+      expect(component.messages()).toEqual([message]);
+    });
+
+    it('can be retried after a failure', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      mockFavouriteService.addFavourite
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({ success: true });
+
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+
+      expect(mockFavouriteService.addFavourite).toHaveBeenCalledTimes(2);
+      expect(toastsSignal().map((toast) => toast.type)).toEqual(['error', 'success']);
+    });
+  });
+
+  it('renders persisted gift payloads in the room message feed', async () => {
+    await fixture.whenStable();
+    component.messages.set([
+      makeMessage({
+        id: 'gift-message',
+        message_type: 'gift',
+        text_content: undefined,
+        gift_payload: {
+          gift_id: 'gift_rose',
+          gift_name: 'Rose',
+          gift_icon: '🌹',
+          coin_value: 10,
+          animation_type: 'float',
+        },
+      }),
+    ]);
+    component.isLoading.set(false);
+    await fixture.whenStable();
+
+    const gift = fixture.debugElement.query(By.directive(GiftAnimationComponent));
+    expect(gift).toBeTruthy();
+    expect(gift.componentInstance.giftPayload()).toMatchObject({ gift_id: 'gift_rose' });
+    expect(fixture.nativeElement.querySelector('.chat-bubble-tail')).toBeNull();
+  });
+
+  it('decrements global chat unread only after a persisted read receipt', async () => {
+    await (
+      component as unknown as {
+        markMessageRead(message: ChatMessage): Promise<void>;
+      }
+    ).markMessageRead(makeMessage({ id: 'unread-1', delivery_status: 'sent' }));
+
+    expect(mockChatService.markMessageStatus).toHaveBeenCalledWith('unread-1', 'read');
+    expect(unreadCounterMock.decrement).toHaveBeenCalledWith('chat');
+
+    unreadCounterMock.decrement.mockClear();
+    mockChatService.markMessageStatus.mockRejectedValueOnce(new Error('unavailable'));
+    await (
+      component as unknown as {
+        markMessageRead(message: ChatMessage): Promise<void>;
+      }
+    ).markMessageRead(makeMessage({ id: 'unread-2', delivery_status: 'sent' }));
+
+    expect(unreadCounterMock.decrement).not.toHaveBeenCalled();
   });
 
   it('does not expose a correction action without a source message', () => {
@@ -212,6 +344,28 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
     document.body.removeChild(el);
     vi.useRealTimers();
+  });
+
+  it('renders an unloaded search result before scrolling to it', () => {
+    const result = makeMessage({
+      id: 'unloaded-result',
+      created_at: '2025-01-01T00:00:00.000Z',
+    });
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    component.messages.set([makeMessage({ id: 'loaded-result' })]);
+    component.showSearchPanel.set(true);
+    component.onSearchResultSelect(result);
+    fixture.detectChanges();
+
+    expect(component.showSearchPanel()).toBe(false);
+    expect(component.messages().map((message) => message.id)).toContain('unloaded-result');
+    expect(fixture.nativeElement.querySelector('#msg-unloaded-result')).not.toBeNull();
+    expect(scrollIntoView).toHaveBeenCalled();
+
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   describe('@mentions', () => {
@@ -513,6 +667,132 @@ describe('ChatRoomComponent (threaded replies)', () => {
       await component.toggleLock();
       expect(mockChatService.unlockChat).toHaveBeenCalledWith('room-1');
       expect(component.isLocked()).toBe(false);
+    });
+  });
+
+  describe('link previews', () => {
+    const preview = {
+      url: 'https://example.com/post',
+      title: 'Great Article',
+      description: 'A description',
+      image: '',
+      siteName: 'Example',
+    };
+    const linkMessage = makeMessage({
+      id: 'link-1',
+      text_content: 'Read https://example.com/post',
+    });
+
+    function renderedCards(): HTMLAnchorElement[] {
+      const host = fixture.nativeElement as HTMLElement;
+      return Array.from(host.querySelectorAll<HTMLAnchorElement>('app-link-preview-card a'));
+    }
+
+    function bubbleText(): string {
+      // The message text is tokenised into per-word spans separated by template whitespace.
+      return ((fixture.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, '');
+    }
+
+    function realtimeHandler(): (data: unknown) => void {
+      const centrifuge = TestBed.inject(CentrifugeService) as unknown as {
+        subscribe: ReturnType<typeof vi.fn>;
+      };
+      const call = centrifuge.subscribe.mock.calls.find(([channel]) => channel === 'chat:room-1');
+      expect(call, 'the room should be subscribed to realtime events').toBeDefined();
+      return call?.[1] as (data: unknown) => void;
+    }
+
+    beforeEach(async () => {
+      // Rendered bubbles mount Spartan primitives that observe their size.
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe(): void {}
+          unobserve(): void {}
+          disconnect(): void {}
+        },
+      );
+      // Let the asynchronous room initialisation finish so it cannot overwrite test state.
+      await fixture.whenStable();
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('renders the card for a message that history returns with a preview', async () => {
+      mockChatService.getMessages.mockResolvedValue([{ ...linkMessage, link_preview: preview }]);
+
+      await component.loadMessages();
+      fixture.detectChanges();
+
+      const cards = renderedCards();
+      expect(cards).toHaveLength(1);
+      expect(cards[0].href).toBe('https://example.com/post');
+      expect(cards[0].textContent).toContain('Great Article');
+      expect(cards[0].textContent).toContain('Opens in a new tab');
+    });
+
+    it('renders plain text only when the message has no preview', async () => {
+      mockChatService.getMessages.mockResolvedValue([linkMessage]);
+
+      await component.loadMessages();
+      fixture.detectChanges();
+
+      expect(renderedCards()).toHaveLength(0);
+      expect(bubbleText()).toContain('example.com/post');
+    });
+
+    it('shows a card delivered in realtime and removes it when an edit publishes a null preview', async () => {
+      mockChatService.getMessages.mockResolvedValue([linkMessage]);
+      await component.loadMessages();
+      const handler = realtimeHandler();
+
+      handler({ message: { ...linkMessage, link_preview: preview } });
+      fixture.detectChanges();
+      expect(renderedCards()).toHaveLength(1);
+
+      handler({
+        message: { ...linkMessage, text_content: 'No link any more', link_preview: null },
+      });
+      fixture.detectChanges();
+
+      expect(renderedCards()).toHaveLength(0);
+      expect(component.messages()).toHaveLength(1);
+      expect(component.messages()[0]?.text_content).toBe('No link any more');
+    });
+
+    it('replaces the card when an edit points at a different link', async () => {
+      mockChatService.getMessages.mockResolvedValue([{ ...linkMessage, link_preview: preview }]);
+      await component.loadMessages();
+      const handler = realtimeHandler();
+
+      handler({
+        message: {
+          ...linkMessage,
+          text_content: 'Read https://example.org/next',
+          link_preview: { ...preview, url: 'https://example.org/next', title: 'Next Article' },
+        },
+      });
+      fixture.detectChanges();
+
+      const cards = renderedCards();
+      expect(cards).toHaveLength(1);
+      expect(cards[0].href).toBe('https://example.org/next');
+      expect(cards[0].textContent).toContain('Next Article');
+      expect(cards[0].textContent).not.toContain('Great Article');
+    });
+
+    it('does not render a card for an unsafe preview that reaches the client', async () => {
+      mockChatService.getMessages.mockResolvedValue([
+        { ...linkMessage, link_preview: { ...preview, url: 'javascript:alert(1)' } },
+      ]);
+
+      await component.loadMessages();
+      fixture.detectChanges();
+
+      expect(renderedCards()).toHaveLength(0);
+      expect(bubbleText()).toContain('example.com/post');
     });
   });
 });

@@ -18,7 +18,7 @@ import {
       @if (dataResource.isLoading()) {
         <p class="mt-4 text-text-secondary">{{ 'common.loading' | t }}</p>
       } @else if (dataResource.error()) {
-        <p class="mt-4 text-danger">{{ 'common.loadError' | t }}</p>
+        <p class="mt-4 text-danger-ink">{{ 'common.loadError' | t }}</p>
       } @else {
         @if (incomingRequests().length) {
           <div class="mt-6">
@@ -53,7 +53,7 @@ import {
                     hlmBtn
                     type="button"
                     (click)="decline(req.id)"
-                    class="px-3 py-1 text-sm text-danger hover:text-danger/80"
+                    class="px-3 py-1 text-sm text-danger-ink hover:text-danger-ink/80"
                   >
                     {{ 'studyBuddy.declineBtn' | t }}
                   </button>

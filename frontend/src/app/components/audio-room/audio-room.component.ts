@@ -29,7 +29,7 @@ import {
 import { PrivatePartyCreatePayload } from '../private-party-create-modal/private-party-create-modal.component';
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
-import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
+import { ApproveSpeakerModalComponent } from '../approve-speaker-modal/approve-speaker-modal.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
@@ -83,9 +83,17 @@ export class AudioRoomComponent implements OnInit {
   readonly showApprovalModal = signal<boolean>(false);
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
+  readonly isCreatingPoll = signal<boolean>(false);
   readonly showNotesPanel = signal<boolean>(false);
-  readonly currentPollId = signal<string | null>(null);
+  readonly currentPollId = computed(() => this.store.currentPoll()?.poll_id ?? null);
   readonly sidebarTab = signal<'chat' | 'notes'>('chat');
+
+  readonly hasRaisedHand = computed(() => {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return false;
+    const room = this.store.currentRoom();
+    return !!room?.raised_hands?.includes(currentUserId);
+  });
 
   readonly stageViewModel = computed(() =>
     buildStageViewModel(
@@ -108,12 +116,7 @@ export class AudioRoomComponent implements OnInit {
   readonly audienceOverflowCount = computed(() =>
     Math.max(0, this.audienceCount() - this.audiencePlaceholderAvatars().length),
   );
-  readonly pollResults = signal<{
-    question: string;
-    options: string[];
-    votes: number[];
-    totalVotes: number;
-  } | null>(null);
+  readonly pollResults = this.store.currentPoll;
 
   readonly httpClient = inject(HttpClient);
 
@@ -225,7 +228,10 @@ export class AudioRoomComponent implements OnInit {
 
   async handleApproveSpeaker(targetUserId: string): Promise<void> {
     await this.approve(targetUserId);
-    this.showApprovalModal.set(false);
+  }
+
+  async handleDeclineSpeaker(targetUserId: string): Promise<void> {
+    await this.store.dismissRaisedHand(targetUserId);
   }
 
   async demote(targetUserId: string): Promise<void> {
@@ -259,23 +265,34 @@ export class AudioRoomComponent implements OnInit {
 
   readonly quickPollService = inject(QuickPollService);
 
-  async openPollForm(): Promise<void> {
+  openPollForm(): void {
     this.showPollFormModal.set(true);
   }
 
-  async closePollForm(): Promise<void> {
+  closePollForm(): void {
     this.showPollFormModal.set(false);
   }
 
   async submitPollForm(question: string, options: string[]): Promise<void> {
     const roomId = this.store.currentRoom()?.id;
-    if (!roomId) return;
+    if (!roomId || this.isCreatingPoll()) return;
+    this.isCreatingPoll.set(true);
     try {
       const result = await this.quickPollService.createPoll(roomId, question, options);
-      this.currentPollId.set(result.poll_id);
+      this.store.setCurrentPoll({
+        poll_id: result.poll_id,
+        question,
+        options,
+        votes: options.map(() => 0),
+        totalVotes: 0,
+        is_active: true,
+        userVote: null,
+      });
       this.showPollFormModal.set(false);
     } catch {
       showToast(this.i18n.translate('common.error'));
+    } finally {
+      this.isCreatingPoll.set(false);
     }
   }
 
@@ -298,8 +315,7 @@ export class AudioRoomComponent implements OnInit {
     if (!roomId) return;
     try {
       const results = await this.quickPollService.getPollResults(roomId, pollId);
-      this.pollResults.set(results);
-      this.currentPollId.set(pollId);
+      this.store.setCurrentPoll(results);
       this.showPollResultsModal.set(true);
     } catch {
       showToast(this.i18n.translate('common.error'));
@@ -309,6 +325,22 @@ export class AudioRoomComponent implements OnInit {
   async voteInPoll(pollId: string, optionIndex: number): Promise<void> {
     try {
       await this.quickPollService.submitVote(pollId, optionIndex);
+      const currentPoll = this.store.currentPoll();
+      if (currentPoll?.poll_id === pollId) {
+        this.store.setCurrentPoll({
+          ...currentPoll,
+          userVote: optionIndex,
+        });
+      }
+      const roomId = this.store.currentRoom()?.id;
+      if (roomId) {
+        try {
+          const results = await this.quickPollService.getPollResults(roomId, pollId);
+          this.store.setCurrentPoll(results);
+        } catch {
+          // The vote is committed. Realtime or reconnect recovery can refresh the aggregate later.
+        }
+      }
       showToast(this.i18n.translate('quickPoll.yourVote'));
     } catch (e: unknown) {
       const msg =

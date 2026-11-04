@@ -51,6 +51,8 @@ Current Playwright coverage includes authentication/onboarding pages, chat/messa
 
 Playwright is the better home for cross-browser, RTL, device-profile, and full-stack/infrastructure-sensitive flows. Cypress remains appropriate for existing Angular-centric feature flows.
 
+Playwright specs must use Playwright's own runner API (`test`, `test.describe`, `expect`) and be launched from `e2e/`. Vitest or Jest style globals abort the whole run with `ReferenceError: describe is not defined`; see [Playwright test-runner boundary](./playwright-test-boundary.md) for the enforced contract and triage steps.
+
 ## Runner context contract
 
 Test files must be executed by the package and runner that owns them. A Playwright spec imports `test`, `expect`, and suite helpers from `@playwright/test`; running that file directly through Node, `tsx`, `ts-node`, Bun, Vitest, or Jest bypasses Playwright's runner bootstrap and fails during initialisation or collection. Conversely, launching Playwright from the repository root or frontend can discover Angular/Vitest specs and produce misleading errors such as `ReferenceError: describe is not defined`.
@@ -65,7 +67,7 @@ Use these package-owned entry points:
 
 Do not execute `e2e/tests/*.spec.ts` directly with a generic JavaScript/TypeScript runtime, and do not pass `e2e/tests` to Vitest or Jest. CI and automation commands that run the standalone Playwright suite must either enter the `e2e` package context or pass the explicit root config `--config e2e/playwright.config.ts`.
 
-`npm run check:playwright-test-boundary` is the repository guard for this ownership contract. It validates package and configuration ownership, rejects known wrong-runner command forms in workflows, scripts, package manifests, and automation instructions, and verifies that Playwright invocations use the `e2e` package context or its explicit configuration.
+`npm run check:playwright-test-boundary` is the repository guard for this ownership contract. It validates package and configuration ownership, rejects known wrong-runner command forms in workflows, scripts, package manifests, and automation instructions, and verifies that Playwright invocations use the `e2e` package context or its explicit configuration. It reads the working tree, so specs that have not been committed yet are checked too.
 
 ## Playwright web-server readiness contract
 
