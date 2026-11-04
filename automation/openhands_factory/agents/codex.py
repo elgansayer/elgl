@@ -112,6 +112,10 @@ class CodexProvider(CLIProvider):
             "--ephemeral",
             "--ignore-user-config",
             "--ignore-rules",
+            # The factory chooses and sandboxes the working directory. Without
+            # this, Codex refuses non-repository maintenance/analysis folders,
+            # and that unclassified exit opens the shared provider breaker.
+            "--skip-git-repo-check",
             "--color",
             "never",
             "--json",

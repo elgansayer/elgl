@@ -614,6 +614,7 @@ class TestAgentProviders(unittest.TestCase):
         self.assertIn("gpt-5.6-sol", runner.commands[0])
         self.assertIn("--ignore-user-config", runner.commands[0])
         self.assertIn("--ignore-rules", runner.commands[0])
+        self.assertIn("--skip-git-repo-check", runner.commands[0])
         self.assertNotIn("-a", runner.commands[0])
         self.assertEqual(runner.commands[0][-1], "-")
 
