@@ -810,6 +810,14 @@ class TestAgentProviders(unittest.TestCase):
         self.assertIn("opencode-go/kimi-k3", health.detail or "")
         self.assertEqual(runner.commands, [("opencode", "models", "opencode-go")])
 
+    def test_opencode_rejects_a_catalogue_with_only_a_similarly_named_model(self):
+        runner = FakeProcessRunner("OpenCode Go\nopencode-go/kimi-k3-preview")
+        provider = OpenCodeProvider(process_runner=runner)
+        with patch("openhands_factory.agents.cli.shutil.which", return_value="/usr/bin/opencode"):
+            health = provider.health()
+        self.assertEqual(health.status, ProviderStatus.UNAVAILABLE)
+        self.assertEqual(runner.commands, [("opencode", "models", "opencode-go")])
+
     def test_opencode_provider(self):
         runner = FakeProcessRunner("opencode success")
         provider = OpenCodeProvider(process_runner=runner)
