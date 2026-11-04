@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FavouritesComponent } from './favourites.component';
 import { I18nService } from '../../services/i18n.service';
 import { FavouriteRecord } from '../../services/chat.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { FavouriteService } from '../../services/favourite.service';
 
 describe('FavouritesComponent failure handling', () => {
@@ -27,6 +28,7 @@ describe('FavouritesComponent failure handling', () => {
             translate: (key: string): string => key,
           },
         },
+        { provide: ConfirmService, useValue: { confirm: vi.fn().mockResolvedValue(true) } },
         { provide: FavouriteService, useValue: favouriteService },
       ],
     }).compileComponents();
@@ -89,9 +91,14 @@ describe('FavouritesComponent failure handling', () => {
     component.favourites.set([favourite]);
 
     await component.deleteFavourite(favourite);
+    fixture.detectChanges();
 
     expect(component.favourites()).toEqual([favourite]);
-    expect(component.deleteError()).toBe(true);
+    expect(component.deleteFailedIds().has(favourite.id)).toBe(true);
     expect(component.isDeletingFavourite(favourite.id)).toBe(false);
+    const alerts = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('[role="alert"]'),
+    );
+    expect(alerts.some((alert) => alert.textContent?.includes('favourites.deleteFailed'))).toBe(true);
   });
 });

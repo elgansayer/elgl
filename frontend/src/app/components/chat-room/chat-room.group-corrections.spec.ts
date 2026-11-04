@@ -58,7 +58,6 @@ describe('ChatRoomComponent group corrections', () => {
       ]),
       getMessages: vi.fn().mockResolvedValue([]),
       sendMessage,
-      addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),
