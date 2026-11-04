@@ -146,21 +146,6 @@ def _absolute_retry_after(value: str, now: datetime) -> int | None:
     return max(0, min(int((moment - now).total_seconds()), 7 * 24 * 3600))
 
 
-def _time_of_day_retry_after(value: str, now: datetime) -> int | None:
-    """Parse "resets 2:20pm (UTC)" as the next such UTC time; other zones are unknown."""
-    match = re.search(r"(?i)resets\s+(\d{1,2})(?::(\d{2}))?\s*([ap]m)\s*\(utc\)", value)
-    if match is None:
-        return None
-    hour, minute = int(match.group(1)), int(match.group(2) or 0)
-    if not 1 <= hour <= 12 or minute > 59:
-        return None
-    hour = hour % 12 + (12 if match.group(3).lower() == "pm" else 0)
-    moment = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-    if moment <= now:
-        moment += timedelta(days=1)
-    return int((moment - now).total_seconds())
-
-
 def extract_retry_after_seconds(value: str, now: datetime | None = None) -> int | None:
     patterns = (
         r"(?i)retry[-_ ]after(?: seconds)?[\s:=]+(\d+)",
@@ -181,11 +166,7 @@ def extract_retry_after_seconds(value: str, now: datetime | None = None) -> int 
     if duration and any(part is not None for part in duration.groups()):
         hours, minutes, seconds = (int(part or 0) for part in duration.groups())
         return min(hours * 3600 + minutes * 60 + seconds, 7 * 24 * 3600)
-    now = now or datetime.now(UTC)
-    absolute = _absolute_retry_after(value, now)
-    if absolute is not None:
-        return absolute
-    return _time_of_day_retry_after(value, now)
+    return _absolute_retry_after(value, now or datetime.now(UTC))
 
 
 def classify_process_failure(result: ProcessResult) -> AgentFailure:

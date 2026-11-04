@@ -45,16 +45,14 @@ def test_existing_relative_forms_are_unchanged() -> None:
 CLAUDE_FIVE_HOUR = "You've hit your 5-hour limit \u00b7 resets 2:20pm (UTC)"
 
 
-def test_claude_five_hour_limit_is_quota_with_next_reset() -> None:
+def test_claude_five_hour_limit_is_quota_without_inferring_a_reset_clock() -> None:
+    # Session-style "resets 2:20pm (UTC)" keeps the configured quota cooldown, matching
+    # test_terminal_output's existing policy; only the classification changes here.
     failure = classify_process_failure(
         ProcessResult(("claude",), 1, CLAUDE_FIVE_HOUR, "", False, False, 0.1)
     )
     assert failure.kind is AgentFailureKind.PROVIDER_QUOTA
-    at_1352 = datetime(2026, 11, 4, 13, 52, tzinfo=UTC)
-    assert extract_retry_after_seconds(CLAUDE_FIVE_HOUR.lower(), at_1352) == 28 * 60
-    at_1500 = datetime(2026, 11, 4, 15, 0, tzinfo=UTC)
-    assert extract_retry_after_seconds(CLAUDE_FIVE_HOUR.lower(), at_1500) == (23 * 60 + 20) * 60
-    assert extract_retry_after_seconds("resets 2:20pm (pst)", at_1352) is None
+    assert failure.retry_after_seconds is None
 
 
 def test_hit_limit_family_and_unrelated_text() -> None:
