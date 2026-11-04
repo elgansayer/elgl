@@ -54,6 +54,8 @@ _QUOTA_MARKERS = (
     "you have hit your session limit",
     "you've hit your weekly limit",
     "you have hit your weekly limit",
+    "you've hit your usage limit",
+    "you have hit your usage limit",
     "quota exhausted",
     "quota exceeded",
     "individual quota reached",
@@ -108,7 +110,41 @@ def redact_agent_output(value: str) -> str:
     return redacted
 
 
-def extract_retry_after_seconds(value: str) -> int | None:
+_MONTHS = {
+    name: number
+    for number, name in enumerate(
+        ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"), 1
+    )
+}
+
+
+def _absolute_retry_after(value: str, now: datetime) -> int | None:
+    """Parse "try again at Nov 8th, 2026 11:38 AM" (CLI host time, which is UTC here)."""
+    match = re.search(
+        r"(?i)try again at\s+([a-z]{3})[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})"
+        r"\s+(\d{1,2}):(\d{2})\s*([ap]m)?",
+        value,
+    )
+    if match is None or match.group(1).lower() not in _MONTHS:
+        return None
+    month, day, year = _MONTHS[match.group(1).lower()], int(match.group(2)), int(match.group(3))
+    hour, minute, meridiem = (
+        int(match.group(4)),
+        int(match.group(5)),
+        (match.group(6) or "").lower(),
+    )
+    if meridiem:
+        if not 1 <= hour <= 12:
+            return None
+        hour = hour % 12 + (12 if meridiem == "pm" else 0)
+    try:
+        moment = datetime(year, month, day, hour, minute, tzinfo=UTC)
+    except ValueError:
+        return None
+    return max(0, min(int((moment - now).total_seconds()), 7 * 24 * 3600))
+
+
+def extract_retry_after_seconds(value: str, now: datetime | None = None) -> int | None:
     patterns = (
         r"(?i)retry[-_ ]after(?: seconds)?[\s:=]+(\d+)",
         r'(?i)"?resets[_ ]in[_ ]seconds"?[\s:=]+(\d+)',
@@ -128,12 +164,13 @@ def extract_retry_after_seconds(value: str) -> int | None:
     if duration and any(part is not None for part in duration.groups()):
         hours, minutes, seconds = (int(part or 0) for part in duration.groups())
         return min(hours * 3600 + minutes * 60 + seconds, 7 * 24 * 3600)
-    return None
+    return _absolute_retry_after(value, now or datetime.now(UTC))
 
 
 def classify_process_failure(result: ProcessResult) -> AgentFailure:
     combined = redact_agent_output(f"{result.stderr}\n{result.stdout}").strip()
-    lowered = combined.lower()
+    # Provider CLIs print U+2019 apostrophes in quota messages; match them as "'".
+    lowered = combined.lower().replace("\u2019", "'")
     retry_after = extract_retry_after_seconds(lowered)
     if result.cancelled:
         kind = AgentFailureKind.CANCELLED
