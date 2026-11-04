@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
@@ -116,6 +117,12 @@ class OpenCodeProvider(CLIProvider):
     def prompt_for_stdin(self, prompt: str, prompt_path: Path | None) -> str | None:
         del prompt, prompt_path
         return None
+
+    def extra_environment(self) -> dict[str, str]:
+        # One OpenCode process can otherwise launch subagent conversations through
+        # its task tool, and --auto approves anything not explicitly denied. Those
+        # children are not counted by the shared provider accounting, so deny it.
+        return {"OPENCODE_CONFIG_CONTENT": json.dumps({"permission": {"task": "deny"}})}
 
     def build_command(
         self,

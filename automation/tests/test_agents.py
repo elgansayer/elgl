@@ -201,6 +201,7 @@ class FakeProcessRunner:
         self.cwds: list[Path] = []
         self.stdin: list[str | None] = []
         self.attached_prompt: str | None = None
+        self.environments: list[dict[str, str]] = []
 
     def run(
         self,
@@ -213,7 +214,8 @@ class FakeProcessRunner:
         max_output_bytes,
         home_mounts=(),
     ):
-        del env, timeout_seconds, max_output_bytes, home_mounts
+        del timeout_seconds, max_output_bytes, home_mounts
+        self.environments.append(dict(env))
         self.commands.append(tuple(command))
         self.cwds.append(cwd)
         self.stdin.append(stdin_text)
@@ -835,3 +837,19 @@ class TestAgentProviders(unittest.TestCase):
         self.assertEqual(result.summary, "opencode success")
         self.assertEqual(runner.stdin, [None])
         self.assertEqual(runner.attached_prompt, "do it")
+        # Subagent delegation would start uncounted model conversations.
+        config = json.loads(runner.environments[0]["OPENCODE_CONFIG_CONTENT"])
+        self.assertEqual(config, {"permission": {"task": "deny"}})
+        self.assertNotIn("OPENAI_API_KEY", runner.environments[0])
+
+    def test_codex_provider_receives_no_opencode_configuration(self):
+        runner = FakeProcessRunner("codex success")
+        provider = CodexProvider(process_runner=runner)
+        request = AgentRequest(
+            phase=AgentPhase.IMPLEMENTATION,
+            task=Task("1", "test", "body", "issue", 1),
+            prompt="do it",
+            cwd=Path("/tmp"),
+        )
+        self.assertTrue(provider.run(request).success)
+        self.assertNotIn("OPENCODE_CONFIG_CONTENT", runner.environments[0])
