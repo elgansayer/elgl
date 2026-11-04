@@ -169,7 +169,7 @@ def extract_retry_after_seconds(value: str, now: datetime | None = None) -> int 
 
 def classify_process_failure(result: ProcessResult) -> AgentFailure:
     combined = redact_agent_output(f"{result.stderr}\n{result.stdout}").strip()
-    # Provider CLIs print typographic apostrophes ("You’ve hit your usage limit").
+    # Provider CLIs print U+2019 apostrophes in quota messages; match them as "'".
     lowered = combined.lower().replace("\u2019", "'")
     retry_after = extract_retry_after_seconds(lowered)
     if result.cancelled:

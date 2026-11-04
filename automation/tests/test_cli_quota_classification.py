@@ -8,7 +8,7 @@ from openhands_factory.agents.process import ProcessResult
 
 # Exact Codex 0.166 output observed on 2026-11-04T13:38Z (typographic apostrophe).
 CODEX_USAGE_LIMIT = (
-    "You’ve hit your usage limit. Visit https://chatgpt.com/settings/usage to purchase "
+    "You\u2019ve hit your usage limit. Visit https://chatgpt.com/settings/usage to purchase "
     "more credits or try again at Nov 8th, 2026 11:38 AM."
 )
 NOW = datetime(2026, 11, 4, 13, 38, tzinfo=UTC)
