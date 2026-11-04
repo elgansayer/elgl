@@ -40,3 +40,26 @@ def test_existing_relative_forms_are_unchanged() -> None:
     assert extract_retry_after_seconds("retry-after: 120", NOW) == 120
     assert extract_retry_after_seconds("resets in 2h 5m", NOW) == 2 * 3600 + 300
     assert extract_retry_after_seconds("no timing here", NOW) is None
+
+
+CLAUDE_FIVE_HOUR = "You've hit your 5-hour limit \u00b7 resets 2:20pm (UTC)"
+
+
+def test_claude_five_hour_limit_is_quota_without_inferring_a_reset_clock() -> None:
+    # Session-style "resets 2:20pm (UTC)" keeps the configured quota cooldown, matching
+    # test_terminal_output's existing policy; only the classification changes here.
+    failure = classify_process_failure(
+        ProcessResult(("claude",), 1, CLAUDE_FIVE_HOUR, "", False, False, 0.1)
+    )
+    assert failure.kind is AgentFailureKind.PROVIDER_QUOTA
+    assert failure.retry_after_seconds is None
+
+
+def test_hit_limit_family_and_unrelated_text() -> None:
+    for text in ("You have hit your monthly limit", "You've hit your daily usage limit"):
+        failure = classify_process_failure(ProcessResult(("x",), 1, text, "", False, False, 0.1))
+        assert failure.kind is AgentFailureKind.PROVIDER_QUOTA, text
+    other = classify_process_failure(
+        ProcessResult(("x",), 1, "connection reset by peer", "", False, False, 0.1)
+    )
+    assert other.kind is AgentFailureKind.PROVIDER_TRANSPORT

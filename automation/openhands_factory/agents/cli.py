@@ -65,6 +65,8 @@ _QUOTA_MARKERS = (
     "insufficient balance",
     "monthly spend limit",
 )
+# "You've hit your session/weekly/usage/5-hour limit": one family across CLIs.
+_HIT_LIMIT = re.compile(r"you(?:'ve| have) hit your [a-z0-9 -]{0,24}limit")
 _RATE_LIMIT_MARKERS = (
     "selected model is at capacity",
     "rate limit",
@@ -180,7 +182,7 @@ def classify_process_failure(result: ProcessResult) -> AgentFailure:
         kind = AgentFailureKind.PROVIDER_UNAVAILABLE
     elif any(marker in lowered for marker in _AUTH_MARKERS):
         kind = AgentFailureKind.PROVIDER_AUTH
-    elif any(marker in lowered for marker in _QUOTA_MARKERS):
+    elif any(marker in lowered for marker in _QUOTA_MARKERS) or _HIT_LIMIT.search(lowered):
         kind = AgentFailureKind.PROVIDER_QUOTA
     elif any(marker in lowered for marker in _RATE_LIMIT_MARKERS):
         kind = AgentFailureKind.PROVIDER_RATE_LIMIT
