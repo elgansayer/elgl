@@ -1,5 +1,14 @@
 import { UnauthorizedException } from '@nestjs/common';
+import {
+  GUARDS_METADATA,
+  INTERCEPTORS_METADATA,
+} from '@nestjs/common/constants';
 import type { User } from '@supabase/supabase-js';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_NO_STORE,
+} from '../common/cache.interceptor';
 import { WordOfTheDayController } from './word-of-the-day.controller';
 import type { WordOfTheDayService } from './word-of-the-day.service';
 
@@ -35,5 +44,26 @@ describe('WordOfTheDayController', () => {
       UnauthorizedException,
     );
     expect(service.getTodayWordForUser).not.toHaveBeenCalled();
+  });
+
+  it('requires the Supabase authentication guard', () => {
+    const guards: unknown[] = Reflect.getMetadata(
+      GUARDS_METADATA,
+      WordOfTheDayController,
+    );
+
+    expect(guards).toContain(SupabaseAuthGuard);
+  });
+
+  it('prevents browser and CDN storage of learner-specific words', () => {
+    const interceptors = Reflect.getMetadata(
+      INTERCEPTORS_METADATA,
+      WordOfTheDayController.prototype.findOne,
+    ) as Array<{ directive: Record<string, string> }>;
+    const cacheControl = interceptors.find(
+      (interceptor) => interceptor instanceof CacheControlInterceptor,
+    );
+
+    expect(cacheControl?.directive).toEqual(CACHE_NO_STORE);
   });
 });

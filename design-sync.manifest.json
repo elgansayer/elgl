@@ -170,7 +170,7 @@
       "claudeDesignPath": "screens/home.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1841-word-card-consolidation (Home now uses the existing visually identical shared word card contract, so content, layout and states are unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
