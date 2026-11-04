@@ -53,6 +53,17 @@ export function sanitiseDiscoveryData<T>(value: T): T {
     )) {
       sanitised[key] = sanitiseDiscoveryData(val);
     }
+
+    if (sanitised['privacy_hide_online_status'] === true) {
+      Reflect.deleteProperty(sanitised, 'last_active_at');
+    }
+    if (sanitised['privacy_hide_vip_status'] === true) {
+      sanitised['is_vip'] = false;
+      Reflect.deleteProperty(sanitised, 'vip_tier');
+    }
+    Reflect.deleteProperty(sanitised, 'privacy_hide_online_status');
+    Reflect.deleteProperty(sanitised, 'privacy_hide_vip_status');
+
     return sanitised as unknown as T;
   }
 
