@@ -12,7 +12,7 @@ from filelock import FileLock
 from openhands_factory.alerts import AlertService
 from openhands_factory.state import atomic_write_json, read_json
 
-PullRequestLifecycleEvent = Literal["reviewed", "merge-queued", "merged"]
+PullRequestLifecycleEvent = Literal["reviewed", "ci-gated", "merge-queued", "merged"]
 MAX_RETAINED_SENT_EVENTS = 2_000
 NOTIFICATION_RETRY_SECONDS = 300
 
