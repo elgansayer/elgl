@@ -55,7 +55,7 @@
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "4.1.0",
     "livekit-server-sdk": "^2.19.1",
-    "nestjs-pino": "^4.6.1",
+    "nestjs-pino": "^5.3.1",
     "node-nlp": "npm:@nlpjs/language@5.0.0-alpha.5",
     "nodemailer": "^10.1.7",
     "pino": "^10.4.0",
