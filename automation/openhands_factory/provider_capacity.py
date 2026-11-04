@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import stat
 import time
 import uuid
 from collections.abc import Iterator
@@ -137,6 +139,12 @@ class ProviderCapacityStore:
             expiry.tzinfo is not None and acquired.tzinfo is not None and acquired <= now < expiry
         )
 
+    @staticmethod
+    def _has_writer_metadata(entry: dict[str, object]) -> bool:
+        # This validates record shape, not whether a recorded PID is live.
+        owner, pid = entry.get("owner"), entry.get("pid")
+        return isinstance(owner, str) and type(pid) is int and pid > 0
+
     def acquire(
         self,
         provider: ProviderName | str,
@@ -175,16 +183,26 @@ class ProviderCapacityStore:
                 provider_key = provider.value if isinstance(provider, ProviderName) else provider
                 entries = providers.setdefault(provider_key, [])
                 now = datetime.now(UTC)
+                # A reader's renewal bound is not proof that foreign work
+                # stopped. Beyond that bound, legacy admission requires the
+                # owner/PID metadata that our writers always persist. Incomplete
+                # corrupt time envelopes must not reserve capacity indefinitely.
+                # PID is record shape, never a liveness/adoption authority.
                 active = self._active_entries(entries, now)
-                renewable_entries = (
-                    [entry for entry in entries if self._is_unexpired(entry, now)]
-                    if token is not None
-                    else active
-                )
+                occupied = [
+                    entry
+                    for entry in entries
+                    if self._is_unexpired(entry, now)
+                    and (
+                        self.factory_generation is None
+                        or entry.get("factory_generation") == self.factory_generation
+                    )
+                    and (token is not None or entry in active or self._has_writer_metadata(entry))
+                ]
                 duplicate_owner = token is not None and any(
-                    entry.get("owner") == owner for entry in renewable_entries
+                    entry.get("owner") == owner for entry in occupied
                 )
-                if len(renewable_entries) < limit and not duplicate_owner:
+                if len(occupied) < limit and not duplicate_owner:
                     entry: dict[str, object] = {
                         "owner": owner,
                         "pid": os.getpid(),
@@ -194,11 +212,11 @@ class ProviderCapacityStore:
                     }
                     if token is not None:
                         entry.update({"lease_protocol": 1, "lease_token": token})
-                    renewable_entries.append(entry)
-                    providers[provider_key] = renewable_entries
+                    occupied.append(entry)
+                    providers[provider_key] = occupied
                     self._save(providers)
                     return time.monotonic() - started
-                providers[provider_key] = renewable_entries
+                providers[provider_key] = occupied
                 self._save(providers)
             if time.monotonic() >= deadline:
                 raise ProviderCapacityUnavailable(
@@ -317,6 +335,78 @@ class ProviderCapacityStore:
                 provider: len(self._active_entries(entries, now))
                 for provider, entries in providers.items()
             }
+
+    def audit_renewable_leases(
+        self, handles: list[RenewableCapacityLease]
+    ) -> tuple[dict[str, int], list[bool], dict[str, int]]:
+        """Observe exact ownership in one current primary, never a backup.
+
+        This is point-in-time evidence, not permission to adopt or dispatch.
+        Unlike ordinary recoverable state reads, a stale backup cannot establish
+        that a released token is still owned. Missing/unsafe/corrupt state fails.
+        """
+        for handle in handles:
+            self._validate_handle(handle)
+        with self.lock.acquire(timeout=2):
+            descriptor = os.open(self.path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(descriptor, "rb") as stream:
+                info = os.fstat(stream.fileno())
+                if (
+                    not stat.S_ISREG(info.st_mode)
+                    or info.st_uid != os.geteuid()
+                    or stat.S_IMODE(info.st_mode) & 0o077
+                    or info.st_nlink != 1
+                    or info.st_size > 1024 * 1024
+                ):
+                    raise ValueError("Capacity audit needs a bounded private regular primary")
+                raw = stream.read(1024 * 1024 + 1)
+            if len(raw) > 1024 * 1024:
+                raise ValueError("Capacity audit primary is too large")
+            payload = json.loads(raw, object_pairs_hook=_unique_audit_fields)
+            if not _is_capacity_payload(payload):
+                raise ValueError("Invalid current capacity audit primary")
+            providers = payload["providers"]
+            if any(
+                not isinstance(entries, list)
+                or any(not isinstance(entry, dict) for entry in entries)
+                for entries in providers.values()
+            ):
+                raise ValueError("Invalid current capacity audit entries")
+            for entries in providers.values():
+                for entry in entries:
+                    acquired = datetime.fromisoformat(entry["acquired_at"])
+                    expiry = datetime.fromisoformat(entry["expires_at"])
+                    if acquired.tzinfo is None or expiry.tzinfo is None or expiry <= acquired:
+                        raise ValueError("Invalid capacity audit time envelope")
+            now = datetime.now(UTC)
+            active = {
+                provider: self._active_entries(entries, now)
+                for provider, entries in providers.items()
+            }
+            return (
+                {provider: len(entries) for provider, entries in active.items()},
+                [
+                    sum(
+                        self._owns_entry(entry, handle) for entry in active.get(handle.provider, [])
+                    )
+                    == 1
+                    for handle in handles
+                ],
+                {
+                    provider: sum(self._is_unexpired(entry, now) for entry in entries)
+                    - len(active[provider])
+                    for provider, entries in providers.items()
+                },
+            )
+
+
+def _unique_audit_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate capacity audit field")
+        result[key] = value
+    return result
 
 
 @contextmanager

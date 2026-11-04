@@ -50,6 +50,33 @@ describe('SendMessageDto', () => {
     expect(hasError(errors, 'text_content')).toBe(true);
   });
 
+  it('requires a bounded authenticated envelope when marked encrypted', async () => {
+    const valid = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'Encrypted message',
+      is_encrypted: true,
+      encrypted_payload: 'e2ee:v1:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==',
+    });
+    const missing = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'Encrypted message',
+      is_encrypted: true,
+    });
+    const forgedFlag = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'Plaintext',
+      is_encrypted: false,
+      encrypted_payload: 'e2ee:v1:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==',
+    });
+
+    expect(valid).toHaveLength(0);
+    expect(hasError(missing, 'encrypted_payload')).toBe(true);
+    expect(hasError(forgedFlag, 'encrypted_payload')).toBe(true);
+  });
+
   it.each(['voice', 'doodle', 'sticker', 'view_once_media'])(
     'requires media_url for %s messages',
     async (messageType) => {

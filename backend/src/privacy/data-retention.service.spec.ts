@@ -414,6 +414,188 @@ describe('DataRetentionService', () => {
 
       await expect(service.finaliseAccountDeletions()).resolves.toBeUndefined();
     });
+
+    describe('Moments data erasure (#1827)', () => {
+      // The account row is anonymised, never deleted, so ON DELETE CASCADE from
+      // public.users does not fire and every Moments table is erased by hand.
+      // Children come before parents (supabase/migrations/005_moments.sql).
+      const ERASURE_STEPS = [
+        'moment_comment_votes.user_id',
+        'moment_question_answers.user_id',
+        'moment_likes.user_id',
+        'moment_comments.reply_to_user_id',
+        'moment_comments.user_id',
+        'moments.user_id',
+        'user_follows.follower_id',
+        'user_follows.following_id',
+      ];
+      const stepsFor = (userId: string): string[] =>
+        ERASURE_STEPS.map((step) => `${step}:${userId}`);
+
+      /**
+       * Table-aware mock. The shared builder answers the same whatever column is
+       * deleted on, so it cannot reject a column that does not exist (there is
+       * no moments.author_id). Every filtered statement is recorded as
+       * `<table>.<column>:<value>` in call order, and `anonymise` marks the
+       * update of the account row.
+       */
+      function mockErasure(
+        fails: (
+          table: string,
+          column: string,
+          userId: unknown,
+        ) => boolean = () => false,
+      ): string[] {
+        const events: string[] = [];
+        mockQueryBuilder.update.mockImplementation(() => {
+          events.push('anonymise');
+          return mockQueryBuilder;
+        });
+        mockSupabaseClient.from.mockImplementation((table: string) => {
+          if (table === 'users') {
+            return mockQueryBuilder;
+          }
+          return {
+            delete: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            eq: vi.fn((column: string, value: unknown) => {
+              events.push(`${table}.${column}:${String(value)}`);
+              return Promise.resolve({
+                error: fails(table, column, value)
+                  ? { message: 'deadlock detected' }
+                  : null,
+              });
+            }),
+          };
+        });
+        return events;
+      }
+
+      it('erases Moments data by user_id, children before parents, before anonymising the account', async () => {
+        mockQueryBuilder.limit.mockResolvedValue({
+          data: [{ id: 'user-abc-123' }],
+          error: null,
+        });
+        const events = mockErasure();
+
+        await service.finaliseAccountDeletions();
+
+        expect(events.slice(0, ERASURE_STEPS.length)).toEqual(
+          stepsFor('user-abc-123'),
+        );
+        expect(events.filter((event) => event === 'anonymise')).toHaveLength(1);
+        expect(events.indexOf('anonymise')).toBeGreaterThanOrEqual(
+          ERASURE_STEPS.length,
+        );
+        // moments and moment_comments have no author_id column.
+        expect(
+          events.filter((event) =>
+            /^moment(?:s|_comments)\.author_id:/.test(event),
+          ),
+        ).toEqual([]);
+      });
+
+      it.each(ERASURE_STEPS)(
+        'stops at the first failure and leaves the account pending when %s cannot be deleted',
+        async (failingStep) => {
+          mockQueryBuilder.limit.mockResolvedValue({
+            data: [{ id: 'user-abc-123' }],
+            error: null,
+          });
+          const [failingTable, failingColumn] = failingStep.split('.');
+          const events = mockErasure(
+            (table, column) =>
+              table === failingTable && column === failingColumn,
+          );
+          const loggerErrorSpy = vi
+            .spyOn(service['logger'], 'error')
+            .mockImplementation(() => undefined);
+
+          await expect(
+            service.finaliseAccountDeletions(),
+          ).resolves.toBeUndefined();
+
+          // The failing statement is the last one issued: later Moments
+          // statements, the rest of the wipe and the anonymisation never run.
+          const failedAt = ERASURE_STEPS.indexOf(failingStep);
+          expect(events).toEqual(
+            stepsFor('user-abc-123').slice(0, failedAt + 1),
+          );
+          expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+          expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+          expect(mockRedis.del).not.toHaveBeenCalled();
+
+          const failureStepNames: Record<string, string> = {
+            'moment_comment_votes.user_id': 'comment_votes_owner',
+            'moment_question_answers.user_id': 'question_answers_owner',
+            'moment_likes.user_id': 'likes_owner',
+            'moment_comments.reply_to_user_id': 'comments_reply_recipient',
+            'moment_comments.user_id': 'comments_owner',
+            'moments.user_id': 'moments_owner',
+            'user_follows.follower_id': 'following_edges',
+            'user_follows.following_id': 'follower_edges',
+          };
+          expect(loggerErrorSpy).toHaveBeenCalledWith(
+            `gdpr_moments_erasure_failed step=${failureStepNames[failingStep]}`,
+          );
+          expect(loggerErrorSpy).toHaveBeenCalledWith(
+            'gdpr_account_deletion_finalisation_failed',
+          );
+          expect(loggerErrorSpy).not.toHaveBeenCalledWith(
+            expect.stringMatching(/user-abc-123|deadlock detected/),
+          );
+        },
+      );
+
+      it('repeats the erasure on the next run and then anonymises the account', async () => {
+        mockQueryBuilder.limit.mockResolvedValue({
+          data: [{ id: 'user-abc-123' }],
+          error: null,
+        });
+        let outage = true;
+        const events = mockErasure((table) => outage && table === 'moments');
+        vi.spyOn(service['logger'], 'error').mockImplementation(
+          () => undefined,
+        );
+
+        await service.finaliseAccountDeletions();
+        expect(events).not.toContain('anonymise');
+
+        outage = false;
+        events.length = 0;
+        await service.finaliseAccountDeletions();
+
+        // Every statement is an idempotent delete, so the whole sequence runs
+        // again from the start and the account is finalised.
+        expect(events.slice(0, ERASURE_STEPS.length)).toEqual(
+          stepsFor('user-abc-123'),
+        );
+        expect(events).toContain('anonymise');
+      });
+
+      it('keeps finalising the other accounts in the batch when one account fails', async () => {
+        mockQueryBuilder.limit.mockResolvedValue({
+          data: [{ id: 'user-a' }, { id: 'user-b' }],
+          error: null,
+        });
+        mockErasure(
+          (table, _column, userId) =>
+            table === 'moments' && userId === 'user-a',
+        );
+        vi.spyOn(service['logger'], 'error').mockImplementation(
+          () => undefined,
+        );
+
+        await service.finaliseAccountDeletions();
+
+        expect(mockQueryBuilder.update).toHaveBeenCalledTimes(1);
+        expect(mockQueryBuilder.update).toHaveBeenCalledWith(
+          expect.objectContaining({ is_deleted: true }),
+        );
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-b');
+        expect(mockQueryBuilder.eq).not.toHaveBeenCalledWith('id', 'user-a');
+      });
+    });
   });
 
   describe('purgeInactiveReadingProgress', () => {

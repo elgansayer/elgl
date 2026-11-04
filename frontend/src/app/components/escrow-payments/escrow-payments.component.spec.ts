@@ -102,7 +102,7 @@ describe('EscrowPaymentsComponent', () => {
     expect(component.statusBadgeClass('pending')).toContain('warning');
     expect(component.statusBadgeClass('released')).toContain('success');
     expect(component.statusBadgeClass('disputed')).toContain('danger');
-    expect(component.statusBadgeClass('refunded')).toContain('text-secondary');
+    expect(component.statusBadgeClass('refunded')).toContain('text-secondary-ink');
     expect(component.statusBadgeClass('cancelled')).toContain('text-muted');
   });
 

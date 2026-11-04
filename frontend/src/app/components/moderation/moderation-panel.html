@@ -127,7 +127,7 @@
               >
                 <p class="text-warning">{{ 'moderation.riskScore' | t }}: {{ res.riskScore }}%</p>
                 @if (res.flags.length) {
-                  <p class="text-danger mt-1">
+                  <p class="text-danger-ink mt-1">
                     {{ 'moderation.flags' | t }}: {{ res.flags?.join(', ') ?? '' | sanitiseHtml }}
                   </p>
                 } @else {

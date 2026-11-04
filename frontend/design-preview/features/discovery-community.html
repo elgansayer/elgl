@@ -30,6 +30,9 @@
         --primary: 198 82 48;
         --secondary: 26 132 120;
         --danger: 217 58 58;
+        --primary-text: 178 74 43;
+        --secondary-text: 23 119 108;
+        --danger-text: 204 39 39;
         --success: 25 134 84;
         --warning: 161 108 9;
         --vip: 153 111 16;
@@ -59,6 +62,9 @@
         --primary: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
         --success: 52 211 153;
         --warning: 242 179 61;
         --vip: 232 184 75;
@@ -235,7 +241,7 @@
       }
       .btn.ghost {
         background: transparent;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .btn.vip {
         background: rgb(var(--vip));
@@ -285,7 +291,7 @@
       .field .error {
         font-weight: 400;
         font-size: 12px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .field.invalid input {
         border-color: rgb(var(--danger));
@@ -304,12 +310,12 @@
       .chip.on {
         background: rgb(var(--primary) / 0.14);
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .chip.tide {
         background: rgb(var(--secondary) / 0.14);
         border-color: rgb(var(--secondary));
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .badge {
         display: inline-flex;
@@ -399,7 +405,7 @@
         border: 1px solid;
       }
       .alert.error {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.5);
         background: rgb(var(--danger) / 0.08);
       }
@@ -500,7 +506,7 @@
         padding: 0 8px;
         min-height: 44px;
         margin-inline-start: -8px;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
         font: 600 12px/1 inherit;
         cursor: pointer;
         text-align: start;
@@ -550,14 +556,14 @@
       }
       .boundary h3 {
         margin: 0;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         font-size: 17px;
         font-weight: 900;
       }
       .mono {
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 11px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         background: rgb(var(--surface-200));
         border-radius: 10px;
         padding: 8px;
@@ -662,7 +668,7 @@
       }
       .lang-tag {
         font-size: 11px;
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
         background: rgb(var(--secondary) / 0.12);
         border-radius: 999px;
         padding: 1px 8px;
@@ -673,7 +679,7 @@
         font-size: 13px;
       }
       .diff del {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .diff ins {
         color: rgb(var(--success));
@@ -862,21 +868,21 @@
         outline: 2px solid rgb(var(--primary));
       }
       .calendar .d.today b {
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .calendar .ev {
         font-size: 9px;
         border-radius: 4px;
         padding: 1px 3px;
         background: rgb(var(--secondary) / 0.18);
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
       .calendar .ev.ember {
         background: rgb(var(--primary) / 0.16);
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .calendar .more {
         font-size: 9px;
@@ -1087,7 +1093,7 @@
               <button class="link-btn" type="button" aria-pressed="false">Translate Bio</button>
               <div class="row" style="justify-content: space-between">
                 <span class="muted" style="font-size: 10px">Tap to view</span
-                ><span style="color: rgb(var(--primary))" aria-hidden="true">→</span>
+                ><span style="color: rgb(var(--primary-text))" aria-hidden="true">→</span>
               </div>
             </div>
           </article>
@@ -1116,7 +1122,7 @@
                   Translating...
                 </button>
               </div>
-              <p class="muted" role="status" style="color: rgb(var(--danger)); margin: 0">
+              <p class="muted" role="status" style="color: rgb(var(--danger-text)); margin: 0">
                 Translation unavailable - try again
               </p>
             </div>
@@ -1394,7 +1400,7 @@
           </div>
           <div class="row">
             <span class="muted">Loading...</span
-            ><span class="muted" style="color: rgb(var(--danger))"
+            ><span class="muted" style="color: rgb(var(--danger-text))"
               >Failed to translate moment.</span
             >
           </div>
@@ -1511,7 +1517,7 @@
                     style="
                       border-radius: 8px;
                       background: rgb(var(--primary) / 0.2);
-                      color: rgb(var(--primary));
+                      color: rgb(var(--primary-text));
                     "
                   >
                     🔗
@@ -1738,13 +1744,13 @@
           </div>
           <div class="list">
             <article class="stack" style="gap: 2px">
-              <a class="title" href="#" style="color: rgb(var(--primary))">Tokyo Language Café</a
+              <a class="title" href="#" style="color: rgb(var(--primary-text))">Tokyo Language Café</a
               ><span class="muted">20 Oct 2026, 14:00</span
               ><span class="secondary">In-Person Meetup · Shibuya</span
               ><span class="muted">Hosted by Aiko</span>
             </article>
             <article class="stack" style="gap: 2px">
-              <a class="title" href="#" style="color: rgb(var(--primary))"
+              <a class="title" href="#" style="color: rgb(var(--primary-text))"
                 >Ramadan traditions - cultural exchange</a
               ><span class="muted">22 Oct 2026, 19:00</span
               ><span class="secondary">Cultural Exchange · Audio room</span
@@ -1815,7 +1821,7 @@
               ><span class="chip">In-Person Meetup</span>
             </div>
             <span class="muted">14:00 · Shibuya</span
-            ><a href="#" style="color: rgb(var(--primary)); font-size: 13px; font-weight: 600"
+            ><a href="#" style="color: rgb(var(--primary-text)); font-size: 13px; font-weight: 600"
               >View Details →</a
             >
           </div>
@@ -1939,7 +1945,7 @@
               <span class="rel"><span class="avatar">A</span><span class="dot"></span></span>
               <div class="grow">
                 <b>Aiko</b> <span class="secondary">liked your moment</span>
-                <div class="muted" style="color: rgb(var(--primary))">New activity</div>
+                <div class="muted" style="color: rgb(var(--primary-text))">New activity</div>
               </div>
               <span aria-hidden="true">❤️</span>
             </div>

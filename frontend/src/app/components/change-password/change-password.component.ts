@@ -44,7 +44,7 @@ import { AuthService } from '../../services/auth.service';
           </button>
         </form>
         @if (messageKey()) {
-          <p class="mt-4 text-center text-sm" [class.text-success]="!isError()" [class.text-danger]="isError()">
+          <p class="mt-4 text-center text-sm" [class.text-success]="!isError()" [class.text-danger-ink]="isError()">
             {{ messageKey() ?? '' | t }}
           </p>
         }

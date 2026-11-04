@@ -111,7 +111,12 @@ class PullRequestRecord:
     is_cross_repository: bool = False
 
     @classmethod
-    def from_payload(cls, value: Mapping[str, object]) -> PullRequestRecord:
+    def from_payload(
+        cls,
+        value: Mapping[str, object],
+        *,
+        required_checks: Collection[str] = _REQUIRED_CHECKS,
+    ) -> PullRequestRecord:
         def text(name: str, default: str = "") -> str:
             item = value.get(name)
             return item if isinstance(item, str) else default
@@ -165,8 +170,8 @@ class PullRequestRecord:
                         workflow_runs.add(match.group("run"))
 
         checks_passed = (
-            _REQUIRED_CHECKS.issubset(successful_checks)
-            and _REQUIRED_CHECKS.issubset(observed_checks)
+            set(required_checks).issubset(successful_checks)
+            and set(required_checks).issubset(observed_checks)
             and bool(terminal_states)
             and all(result in _SUCCESSFUL_CHECK_STATES for result in terminal_states)
             and not pending

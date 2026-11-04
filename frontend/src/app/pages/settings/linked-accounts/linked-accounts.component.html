@@ -9,7 +9,7 @@
 
   <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
     @if (errorMessage()) {
-      <div role="alert" class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+      <div role="alert" class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger-ink">
         {{ errorMessage() | t }}
       </div>
     }
@@ -26,7 +26,7 @@
 
       @if (linkedAccountsResource.error()) {
         <div role="alert" class="rounded-card border border-danger/30 bg-danger/10 p-4 space-y-3">
-          <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+          <p class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
           <button
             hlmBtn
             type="button"
@@ -70,7 +70,7 @@
                   <button
                     hlmBtn
                     (click)="requestUnlink(provider.id)"
-                    class="min-h-11 text-sm font-semibold text-danger hover:text-danger/80 transition-colors disabled:opacity-40"
+                    class="min-h-11 text-sm font-semibold text-danger-ink hover:text-danger-ink/80 transition-colors disabled:opacity-40"
                     [disabled]="loading() || !canUnlink(provider.id)"
                     [attr.aria-label]="('settings.linkedAccounts.unlink' | t) + ' ' + (provider.labelKey | t)"
                   >

@@ -1,5 +1,6 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { Component, input, output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -8,19 +9,15 @@ import { EconomyStore } from '../../services/economy.store';
 
 @Component({
   selector: 'app-tip-host-modal',
-  imports: [HlmInput, HlmButton, TranslatePipe, FormsModule],
+  imports: [HlmInput, HlmButton, TranslatePipe, FormsModule, ...HlmDialogImports],
   template: `
-    <div
-      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      [attr.aria-labelledby]="titleId"
-      [attr.aria-describedby]="subtitleId"
-      (keydown.escape)="closed.emit()"
-      (click)="onBackdropClick($event)"
-    >
-      <div
-        class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-4 sm:space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto"
+    <hlm-dialog state="open" (stateChanged)="onDialogStateChanged($event)">
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="max-h-[calc(100dvh-2rem)] w-[calc(100%-1rem)] max-w-md space-y-4 overflow-y-auto rounded-sheet border border-surface-100 bg-surface-200 p-4 shadow-lift sm:w-[calc(100%-2rem)] sm:space-y-5 sm:p-6"
+        [attr.aria-labelledby]="titleId"
+        [attr.aria-describedby]="subtitleId"
       >
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
@@ -34,11 +31,14 @@ import { EconomyStore } from '../../services/economy.store';
           </div>
           <button
             hlmBtn
-            (click)="closed.emit()"
-            class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            hlmDialogClose
+            type="button"
+            variant="ghost"
+            size="icon-touch"
+            [disabled]="isSending()"
             [attr.aria-label]="'common.close' | t"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 
@@ -66,6 +66,7 @@ import { EconomyStore } from '../../services/economy.store';
             @for (amount of presetAmounts(); track amount) {
               <button
                 hlmBtn
+                type="button"
                 (click)="selectAmount(amount)"
                 [class]="
                   'p-3 sm:p-4 rounded-2xl border-2 transition-all font-extrabold text-center text-sm sm:text-base ' +
@@ -99,6 +100,7 @@ import { EconomyStore } from '../../services/economy.store';
           />
           <button
             hlmBtn
+            type="button"
             (click)="selectAmount(customAmount())"
             [disabled]="!customAmount() || customAmount() < 1"
             class="px-4 py-3 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary disabled:opacity-40"
@@ -112,13 +114,18 @@ import { EconomyStore } from '../../services/economy.store';
         <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
           <button
             hlmBtn
-            (click)="closed.emit()"
-            class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary"
+            hlmDialogClose
+            type="button"
+            variant="secondary"
+            size="touch"
+            [disabled]="isSending()"
           >
             {{ 'audioRoom.tipCancelBtn' | t }}
           </button>
           <button
             hlmBtn
+            type="button"
+            size="touch"
             [disabled]="
               !selectedAmount() ||
               selectedAmount()! < 1 ||
@@ -130,31 +137,15 @@ import { EconomyStore } from '../../services/economy.store';
             [attr.aria-label]="'audioRoom.tipSendAria' | t: { amount: selectedAmount() ?? 0 }"
           >
             {{
-              isSending() ? '...' : ('audioRoom.tipSendBtn' | t: { amount: selectedAmount() ?? 0 })
+              isSending()
+                ? ('audioRoom.tipSending' | t)
+                : ('audioRoom.tipSendBtn' | t: { amount: selectedAmount() ?? 0 })
             }}
           </button>
         </div>
-      </div>
-    </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-      .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border-width: 0;
-      }
-    `,
-  ],
 })
 export class TipHostModalComponent {
   roomId = input.required<string>();
@@ -167,6 +158,7 @@ export class TipHostModalComponent {
   readonly selectedAmount = signal<number | null>(null);
   readonly customAmount = signal<number>(0);
   readonly isSending = signal<boolean>(false);
+  private readonly pendingIdempotencyKey = signal<string | null>(null);
 
   readonly presetAmounts = signal<number[]>([10, 50, 100, 500]);
 
@@ -176,6 +168,7 @@ export class TipHostModalComponent {
 
   selectAmount(amount: number): void {
     if (amount >= 1) {
+      if (this.selectedAmount() !== amount) this.pendingIdempotencyKey.set(null);
       this.selectedAmount.set(amount);
     }
   }
@@ -184,19 +177,19 @@ export class TipHostModalComponent {
     this.customAmount.set(value);
   }
 
-  onBackdropClick(event: MouseEvent): void {
-    if (event.target === event.currentTarget) {
-      this.closed.emit();
-    }
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && !this.isSending()) this.closed.emit();
   }
 
   async confirmSend(): Promise<void> {
     const amount = this.selectedAmount();
     if (!amount || amount < 1) return;
+    const idempotencyKey = this.pendingIdempotencyKey() ?? crypto.randomUUID();
+    this.pendingIdempotencyKey.set(idempotencyKey);
     this.isSending.set(true);
     try {
-      await this.audioRoomsStore.tipHost(this.roomId(), amount);
-      this.closed.emit();
+      const sent = await this.audioRoomsStore.tipHost(this.roomId(), amount, idempotencyKey);
+      if (sent) this.closed.emit();
     } finally {
       this.isSending.set(false);
     }

@@ -16,7 +16,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <p role="status" class="py-8 text-center text-text-secondary">{{ 'loading' | t }}</p>
       } @else if (error()) {
         <div role="alert" class="flex flex-col items-start gap-3 rounded-card bg-surface-300 p-4">
-          <p class="text-danger">{{ 'common.error_generic' | t }}</p>
+          <p class="text-danger-ink">{{ 'common.error_generic' | t }}</p>
           <button hlmBtn type="button" variant="secondary" size="touch" (click)="retry()">
             {{ 'common.retry' | t }}
           </button>
@@ -85,7 +85,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               <div class="mt-5 border-t border-surface-100 pt-4">
                 <a
                   [routerLink]="['/profile', item.host_id]"
-                  class="inline-flex min-h-11 items-center rounded-app text-sm font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  class="inline-flex min-h-11 items-center rounded-app text-sm font-semibold text-primary-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   {{ 'events.hosted_by' | t: { name: item.host_name } }}
                 </a>

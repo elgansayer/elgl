@@ -264,7 +264,7 @@ describe('DiscoveryService PostGIS partner queries', () => {
     expect(result.map((partner) => partner.id)).toEqual(['allowed-user']);
   });
 
-  it('falls back to the standard discovery query when the PostGIS RPC fails', async () => {
+  it('reports the search as unavailable when the PostGIS RPC fails', async () => {
     rpc.mockResolvedValue({
       data: null,
       error: { message: 'PostGIS unavailable' },
@@ -274,22 +274,18 @@ describe('DiscoveryService PostGIS partner queries', () => {
       error: null,
     } satisfies QueryResult);
 
-    const result = await service.searchPartners('current-user', null, {
-      latitude: 51.5074,
-      longitude: -0.1278,
-    });
+    await expect(
+      service.searchPartners('current-user', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+      }),
+    ).rejects.toThrow('Partner discovery is temporarily unavailable');
 
-    expect(queryBuilder.limit).toHaveBeenCalledWith(50);
+    expect(queryBuilder.limit).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith(
       { error: 'PostGIS unavailable' },
-      'PostGIS partner search failed; using bounded non-spatial fallback',
+      'PostGIS partner search failed; radius filter unavailable',
     );
-    expect(result).toEqual([
-      expect.objectContaining({
-        id: 'fallback-partner',
-        distance_metres: undefined,
-      }),
-    ]);
   });
 
   it('logs search metrics when PostGIS proximity search matches users within custom radius', async () => {

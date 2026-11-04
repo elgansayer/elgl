@@ -76,8 +76,17 @@ export class UsersService {
       .eq('id', userId)
       .single();
 
-    if (response.error || !response.data) {
-      return this.getMockProfile(userId);
+    if (response.error) {
+      if (response.error.code === 'PGRST116') {
+        throw new NotFoundException('User profile not found');
+      }
+      Logger.error('Failed to load user profile', {
+        code: response.error.code,
+      });
+      throw new InternalServerErrorException('Unable to load user profile');
+    }
+    if (!response.data) {
+      throw new NotFoundException('User profile not found');
     }
 
     const profile = response.data as UserProfile;
@@ -602,9 +611,10 @@ export class UsersService {
       .update(updatePayload as never)
       .eq('id', userId);
     if (updateError) {
-      Logger.warn(
-        `Supabase update failed, falling back to mock: ${updateError.message}`,
-      );
+      Logger.error('Failed to update user profile', {
+        code: updateError.code,
+      });
+      throw new InternalServerErrorException('Unable to update user profile');
     }
 
     // Invalidate matchmaking caches when profile fields that affect
@@ -1204,21 +1214,25 @@ export class UsersService {
       visitsCountRes,
     ] = await Promise.all([
       supabase.from('users').select('*').eq('id', userId).maybeSingle(),
+      // The Moments tables are owned through user_id and user_follows has a
+      // composite primary key (follower_id, following_id) with no id column
+      // (005_moments.sql). Filtering or selecting a column that does not exist
+      // makes the count query fail, which surfaced as a silent zero.
       supabase
         .from('moments')
         .select('id', { count: 'exact', head: true })
-        .eq('author_id', userId),
+        .eq('user_id', userId),
       supabase
         .from('moment_comments')
         .select('id', { count: 'exact', head: true })
-        .eq('author_id', userId),
+        .eq('user_id', userId),
       supabase
         .from('user_follows')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('following_id', userId),
       supabase
         .from('user_follows')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('follower_id', userId),
       supabase
         .from('profile_visits')
@@ -1310,7 +1324,6 @@ export class UsersService {
         | 'user_profile_likes'
         | 'status_views';
       column:
-        | 'author_id'
         | 'user_id'
         | 'sender_id'
         | 'visitor_id'
@@ -1322,8 +1335,8 @@ export class UsersService {
         | 'viewer_id'
         | 'status_owner_id';
     }> = [
-      { table: 'moments', column: 'author_id' },
-      { table: 'moment_comments', column: 'author_id' },
+      { table: 'moments', column: 'user_id' },
+      { table: 'moment_comments', column: 'user_id' },
       { table: 'moment_likes', column: 'user_id' },
       { table: 'flashcards', column: 'user_id' },
       { table: 'chat_messages', column: 'sender_id' },

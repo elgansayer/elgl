@@ -4,6 +4,7 @@ import { By } from '@angular/platform-browser';
 import { ChatListComponent } from './chat-list.component';
 import { ChatService } from '../../services/chat.service';
 import { GroupsService } from '../../services/groups.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 import * as toast from '../../services/toast.service';
 import { provideRouter } from '@angular/router';
 
@@ -189,6 +190,57 @@ describe('ChatListComponent', () => {
     expect(onlineLabel).toBeTruthy();
     expect(onlineLabel.nativeElement.textContent.trim().length).toBeGreaterThan(0);
     expect(decorativeDot).toBeTruthy();
+  });
+
+  it('keeps the authoritative global count when bounded room previews load', async () => {
+    const unreadCounter = TestBed.inject(UnreadCounterService);
+    unreadCounter.set('chat', 7);
+    mockChatService.getRooms.mockResolvedValue([
+      {
+        id: 'room-1',
+        title: 'Partner',
+        subtitle: '',
+        avatar: '',
+        is_online: false,
+        is_pinned: false,
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+    mockChatService.getMessages.mockResolvedValue([]);
+
+    await component.loadPreviews();
+
+    expect(unreadCounter.tabCount('chat')).toBe(7);
+  });
+
+  it('does not show a message with a persisted read receipt as unread', async () => {
+    mockChatService.getRooms.mockResolvedValue([
+      {
+        id: 'room-1',
+        title: 'Partner',
+        subtitle: '',
+        avatar: '',
+        is_online: false,
+        is_pinned: false,
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+    mockChatService.getMessages.mockResolvedValue([
+      {
+        id: 'message-1',
+        room_id: 'room-1',
+        sender_id: 'partner-1',
+        message_type: 'text',
+        text_content: 'Hello',
+        is_read: false,
+        delivery_status: 'read',
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+
+    await component.loadPreviews();
+
+    expect(component.previews()[0]?.unreadCount).toBe(0);
   });
 
   describe('toggleRoomLock', () => {

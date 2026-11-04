@@ -1,6 +1,10 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext, CallHandler } from '@nestjs/common';
+import {
+  ExecutionContext,
+  CallHandler,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { of, throwError } from 'rxjs';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
@@ -53,6 +57,8 @@ describe('AdminController', () => {
             getLoginHistory: vi.fn(),
             listAllBlocks: vi.fn(),
             removeBlock: vi.fn(),
+            banUser: vi.fn(),
+            warnUser: vi.fn(),
           },
         },
       ],
@@ -152,6 +158,98 @@ describe('AdminController', () => {
 
       expect(adminService.removeBlock).toHaveBeenCalledWith('block-42');
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('banUser', () => {
+    it('delegates to AdminService.banUser and returns confirmation message', async () => {
+      (adminService.banUser as Mock).mockResolvedValue(undefined);
+      const req = { user: { id: 'admin-1' } };
+
+      const result = await controller.banUser(
+        'target-user-1',
+        req as unknown as Parameters<typeof controller.banUser>[1],
+      );
+
+      expect(adminService.banUser).toHaveBeenCalledWith(
+        'target-user-1',
+        'admin-1',
+      );
+      expect(result).toEqual({ message: 'User banned' });
+    });
+
+    it('falls back to req.user.sub when req.user.id is absent', async () => {
+      (adminService.banUser as Mock).mockResolvedValue(undefined);
+      const req = { user: { sub: 'admin-sub-1' } };
+
+      const result = await controller.banUser(
+        'target-user-1',
+        req as unknown as Parameters<typeof controller.banUser>[1],
+      );
+
+      expect(adminService.banUser).toHaveBeenCalledWith(
+        'target-user-1',
+        'admin-sub-1',
+      );
+      expect(result).toEqual({ message: 'User banned' });
+    });
+
+    it('throws UnauthorizedException when admin user identifier is missing', async () => {
+      const req = { user: {} };
+
+      await expect(
+        controller.banUser(
+          'target-user-1',
+          req as unknown as Parameters<typeof controller.banUser>[1],
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(adminService.banUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('warnUser', () => {
+    it('delegates to AdminService.warnUser and returns confirmation message', async () => {
+      (adminService.warnUser as Mock).mockResolvedValue(undefined);
+      const req = { user: { id: 'admin-1' } };
+
+      const result = await controller.warnUser(
+        'target-user-1',
+        req as unknown as Parameters<typeof controller.warnUser>[1],
+      );
+
+      expect(adminService.warnUser).toHaveBeenCalledWith(
+        'target-user-1',
+        'admin-1',
+      );
+      expect(result).toEqual({ message: 'User warned' });
+    });
+
+    it('falls back to req.user.sub when req.user.id is absent', async () => {
+      (adminService.warnUser as Mock).mockResolvedValue(undefined);
+      const req = { user: { sub: 'admin-sub-1' } };
+
+      const result = await controller.warnUser(
+        'target-user-1',
+        req as unknown as Parameters<typeof controller.warnUser>[1],
+      );
+
+      expect(adminService.warnUser).toHaveBeenCalledWith(
+        'target-user-1',
+        'admin-sub-1',
+      );
+      expect(result).toEqual({ message: 'User warned' });
+    });
+
+    it('throws UnauthorizedException when admin user identifier is missing', async () => {
+      const req = { user: {} };
+
+      await expect(
+        controller.warnUser(
+          'target-user-1',
+          req as unknown as Parameters<typeof controller.warnUser>[1],
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(adminService.warnUser).not.toHaveBeenCalled();
     });
   });
 

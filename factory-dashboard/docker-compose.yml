@@ -9,9 +9,8 @@
 
 services:
   dashboard:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/elgansayer/factory-dashboard:latest
+    pull_policy: always
     restart: unless-stopped
     ports:
       - "127.0.0.1:3100:3100"

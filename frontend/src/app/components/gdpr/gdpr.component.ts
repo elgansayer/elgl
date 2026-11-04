@@ -38,7 +38,7 @@ import { I18nService } from '../../services/i18n.service';
           <div
             class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger/10 p-3"
           >
-            <span class="text-xs text-danger" role="alert">{{ statusError() }}</span>
+            <span class="text-xs text-danger-ink" role="alert">{{ statusError() }}</span>
             <button
               hlmBtn
               type="button"
@@ -75,7 +75,7 @@ import { I18nService } from '../../services/i18n.service';
               <p class="text-xs text-success" role="status">{{ 'gdpr.archiveSuccess' | t }}</p>
             }
             @if (archiveError()) {
-              <p class="text-xs text-danger" role="alert">{{ archiveError() }}</p>
+              <p class="text-xs text-danger-ink" role="alert">{{ archiveError() }}</p>
             }
           </div>
         </section>
@@ -100,7 +100,7 @@ import { I18nService } from '../../services/i18n.service';
                 <hlm-checkbox
                   [checked]="confirmDelete()"
                   (change)="confirmDelete.set(!confirmDelete())"
-                  class="h-5 w-5 rounded border-surface-300 text-danger"
+                  class="h-5 w-5 rounded border-surface-300 text-danger-ink"
                 />
                 <span class="text-sm text-text-primary">{{ 'gdpr.deleteConfirmLabel' | t }}</span>
               </label>
@@ -118,7 +118,7 @@ import { I18nService } from '../../services/i18n.service';
                 {{ deleting() ? ('common.loading' | t) : ('gdpr.deleteAccountBtn' | t) }}
               </button>
               @if (deleteError()) {
-                <p class="text-xs text-danger" role="alert">{{ deleteError() }}</p>
+                <p class="text-xs text-danger-ink" role="alert">{{ deleteError() }}</p>
               }
             </div>
           </section>
@@ -145,7 +145,7 @@ import { I18nService } from '../../services/i18n.service';
                 {{ cancelling() ? ('common.loading' | t) : ('gdpr.cancelDeletionBtn' | t) }}
               </button>
               @if (cancelError()) {
-                <p class="text-xs text-danger" role="alert">{{ cancelError() }}</p>
+                <p class="text-xs text-danger-ink" role="alert">{{ cancelError() }}</p>
               }
             </div>
           </section>

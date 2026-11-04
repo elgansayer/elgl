@@ -182,6 +182,8 @@ export class SecureChatService extends ChatService {
         status_reply_payload: dto.status_reply_payload ?? null,
         is_view_once: dto.message_type === 'view_once_media',
         delivery_status: 'sent',
+        is_encrypted: dto.is_encrypted ?? false,
+        encrypted_payload: dto.encrypted_payload ?? null,
       })
       .select(
         `*, sender:users!chat_messages_sender_id_fkey (id, display_name, avatar_url)`,

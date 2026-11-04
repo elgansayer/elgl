@@ -8,15 +8,21 @@ import { FavouriteService } from '../../services/favourite.service';
 import { I18nService } from '../../services/i18n.service';
 import { NlpService } from '../../services/nlp.service';
 import { SafetyService } from '../../services/safety.service';
+import { toastsSignal } from '../../services/toast.service';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
+import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { ChatMessageComponent } from './chat-message.component';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 describe('ChatMessageComponent', () => {
   let fixture: ComponentFixture<ChatMessageComponent>;
   let currentUser: ReturnType<typeof vi.fn>;
+  let addFavourite: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    addFavourite = vi.fn().mockResolvedValue({ success: true });
+    toastsSignal.set([]);
     const blockedUserIds = signal<ReadonlySet<string>>(new Set());
     currentUser = vi.fn().mockReturnValue({ id: 'viewer-id' });
 
@@ -32,7 +38,7 @@ describe('ChatMessageComponent', () => {
         },
         {
           provide: FavouriteService,
-          useValue: { addFavourite: vi.fn().mockResolvedValue(undefined) },
+          useValue: { addFavourite },
         },
         {
           provide: SafetyService,
@@ -76,6 +82,39 @@ describe('ChatMessageComponent', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    toastsSignal.set([]);
+  });
+
+  describe('favouriting a message', () => {
+    const event = { messageId: 'message-id', content: 'A complex sentence', messageType: 'text' };
+
+    it('saves the message by id only and confirms with a translated success toast', async () => {
+      await fixture.componentInstance.onFavourite(event);
+
+      expect(addFavourite).toHaveBeenCalledWith({ message_id: 'message-id' });
+      expect(toastsSignal()).toEqual([
+        expect.objectContaining({ type: 'success', message: 'chatRoom.bookmarkSuccess' }),
+      ]);
+    });
+
+    it('tells the user when the message could not be saved instead of failing silently', async () => {
+      addFavourite.mockRejectedValueOnce(new Error('offline'));
+
+      await expect(fixture.componentInstance.onFavourite(event)).resolves.toBeUndefined();
+
+      expect(toastsSignal()).toEqual([
+        expect.objectContaining({ type: 'error', message: 'chatRoom.bookmarkError' }),
+      ]);
+    });
+
+    it('is wired to the context menu favourite action', async () => {
+      const menu = fixture.debugElement.query(By.directive(LongPressContextMenuComponent));
+
+      menu.componentInstance.favourite.emit(event);
+      await fixture.whenStable();
+
+      expect(addFavourite).toHaveBeenCalledWith({ message_id: 'message-id' });
+    });
   });
 
   it('delegates simplification to the shared context menu without an inline action', () => {
@@ -120,6 +159,71 @@ describe('ChatMessageComponent', () => {
 
   it('does not render a rich link preview when the message has no preview payload', () => {
     expect(fixture.debugElement.query(By.directive(LinkPreviewCardComponent))).toBeNull();
+  });
+
+  it('renders system events with the dedicated bubble and no user-message actions', () => {
+    fixture.componentRef.setInput('message', {
+      id: 'system-message-id',
+      room_id: 'room-id',
+      sender_id: '',
+      message_type: 'system',
+      system_event: { type: 'profileUpdated', name: 'Language Partner' },
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    fixture.detectChanges();
+
+    const bubble = fixture.debugElement.query(By.directive(ChatSystemBubbleComponent));
+    expect(bubble).toBeTruthy();
+    expect(bubble.componentInstance.eventType()).toBe('profileUpdated');
+    expect(bubble.componentInstance.params()).toEqual({
+      type: 'profileUpdated',
+      name: 'Language Partner',
+    });
+    expect(fixture.debugElement.query(By.directive(LongPressContextMenuComponent))).toBeNull();
+  });
+
+  it('uses the generic system bubble fallback for a malformed system message', () => {
+    fixture.componentRef.setInput('message', {
+      id: 'system-message-id',
+      room_id: 'room-id',
+      sender_id: '',
+      message_type: 'system',
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    fixture.detectChanges();
+
+    const bubble = fixture.debugElement.query(By.directive(ChatSystemBubbleComponent));
+    expect(bubble).toBeTruthy();
+    expect(bubble.componentInstance.i18nKey()).toBe('notifications.systemAlert');
+    expect(fixture.debugElement.query(By.directive(LongPressContextMenuComponent))).toBeNull();
+  });
+
+  it('renders gift messages through the shared gift animation component', async () => {
+    fixture.componentRef.setInput('message', {
+      id: 'gift-message',
+      room_id: 'room-id',
+      sender_id: 'sender-id',
+      message_type: 'gift',
+      gift_payload: {
+        gift_id: 'gift_rose',
+        gift_name: 'Rose',
+        gift_icon: '🌹',
+        coin_value: 10,
+        animation_type: 'float',
+      },
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    await fixture.whenStable();
+
+    const gift = fixture.debugElement.query(By.directive(GiftAnimationComponent));
+    expect(gift).toBeTruthy();
+    expect(gift.componentInstance.giftPayload()).toMatchObject({
+      gift_id: 'gift_rose',
+      coin_value: 10,
+    });
   });
 
   it('updates memoized message ownership when the current user input changes', () => {

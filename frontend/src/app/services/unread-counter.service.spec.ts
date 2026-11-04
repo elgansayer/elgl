@@ -101,6 +101,37 @@ describe('UnreadCounterService', () => {
     expect(service.discoveryUnread()).toBe(100);
   });
 
+  it('preserves an increment received while an authoritative request is in flight', () => {
+    service.set('moments', 4);
+    const snapshot = service.snapshot();
+    service.increment('moments');
+
+    service.reconcile('moments', 4, snapshot);
+
+    expect(service.tabCount('moments')).toBe(5);
+  });
+
+  it('preserves a persisted read received while an authoritative request is in flight', () => {
+    service.set('discovery', 4);
+    const snapshot = service.snapshot();
+    service.decrement('discovery');
+
+    service.reconcile('discovery', 4, snapshot);
+
+    expect(service.tabCount('discovery')).toBe(3);
+  });
+
+  it('preserves conflicting local changes when a response is intermediate', () => {
+    service.set('profile', 4);
+    const snapshot = service.snapshot();
+    service.increment('profile');
+    service.decrement('profile');
+
+    service.reconcile('profile', 5, snapshot);
+
+    expect(service.tabCount('profile')).toBe(4);
+  });
+
   it('should normalise invalid and fractional counts before navigation renders them', () => {
     service.set('chat', Number.NaN);
     service.set('moments', Number.POSITIVE_INFINITY);
@@ -199,5 +230,16 @@ describe('UnreadCounterService', () => {
       },
       { timeout: 100 },
     );
+  });
+
+  it('should handle synchronous badge API failures gracefully', async () => {
+    setAppBadgeSpy.mockImplementationOnce(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+
+    expect(() => service.set('chat', 3)).not.toThrow();
+    await vi.waitFor(() => {
+      expect(service.tabCount('chat')).toBe(3);
+    });
   });
 });

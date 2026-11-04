@@ -11,6 +11,7 @@ type QueryChain = {
   match: Mock;
   is: Mock;
   not: Mock;
+  gt: Mock;
   overlaps: Mock;
   order: Mock;
   limit: Mock;
@@ -28,6 +29,7 @@ const makeQueryChain = (
     'match',
     'is',
     'not',
+    'gt',
     'overlaps',
     'order',
     'limit',
@@ -62,6 +64,8 @@ describe('daily recommendations contract', () => {
     };
     const redis = {
       pipeline: vi.fn().mockReturnValue(pipeline),
+      set: vi.fn().mockResolvedValue('OK'),
+      eval: vi.fn().mockResolvedValue(1),
     };
     const from = vi.fn();
     const logger = {
@@ -78,7 +82,7 @@ describe('daily recommendations contract', () => {
         getRedisClient: vi.fn().mockReturnValue(redis),
       } as never,
       { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) } as never,
-      {} as never,
+      { recordMatchmakingDailyJobRun: vi.fn() } as never,
       { isAvailable: vi.fn().mockReturnValue(true) } as never,
       { reportCrash: vi.fn().mockResolvedValue({}) } as never,
     );
@@ -95,13 +99,17 @@ describe('daily recommendations contract', () => {
         target_languages: ['es'],
       },
     ]);
+    // One spare candidate beyond the ten that are cached.
     const matches = makeQueryChain(
-      Array.from({ length: 10 }, (_, index) =>
-        makeCandidate(`partner-${index + 1}`),
+      Array.from({ length: 11 }, (_, index) =>
+        makeCandidate(`partner-${String(index + 1).padStart(2, '0')}`),
       ),
     );
 
-    from.mockReturnValueOnce(users).mockReturnValueOnce(matches);
+    from
+      .mockReturnValueOnce(users)
+      .mockReturnValueOnce(matches)
+      .mockReturnValueOnce(makeQueryChain([]));
 
     await service.calculateDailyRecommendations();
 
@@ -115,13 +123,17 @@ describe('daily recommendations contract', () => {
     expect(matches.match).toHaveBeenCalledWith(privacyFilters);
     expect(matches.is).toHaveBeenCalledWith('scheduled_for_deletion_at', null);
 
-    expect(users.limit).toHaveBeenCalledWith(5000);
-    expect(matches.limit).toHaveBeenCalledWith(10);
+    // Learners are read a bounded keyset page at a time, not all at once.
+    expect(users.limit).toHaveBeenCalledWith(1000);
+    expect(users.order).toHaveBeenCalledWith('id', { ascending: true });
+    expect(matches.limit).toHaveBeenCalledWith(11);
     // Serious-learner status is computed (streak + recent activity, #7586), so
-    // the bounded pre-fetch orders by streak rather than the stale stored flag.
-    expect(matches.order).toHaveBeenCalledWith('study_streak_days', {
+    // the bounded pre-fetch orders by streak rather than the stale stored flag,
+    // with the id as a tie-break so the list is stable between runs.
+    expect(matches.order).toHaveBeenNthCalledWith(1, 'study_streak_days', {
       ascending: false,
     });
+    expect(matches.order).toHaveBeenNthCalledWith(2, 'id', { ascending: true });
     expect(pipeline.set).toHaveBeenCalledTimes(1);
     expect(pipeline.set).toHaveBeenCalledWith(
       'recommendations:daily:learner-1',
@@ -135,7 +147,10 @@ describe('daily recommendations contract', () => {
     ) as Array<{ id: string }>;
     expect(cached).toHaveLength(10);
     expect(cached.map((candidate) => candidate.id)).toEqual(
-      Array.from({ length: 10 }, (_, index) => `partner-${index + 1}`),
+      Array.from(
+        { length: 10 },
+        (_, index) => `partner-${String(index + 1).padStart(2, '0')}`,
+      ),
     );
   });
 
@@ -154,7 +169,10 @@ describe('daily recommendations contract', () => {
       makeCandidate('partner-2'),
     ]);
 
-    from.mockReturnValueOnce(users).mockReturnValueOnce(matches);
+    from
+      .mockReturnValueOnce(users)
+      .mockReturnValueOnce(matches)
+      .mockReturnValueOnce(makeQueryChain([]));
 
     await service.calculateDailyRecommendations();
 
@@ -187,11 +205,15 @@ describe('daily recommendations contract', () => {
       makeCandidate('partner-1'),
     ]);
 
-    from.mockReturnValueOnce(users).mockReturnValueOnce(matches);
+    from
+      .mockReturnValueOnce(users)
+      .mockReturnValueOnce(matches)
+      .mockReturnValueOnce(makeQueryChain([]));
 
     await service.calculateDailyRecommendations();
 
-    expect(from).toHaveBeenCalledTimes(2);
+    // One learner page, one shared candidate query, one terminal empty page.
+    expect(from).toHaveBeenCalledTimes(3);
     expect(pipeline.set).toHaveBeenCalledTimes(2);
     expect(pipeline.set.mock.calls.map((call) => call[0])).toEqual([
       'recommendations:daily:learner-1',

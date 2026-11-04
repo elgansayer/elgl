@@ -58,7 +58,7 @@ import { DiscoveryService } from '../../services/discovery.service';
         @if (translationErrorKey()) {
           <p
             [id]="translationStatusId()"
-            class="mt-1 text-xs text-danger"
+            class="mt-1 text-xs text-danger-ink"
             role="status"
             aria-live="polite"
           >

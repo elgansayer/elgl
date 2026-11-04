@@ -1,4 +1,4 @@
-import { Component, computed, inject, output, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, output } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
@@ -35,10 +35,15 @@ export class GlobalSearchComponent {
 
   readonly searchFilters = output<SearchFilterParams>();
 
-  readonly nativeLanguages = signal<string>('');
-  readonly targetLanguage = signal<string>('');
-  readonly level = signal<string>('');
-  readonly hasAudioIntro = signal<boolean>(false);
+  readonly initialNativeLanguages = input<string>('');
+  readonly initialTargetLanguage = input<string>('');
+  readonly initialLevel = input<string>('');
+  readonly initialHasAudioIntro = input<boolean>(false);
+
+  readonly nativeLanguages = linkedSignal(() => this.initialNativeLanguages());
+  readonly targetLanguage = linkedSignal(() => this.initialTargetLanguage());
+  readonly level = linkedSignal(() => this.initialLevel());
+  readonly hasAudioIntro = linkedSignal(() => this.initialHasAudioIntro());
   readonly audioIntroId = `global-hasAudioIntro-${crypto.randomUUID()}`;
 
   readonly levels = [
@@ -55,7 +60,7 @@ export class GlobalSearchComponent {
     const uiLangShort = uiLang.split('-')[0];
     let displayNames: Intl.DisplayNames;
     try {
-      displayNames = new Intl.DisplayNames([uiLangShort], { type: 'language' });
+      displayNames = new Intl.DisplayNames([uiLang, uiLangShort, 'en'], { type: 'language' });
     } catch {
       displayNames = new Intl.DisplayNames(['en'], { type: 'language' });
     }
@@ -75,7 +80,7 @@ export class GlobalSearchComponent {
         nativeName = code.toUpperCase();
       }
       return { code, translatedName, nativeName, flag: getLanguageFlag(code) };
-    }).sort((a, b) => a.translatedName.localeCompare(b.translatedName));
+    }).sort((a, b) => a.translatedName.localeCompare(b.translatedName, uiLangShort));
   });
 
   applyFilters(): void {

@@ -1,90 +1,133 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TipHostModalComponent } from './tip-host-modal.component';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
+import { EconomyStore } from '../../services/economy.store';
+import { I18nService } from '../../services/i18n.service';
+import { TipHostModalComponent } from './tip-host-modal.component';
 
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
-
-describe.skip('TipHostModalComponent', () => {
+describe('TipHostModalComponent', () => {
   let component: TipHostModalComponent;
   let fixture: ComponentFixture<TipHostModalComponent>;
-  let audioRoomsStore: AudioRoomsStore;
+  const tipHost = vi.fn<(roomId: string, amount: number, requestId: string) => Promise<boolean>>();
+  const coinsBalance = signal(200);
 
   beforeEach(async () => {
+    tipHost.mockReset();
+    coinsBalance.set(200);
     await TestBed.configureTestingModule({
       imports: [TipHostModalComponent],
       providers: [
-        AudioRoomsStore,
-        provideHttpClient(),
-        provideHttpClientTesting(),
+        { provide: AudioRoomsStore, useValue: { tipHost } },
+        { provide: EconomyStore, useValue: { coinsBalance } },
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string, params?: Record<string, unknown>) =>
+              params?.['amount'] === undefined ? key : `${key}:${params['amount']}`,
+          },
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TipHostModalComponent);
     component = fixture.componentInstance;
-    audioRoomsStore = TestBed.inject(AudioRoomsStore);
-
-    // Set required inputs
     fixture.componentRef.setInput('roomId', 'room-1');
-    fixture.componentRef.setInput('hostName', 'TestHost');
-    fixture.detectChanges();
+    fixture.componentRef.setInput('hostName', 'Test Host');
+    await fixture.whenStable();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders an accessible dialog with logical directional styles', () => {
+    const title = document.getElementById(component.titleId);
+    const dialog = title?.closest('[role="dialog"]') as HTMLElement | null;
+    expect(dialog).not.toBeNull();
+    expect(dialog?.getAttribute('aria-modal')).toBe('true');
+    expect(dialog?.outerHTML).not.toMatch(/\b(?:pl|pr|ml|mr|left|right|border-l|border-r)-/);
   });
 
-  it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-, border-s, border-e)', () => {
-    const modal = fixture.nativeElement.querySelector('.max-w-md');
-    expect(modal).toBeTruthy();
-    const html = modal.outerHTML;
-    expect(html).not.toMatch(/\bpl-\d/);
-    expect(html).not.toMatch(/\bpr-\d/);
-    expect(html).not.toMatch(/\bml-\d/);
-    expect(html).not.toMatch(/\bmr-\d/);
-    expect(html).not.toMatch(/\bborder-l\b/);
-    expect(html).not.toMatch(/\bborder-r\b/);
+  it('delegates focus, Escape and backdrop behaviour to the Spartan dialog', () => {
+    const title = document.getElementById(component.titleId);
+    const panel = title?.closest('.rounded-sheet') as HTMLElement | null;
+    const closeControls = panel?.querySelectorAll('[data-slot="dialog-close"]');
+
+    expect(panel).not.toBeNull();
+    expect(panel?.classList.contains('shadow-lift')).toBe(true);
+    expect(closeControls?.length).toBe(2);
   });
 
-  it('should have preset amounts', () => {
-    expect(component.presetAmounts()).toEqual([10, 50, 100, 500]);
-  });
-
-  it('should select a preset amount', () => {
+  it('selects only positive preset amounts', () => {
     component.selectAmount(50);
+    expect(component.selectedAmount()).toBe(50);
+
+    component.selectAmount(0);
     expect(component.selectedAmount()).toBe(50);
   });
 
-  it('should not select an amount less than 1', () => {
-    component.selectAmount(0);
-    expect(component.selectedAmount()).toBeNull();
-  });
-
-  it('should emit closed when backdrop is clicked', () => {
-    const spy = vi.spyOn(component.closed, 'emit');
-    component.onBackdropClick(new MouseEvent('click'));
-    expect(spy).not.toHaveBeenCalled(); // event target !== currentTarget in unit test
-  });
-
-  it('should call tipHost on confirmSend', async () => {
-    const tipSpy = vi.spyOn(audioRoomsStore, 'tipHost').mockResolvedValue(true);
+  it('submits one stable UUID and closes after success', async () => {
+    tipHost.mockResolvedValueOnce(true);
     const closeSpy = vi.spyOn(component.closed, 'emit');
+    component.selectAmount(100);
+
+    await component.confirmSend();
+
+    expect(tipHost).toHaveBeenCalledWith('room-1', 100, expect.any(String));
+    expect(tipHost.mock.calls[0]?.[2]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(closeSpy).toHaveBeenCalledOnce();
+  });
+
+  it('stays open and reuses the request key after a failed delivery', async () => {
+    tipHost.mockResolvedValue(false);
+    const closeSpy = vi.spyOn(component.closed, 'emit');
+    component.selectAmount(50);
+
+    await component.confirmSend();
+    await component.confirmSend();
+
+    expect(tipHost).toHaveBeenCalledTimes(2);
+    expect(tipHost.mock.calls[0]?.[2]).toBe(tipHost.mock.calls[1]?.[2]);
+    expect(closeSpy).not.toHaveBeenCalled();
+  });
+
+  it('uses a fresh request key after the amount changes', async () => {
+    tipHost.mockResolvedValue(false);
+    component.selectAmount(10);
+    await component.confirmSend();
+    const firstKey = tipHost.mock.calls[0]?.[2];
 
     component.selectAmount(100);
     await component.confirmSend();
 
-    expect(tipSpy).toHaveBeenCalledWith('room-1', 100);
-    expect(closeSpy).toHaveBeenCalled();
+    expect(tipHost.mock.calls[1]?.[2]).not.toBe(firstKey);
   });
 
-  it('should not call tipHost if no amount selected', async () => {
-    const tipSpy = vi.spyOn(audioRoomsStore, 'tipHost').mockResolvedValue(true);
-    await component.confirmSend();
-    expect(tipSpy).not.toHaveBeenCalled();
+  it('disables submission when the selected tip exceeds the balance', async () => {
+    coinsBalance.set(20);
+    component.selectAmount(50);
+    await fixture.whenStable();
+
+    const title = document.getElementById(component.titleId);
+    const panel = title?.closest('.rounded-sheet');
+    const sendButton = panel?.querySelector(
+      'button[aria-label="audioRoom.tipSendAria:50"]',
+    ) as HTMLButtonElement | null;
+    expect(sendButton?.disabled).toBe(true);
   });
 
-  it('should handle custom amount', () => {
-    component.onCustomAmountChange(25);
-    expect(component.customAmount()).toBe(25);
+  it('emits close for a dialog-originated dismissal', () => {
+    const closeSpy = vi.spyOn(component.closed, 'emit');
+
+    component.onDialogStateChanged('closed');
+
+    expect(closeSpy).toHaveBeenCalledOnce();
+  });
+
+  it('does not close the dialog while a tip is in flight', () => {
+    const closeSpy = vi.spyOn(component.closed, 'emit');
+    component.isSending.set(true);
+
+    component.onDialogStateChanged('closed');
+
+    expect(closeSpy).not.toHaveBeenCalled();
   });
 });

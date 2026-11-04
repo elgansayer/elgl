@@ -56,12 +56,12 @@ export class AppChipComponent {
     switch (this.variant()) {
       case 'default':
         variantClass = this.selected()
-          ? 'bg-primary/10 text-primary border border-primary/20'
+          ? 'bg-primary/10 text-primary-ink border border-primary/20'
           : 'bg-surface-100 text-text-primary border border-surface-100';
         break;
       case 'outlined':
         variantClass = this.selected()
-          ? 'border-2 border-primary text-primary bg-surface-200'
+          ? 'border-2 border-primary text-primary-ink bg-surface-200'
           : 'border border-surface-100 text-text-primary bg-surface-200';
         break;
       case 'primary':

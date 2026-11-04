@@ -1,39 +1,47 @@
 # Matchmaking and Discovery UI
 
-Issue #959 is implemented by the existing Angular `DiscoveryComponent` and its shared filter primitives rather than by a second discovery surface.
+Issue #1715 is implemented by the existing Angular `DiscoveryComponent` and its shared filter primitives rather than by a second discovery surface.
 
 ## Product contract
 
 `/discovery` owns partner matchmaking. The screen exposes the repository's canonical discovery filters and sends them through `DiscoveryService.findPartners()`:
 
-- distance is expressed in kilometres in the UI and converted to `radius_metres` at the API boundary;
+- the VIP distance slider and explicit Nearby flow express distance in kilometres in the UI and convert it to `radius_metres` at the API boundary;
+- ordinary free discovery omits the disabled radius, while coordinate-based searches without an explicit radius retain the API's 50 km default;
+- an explicit distance filter requires browser coordinates or, for a VIP member, a valid saved profile point; the API enforces the VIP boundary server-side and returns a validation error instead of silently running an unbounded query when an entitled request has no origin;
+- authenticated profile failures remain unavailable or not-found states and never fall back to synthetic VIP, administrator, or language data;
 - native language, target language, proficiency and audio-intro filters are collected by the shared global-search control;
 - the user's target languages are also available as fast target-language pills;
 - the Serious Learner filter maps to `serious_learner_only` while the separately persisted Serious Learner mode remains owned by the account/discovery preference flow;
+- spatial and non-spatial searches share the same Serious Learner qualification: a study streak of at least seven days and activity within the last 24 hours;
 - age, VIP-gated gender, interests, availability, voice-room activity and sort options continue to compose with the same request rather than starting parallel searches.
 
-Changing an age or distance slider uses the existing 300 ms debounce. A new search aborts the previous request, and only the active request may clear the loading state or replace results. Reset restores the default 50 km radius, 18-100 age range, best-match sort and clears optional filters before issuing one new search.
+Changing an age or distance slider uses the existing 300 ms debounce. For VIP discovery, the API applies the selected radius relative to the authenticated learner's saved profile location, while the explicit Nearby filter uses its short-lived browser coordinates. This keeps the distance control effective without requesting browser location when discovery opens. A new search aborts the previous request, and only the active request may clear the loading state or replace results. Reset restores the default 50 km radius, 18-100 age range, best-match sort and clears optional filters before issuing one new search.
+
+If the PostGIS radius query is unavailable, the API returns an unavailable response rather than substituting non-spatial partners that may fall outside the selected distance.
 
 ## State and failure behaviour
 
-The component has explicit loading, result, empty and retryable error states. Search errors do not mutate the selected filters, so Retry repeats the user's current criteria. Superseded requests are ignored after cancellation so a slow response cannot overwrite newer results.
+The component has explicit loading, result, empty and error states. `DiscoveryService` preserves the distinction between a genuine empty result and an API failure. Authentication/authorisation, rate-limit, invalid-filter and unavailable failures receive translated guidance. Retry preserves the user's current criteria; an invalid-filter response offers Reset Filters instead because repeating the same request cannot succeed. Logs contain only the sanitised failure class and status, never the request URL or Nearby coordinates. Superseded requests are ignored after cancellation so a slow response cannot overwrite newer results.
 
 Blocked users are removed before partner cards are exposed even when a lower layer returns a stale cached result. Server-side discovery eligibility and privacy checks remain authoritative; the client-side block pass is defence in depth, not a replacement for backend authorization.
+
+Partner cards render only profile data returned by the API. Missing language lists remain empty. Missing or unreachable avatar images use the bundled default-avatar asset, and Discovery does not synthesise language pairs or contact a third-party image endpoint. Database failures in both the primary and language-pair searches return an unavailable response rather than fabricating partner profiles; genuine successful empty queries remain empty results.
 
 Offline discovery remains owned by `OfflineDiscoveryCacheService` and `DiscoveryService`. The UI indicates when it is offline and when cached data is being used. This issue does not add another cache or another persistence model.
 
 ## Accessibility and responsive behaviour
 
-The screen uses the existing Spartan controls and shared slider/language-picker primitives. Filters have programmatic labels, the result region exposes loading/error semantics, and controls remain keyboard operable. Filter rows wrap or horizontally scroll on narrow screens rather than requiring a desktop viewport. Important state is expressed in text/ARIA state rather than colour alone.
+The screen uses the existing Spartan controls and shared slider/language-picker primitives. The language picker is a Spartan modal dialog, which owns initial focus, focus containment, Escape and backdrop dismissal, and trigger-focus restoration. Filters have programmatic labels, the result region exposes loading/error semantics, and controls remain keyboard operable. Filter rows wrap or horizontally scroll on narrow screens rather than requiring a desktop viewport. Important state is expressed in text/ARIA state rather than colour alone.
 
 ## Verification
 
-`frontend/src/app/components/discovery/discovery-filter-contract.spec.ts` is the active Vitest contract suite for #959. It verifies that distance, native/target language and Serious Learner criteria reach the canonical search request, that VIP-only gender filtering is not sent for free users, that blocked users are removed, failures expose the retryable error state, reset restores defaults, and superseded requests cannot replace newer results.
+`frontend/src/app/components/discovery/discovery-filter-contract.spec.ts` is the active Vitest contract suite for #1715. It renders and drives the actual distance, language and Serious Learner controls, verifies that their criteria reach the canonical search request, exercises rendered error recovery, and proves missing profile data is not fabricated. It also verifies that VIP-only gender filtering is not sent for free users, that blocked users are removed, reset restores defaults, and superseded requests cannot replace newer results. `frontend/src/app/components/primitives/language-picker/language-picker.component.spec.ts` covers the dialog's Escape and focus-restoration contract. `backend/src/discovery/discovery.service.spec.ts` proves that the saved profile point and requested radius reach the PostGIS search. `backend/src/database/migrations/20261030033000_align_nearby_serious_learner_policy.spec.ts` keeps the PostGIS Serious Learner predicate aligned with the canonical service policy. `frontend/src/app/services/discovery.service.spec.ts` covers classification at the live HTTP boundary, including retry policy and sanitised failure details passed to the component.
 
-`frontend/src/app/components/discovery/discovery-search-race.spec.ts` separately locks loading-state ownership during overlapping searches. The older broad discovery component suite remains untouched for historical coverage while the focused #959 contract is executable in normal CI. Shared primitives retain their own component-level coverage.
+`frontend/src/app/components/discovery/discovery-search-race.spec.ts` separately locks loading-state ownership during overlapping searches. The older broad discovery component suite remains untouched for historical coverage while the focused #1715 contract is executable in normal CI. Shared primitives retain their own component-level coverage.
 
 ## Rollout and rollback
 
-There is no database migration, new endpoint or persisted-data change for #959. Deploy using the normal frontend release pipeline. Rollback is a normal revert of the issue-completion PR; the existing production discovery route and API contract are unchanged.
+The forward migration replaces the existing PostGIS function body without changing its signature or result shape, so mixed backend versions remain compatible and retries are safe. Deploy it before or with the application release. Rollback restores the previous function body from `20260828082500_enforce_serious_learner_thresholds.sql`; no persisted user data is changed.
 
-Nearby geolocation, persisted Serious Learner mode semantics and recommendation-carousel work are intentionally left to their dedicated issues/PRs so this completion change does not duplicate or conflict with those implementations.
+Nearby geolocation, persisted Serious Learner mode semantics and recommendation-carousel behaviour remain owned by their existing dedicated implementations. This change composes those paths instead of introducing competing versions.

@@ -209,7 +209,7 @@ describe('DiscoveryService PostGIS search contract', () => {
     );
   });
 
-  it('falls back to the bounded non-spatial query when PostGIS is unavailable and removes stale distance metadata', async () => {
+  it('does not return non-spatial rows when PostGIS cannot enforce the radius', async () => {
     supabaseClient.rpc.mockResolvedValue({
       data: null,
       error: { message: 'PostGIS unavailable' },
@@ -219,18 +219,13 @@ describe('DiscoveryService PostGIS search contract', () => {
       error: null,
     });
 
-    const result = await service.searchPartners('viewer-1', null, {
-      latitude: 40.7128,
-      longitude: -74.006,
-    });
-
-    expect(queryBuilder['limit']).toHaveBeenCalledTimes(1);
-    expect(queryBuilder['limit']).toHaveBeenCalledWith(50);
-    expect(result).toEqual([
-      expect.objectContaining({
-        id: 'fallback-1',
-        distance_metres: undefined,
+    await expect(
+      service.searchPartners('viewer-1', null, {
+        latitude: 40.7128,
+        longitude: -74.006,
+        radius_metres: 1_000,
       }),
-    ]);
+    ).rejects.toThrow('Partner discovery is temporarily unavailable');
+    expect(queryBuilder['limit']).not.toHaveBeenCalled();
   });
 });

@@ -158,24 +158,14 @@ export class UserService {
   }
 
   async getMyProfile(): Promise<UserProfile | null> {
-    const fallbackProfile: UserProfile = {
-      ...MOCK_USER_PROFILE,
-      status_text: 'Learning new languages!',
-      chat_enter_to_send: false,
-      chat_text_size: 'medium',
-      auto_download_wifi_only: false,
-      auto_download_preference: 'wifi',
-      last_active_at: new Date().toISOString(),
-    };
-
     if (!this.authService.getAccessToken()) {
-      return fallbackProfile;
+      return null;
     }
 
     return firstValueFrom(
       this.http
         .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of(fallbackProfile))),
+        .pipe(catchError(() => of(null))),
     );
   }
 

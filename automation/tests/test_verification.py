@@ -29,6 +29,7 @@ def test_verification_sets_private_umask_before_any_cache_creation(tmp_path: Pat
             + '\nmkdir "$workspace/private-cache"\ntouch "$workspace/private-cache/receipt"\n',
             "test-verification-umask",
             *([str(tmp_path)] * 8),
+            "0",
         ),
         check=True,
         capture_output=True,
@@ -116,6 +117,7 @@ def test_neptune_zero_exit_requires_a_complete_matching_literal_success_receipt(
     command = commands_for(tmp_path, {Path("docs/readme.md")}, "neptune")[0]
     names = [
         "input-tooling",
+        "film-contracts",
         "catalogue-tests",
         "catalogue-validation",
         "factory-contracts",

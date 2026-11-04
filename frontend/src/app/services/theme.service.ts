@@ -7,6 +7,11 @@ export type Theme = 'light' | 'dark' | 'system';
 const ACCENT_STORAGE_KEY = 'app_primary_accent_color';
 const THEME_STORAGE_KEY = 'app_theme';
 const HEX_COLOUR_PATTERN = /^#[0-9a-f]{6}$/i;
+const MINIMUM_TEXT_CONTRAST = 4.5;
+const LIGHTNESS_STEP = 0.005;
+type RgbColour = [number, number, number];
+type HslColour = [number, number, number];
+const LIGHT_SURFACE_500: RgbColour = [246, 247, 250];
 
 function isTheme(value: unknown): value is Theme {
   return typeof value === 'string' && ['light', 'dark', 'system'].includes(value);
@@ -16,13 +21,100 @@ function isAccentColour(value: unknown): value is string {
   return typeof value === 'string' && HEX_COLOUR_PATTERN.test(value);
 }
 
-function hexToRgb(hex: string): [number, number, number] {
+function hexToRgb(hex: string): RgbColour {
   const value = hex.slice(1);
   return [
     Number.parseInt(value.slice(0, 2), 16),
     Number.parseInt(value.slice(2, 4), 16),
     Number.parseInt(value.slice(4, 6), 16),
   ];
+}
+
+function rgbToHsl([redByte, greenByte, blueByte]: RgbColour): HslColour {
+  const red = redByte / 255;
+  const green = greenByte / 255;
+  const blue = blueByte / 255;
+  const maximum = Math.max(red, green, blue);
+  const minimum = Math.min(red, green, blue);
+  const delta = maximum - minimum;
+  const lightness = (maximum + minimum) / 2;
+
+  if (delta === 0) return [0, 0, lightness];
+
+  const saturation = delta / (1 - Math.abs(2 * lightness - 1));
+  let hue: number;
+  if (maximum === red) {
+    hue = 60 * (((green - blue) / delta) % 6);
+  } else if (maximum === green) {
+    hue = 60 * ((blue - red) / delta + 2);
+  } else {
+    hue = 60 * ((red - green) / delta + 4);
+  }
+
+  return [(hue + 360) % 360, saturation, lightness];
+}
+
+function hslToRgb([hue, saturation, lightness]: HslColour): RgbColour {
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const second = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const match = lightness - chroma / 2;
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+
+  if (hue < 60) {
+    red = chroma;
+    green = second;
+  } else if (hue < 120) {
+    red = second;
+    green = chroma;
+  } else if (hue < 180) {
+    green = chroma;
+    blue = second;
+  } else if (hue < 240) {
+    green = second;
+    blue = chroma;
+  } else if (hue < 300) {
+    red = second;
+    blue = chroma;
+  } else {
+    red = chroma;
+    blue = second;
+  }
+
+  return [
+    Math.round((red + match) * 255),
+    Math.round((green + match) * 255),
+    Math.round((blue + match) * 255),
+  ];
+}
+
+function relativeLuminance([red, green, blue]: RgbColour): number {
+  const linearise = (channel: number) => {
+    const value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+
+  return 0.2126 * linearise(red) + 0.7152 * linearise(green) + 0.0722 * linearise(blue);
+}
+
+function contrastRatio(first: RgbColour, second: RgbColour): number {
+  const lighter = Math.max(relativeLuminance(first), relativeLuminance(second));
+  const darker = Math.min(relativeLuminance(first), relativeLuminance(second));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function deriveLightTextColour(colour: RgbColour): RgbColour {
+  const [hue, saturation, initialLightness] = rgbToHsl(colour);
+  let lightness = initialLightness;
+  let candidate = colour;
+
+  while (contrastRatio(candidate, LIGHT_SURFACE_500) < MINIMUM_TEXT_CONTRAST && lightness > 0) {
+    lightness = Math.max(0, lightness - LIGHTNESS_STEP);
+    candidate = hslToRgb([hue, saturation, lightness]);
+  }
+
+  return candidate;
 }
 
 @Injectable({
@@ -148,12 +240,22 @@ export class ThemeService {
     if (!colour) {
       root.style.removeProperty('--color-primary-rgb');
       root.style.removeProperty('--color-primary');
+      root.style.removeProperty('--color-primary-text-rgb');
       return;
     }
 
     const [r, g, b] = hexToRgb(colour);
     root.style.setProperty('--color-primary-rgb', `${r} ${g} ${b}`);
     root.style.setProperty('--color-primary', colour);
+    this.applyPrimaryTextColour([r, g, b], root.classList.contains('dark'));
+  }
+
+  private applyPrimaryTextColour(colour: RgbColour, isDark: boolean): void {
+    const root = this.document?.documentElement;
+    if (!root) return;
+
+    const [red, green, blue] = isDark ? colour : deriveLightTextColour(colour);
+    root.style.setProperty('--color-primary-text-rgb', `${red} ${green} ${blue}`);
   }
 
   private applyTheme(theme: Theme): void {
@@ -166,5 +268,10 @@ export class ThemeService {
         window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     this.document.documentElement.classList.toggle('dark', isDark);
+
+    const accent = this.primaryAccentColor();
+    if (accent) {
+      this.applyPrimaryTextColour(hexToRgb(accent), isDark);
+    }
   }
 }

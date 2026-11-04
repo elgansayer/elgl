@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -11,6 +12,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { PROFICIENCY_LEVELS } from '../../users/proficiency-level';
 
 const transformOptionalBoolean = ({ value }: { value: unknown }): unknown => {
   if (value === true || value === false) return value;
@@ -60,7 +62,7 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Search radius in metres (1000 - 250000). Defaults to 50000 (50 km). Used by the PostGIS ST_DWithin RPC for proximity filtering.',
+      'Search radius in metres (1000 - 250000). With a spatial origin, an omitted radius defaults to 50000 (50 km). Without an origin, omitting it preserves global discovery.',
     minimum: 1000,
     maximum: 250000,
     default: 50000,
@@ -73,7 +75,7 @@ export class SearchQueryDto {
   @IsNumber()
   @Min(1000)
   @Max(250000)
-  radius_metres?: number = 50000;
+  radius_metres?: number;
 
   @ApiPropertyOptional({
     description:
@@ -112,7 +114,11 @@ export class SearchQueryDto {
     example: 'B1',
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   @IsString()
+  @IsIn(PROFICIENCY_LEVELS)
   level?: string;
 
   @ApiPropertyOptional({

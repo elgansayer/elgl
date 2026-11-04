@@ -2,7 +2,7 @@
   <div class="flex items-center justify-between gap-2 border-b border-surface-100 pb-2.5">
     <div class="flex items-center gap-3">
       <div
-        class="h-10 w-10 rounded-card bg-primary/10 text-primary flex items-center justify-center"
+        class="h-10 w-10 rounded-card bg-primary/10 text-primary-ink flex items-center justify-center"
       >
         💬
       </div>
@@ -54,6 +54,28 @@
       </app-button-secondary>
     </div>
   </div>
+
+  @if (isE2eeRoom()) {
+    <div
+      class="mt-2 flex items-center justify-center gap-1.5 ps-3 pe-3 pt-1.5 pb-1.5 bg-surface-200/60 rounded-card border border-surface-200 text-xs text-text-muted select-none"
+      role="status"
+    >
+      <svg
+        class="w-3.5 h-3.5 text-success shrink-0"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      <span>{{ 'chatRoom.e2eeBanner' | t }}</span>
+    </div>
+  }
 
   @if (pendingUnlock()) {
     <div class="flex-1 flex flex-col items-center justify-center gap-3 text-center">
@@ -112,7 +134,7 @@
           />
           <app-button-secondary
             (clicked)="removeMember()"
-            customClass="ps-3 pe-3 pt-2 pb-2 text-xs text-danger"
+            customClass="ps-3 pe-3 pt-2 pb-2 text-xs text-danger-ink"
             [ariaLabel]="'chatRoom.removeMemberBtn' | t"
           >
             {{ 'chatRoom.removeMemberBtn' | t }}
@@ -142,7 +164,7 @@
       }
 
       @for (msg of filteredMessages(); track msg.id) {
-        @if (msg.message_type === 'system' && msg.system_event) {
+        @if (msg.message_type === 'system') {
           <app-chat-system-bubble
             [eventType]="msg.system_event?.type ?? ''"
             [params]="msg.system_event ?? {}"
@@ -152,6 +174,8 @@
             [messageId]="msg.id"
             [messageContent]="msg.text_content ?? ''"
             [messageType]="msg.message_type"
+            [correctionOriginal]="msg.correction_payload?.original ?? null"
+            [correctionCorrected]="msg.correction_payload?.corrected ?? null"
             [senderId]="msg.sender_id"
             [roomId]="roomId"
             [isBlocked]="blockedUserIds().includes(msg.sender_id)"
@@ -174,20 +198,25 @@
             >
               <div
                 [class]="
-                  'relative max-w-[80%] ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
-                  (isOwnMessage(msg)
-                    ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-on-fill'
-                    : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary')
+                  'relative max-w-[80%] text-sm transition-colors ' +
+                  (msg.message_type === 'gift'
+                    ? 'bg-transparent shadow-none'
+                    : 'ps-3 pe-3 pt-2.5 pb-2.5 shadow-sm ' +
+                      (isOwnMessage(msg)
+                        ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-on-fill'
+                        : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary'))
                 "
                 [class.ring-2]="highlightedMessageId() === msg.id"
                 [class.ring-warning]="highlightedMessageId() === msg.id"
               >
-                <span
-                  class="chat-bubble-tail"
-                  [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
-                  [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
-                  aria-hidden="true"
-                ></span>
+                @if (msg.message_type !== 'gift') {
+                  <span
+                    class="chat-bubble-tail"
+                    [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
+                    [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
+                    aria-hidden="true"
+                  ></span>
+                }
                 <p class="mb-1 text-[11px] opacity-70 flex items-center gap-1">
                   <span>
                     {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
@@ -244,7 +273,7 @@
                       }
                       @if (msg.delivery_status === 'read') {
                         <svg
-                          class="w-3.5 h-3.5 text-secondary"
+                          class="w-3.5 h-3.5 text-secondary-ink"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -258,7 +287,7 @@
                           />
                         </svg>
                         <svg
-                          class="w-3.5 h-3.5 -ms-2 text-secondary"
+                          class="w-3.5 h-3.5 -ms-2 text-secondary-ink"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -300,6 +329,7 @@
                 @if (msg.message_type === 'text' && msg.text_content) {
                   <app-tokenised-text
                     [text]="msg.text_content ?? ''"
+                    [language]="partnerLanguage() || 'en'"
                     (wordClicked)="onWordClicked($event)"
                   ></app-tokenised-text>
                   @if (transliterations()[msg.id]) {
@@ -308,7 +338,7 @@
                     </p>
                   }
                   @if (showTranslation()[msg.id] && translations()[msg.id]) {
-                    <p class="mt-1 text-[10px] text-primary italic">
+                    <p class="mt-1 text-[10px] text-primary-ink italic">
                       {{ translations()[msg.id] }}
                     </p>
                   }
@@ -321,6 +351,9 @@
                       [siteName]="lp.siteName"
                     ></app-link-preview-card>
                   }
+                }
+                @if (msg.message_type === 'gift') {
+                  <app-gift-animation [giftPayload]="msg.gift_payload ?? null" />
                 }
                 @if (msg.message_type === 'correction' && msg.correction_payload) {
                   <app-visual-diff
@@ -438,7 +471,8 @@
     @if (showDoodleModal()) {
       <hlm-dialog
         state="open"
-        aria-labelledby="doodle-pad-title"
+        [aria-label]="'doodle.title' | t"
+        [aria-labelledby]="null"
         [aria-describedby]="null"
         (closed)="showDoodleModal.set(false)"
       >
@@ -483,7 +517,7 @@
       <div class="mb-2 flex flex-wrap items-center gap-2">
         <app-button-secondary
           (clicked)="showDoodleModal.set(true)"
-          customClass="bg-secondary/20 text-secondary ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          customClass="bg-secondary/20 text-secondary-ink ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
           [ariaLabel]="'chatRoom.doodleBtn' | t"
         >
           {{ 'chatRoom.doodleBtn' | t }}

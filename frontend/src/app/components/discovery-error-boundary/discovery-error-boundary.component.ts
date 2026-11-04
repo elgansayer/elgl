@@ -82,10 +82,10 @@ function parseStackFrames(stack: string): DiscoveryCrashPayload['stackFrames'] {
           class="rounded-sheet border border-danger/30 bg-danger/10 p-6 text-center space-y-4"
         >
           <p class="text-4xl" aria-hidden="true">&#128269;</p>
-          <h3 class="text-lg font-black text-danger">{{ 'discoveryErrorBoundary.title' | t }}</h3>
+          <h3 class="text-lg font-black text-danger-ink">{{ 'discoveryErrorBoundary.title' | t }}</h3>
           <p class="text-sm text-text-secondary">{{ 'discoveryErrorBoundary.description' | t }}</p>
           @if (errorMessage()) {
-            <p class="rounded-app bg-surface-200 p-3 text-xs font-mono text-danger break-all">
+            <p class="rounded-app bg-surface-200 p-3 text-xs font-mono text-danger-ink break-all">
               {{ errorMessage() }}
             </p>
           }

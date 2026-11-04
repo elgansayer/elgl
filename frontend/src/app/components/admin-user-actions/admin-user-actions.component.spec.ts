@@ -122,7 +122,7 @@ describe('AdminUserActionsComponent', () => {
 
     const feedbackEl = fixture.nativeElement.querySelector('[role="status"]');
     expect(feedbackEl?.textContent?.trim()).toBe('admin.banFailed');
-    expect(feedbackEl?.classList.contains('text-danger')).toBe(true);
+    expect(feedbackEl?.classList.contains('text-danger-ink')).toBe(true);
   });
 
   it('handles warn successfully and updates feedback state', async () => {
@@ -167,6 +167,6 @@ describe('AdminUserActionsComponent', () => {
 
     const feedbackEl = fixture.nativeElement.querySelector('[role="status"]');
     expect(feedbackEl?.textContent?.trim()).toBe('admin.warningFailed');
-    expect(feedbackEl?.classList.contains('text-danger')).toBe(true);
+    expect(feedbackEl?.classList.contains('text-danger-ink')).toBe(true);
   });
 });

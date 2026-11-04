@@ -12,7 +12,10 @@ import * as jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
-import { SubscriptionPlansService } from './services/subscription-plans.service';
+import {
+  SubscriptionPlansService,
+  type VipTier,
+} from './services/subscription-plans.service';
 
 // Google signs every Cloud Pub/Sub push request with an OIDC ID token in the
 // `Authorization: Bearer <token>` header - see
@@ -300,6 +303,12 @@ export class GooglePlayNotificationService {
     }
 
     const tier = this.mapSubscriptionIdToTier(subscriptionId);
+    if (!tier) {
+      this.logger.warn(
+        `Refusing Google Play subscription with unknown product ID ${subscriptionId}`,
+      );
+      return;
+    }
     this.logger.info(
       `Activating subscription for user ${userId}, tier: ${tier}`,
     );
@@ -418,10 +427,7 @@ export class GooglePlayNotificationService {
     return ownerId === userId;
   }
 
-  private mapSubscriptionIdToTier(subscriptionId: string): string {
-    return (
-      this.subscriptionPlansService.getTierByProductId(subscriptionId) ??
-      'consumer_8_ukp_10_usd'
-    );
+  private mapSubscriptionIdToTier(subscriptionId: string): VipTier | null {
+    return this.subscriptionPlansService.getTierByProductId(subscriptionId);
   }
 }

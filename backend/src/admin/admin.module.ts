@@ -22,6 +22,7 @@ import { AdminRoleInventoryService } from './admin-role-inventory.service';
 import { AdminRolesV1Controller } from './admin-roles-v1.controller';
 import { AdminService } from './admin.service';
 import { AdminSystemHealthService } from './admin-system-health.service';
+import { AdminUserDetailService } from './admin-user-detail.service';
 import { AdminV1Controller } from './admin-v1.controller';
 import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 import { AdminGuard } from './guards/admin.guard';
@@ -39,6 +40,7 @@ import { NetworkAbuseGuard } from './guards/network-abuse.guard';
   ],
   providers: [
     AdminService,
+    AdminUserDetailService,
     AdminAuthorizationService,
     AdminAuditService,
     AdminAuditQueryService,

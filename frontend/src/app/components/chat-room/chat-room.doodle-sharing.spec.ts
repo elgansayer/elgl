@@ -74,7 +74,6 @@ describe('ChatRoomComponent doodle sharing contract', () => {
       getGroupMembers: vi.fn().mockResolvedValue([]),
       getMessages: vi.fn().mockResolvedValue([]),
       sendMessage,
-      addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),
@@ -170,7 +169,8 @@ describe('ChatRoomComponent doodle sharing contract', () => {
       const dialog = doodleDialog();
       expect(dialog).not.toBeNull();
       expect(dialog?.getAttribute('aria-modal')).toBe('true');
-      expect(dialog?.getAttribute('aria-labelledby')).toBe('doodle-pad-title');
+      expect(dialog?.hasAttribute('aria-labelledby')).toBe(false);
+      expect(dialog?.getAttribute('aria-label')).toBe(i18n.translate('doodle.title'));
       expect(document.getElementById('doodle-pad-title')?.textContent?.trim()).toBe(
         i18n.translate('doodle.title'),
       );

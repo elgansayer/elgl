@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
-import { QuickPollService } from './quick-poll.service';
+import { parseQuickPollRealtimeEvent, QuickPollService } from './quick-poll.service';
 
 describe('QuickPollService', () => {
   const getAccessToken = vi.fn();
@@ -43,7 +44,7 @@ describe('QuickPollService', () => {
     ).resolves.toEqual({ poll_id: 'poll-1' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/audio-rooms/room%2Fone/polls', {
+    expect(fetchMock).toHaveBeenCalledWith(`${environment.apiUrl}/audio-rooms/room%2Fone/polls`, {
       method: 'POST',
       body: JSON.stringify({ question: 'Next topic?', options: ['Travel', 'Food'] }),
       headers: {
@@ -57,7 +58,7 @@ describe('QuickPollService', () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 201 }));
 
     await expect(service.submitVote('poll-1', 2)).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledWith('/api/audio-rooms/polls/vote', {
+    expect(fetchMock).toHaveBeenCalledWith(`${environment.apiUrl}/audio-rooms/polls/vote`, {
       method: 'POST',
       body: JSON.stringify({ pollId: 'poll-1', optionIndex: 2 }),
       headers: {
@@ -74,6 +75,87 @@ describe('QuickPollService', () => {
       'Authentication required',
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('loads and validates the active poll used for reconnect recovery', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          poll_id: 'poll-1',
+          question: 'Next topic?',
+          options: ['Travel', 'Food'],
+          votes: [2, 1],
+          totalVotes: 3,
+          is_active: true,
+          userVote: 0,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    await expect(service.getActivePoll('room/one')).resolves.toMatchObject({
+      poll_id: 'poll-1',
+      votes: [2, 1],
+      userVote: 0,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${environment.apiUrl}/audio-rooms/room%2Fone/polls/active`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+      },
+    );
+  });
+
+  it('rejects malformed poll result payloads', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          poll_id: 'poll-1',
+          question: 'Next topic?',
+          options: ['Travel', 'Food'],
+          votes: [1],
+          totalVotes: 1,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    await expect(service.getActivePoll('room-1')).rejects.toThrow('Invalid quick poll response');
+  });
+
+  it('rejects inconsistent aggregate totals and caller votes', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          poll_id: 'poll-1',
+          question: 'Next topic?',
+          options: ['Travel', 'Food'],
+          votes: [1, 1],
+          totalVotes: 3,
+          userVote: null,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    await expect(service.getActivePoll('room-1')).rejects.toThrow('Invalid quick poll response');
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          poll_id: 'poll-1',
+          question: 'Next topic?',
+          options: ['Travel', 'Food'],
+          votes: [1, 1],
+          totalVotes: 2,
+          userVote: 2,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    await expect(service.getActivePoll('room-1')).rejects.toThrow('Invalid quick poll response');
   });
 
   it('rejects invalid or duplicate options before sending a request', async () => {
@@ -113,5 +195,39 @@ describe('QuickPollService', () => {
     await expect(service.submitVote('poll-1', -1)).rejects.toThrow('Invalid quick poll vote');
     await expect(service.submitVote('poll-1', 1.5)).rejects.toThrow('Invalid quick poll vote');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('narrows realtime opened and updated poll payloads', () => {
+    expect(
+      parseQuickPollRealtimeEvent({
+        type: 'poll_opened',
+        poll_id: 'poll-1',
+        question: 'Next topic?',
+        options: ['Travel', 'Food'],
+      }),
+    ).toEqual({
+      type: 'poll_opened',
+      poll: {
+        poll_id: 'poll-1',
+        question: 'Next topic?',
+        options: ['Travel', 'Food'],
+        votes: [0, 0],
+        totalVotes: 0,
+        is_active: true,
+        userVote: null,
+      },
+    });
+    expect(
+      parseQuickPollRealtimeEvent({
+        type: 'poll_updated',
+        poll_id: 'poll-1',
+        question: 'Next topic?',
+        options: ['Travel', 'Food'],
+        votes: [1, 2],
+        totalVotes: 3,
+        is_active: true,
+      }),
+    ).toMatchObject({ type: 'poll_updated', poll: { votes: [1, 2] } });
+    expect(parseQuickPollRealtimeEvent({ type: 'poll_updated', votes: ['invalid'] })).toBeNull();
   });
 });
