@@ -1,3 +1,12 @@
+import 'reflect-metadata';
+import type {
+  CallHandler,
+  ExecutionContext,
+  NestInterceptor,
+} from '@nestjs/common';
+import { INTERCEPTORS_METADATA } from '@nestjs/common/constants';
+import { of } from 'rxjs';
+import { CacheControlInterceptor } from '../common/cache.interceptor';
 import { AdminAuditQueryService } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
@@ -317,5 +326,45 @@ describe('AdminV1Controller', () => {
 
     await expect(controller.getUser('user-1')).resolves.toEqual(expected);
     expect(adminService.getUser).toHaveBeenCalledWith('user-1');
+  });
+
+  describe('privileged user responses', () => {
+    const headersSetBy = (handler: object): Record<string, string> => {
+      const interceptors = (Reflect.getMetadata(
+        INTERCEPTORS_METADATA,
+        handler,
+      ) ?? []) as NestInterceptor[];
+      const cacheControl = interceptors.find(
+        (interceptor) => interceptor instanceof CacheControlInterceptor,
+      );
+      expect(cacheControl).toBeDefined();
+
+      const headers: Record<string, string> = {};
+      const context = {
+        switchToHttp: () => ({
+          getRequest: () => ({ headers: { authorization: 'Bearer admin' } }),
+          getResponse: () => ({
+            setHeader: (name: string, value: string) => {
+              headers[name] = value;
+            },
+            removeHeader: vi.fn(),
+          }),
+        }),
+      } as unknown as ExecutionContext;
+      const next: CallHandler = { handle: () => of(null) };
+      cacheControl?.intercept(context, next).subscribe();
+      return headers;
+    };
+
+    it.each([
+      ['listUsers', AdminV1Controller.prototype.listUsers],
+      ['getUser', AdminV1Controller.prototype.getUser],
+      ['getUserLoginHistory', AdminV1Controller.prototype.getUserLoginHistory],
+    ])('%s forbids browser and CDN storage of user data', (_name, handler) => {
+      expect(headersSetBy(handler)).toEqual({
+        'Cache-Control': 'private, no-store',
+        'CDN-Cache-Control': 'private, no-store',
+      });
+    });
   });
 });

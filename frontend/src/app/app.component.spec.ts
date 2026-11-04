@@ -45,9 +45,7 @@ describe('AppComponent', () => {
 
   const economyStoreMock = {
     loadInitialData: vi.fn(() => Promise.resolve()),
-    claimDailyCheckIn: vi.fn(() =>
-      Promise.resolve({ claimed: true, coins_rewarded: 123 }),
-    ),
+    claimDailyCheckIn: vi.fn(() => Promise.resolve({ claimed: true, coins_rewarded: 123 })),
     triggerGiftAnimation: vi.fn(),
     activeGiftAnimation: vi.fn(() => null),
   };
@@ -78,6 +76,14 @@ describe('AppComponent', () => {
     set: vi.fn(),
     increment: vi.fn(),
     decrement: vi.fn(),
+    snapshot: vi.fn(() => ({
+      chat: 0,
+      moments: 0,
+      discovery: 0,
+      audioRooms: 0,
+      profile: 0,
+    })),
+    reconcile: vi.fn(),
     resetAll: vi.fn(),
     setChatUnread: vi.fn(),
     setNotificationUnread: vi.fn(),
@@ -103,7 +109,12 @@ describe('AppComponent', () => {
   };
 
   const notificationServiceMock = {
-    getUnreadCount: vi.fn(() => Promise.resolve(0)),
+    getUnreadCount: vi.fn(() =>
+      Promise.resolve({
+        unreadCount: 0,
+        byTab: { moments: 0, discovery: 0, profile: 0 },
+      }),
+    ),
     markAllAsRead: vi.fn(() => Promise.resolve()),
     markAsRead: vi.fn(() => Promise.resolve()),
     getNotifications: vi.fn(() => Promise.resolve([])),
@@ -126,6 +137,11 @@ describe('AppComponent', () => {
     authServiceMock.isAuthenticated.mockReturnValue(true);
     authServiceMock.currentUser.mockReturnValue({ id: 'test-user-1' });
     appLockServiceMock.biometricEnabled.mockReturnValue(false);
+    notificationServiceMock.getUnreadCount.mockResolvedValue({
+      unreadCount: 0,
+      byTab: { moments: 0, discovery: 0, profile: 0 },
+    });
+    chatServiceMock.getUnreadCount.mockResolvedValue(0);
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
@@ -174,7 +190,7 @@ describe('AppComponent', () => {
     expect(component.unreadCounter.totalUnread()).toBe(0);
   });
 
-  it('should call core services during ngOnInit', () => {
+  it('should call core services during ngOnInit', async () => {
     expect(versionServiceMock.checkVersion).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.loadInitialData).toHaveBeenCalledTimes(1);
     expect(safetyServiceMock.loadBlockedUsers).toHaveBeenCalledTimes(1);
@@ -182,12 +198,14 @@ describe('AppComponent', () => {
     expect(centrifugeServiceMock.connect).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(1);
     expect(fcmServiceMock.requestPermissionAndGetToken).toHaveBeenCalledTimes(1);
-    expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
+    });
   });
 
   it('loads the initial chat unread count with one service call', async () => {
     chatServiceMock.getUnreadCount.mockClear();
-    unreadCounterMock.setChatUnread.mockClear();
+    unreadCounterMock.reconcile.mockClear();
     chatServiceMock.getUnreadCount.mockResolvedValueOnce(7);
 
     await (
@@ -195,19 +213,90 @@ describe('AppComponent', () => {
     ).loadInitialUnreadCounts();
 
     expect(chatServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
-    expect(unreadCounterMock.setChatUnread).toHaveBeenLastCalledWith(7);
+    expect(unreadCounterMock.reconcile).toHaveBeenCalledWith('chat', 7, expect.any(Object));
   });
 
   it('preserves the current chat count when the initial request fails', async () => {
     chatServiceMock.getUnreadCount.mockClear();
-    unreadCounterMock.setChatUnread.mockClear();
+    unreadCounterMock.reconcile.mockClear();
     chatServiceMock.getUnreadCount.mockRejectedValueOnce(new Error('unavailable'));
 
     await (
       component as unknown as { loadInitialUnreadCounts(): Promise<void> }
     ).loadInitialUnreadCounts();
 
-    expect(unreadCounterMock.setChatUnread).not.toHaveBeenCalled();
+    expect(unreadCounterMock.reconcile).not.toHaveBeenCalledWith(
+      'chat',
+      expect.any(Number),
+      expect.any(Object),
+    );
+  });
+
+  it('refreshes authoritative notification tabs after a personal invalidation', async () => {
+    notificationServiceMock.getUnreadCount.mockClear();
+    chatServiceMock.getUnreadCount.mockClear();
+    unreadCounterMock.reconcile.mockClear();
+    notificationServiceMock.getUnreadCount.mockResolvedValueOnce({
+      unreadCount: 6,
+      byTab: { moments: 3, discovery: 2, profile: 1 },
+    });
+
+    subscribeCallback?.({
+      type: 'unread_counts_changed',
+      source: 'notifications',
+    });
+
+    await vi.waitFor(() => {
+      expect(unreadCounterMock.reconcile).toHaveBeenCalledWith('moments', 3, expect.any(Object));
+    });
+    expect(notificationServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
+    expect(chatServiceMock.getUnreadCount).not.toHaveBeenCalled();
+  });
+
+  it('coalesces repeated invalidations received during an active refresh', async () => {
+    let resolveFirst:
+      | ((value: {
+          unreadCount: number;
+          byTab: { moments: number; discovery: number; profile: number };
+        }) => void)
+      | undefined;
+    notificationServiceMock.getUnreadCount.mockClear();
+    notificationServiceMock.getUnreadCount
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve;
+          }),
+      )
+      .mockResolvedValue({
+        unreadCount: 2,
+        byTab: { moments: 2, discovery: 0, profile: 0 },
+      });
+
+    subscribeCallback?.({ type: 'unread_counts_changed', source: 'notifications' });
+    await vi.waitFor(() => expect(resolveFirst).toBeDefined());
+    subscribeCallback?.({ type: 'unread_counts_changed', source: 'notifications' });
+    subscribeCallback?.({ type: 'unread_counts_changed', source: 'notifications' });
+    resolveFirst?.({
+      unreadCount: 1,
+      byTab: { moments: 1, discovery: 0, profile: 0 },
+    });
+
+    await vi.waitFor(() => {
+      expect(notificationServiceMock.getUnreadCount).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('loads unread counts when unrelated startup providers fail', async () => {
+    economyStoreMock.loadInitialData.mockRejectedValueOnce(new Error('economy unavailable'));
+    safetyServiceMock.loadBlockedUsers.mockRejectedValueOnce(new Error('safety unavailable'));
+    notificationServiceMock.getUnreadCount.mockClear();
+    chatServiceMock.getUnreadCount.mockClear();
+
+    await component.ngOnInit();
+
+    expect(notificationServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
+    expect(chatServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
   });
 
   it('should trigger gift animation when receiving a virtual_gift payload', () => {

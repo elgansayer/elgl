@@ -85,3 +85,12 @@ mount their state read-only, test, then rebuild the container.
 - **Single Docker container** - Alpine-based, ~50 MB image
 - **Read-only Factory mounts** - each repository state directory is mounted `:ro`
 - **HTTP Basic Auth** - enforced at the server layer on all routes except `/health`
+
+## Production image and deployment
+
+Dashboard pull requests run the Node test suite and build the container without
+publishing it. Changes merged to `main`, or a manual workflow dispatch on `main`,
+publish `ghcr.io/elgansayer/factory-dashboard:latest` and the immutable
+`sha-<commit>` tag. A successful publication then calls the repository-scoped
+Arcane deployment webhook. Manual dispatches from other refs remain build-only
+and cannot replace the production image.

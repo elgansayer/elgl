@@ -1,6 +1,6 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { DataScrubbingService } from '../privacy/data-scrubbing.service';
@@ -18,6 +18,7 @@ describe('AdminService', () => {
   let mockSupabaseClient: Record<string, Mock>;
   let mockQueryBuilder: Record<string, Mock>;
   let mockRedisClient: Record<string, Mock>;
+  let mockMetrics: Record<string, Mock>;
 
   beforeEach(async () => {
     mockRedisClient = {
@@ -38,10 +39,27 @@ describe('AdminService', () => {
       insert: vi.fn().mockReturnThis(),
       limit: vi.fn(),
       single: vi.fn(),
+      maybeSingle: vi.fn(),
     };
 
     mockSupabaseClient = {
       from: vi.fn().mockReturnValue(mockQueryBuilder),
+    };
+
+    mockMetrics = {
+      recordAdminBanAction: vi.fn(),
+      recordAdminWarnAction: vi.fn(),
+      recordAdminVipToggle: vi.fn(),
+      recordAdminBlockRemoval: vi.fn(),
+      recordAdminReportResolution: vi.fn(),
+      recordAdminApiError: vi.fn(),
+      observeAdminApiLatency: vi.fn(),
+      setAdminPendingReports: vi.fn(),
+      setAdminActiveBlocks: vi.fn(),
+      recordAdminLoginHistoryRequest: vi.fn(),
+      recordTsReportSubmitted: vi.fn(),
+      setTsPendingReports: vi.fn(),
+      setTsActiveBlocksTotal: vi.fn(),
     };
 
     const mockScrubbingService = {
@@ -98,21 +116,7 @@ describe('AdminService', () => {
         },
         {
           provide: MetricsService,
-          useValue: {
-            recordAdminBanAction: vi.fn(),
-            recordAdminWarnAction: vi.fn(),
-            recordAdminVipToggle: vi.fn(),
-            recordAdminBlockRemoval: vi.fn(),
-            recordAdminReportResolution: vi.fn(),
-            recordAdminApiError: vi.fn(),
-            observeAdminApiLatency: vi.fn(),
-            setAdminPendingReports: vi.fn(),
-            setAdminActiveBlocks: vi.fn(),
-            recordAdminLoginHistoryRequest: vi.fn(),
-            recordTsReportSubmitted: vi.fn(),
-            setTsPendingReports: vi.fn(),
-            setTsActiveBlocksTotal: vi.fn(),
-          },
+          useValue: mockMetrics,
         },
       ],
     }).compile();
@@ -212,16 +216,131 @@ describe('AdminService', () => {
       expect(mockQueryBuilder.range).toHaveBeenCalledWith(10, 19);
     });
 
-    it('returns an empty result when the query errors', async () => {
+    it('reports a storage failure as unavailable instead of an empty success', async () => {
       mockQueryBuilder.range.mockResolvedValue({
         data: null,
-        error: { message: 'boom' },
+        error: { message: 'connection to 10.0.0.5 refused' },
         count: null,
       });
 
-      const result = await service.listUsers({ page: 1, pageSize: 20 });
+      const failure = await service.listUsers({ page: 1, pageSize: 20 }).then(
+        () => null,
+        (error: unknown) => error,
+      );
 
-      expect(result).toEqual({ users: [], total: 0, page: 1, pageSize: 20 });
+      expect(failure).toBeInstanceOf(ServiceUnavailableException);
+      expect((failure as ServiceUnavailableException).message).toBe(
+        'Admin user data unavailable',
+      );
+      expect(
+        JSON.stringify((failure as ServiceUnavailableException).getResponse()),
+      ).not.toContain('10.0.0.5');
+      expect(mockMetrics.recordAdminApiError).toHaveBeenCalledWith(
+        'users',
+        'database_error',
+      );
+      expect(mockMetrics.observeAdminApiLatency).not.toHaveBeenCalled();
+      expect(mockRedisClient.set).not.toHaveBeenCalled();
+    });
+
+    it('records query latency for a successful uncached search', async () => {
+      mockQueryBuilder.range.mockResolvedValue({
+        data: [{ id: 'user-1' }],
+        error: null,
+        count: 1,
+      });
+
+      await service.listUsers({ page: 1, pageSize: 20 });
+
+      expect(mockMetrics.observeAdminApiLatency).toHaveBeenCalledWith(
+        'users',
+        'listUsers',
+        expect.any(Number),
+      );
+      expect(mockMetrics.recordAdminApiError).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getUser', () => {
+    const userId = '0b6f6a0e-5f1c-4c8e-9d52-0f4d5d8d9a11';
+
+    it('returns only the bounded administrative user summary contract', async () => {
+      const summary = {
+        id: userId,
+        display_name: 'Test User',
+        avatar_url: null,
+        native_languages: ['en'],
+        target_languages: ['ja'],
+        is_vip: false,
+        vip_tier: 'free',
+        is_admin: false,
+        coins_balance: 10,
+        study_streak_days: 3,
+        last_active_at: '2026-08-15T20:00:00.000Z',
+        created_at: '2026-01-01T00:00:00.000Z',
+      };
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: summary,
+        error: null,
+      });
+
+      await expect(service.getUser(userId)).resolves.toEqual(summary);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', userId);
+      expect(mockQueryBuilder.select).toHaveBeenCalledTimes(1);
+      const columns = String(mockQueryBuilder.select.mock.calls[0]?.[0]);
+      expect(columns).not.toContain('email');
+      expect(columns).not.toContain('bio_text');
+      expect(mockMetrics.observeAdminApiLatency).toHaveBeenCalledWith(
+        'users',
+        'getUser',
+        expect.any(Number),
+      );
+    });
+
+    it('returns a stable not-found error when no user has the identifier', async () => {
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: null,
+        error: null,
+      });
+
+      await expect(service.getUser(userId)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(mockMetrics.recordAdminApiError).not.toHaveBeenCalled();
+    });
+
+    it('answers not found for a malformed identifier without querying storage', async () => {
+      await expect(service.getUser('not-a-uuid')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await expect(service.getUser("' or 1=1 --")).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('reports a storage failure as unavailable rather than as a missing user', async () => {
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: null,
+        error: { message: 'password authentication failed for user "svc"' },
+      });
+
+      const failure = await service.getUser(userId).then(
+        () => null,
+        (error: unknown) => error,
+      );
+
+      expect(failure).toBeInstanceOf(ServiceUnavailableException);
+      expect(
+        JSON.stringify((failure as ServiceUnavailableException).getResponse()),
+      ).not.toContain('password');
+      expect(mockMetrics.recordAdminApiError).toHaveBeenCalledWith(
+        'users',
+        'database_error',
+      );
     });
   });
 

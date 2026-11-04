@@ -48,7 +48,9 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
         @if (errorMessage()) {
           <app-card variant="outlined" customClass="max-w-md mx-auto border-danger/30 bg-danger/10">
             <div class="text-center py-4">
-              <p class="text-danger-ink font-semibold mb-2">{{ 'subscription.page.loadError' | t }}</p>
+              <p class="text-danger-ink font-semibold mb-2">
+                {{ 'subscription.page.loadError' | t }}
+              </p>
               <p class="text-text-secondary text-sm mb-4">{{ errorMessage() }}</p>
               <app-button-primary (clicked)="loadPlans()" size="sm">{{
                 'subscription.page.retry' | t
@@ -100,11 +102,13 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
                   </ul>
 
                   <app-gradient-button
-                    [disabled]="subscribingPlanId() === plan.id"
+                    [disabled]="plan.price_usd === 0 || subscribingPlanId() === plan.id"
                     [customClass]="'w-full'"
                     (clicked)="subscribe(plan.id)"
                   >
-                    @if (subscribingPlanId() === plan.id) {
+                    @if (plan.price_usd === 0) {
+                      {{ 'subscription.page.currentFreePlan' | t }}
+                    } @else if (subscribingPlanId() === plan.id) {
                       <span class="flex items-center gap-2">
                         <span
                           class="animate-spin inline-block w-4 h-4 border-2 border-on-fill border-t-transparent rounded-full"
@@ -173,9 +177,10 @@ export class SubscriptionPageComponent {
   }
 
   async subscribe(planId: string): Promise<void> {
-    this.subscribingPlanId.set(planId);
     const plan = this.plans().find((p) => p.id === planId);
-    if (!plan) return;
+    if (!plan || plan.price_usd === 0) return;
+
+    this.subscribingPlanId.set(planId);
 
     try {
       const response = await this.monetisationService.createCheckoutSession(planId, plan.interval);

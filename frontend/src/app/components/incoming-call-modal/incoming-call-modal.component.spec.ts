@@ -54,6 +54,25 @@ describe('IncomingCallModalComponent', () => {
     expect(audioEl).toBeNull();
   });
 
+  it('does not claim that an incoming call is encrypted before it connects', () => {
+    const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+    const pauseSpy = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    fixture.componentRef.setInput('callData', {
+      callerId: 'user-456',
+      callerName: 'Alice',
+      roomName: 'room-1',
+      isVideoCall: false,
+    });
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Encrypted call');
+    fixture.componentRef.setInput('callData', null);
+    fixture.detectChanges();
+    playSpy.mockRestore();
+    pauseSpy.mockRestore();
+  });
+
   it('should handle ngOnDestroy gracefully', () => {
     // Component uses DestroyRef, make sure destroy doesn't throw
     expect(() => fixture.destroy()).not.toThrow();

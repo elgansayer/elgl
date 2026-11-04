@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -33,6 +34,8 @@ from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Lease, Task, changed_path_fingerprint
+from openhands_factory.neptune_intake import NeptuneIntakeUnavailable, accepted_verification
+from openhands_factory.neptune_preparation import ToolPreparationUnavailable, prepare_native
 from openhands_factory.pr_convergence import (
     ConvergenceAction,
     PullRequestCapacity,
@@ -95,6 +98,7 @@ CODE_MUTATING_AGENT_PHASES = {
     "ci-repair",
 }
 VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
+    "missing/mismatched offline godot cache",
     "the cypress binary is missing",
     "we expected the binary to be installed here",
     "getaddrinfo eai_again",
@@ -189,6 +193,7 @@ class FactoryPipeline:
             trusted_github_actors=config.trusted_github_actors,
             require_ready_label=config.require_ready_label,
             ready_label=config.ready_label,
+            merge_review_policy=config.merge_review_policy,
         )
         self.jobs = JobStore(
             config.state_dir / "jobs.json",
@@ -1254,7 +1259,10 @@ class FactoryPipeline:
             # A head the Factory already verified and pushed can re-enter VERIFYING
             # with a clean worktree; "nothing to commit" then failed every retry
             # (issue 9464, PR #9671, 2026-10-29). Any other clean tree still fails.
-            if job.latest_verified_sha != workflow.head_sha() or workflow.has_changes():
+            if (
+                job.latest_verified_sha != workflow.head_sha()
+                and job.verification_candidate_sha != workflow.head_sha()
+            ) or workflow.has_changes():
                 workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
@@ -1417,11 +1425,47 @@ class FactoryPipeline:
                     return
                 self.github.remove_issue_labels(job.pull_request, ("factory-stack-blocked",))
 
-            if self._refresh_pull_request_if_changed(job, worktree, lease_owner):
+            review_status = self._status(job) if job.pull_request is not None else None
+            if self._refresh_pull_request_if_changed(
+                job, worktree, lease_owner, known_status=review_status
+            ):
                 return
 
             if self.config.tests_only_merging:
                 self._finish_tests_only_validation(job, workflow, lease_owner)
+                return
+
+            # Do not buy an independent review without its required CI evidence.
+            # The coordinator owns capable-host checks and retries; a restricted
+            # provider cannot correct missing CI by changing repository code.
+            if review_status is None:
+                raise FactoryError("Independent review requires a pull request with exact-head CI")
+            if review_status.ci_required_failed:
+                job.state = JobState.REPAIRING
+                return
+            if review_status.ci_required_pending or not review_status.ci_required_passed:
+                # Keep the review handoff durable. CI_PENDING would wait on the
+                # review status which only this phase can produce after CI passes.
+                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+                return
+
+            if self.config.merge_review_policy == "ci-gated":
+                # Exact-head required CI is the merge gate. Buy no review
+                # conversation and publish no review status; CI_PENDING re-reads
+                # GitHub and a moved head returns to verification as before.
+                if job.pull_request is None:
+                    raise FactoryError("Pull request number is missing")
+                job.review_findings.clear()
+                if job.head_sha is None:
+                    job.head_sha = workflow.head_sha()
+                self.github.mark_ready(job.pull_request)
+                self._record_pr_lifecycle(
+                    job,
+                    "ci-gated",
+                    "Required CI passed on this exact head; the ci-gated merge policy "
+                    "skips the independent AI review.",
+                )
+                job.state = JobState.CI_PENDING
                 return
 
             # The worktree persists across retries of this state, so a review report
@@ -1440,7 +1484,12 @@ class FactoryPipeline:
                 job,
                 worktree,
                 "review",
-                build_phase_prompt(prompt_dir, "review", job.task),
+                build_phase_prompt(
+                    prompt_dir,
+                    "review",
+                    job.task,
+                    coordinator_verification=self._review_verification_snapshot(job, review_status),
+                ),
                 lease_owner=lease_owner,
                 prepare_attempt=clear_review_report,
                 validate_output=require_valid_review_report,
@@ -1708,7 +1757,12 @@ class FactoryPipeline:
                     else "fix: repair CI for"
                 )
             )
-            workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
+            if (
+                self.config.neptune_intake_dir is None
+                or workflow.has_changes()
+                or job.verification_candidate_sha != workflow.head_sha()
+            ):
+                workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
@@ -2193,26 +2247,60 @@ class FactoryPipeline:
         self._record_verified_head(job, lease_owner, verified_paths)
         job.state = JobState.REVIEWING
 
+    @staticmethod
+    def _review_verification_snapshot(job: Job, status: PullRequestStatus | None) -> str:
+        """Give restricted reviewers API evidence without credentials or new authority."""
+        matching = bool(
+            status
+            and status.number == job.pull_request
+            and status.head_sha == job.head_sha == job.latest_verified_sha
+        )
+        passed = bool(
+            matching
+            and status
+            and status.state == "OPEN"
+            and status.ci_required_passed
+            and not status.ci_required_pending
+            and not status.ci_required_failed
+        )
+        return json.dumps(
+            {
+                "source": "coordinator GitHub status observation",
+                "pull_request": job.pull_request,
+                "job_head_sha": job.head_sha,
+                "latest_verified_sha": job.latest_verified_sha,
+                "observed_head_sha": status.head_sha if status else None,
+                "required_ci_passed_for_verified_head": passed,
+                "required_ci_pending": status.ci_required_pending if status else None,
+                "required_ci_failed": status.ci_required_failed if status else None,
+                "workflow_run_ids": sorted(status.workflow_run_ids)[:16] if status else [],
+                "scope": "CI status metadata, not independent acceptance or a new review approval",
+            },
+            indent=2,
+        )
+
     def _refresh_pull_request_if_changed(
         self,
         job: Job,
         worktree: Path,
         lease_owner: str,
+        *,
+        known_status: PullRequestStatus | None = None,
     ) -> bool:
         """Refresh PR evidence before using or pushing it against a changed head."""
         if job.pull_request is None:
             return False
 
-        status = self._status(job)
+        status = known_status or self._status(job)
         if status.state == "MERGED":
             job.state = JobState.MERGED
             return True
         if self._recover_closed_pull_request(job, status):
             return True
-        needs_base_refresh = status.merge_state_status == "BEHIND" or (
-            status.merge_state_status == "UNKNOWN"
-            and not self._workflow(worktree).contains_current_base()
-        )
+        # Use the same base policy as review intake. A transient UNKNOWN must
+        # not archive unverified review repairs from an already tested head when
+        # non-strict merging permits that head to remain on its original base.
+        needs_base_refresh = self._review_needs_base_update(job, self._workflow(worktree), status)
         if self.config.tests_only_merging and "Neptune current base" in status.failed_checks:
             needs_base_refresh = True
         needs_conflict_repair = (
@@ -2425,30 +2513,62 @@ class FactoryPipeline:
         status = self.github.pull_request_status(parent)
         return parent if status.state == "OPEN" else None
 
-    def _verify(self, workflow: GitWorkflow) -> set[Path]:
+    def _verify(self, workflow: GitWorkflow, *, job: Job | None = None) -> set[Path]:
         changed = workflow.changed_paths()
         if not changed:
             raise FactoryError("No changed paths were found")
+        bound = self.config.neptune_intake_dir is not None
+        if bound:
+            if job is None:
+                raise NeptuneIntakeUnavailable("missing assigned job")
+            # Local candidate commit is a checkpoint, never verification or publication.
+            if workflow.has_changes():
+                workflow.stage_all()
+                workflow.commit("fix: checkpoint Neptune candidate " + job.task.identifier)
+            job.verification_candidate_sha = workflow.head_sha()
+            self.jobs.save_job(job)
         commands = commands_for(workflow.repository, changed, self.config.repository_profile)
         # Memory-heavy Angular commands and fixed-port browser commands are
         # serialized across workers. The remaining checks can run at full worker
         # parallelism. Running shared checks first means cheap failures are judged
         # before spending minutes in the host-wide verification slot.
-        shared = [command for command in commands if not command.exclusive]
-        exclusive = [command for command in commands if command.exclusive]
+        shared = [] if bound else [command for command in commands if not command.exclusive]
+        exclusive = commands if bound else [command for command in commands if command.exclusive]
+
+        def verify_exclusive() -> None:
+            selected = exclusive
+            if bound:
+                assert job is not None
+                with accepted_verification(
+                    self.config, job, workflow.repository, changed
+                ) as accepted:
+                    self.jobs.save_job(job)
+                    selected = accepted.commands(selected)
+                    selected = prepare_native(self.config, workflow.repository, changed, selected)
+                    run_verification(selected)
+                return
+            if self.config.repository_profile == "neptune":
+                selected = prepare_native(self.config, workflow.repository, changed, selected)
+            run_verification(selected)
+
         try:
             run_verification(shared)
             if not exclusive:
                 return changed
             if self.verification_slots is None:
-                run_verification(exclusive)
+                # Standalone coordinators must use the same host gate too.
+                if self.host_resource_slots is None:
+                    verify_exclusive()
+                else:
+                    with self.host_resource_slots.exclusive():
+                        verify_exclusive()
                 return changed
             with self.verification_slots:
                 if self.host_resource_slots is None:
-                    run_verification(exclusive)
+                    verify_exclusive()
                 else:
                     with self.host_resource_slots.exclusive():
-                        run_verification(exclusive)
+                        verify_exclusive()
             return changed
         finally:
             workflow.discard_transient_build_metadata()
@@ -2460,10 +2580,14 @@ class FactoryPipeline:
     ) -> set[Path] | None:
         """Route deterministic verification failures into bounded agent repair."""
         try:
-            changed = self._verify(workflow)
+            changed = (
+                self._verify(workflow, job=job)
+                if self.config.neptune_intake_dir
+                else self._verify(workflow)
+            )
         except VerificationFailed as error:
             detail = str(error)
-            if any(
+            if isinstance(error, (ToolPreparationUnavailable, NeptuneIntakeUnavailable)) or any(
                 marker in detail.lower() for marker in VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS
             ):
                 # Host/cache/resource failures cannot be corrected by editing the
@@ -2684,7 +2808,10 @@ class FactoryPipeline:
             if proposals:
                 self._create_deduplicated_issues(proposals)
             if review_workflow.has_changes():
-                self._verify(review_workflow)
+                if self.config.neptune_intake_dir:
+                    self._verify(review_workflow, job=job)
+                else:
+                    self._verify(review_workflow)
                 review_workflow.stage_all()
                 review_workflow.commit(f"docs: weekly architect gap analysis ({date_id})")
                 review_workflow.push(branch)

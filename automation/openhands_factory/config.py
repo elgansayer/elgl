@@ -177,6 +177,7 @@ class AgentsRoutingConfig(BaseModel):
 class AgentsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    repository_scope: str | None = None
     routing_enabled: bool = True
     providers: dict[str, ProviderConfig] = Field(
         default_factory=lambda: {
@@ -269,6 +270,13 @@ class AgentsConfig(BaseModel):
     routing: AgentsRoutingConfig = Field(default_factory=AgentsRoutingConfig)
     timeouts: AgentTimeoutsConfig = Field(default_factory=AgentTimeoutsConfig)
     circuit_breaker: AgentCircuitBreakerConfig = Field(default_factory=AgentCircuitBreakerConfig)
+
+    @field_validator("repository_scope")
+    @classmethod
+    def valid_repository_scope(cls, value: str | None) -> str | None:
+        if value is not None and not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", value):
+            raise ValueError("agent repository scope must be owner/repository")
+        return value
 
     @model_validator(mode="before")
     @classmethod
@@ -411,7 +419,13 @@ class FactoryConfig(BaseModel):
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
     repository_profile: Literal["hellotalk", "workout-agent", "neptune"] = "hellotalk"
+    # "independent-review" buys an AI review and publishes factory/independent-review
+    # before merge. "ci-gated" merges once exact-head required CI passes; it buys no
+    # review conversation and ignores a retired review status. Separate from
+    # tests_only_merging, which also selects Neptune admission and merge behaviour.
+    merge_review_policy: Literal["independent-review", "ci-gated"] = "independent-review"
     neptune_activation_enabled: bool = False
+    neptune_intake_dir: Path | None = None
     prompt_dir: Path = Path("/var/lib/hellotalk-factory/repository/automation/prompts")
     system_prompt_path: Path = Path(
         "/var/lib/hellotalk-factory/repository/automation/prompts/system.md"
@@ -644,6 +658,11 @@ class FactoryConfig(BaseModel):
             raise ValueError(
                 "OPENCODE_GO_API_KEY and OPENCODE_GO_MODEL must either both be set or both be empty"
             )
+        if (
+            self.agents.repository_scope is not None
+            and self.agents.repository_scope.casefold() != self.github_repository.casefold()
+        ):
+            raise ValueError("agent configuration is scoped to a different repository")
         self._validate_neptune_profile()
         return self
 
@@ -652,6 +671,19 @@ class FactoryConfig(BaseModel):
         return self.repository_profile == "neptune"
 
     def _validate_neptune_profile(self) -> None:
+        if self.neptune_intake_dir is not None:
+            registry = self.neptune_intake_dir
+            if self.repository_profile != "neptune" or not registry.is_absolute():
+                raise ValueError(
+                    "Accepted Neptune intake requires its profile and an absolute private registry"
+                )
+            for source in (self.repository, self.worktree_dir):
+                if registry.resolve().is_relative_to(
+                    source.resolve()
+                ) or source.resolve().is_relative_to(registry.resolve()):
+                    raise ValueError(
+                        "Accepted Neptune intake must be separate from candidate/source roots"
+                    )
         neptune_repository = self.github_repository.casefold() == NEPTUNE_REPOSITORY.casefold()
         if not self.tests_only_merging:
             if neptune_repository or self.neptune_activation_enabled:
@@ -798,6 +830,9 @@ class FactoryConfig(BaseModel):
                     env.get("FACTORY_REPOSITORY_PROFILE", "hellotalk"),
                 ),
                 neptune_activation_enabled=boolean("FACTORY_NEPTUNE_ENABLED", False),
+                neptune_intake_dir=Path(env["FACTORY_NEPTUNE_INTAKE_DIR"])
+                if env.get("FACTORY_NEPTUNE_INTAKE_DIR")
+                else None,
                 prompt_dir=Path(
                     env.get("FACTORY_PROMPT_DIR", str(repository / "automation" / "prompts"))
                 ),
@@ -919,6 +954,10 @@ class FactoryConfig(BaseModel):
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
+                merge_review_policy=cast(
+                    Literal["independent-review", "ci-gated"],
+                    env.get("FACTORY_MERGE_REVIEW_POLICY", "independent-review"),
+                ),
                 trusted_github_actors=trusted_github_actors,
                 control_github_actors=control_github_actors,
                 require_ready_label=boolean("FACTORY_REQUIRE_READY_LABEL", False),

@@ -139,6 +139,8 @@ describe('ChatService message persistence and realtime pipeline', () => {
       status_reply_payload: null,
       is_view_once: false,
       delivery_status: 'sent',
+      is_encrypted: false,
+      encrypted_payload: null,
     });
     expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
       message: savedMessage,

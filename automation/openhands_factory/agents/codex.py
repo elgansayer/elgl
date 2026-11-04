@@ -7,9 +7,16 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from openhands_factory.agents.base import AgentPhase, AgentRequest, ProviderHealth, ProviderStatus
+from openhands_factory.agents.base import (
+    AgentFailure,
+    AgentPhase,
+    AgentRequest,
+    ProviderHealth,
+    ProviderStatus,
+)
 from openhands_factory.agents.cli import CLIProvider, classify_process_failure
 from openhands_factory.agents.process import ProcessResult
+from openhands_factory.agents.terminal_output import codex_outcome
 
 # Keep maximum reasoning for open-ended planning and architecture. Implementation
 # uses high effort to bound latency; deterministic verification and independent
@@ -38,6 +45,11 @@ class CodexProvider(CLIProvider):
     default_model = "gpt-5.6-sol"
     default_credential_paths = (".codex",)
     default_runtime_paths = (".local/bin", ".npm-global")
+
+    def interpret_process_result(
+        self, result: ProcessResult
+    ) -> tuple[str | None, AgentFailure | None]:
+        return codex_outcome(result)
 
     @staticmethod
     def _full_prompt(request: AgentRequest) -> str:
@@ -100,8 +112,13 @@ class CodexProvider(CLIProvider):
             "--ephemeral",
             "--ignore-user-config",
             "--ignore-rules",
+            # The factory chooses and sandboxes the working directory. Without
+            # this, Codex refuses non-repository maintenance/analysis folders,
+            # and that unclassified exit opens the shared provider breaker.
+            "--skip-git-repo-check",
             "--color",
             "never",
+            "--json",
         ]
         if request.system_prompt:
             command.extend(("-c", f"developer_instructions={json.dumps(request.system_prompt)}"))

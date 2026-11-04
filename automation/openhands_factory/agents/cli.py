@@ -50,6 +50,10 @@ _AUTH_MARKERS = (
     "invalid credentials",
 )
 _QUOTA_MARKERS = (
+    "you've hit your session limit",
+    "you have hit your session limit",
+    "you've hit your weekly limit",
+    "you have hit your weekly limit",
     "quota exhausted",
     "quota exceeded",
     "individual quota reached",
@@ -60,6 +64,7 @@ _QUOTA_MARKERS = (
     "monthly spend limit",
 )
 _RATE_LIMIT_MARKERS = (
+    "selected model is at capacity",
     "rate limit",
     "too many requests",
     "429",
@@ -246,16 +251,21 @@ class CLIProvider:
         stdin_text: str | None,
         timeout_seconds: int,
         max_output_bytes: int,
+        process_runner: AgentProcessRunner | None = None,
     ) -> ProcessResult:
-        return self.process_runner.run(
+        return (process_runner or self.process_runner).run(
             command,
             cwd=cwd,
-            env=provider_environment(),
+            env=provider_environment(extra=self.extra_environment()),
             stdin_text=stdin_text,
             timeout_seconds=timeout_seconds,
             max_output_bytes=max_output_bytes,
             home_mounts=self.home_mounts,
         )
+
+    def extra_environment(self) -> dict[str, str]:
+        """Provider-specific settings added after the credential-free allowlist."""
+        return {}
 
     def invalidate_health_cache(self) -> None:
         """Force the next circuit half-open check to execute a real probe."""
@@ -352,6 +362,22 @@ class CLIProvider:
             f"{request.prompt}"
         )
 
+    def interpret_process_result(
+        self, result: ProcessResult
+    ) -> tuple[str | None, AgentFailure | None]:
+        """Legacy text transports; structured providers override this boundary."""
+        summary = (
+            redact_agent_output(result.stdout)[-4000:]
+            or redact_agent_output(result.stderr)[-4000:]
+            or None
+        )
+        failure = (
+            None
+            if result.exit_code == 0 and not result.timed_out and not result.cancelled
+            else classify_process_failure(result)
+        )
+        return summary, failure
+
     def run(self, request: AgentRequest) -> AgentResult:
         started_at = datetime.now(UTC)
         model = self.model_for(request.phase)
@@ -367,6 +393,7 @@ class CLIProvider:
                     stdin_text=self.prompt_for_stdin(full_prompt, prompt_path),
                     timeout_seconds=timeout,
                     max_output_bytes=max_output,
+                    process_runner=request.process_runner,
                 )
         except FileNotFoundError:
             finished_at = datetime.now(UTC)
@@ -407,14 +434,7 @@ class CLIProvider:
             )
 
         finished_at = datetime.now(UTC)
-        stdout = redact_agent_output(result.stdout)
-        stderr = redact_agent_output(result.stderr)
-        summary = stdout[-4000:] or stderr[-4000:] or None
-        failure = (
-            None
-            if result.exit_code == 0 and not result.timed_out and not result.cancelled
-            else classify_process_failure(result)
-        )
+        summary, failure = self.interpret_process_result(result)
         return AgentResult(
             provider=self.name,
             phase=request.phase,

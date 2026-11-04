@@ -171,7 +171,7 @@ def _wait_file(path, *, parent=None, timeout=8):
 def _alive(pid):
     try:
         stat = Path(f"/proc/{pid}/stat").read_text()
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
         return False
     return stat.rsplit(")", 1)[1].split()[0] != "Z"
 

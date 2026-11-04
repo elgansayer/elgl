@@ -176,7 +176,7 @@ export class ModerationService {
             if (item.reportedMomentId) {
               const moment = momentContentMap.get(item.reportedMomentId);
               if (moment) {
-                item.moment_content = moment.content_text;
+                item.moment_content = moment.text_content;
                 item.momentAuthorName = moment.authorName;
               }
             }
@@ -198,15 +198,20 @@ export class ModerationService {
 
   private async batchGetMomentContent(
     momentIds: string[],
-  ): Promise<Map<string, { content_text: string; authorName: string | null }>> {
+  ): Promise<Map<string, { text_content: string; authorName: string | null }>> {
     const result = new Map<
       string,
-      { content_text: string; authorName: string | null }
+      { text_content: string; authorName: string | null }
     >();
 
+    // moments.text_content and moments.user_id come from 005_moments.sql (there
+    // is no content_text or author_id column). The author embed names the
+    // user_id foreign key constraint, like the other embeds in this codebase.
     const { data, error } = await this.supabase
       .from('moments')
-      .select('id, content_text, author_id, author:author_id ( display_name )')
+      .select(
+        'id, text_content, user_id, author:users!moments_user_id_fkey ( display_name )',
+      )
       .in('id', momentIds);
 
     if (error || !data) {
@@ -216,11 +221,11 @@ export class ModerationService {
 
     for (const row of data as Array<{
       id: string;
-      content_text?: string;
+      text_content?: string | null;
       author?: { display_name?: string } | null;
     }>) {
       result.set(row.id, {
-        content_text: row.content_text ?? '',
+        text_content: row.text_content ?? '',
         authorName: row.author?.display_name ?? null,
       });
     }
@@ -335,8 +340,8 @@ export class ModerationService {
             .single(),
           this.supabase
             .from('moments')
-            .select('id, content_text')
-            .eq('author_id', userId)
+            .select('id, text_content')
+            .eq('user_id', userId)
             .order('created_at', { ascending: false })
             .limit(20),
         ]);
@@ -369,8 +374,8 @@ export class ModerationService {
       const momentRows = (moments ?? []) as unknown[];
       const momentText = momentRows
         .map((row) => {
-          const obj = row as { content_text?: string };
-          return obj.content_text ?? '';
+          const obj = row as { text_content?: string | null };
+          return obj.text_content ?? '';
         })
         .join(' ');
 

@@ -111,10 +111,14 @@ export class NlpController {
   }
 
   /**
-   * UI translations are cached in Redis and change rarely.
-   * Edge caching reduces load on the DeepL integration.
+   * Interface translations are cached in Redis per source string, so a language
+   * is translated once and then served to every user. A cache miss spends paid
+   * DeepL quota, so each user is also limited to ten requests per ten minutes
+   * on top of the global throttle. Switching to a language already stored on the
+   * device never calls this endpoint.
    */
   @Post('translate-ui')
+  @NlpRateLimit({ maxRequests: 10, windowSeconds: 600 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   async translateUi(@Body() dto: TranslateUiDto): Promise<TranslateUiResult> {
     return await this.nlpService.translateUi(dto);

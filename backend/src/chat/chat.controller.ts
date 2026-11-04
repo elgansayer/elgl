@@ -6,17 +6,24 @@ import {
   HttpException,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_NO_STORE,
+} from '../common/cache.interceptor';
 import { FavouritesService } from '../favourites/favourites.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { ConversationStarterDto } from './dto/conversation-starter.dto';
@@ -39,7 +46,24 @@ import { ChatService } from './chat.service';
 import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import type { Request, Response } from 'express';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isFavouriteRecord(
+  item: Record<string, unknown>,
+): item is Record<string, unknown> & FavouriteRecord {
+  return (
+    typeof item['id'] === 'string' &&
+    typeof item['user_id'] === 'string' &&
+    typeof item['item_type'] === 'string' &&
+    isRecord(item['item_payload']) &&
+    typeof item['created_at'] === 'string'
+  );
+}
 
 @Controller('chat')
 @UseGuards(SupabaseAuthGuard)
@@ -50,6 +74,7 @@ export class ChatController {
     private readonly centrifugoService: CentrifugoService,
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
+    private readonly personalChatEncryptionService: PersonalChatEncryptionService,
   ) {}
 
   // Tighter than the app-wide default (10/60s, app.module.ts) - this mints a
@@ -165,14 +190,16 @@ export class ChatController {
     return await this.chatService.getMessages(roomId, search, user.id);
   }
 
+  // Compatibility routes for clients that predate the dedicated /favourites
+  // controller. Writes share FavouritesService so both route families apply the
+  // same authorization, idempotency and error mapping.
   @Post('favourites')
   async addFavourite(
     @CurrentUser() user: User | null,
     @Body() dto: AddFavouriteDto,
   ): Promise<{ success: boolean } | null> {
     if (!user) return null;
-    await this.chatService.addFavourite(user.id, dto);
-    return { success: true };
+    return await this.favouritesService.addFavourite(user.id, dto);
   }
 
   @Get('favourites')
@@ -185,17 +212,16 @@ export class ChatController {
       100,
       0,
     );
-    return page.items as unknown as FavouriteRecord[];
+    return page.items.filter(isFavouriteRecord);
   }
 
   @Delete('favourites/:id')
   async deleteFavourite(
     @CurrentUser() user: User | null,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ success: boolean } | null> {
     if (!user) return null;
-    await this.chatService.deleteFavourite(user.id, id);
-    return { success: true };
+    return await this.favouritesService.removeFavourite(user.id, id);
   }
 
   @Post('llm-proxy')
@@ -372,6 +398,27 @@ export class ChatController {
         avatar_url: m.user?.avatar_url,
       }),
     );
+  }
+
+  @Get('rooms/:roomId/e2ee-key')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  async getRoomE2eeKey(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ e2ee_key: string; room_id: string; algorithm: string }> {
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    const result = await this.personalChatEncryptionService.getConversationKey(
+      roomId,
+      user.id,
+    );
+    return {
+      e2ee_key: result.e2eeKey,
+      room_id: result.roomId,
+      algorithm: result.algorithm,
+    };
   }
 
   // Chat Lock endpoints

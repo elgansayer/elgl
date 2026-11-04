@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import type Redis from 'ioredis';
 import { SupabaseService, type UsersRow } from '../supabase/supabase.service';
@@ -18,6 +23,10 @@ import {
 
 const SUMMARY_COLUMNS =
   'id, display_name, avatar_url, native_languages, target_languages, is_vip, vip_tier, is_admin, coins_balance, study_streak_days, last_active_at, created_at';
+
+// Stable, provider-agnostic message for user reads that fail in storage. The
+// admin portal treats a 503 as "unavailable, retry" and never as "no results".
+const ADMIN_USER_DATA_UNAVAILABLE = 'Admin user data unavailable';
 
 const CACHE_TTL_USERS = 300;
 const CACHE_TTL_BLOCKS = 300;
@@ -143,6 +152,7 @@ export class AdminService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
     let request = supabase
       .from('users')
@@ -157,9 +167,18 @@ export class AdminService {
       .range(from, to);
 
     if (error) {
-      this.logger.warn(error, `Failed to list admin users`);
-      return { users: [], total: 0, page, pageSize };
+      // A storage failure must not be reported as an empty successful search:
+      // operators would read "no matching users" during an outage.
+      this.metrics.recordAdminApiError('users', 'database_error');
+      this.logger.error(error, 'Failed to list admin users');
+      throw new ServiceUnavailableException(ADMIN_USER_DATA_UNAVAILABLE);
     }
+
+    this.metrics.observeAdminApiLatency(
+      'users',
+      'listUsers',
+      (Date.now() - start) / 1000,
+    );
 
     const result: AdminUserListResult = {
       users: data ?? [],
@@ -179,16 +198,35 @@ export class AdminService {
   }
 
   async getUser(userId: string): Promise<AdminUserSummary> {
+    // users.id is a UUID primary key, so a malformed identifier cannot match a
+    // user. Answer "not found" without a query: PostgreSQL would reject it as a
+    // syntax error, which is indistinguishable from an outage below.
+    if (!isUUID(userId)) {
+      throw new NotFoundException('User not found');
+    }
+
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('users')
       .select(SUMMARY_COLUMNS)
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      this.metrics.recordAdminApiError('users', 'database_error');
+      this.logger.error(error, 'Failed to load admin user detail');
+      throw new ServiceUnavailableException(ADMIN_USER_DATA_UNAVAILABLE);
+    }
+    if (!data) {
       throw new NotFoundException('User not found');
     }
+
+    this.metrics.observeAdminApiLatency(
+      'users',
+      'getUser',
+      (Date.now() - start) / 1000,
+    );
 
     return data;
   }

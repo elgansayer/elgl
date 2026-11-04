@@ -1,6 +1,12 @@
-# HelloTalk OpenHands Factory runbook
+# Shared Repo Factory runbook
 
-The Factory is the sole autonomous engineering control plane for this repository. It discovers GitHub work,
+The shared control package lives in `elgl/automation/openhands_factory/`; Elgl,
+Workout and Neptune are target projects. Neptune keeps its project-specific
+reference preparation and verification in `Neptune-Bomberman/tools/factory/`.
+See [source ownership and framework evaluation](LOCATION-AND-EVALUATION.md) and
+the [repository-scoped OpenCode research trial](OPENCODE-RESEARCH.md).
+
+The Factory is the shared autonomous engineering control plane. Each instance discovers GitHub work,
 schedules durable jobs, creates isolated worktrees, routes each AI-backed phase to an eligible provider, verifies
 the result, obtains an independent review, repairs failures, and permits merge only for the reviewed head SHA.
 

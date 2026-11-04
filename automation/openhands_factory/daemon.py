@@ -38,6 +38,7 @@ from openhands_factory.maintenance import MAINTENANCE_TAG, MaintenanceController
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.recovery_retention import prune_recovery_archives
+from openhands_factory.session_identity import SessionIdentityJournal
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 from openhands_factory.worktree_cache import prune_inactive_worktree_caches
@@ -669,11 +670,13 @@ class FactoryDaemon:
             lease_seconds=config.max_task_minutes * 60 + 300,
         )
         self.verification_slots = Semaphore(1)
+        self._session_journal: SessionIdentityJournal | None = None
         self.pipeline = FactoryPipeline(
             config,
             verification_slots=self.verification_slots,
             host_resource_slots=self.host_resource_slots,
         )
+        self._supervise_neptune_pipeline()
         self.issue_admission = self._issue_admission_gate(config)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
@@ -687,6 +690,20 @@ class FactoryDaemon:
             "last_selected_jobs": [],
             "last_selection_at": None,
         }
+
+    def _supervise_neptune_pipeline(self) -> None:
+        """Retain the existing private journal when a Neptune router is rebuilt.
+
+        Other repository policies remain unchanged. Constructing a supervisor
+        reserves no slot and starts no provider or scheduling loop.
+        """
+        if not self.config.tests_only_merging:
+            return
+        if self._session_journal is None:
+            self._session_journal = SessionIdentityJournal(
+                self.config.state_dir / "manual-session-identities"
+            )
+        self.pipeline.router.supervise_sessions(self._session_journal)
 
     @staticmethod
     def _issue_admission_gate(config: FactoryConfig) -> IssueAdmissionGate:
@@ -798,6 +815,7 @@ class FactoryDaemon:
             verification_slots=self.verification_slots,
             host_resource_slots=self.host_resource_slots,
         )
+        self._supervise_neptune_pipeline()
         self.issue_admission = self._issue_admission_gate(self.config)
         LOGGER.info(
             "Activated Factory generation %s runtime=%s",

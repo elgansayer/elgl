@@ -31,7 +31,7 @@ type DiscoveryUser = UserProfile & {
   distance?: number;
   distance_metres?: number;
   is_partner_of_week?: boolean;
-  proficiency_level?: string;
+  proficiency_level?: string | null;
   age?: number;
   gender?: string;
   country?: string;
@@ -422,7 +422,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, interests, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, interests, bio_text, avatar_url, audio_intro_url, is_vip, vip_tier, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -458,7 +458,10 @@ export class DiscoveryService {
     }
 
     if (query.level) {
-      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+      queryBuilder = queryBuilder.eq(
+        'proficiency_level',
+        query.level.toUpperCase(),
+      );
     }
 
     if (_currentUserProfile?.is_vip && query.gender) {
@@ -519,14 +522,15 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
+      const ranked = this.sortUsers(
+        enriched,
+        query.sort,
+        searchLat,
+        searchLon,
+        _currentUserProfile,
+      );
       return sanitiseDiscoveryData(
-        this.sortUsers(
-          enriched,
-          query.sort,
-          searchLat,
-          searchLon,
-          _currentUserProfile,
-        ),
+        ranked.map((user) => this.withoutPrivateEntitlement(user)),
       );
     };
 
@@ -541,7 +545,7 @@ export class DiscoveryService {
           : null,
         filter_target: query.target_language || null,
         serious_only: seriousLearnerOnly,
-        filter_level: query.level || null,
+        filter_level: query.level ? query.level.toUpperCase() : null,
         filter_gender:
           _currentUserProfile?.is_vip && query.gender ? query.gender : null,
         filter_age_min: query.age_min ?? null,
@@ -578,6 +582,7 @@ export class DiscoveryService {
         ...item,
         distance_metres: item.distance_metres ?? item.distance ?? undefined,
       }));
+      rpcResults = await this.hydrateVipTiers(rpcResults);
       if (blockedIds.length > 0) {
         const blockedSet = new Set(blockedIds);
         rpcResults = rpcResults.filter((u) => !blockedSet.has(u.id));
@@ -625,11 +630,11 @@ export class DiscoveryService {
     // When a proficiency level is requested, keep users that either have the
     // matching level or do not yet have a level recorded (fresh profiles).
     if (query.level) {
-      const requestedLevel = query.level;
+      const requestedLevel = query.level.toUpperCase();
       results = results.filter(
         (u) =>
           u.proficiency_level === undefined ||
-          u.proficiency_level === requestedLevel,
+          u.proficiency_level?.toUpperCase() === requestedLevel,
       );
     }
     const filtered = await this.filterByVoiceRoomActive(
@@ -773,7 +778,10 @@ export class DiscoveryService {
     }
 
     if (query.level) {
-      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+      queryBuilder = queryBuilder.eq(
+        'proficiency_level',
+        query.level.toUpperCase(),
+      );
     }
 
     if (query.age_min !== undefined) {
@@ -953,7 +961,10 @@ export class DiscoveryService {
     }
 
     if (query.level) {
-      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+      queryBuilder = queryBuilder.eq(
+        'proficiency_level',
+        query.level.toUpperCase(),
+      );
     }
 
     const nativeLang = native_language;
@@ -1191,7 +1202,61 @@ export class DiscoveryService {
       }
     }
 
+    if (candidate.is_vip) {
+      const tier = candidate.vip_tier ?? '';
+      if (tier.startsWith('pro') || tier.startsWith('developer')) {
+        score += 30;
+      } else {
+        score += 15;
+      }
+      reasons.push('vip_priority');
+    }
+
     return { score, reasons };
+  }
+
+  private async hydrateVipTiers(
+    users: DiscoveryUser[],
+  ): Promise<DiscoveryUser[]> {
+    const vipIds = Array.from(
+      new Set(users.filter((user) => user.is_vip).map((user) => user.id)),
+    );
+    if (vipIds.length === 0) return users;
+
+    const response = await this.supabaseService
+      .getClient()
+      .from('users')
+      .select('id, vip_tier')
+      .in('id', vipIds)
+      .limit(vipIds.length);
+
+    if (response.error || !response.data) {
+      this.logger.warn(
+        { candidate_count: vipIds.length },
+        'VIP discovery tiers unavailable; continuing without paid visibility boosts',
+      );
+      return users;
+    }
+
+    const tiers = new Map<string, string>();
+    for (const row of response.data) {
+      if (typeof row.id === 'string' && typeof row.vip_tier === 'string') {
+        tiers.set(row.id, row.vip_tier);
+      }
+    }
+
+    return users.map((user) => ({
+      ...user,
+      vip_tier: tiers.get(user.id) ?? user.vip_tier,
+    }));
+  }
+
+  private withoutPrivateEntitlement<T extends Partial<UserProfile>>(
+    user: T,
+  ): T {
+    const publicUser = { ...user };
+    Reflect.deleteProperty(publicUser, 'vip_tier');
+    return publicUser;
   }
 
   private sortUsers(

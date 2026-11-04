@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import re
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -15,6 +17,15 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.cli import CLIProvider, classify_process_failure, secure_prompt_file
 from openhands_factory.agents.process import ProcessResult
+
+
+def catalogue_models(output: str) -> frozenset[str]:
+    """Read exact model identifiers, excluding banners and similarly named models."""
+    return frozenset(
+        value
+        for line in output.splitlines()
+        if re.fullmatch(r"opencode-go/[A-Za-z0-9][A-Za-z0-9._-]*", value := line.strip())
+    )
 
 
 class OpenCodeProvider(CLIProvider):
@@ -54,8 +65,9 @@ class OpenCodeProvider(CLIProvider):
                 detail=failure.message,
             )
         output = f"{result.stdout}\n{result.stderr}"
+        available = catalogue_models(output)
         configured_models = {model for model in {self.model, *self.phase_models.values()} if model}
-        missing_models = sorted(model for model in configured_models if model not in output)
+        missing_models = sorted(configured_models - available)
         if missing_models:
             return ProviderHealth(
                 self.name,
@@ -105,6 +117,12 @@ class OpenCodeProvider(CLIProvider):
     def prompt_for_stdin(self, prompt: str, prompt_path: Path | None) -> str | None:
         del prompt, prompt_path
         return None
+
+    def extra_environment(self) -> dict[str, str]:
+        # One OpenCode process can otherwise launch subagent conversations through
+        # its task tool, and --auto approves anything not explicitly denied. Those
+        # children are not counted by the shared provider accounting, so deny it.
+        return {"OPENCODE_CONFIG_CONTENT": json.dumps({"permission": {"task": "deny"}})}
 
     def build_command(
         self,

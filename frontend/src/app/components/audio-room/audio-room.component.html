@@ -18,11 +18,19 @@
           @if (!store.isSpeaker()) {
             <button
               hlmBtn
+              type="button"
               (click)="raiseHand()"
-              class="rounded-app bg-warning ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-on-fill"
-              [attr.aria-label]="'audioRoom.raiseHandBtn' | t"
+              [disabled]="hasRaisedHand()"
+              class="rounded-app bg-warning ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-on-fill disabled:opacity-60 disabled:cursor-not-allowed"
+              [attr.aria-label]="
+                (hasRaisedHand() ? 'audioRoom.handRaisedBtn' : 'audioRoom.raiseHandBtn') | t
+              "
             >
-              {{ 'audioRoom.raiseHandBtn' | t }}
+              @if (hasRaisedHand()) {
+                {{ 'audioRoom.handRaisedBtn' | t }}
+              } @else {
+                {{ 'audioRoom.raiseHandBtn' | t }}
+              }
             </button>
           }
           <button
@@ -47,9 +55,31 @@
           >
             {{ 'audioRoom.moderateBtn' | t }}
           </app-button-secondary>
+          @if (
+            room.host_id === authService.currentUser()?.id ||
+            room.co_host_id === authService.currentUser()?.id
+          ) {
+            <button
+              hlmBtn
+              type="button"
+              (click)="showApprovalModal.set(true)"
+              class="rounded-app bg-warning ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-on-fill"
+              [attr.aria-label]="'approveSpeaker.modalTitle' | t"
+            >
+              {{ 'approveSpeaker.modalTitle' | t }}
+              @if (room.raised_hands && room.raised_hands.length > 0) {
+                <span
+                  class="ms-1.5 inline-flex items-center justify-center rounded-full bg-on-fill/30 px-1.5 py-0.5 text-[10px] font-bold text-on-fill"
+                >
+                  {{ room.raised_hands.length }}
+                </span>
+              }
+            </button>
+          }
           @if (room.host_id === authService.currentUser()?.id) {
             <button
               hlmBtn
+              type="button"
               (click)="openPollForm()"
               class="rounded-app bg-primary ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-on-fill"
               [attr.aria-label]="'quickPoll.createBtn' | t"
@@ -257,9 +287,7 @@
                 <div
                   class="rounded-card border border-surface-200 bg-surface-100 p-3 text-center text-xs font-bold text-text-secondary"
                   role="listitem"
-                  [attr.aria-label]="
-                    'audioRoom.speakerCount' | t: { count: stageOverflowCount() }
-                  "
+                  [attr.aria-label]="'audioRoom.speakerCount' | t: { count: stageOverflowCount() }"
                 >
                   +{{ stageOverflowCount() }}
                 </div>
@@ -268,13 +296,15 @@
           </app-card>
 
           @if (
-            room.host_id === authService.currentUser()?.id &&
+            (room.host_id === authService.currentUser()?.id ||
+              room.co_host_id === authService.currentUser()?.id) &&
             room.raised_hands &&
             room.raised_hands.length > 0
           ) {
             <div class="flex justify-center pt-2">
               <button
                 hlmBtn
+                type="button"
                 (click)="showApprovalModal.set(true)"
                 class="rounded-app bg-warning ps-5 pe-5 pt-3 pb-3 text-sm font-bold text-on-fill hover:bg-warning/80 transition-colors shadow-glow"
                 [attr.aria-label]="'audioRoom.raisedHandsTitle' | t"
@@ -350,41 +380,40 @@
         <div class="flex flex-col gap-4">
           <app-room-chat></app-room-chat>
           @if (showNotesPanel()) {
-            <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
+            <app-voiceroom-notes
+              [roomId]="room.id"
+              [canPost]="
+                room.host_id === authService.currentUser()?.id ||
+                room.co_host_id === authService.currentUser()?.id ||
+                store.isSpeaker()
+              "
+              [isHost]="
+                room.host_id === authService.currentUser()?.id ||
+                room.co_host_id === authService.currentUser()?.id
+              "
+              [currentUserId]="authService.currentUser()?.id"
+            ></app-voiceroom-notes>
           }
         </div>
       </div>
     </app-card>
 
     @if (showPollFormModal()) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-        <div class="w-full max-w-md">
-          <app-quick-poll-form
-            (submitPoll)="submitPollForm($event.question, $event.options)"
-            (cancelled)="closePollForm()"
-          ></app-quick-poll-form>
-        </div>
-      </div>
+      <app-quick-poll-form
+        [submitting]="isCreatingPoll()"
+        (submitPoll)="submitPollForm($event.question, $event.options)"
+        (cancelled)="closePollForm()"
+      ></app-quick-poll-form>
     }
 
     @if (showPollResultsModal() && pollResults()) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-        <div class="w-full max-w-md relative">
-          <button
-            hlmBtn
-            (click)="showPollResultsModal.set(false)"
-            class="absolute top-2 end-2 text-surface-400 hover:text-text-primary"
-            aria-label="Close"
-          >
-            &times;
-          </button>
-          <app-quick-poll-display
-            [data]="pollResults()!"
-            [allowVote]="true"
-            (vote)="voteInPoll(currentPollId()!, $event)"
-          ></app-quick-poll-display>
-        </div>
-      </div>
+      <app-quick-poll-display
+        [data]="pollResults()!"
+        [allowVote]="pollResults()!.is_active && pollResults()!.userVote === null"
+        [selectedOptionIndex]="pollResults()!.userVote"
+        (vote)="voteInPoll(currentPollId()!, $event)"
+        (closed)="showPollResultsModal.set(false)"
+      ></app-quick-poll-display>
     }
 
     @if (showGiftModal()) {
@@ -414,9 +443,10 @@
 
     @if (showApprovalModal() && room.raised_hands) {
       <app-approve-speaker-modal
-        [raisedHandUserIds]="room.raised_hands"
-        (approve)="handleApproveSpeaker($event)"
-        (dismiss)="showApprovalModal.set(false)"
+        [raisedHands]="room.raised_hands"
+        (approved)="handleApproveSpeaker($event)"
+        (declined)="handleDeclineSpeaker($event)"
+        (closed)="showApprovalModal.set(false)"
       ></app-approve-speaker-modal>
     }
   } @else {
@@ -470,6 +500,7 @@
         @for (group of store.roomsByLanguage(); track group.language_pair) {
           <button
             hlmBtn
+            size="touch"
             (click)="selectLanguageGroup(group.language_pair)"
             class="rounded-card border px-3 py-2 text-xs font-bold transition-colors"
             [class.border-primary]="store.selectedLanguageGroup() === group.language_pair"

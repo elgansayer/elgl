@@ -16,7 +16,10 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { UpdateNotificationPreferencesDto } from '../notification-preferences/dto/update-notification-preferences.dto';
 import { GetNotificationsQueryDto } from './dto/get-notifications-query.dto';
 import { NotificationDto } from './dto/notification.dto';
-import { NotificationsInboxService } from './notifications-inbox.service';
+import {
+  NotificationUnreadCounts,
+  NotificationsInboxService,
+} from './notifications-inbox.service';
 import { NotificationsService } from './notifications.service';
 
 @Controller('notifications')
@@ -39,7 +42,7 @@ export class NotificationsController {
   @Get('unread-count')
   async getUnreadCount(
     @CurrentUser() user: User | null,
-  ): Promise<{ unreadCount: number }> {
+  ): Promise<NotificationUnreadCounts> {
     if (!user) throw new UnauthorizedException();
     return this.notificationsInboxService.getUnreadCount(user.id);
   }
