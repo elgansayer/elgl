@@ -40,3 +40,28 @@ def test_existing_relative_forms_are_unchanged() -> None:
     assert extract_retry_after_seconds("retry-after: 120", NOW) == 120
     assert extract_retry_after_seconds("resets in 2h 5m", NOW) == 2 * 3600 + 300
     assert extract_retry_after_seconds("no timing here", NOW) is None
+
+
+CLAUDE_FIVE_HOUR = "You've hit your 5-hour limit \u00b7 resets 2:20pm (UTC)"
+
+
+def test_claude_five_hour_limit_is_quota_with_next_reset() -> None:
+    failure = classify_process_failure(
+        ProcessResult(("claude",), 1, CLAUDE_FIVE_HOUR, "", False, False, 0.1)
+    )
+    assert failure.kind is AgentFailureKind.PROVIDER_QUOTA
+    at_1352 = datetime(2026, 11, 4, 13, 52, tzinfo=UTC)
+    assert extract_retry_after_seconds(CLAUDE_FIVE_HOUR.lower(), at_1352) == 28 * 60
+    at_1500 = datetime(2026, 11, 4, 15, 0, tzinfo=UTC)
+    assert extract_retry_after_seconds(CLAUDE_FIVE_HOUR.lower(), at_1500) == (23 * 60 + 20) * 60
+    assert extract_retry_after_seconds("resets 2:20pm (pst)", at_1352) is None
+
+
+def test_hit_limit_family_and_unrelated_text() -> None:
+    for text in ("You have hit your monthly limit", "You've hit your daily usage limit"):
+        failure = classify_process_failure(ProcessResult(("x",), 1, text, "", False, False, 0.1))
+        assert failure.kind is AgentFailureKind.PROVIDER_QUOTA, text
+    other = classify_process_failure(
+        ProcessResult(("x",), 1, "connection reset by peer", "", False, False, 0.1)
+    )
+    assert other.kind is AgentFailureKind.PROVIDER_TRANSPORT
