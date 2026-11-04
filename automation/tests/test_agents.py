@@ -201,6 +201,7 @@ class FakeProcessRunner:
         self.cwds: list[Path] = []
         self.stdin: list[str | None] = []
         self.attached_prompt: str | None = None
+        self.environments: list[dict[str, str]] = []
 
     def run(
         self,
@@ -213,7 +214,8 @@ class FakeProcessRunner:
         max_output_bytes,
         home_mounts=(),
     ):
-        del env, timeout_seconds, max_output_bytes, home_mounts
+        del timeout_seconds, max_output_bytes, home_mounts
+        self.environments.append(dict(env))
         self.commands.append(tuple(command))
         self.cwds.append(cwd)
         self.stdin.append(stdin_text)
@@ -614,6 +616,7 @@ class TestAgentProviders(unittest.TestCase):
         self.assertIn("gpt-5.6-sol", runner.commands[0])
         self.assertIn("--ignore-user-config", runner.commands[0])
         self.assertIn("--ignore-rules", runner.commands[0])
+        self.assertIn("--skip-git-repo-check", runner.commands[0])
         self.assertNotIn("-a", runner.commands[0])
         self.assertEqual(runner.commands[0][-1], "-")
 
@@ -810,6 +813,14 @@ class TestAgentProviders(unittest.TestCase):
         self.assertIn("opencode-go/kimi-k3", health.detail or "")
         self.assertEqual(runner.commands, [("opencode", "models", "opencode-go")])
 
+    def test_opencode_rejects_a_catalogue_with_only_a_similarly_named_model(self):
+        runner = FakeProcessRunner("OpenCode Go\nopencode-go/kimi-k3-preview")
+        provider = OpenCodeProvider(process_runner=runner)
+        with patch("openhands_factory.agents.cli.shutil.which", return_value="/usr/bin/opencode"):
+            health = provider.health()
+        self.assertEqual(health.status, ProviderStatus.UNAVAILABLE)
+        self.assertEqual(runner.commands, [("opencode", "models", "opencode-go")])
+
     def test_opencode_provider(self):
         runner = FakeProcessRunner("opencode success")
         provider = OpenCodeProvider(process_runner=runner)
@@ -826,3 +837,19 @@ class TestAgentProviders(unittest.TestCase):
         self.assertEqual(result.summary, "opencode success")
         self.assertEqual(runner.stdin, [None])
         self.assertEqual(runner.attached_prompt, "do it")
+        # Subagent delegation would start uncounted model conversations.
+        config = json.loads(runner.environments[0]["OPENCODE_CONFIG_CONTENT"])
+        self.assertEqual(config, {"permission": {"task": "deny"}})
+        self.assertNotIn("OPENAI_API_KEY", runner.environments[0])
+
+    def test_codex_provider_receives_no_opencode_configuration(self):
+        runner = FakeProcessRunner("codex success")
+        provider = CodexProvider(process_runner=runner)
+        request = AgentRequest(
+            phase=AgentPhase.IMPLEMENTATION,
+            task=Task("1", "test", "body", "issue", 1),
+            prompt="do it",
+            cwd=Path("/tmp"),
+        )
+        self.assertTrue(provider.run(request).success)
+        self.assertNotIn("OPENCODE_CONFIG_CONTENT", runner.environments[0])

@@ -540,6 +540,20 @@ describe('ProfileComponent', () => {
     );
   });
 
+  it('keeps all profile visibility choices large enough for touch input', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.toggleEdit();
+    fixture.detectChanges();
+
+    const choices: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll('[role="radiogroup"] button');
+    expect(choices).toHaveLength(3);
+    for (const choice of choices) {
+      expect(choice.classList.contains('min-h-11')).toBe(true);
+    }
+  });
+
   it('should not expose raw transport details when loadProfile fails', async () => {
     mockUserService.getMyProfile.mockRejectedValue(new Error('Network error'));
     await fixture.componentInstance.loadProfile();

@@ -19,7 +19,7 @@ from openhands_factory.architecture_guard import (
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.generation import generation_snapshot
-from openhands_factory.github import REQUIRED_FACTORY_MERGE_CHECKS
+from openhands_factory.github import required_merge_checks
 from openhands_factory.jobs import JobStore
 from openhands_factory.legacy_runtime import detect_legacy_runtime
 from openhands_factory.models import JobState
@@ -485,7 +485,9 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
             if isinstance(context, str) and context:
                 required_contexts.add(context)
 
-    missing = sorted(REQUIRED_FACTORY_MERGE_CHECKS - required_contexts)
+    required_checks = required_merge_checks(config.merge_review_policy)
+    review_required = "factory/independent-review" in required_checks
+    missing = sorted(required_checks - required_contexts)
     details_by_id = {
         ruleset_id: details
         for ruleset_id in rules_by_id
@@ -536,12 +538,15 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
             manual_review_rulesets.append(ruleset_id)
 
     passed = (
-        pull_request_required and not missing and bool(baseline_rulesets) and bool(review_rulesets)
+        pull_request_required
+        and not missing
+        and bool(baseline_rulesets)
+        and (bool(review_rulesets) or not review_required)
     )
     detail_parts = [
         f"pull-request-rule={'present' if pull_request_required else 'missing'}",
         (
-            "required-statuses=" + ",".join(sorted(REQUIRED_FACTORY_MERGE_CHECKS))
+            "required-statuses=" + ",".join(sorted(required_checks))
             if not missing
             else "missing-statuses=" + ",".join(missing)
         ),
@@ -553,6 +558,8 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
         (
             "review-ruleset=" + ",".join(str(value) for value in review_rulesets)
             if review_rulesets
+            else "review-ruleset=not-required (ci-gated)"
+            if not review_required
             else "no active independent-review ruleset with an allowed bypass policy"
         ),
         (

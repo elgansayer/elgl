@@ -458,6 +458,93 @@ install_runtime_bundle() {
   record_runtime_commit "$commit" || return 1
 }
 
+stage_inactive_neptune_configuration() {
+  local commit=$1
+  local destination=${2:-/etc/repo-factory/instances/neptune.env}
+  local relative_path=config/factory/instances/neptune.env
+  local bytes workspace entry result=failed
+
+  # Operator configuration wins, including a dangling link. Do not read it.
+  if [ -e "$destination" ] || [ -L "$destination" ]; then
+    log 'Preserving existing Neptune instance configuration'
+    return 0
+  fi
+  verify_commit_identity "$commit" || return 1
+  entry=$(factory_git_read ls-tree "$commit" -- "$relative_path") || return 1
+  if [ -z "$entry" ]; then
+    log 'Verified runtime predates the Neptune profile; deferring preparation'
+    return 0
+  fi
+  bytes=$(factory_git_read cat-file -s "${commit}:${relative_path}") || return 1
+  if [[ ! "$bytes" =~ ^[0-9]{1,5}$ ]] || [ "$bytes" -eq 0 ] || [ "$bytes" -gt 32768 ]; then
+    log 'Refusing oversized or empty Neptune preparatory configuration'
+    return 1
+  fi
+  workspace=$(mktemp -d "$(dirname -- "$destination")/.neptune-stage.XXXXXX") || return 1
+  if install_runtime_file_from_commit \
+    "$commit" "$relative_path" "$workspace/neptune.env" 0644 root root 0700 && \
+    timeout 10s /usr/bin/python3 -I - "$workspace/neptune.env" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+try:
+    values = {}
+    for line in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        key, separator, value = line.partition("=")
+        if not separator or not re.fullmatch(r"[A-Z][A-Z0-9_]*", key) or key in values:
+            raise ValueError
+        values[key] = value
+    required = {
+        "FACTORY_NEPTUNE_ENABLED": "false",
+        "FACTORY_REPOSITORY_PROFILE": "neptune",
+        "GITHUB_REPOSITORY": "elgansayer/Neptune-Bomberman",
+        "FACTORY_PROVIDER_CAPACITY_DIR": "/var/lib/repo-factory/shared",
+        "FACTORY_AGENTS_CONFIG": "/etc/repo-factory/agents.json",
+        "FACTORY_MAX_PARALLEL_JOBS": "1",
+        "FACTORY_MONTHLY_VARIABLE_BUDGET_USD": "0",
+        "FACTORY_REQUIRE_TRUSTED_INTAKE": "true",
+        "FACTORY_REQUIRE_READY_LABEL": "true",
+        "FACTORY_REQUIRE_GREEN_MAIN_BETWEEN_MERGES": "true",
+        "FACTORY_REVIEW_RESERVE_PROVIDER_SLOT": "false",
+        "FACTORY_REVIEW_LANE_MAX_CONCURRENT": "1",
+        "FACTORY_MAINTENANCE_ENABLED": "false",
+    }
+    allowed = set(required) | {
+        "FACTORY_REPOSITORY", "FACTORY_BASE_BRANCH", "FACTORY_STATE_DIR",
+        "FACTORY_LOG_DIR", "FACTORY_PROFILE_STORE", "FACTORY_WORKTREE_DIR",
+        "FACTORY_RECOVERY_DIR", "FACTORY_PROMPT_DIR", "FACTORY_SYSTEM_PROMPT_PATH",
+        "FACTORY_ARCHITECTURE", "FACTORY_TASK_IMAGE", "FACTORY_TRUSTED_GITHUB_ACTORS",
+        "FACTORY_CONTROL_GITHUB_ACTORS", "FACTORY_READY_LABEL",
+    }
+    if set(values) - allowed:
+        raise ValueError
+    if any(values.get(key) != value for key, value in required.items()):
+        raise ValueError
+    if any(re.search(r"TOKEN|SECRET|PASSWORD|API_KEY", key) for key in values):
+        raise ValueError
+except (OSError, UnicodeError, ValueError):
+    raise SystemExit(1)
+PY
+  then
+    # A link publishes the verified file without replacing a concurrent writer.
+    if ln -T -- "$workspace/neptune.env" "$destination" 2>/dev/null; then
+      result=staged
+    elif [ -e "$destination" ] || [ -L "$destination" ]; then
+      result=preserved
+    fi
+  fi
+  rm -f -- "$workspace/neptune.env" || return 1
+  rmdir -- "$workspace" || return 1
+  case "$result" in
+    staged) log 'Staged disabled Neptune instance configuration' ;;
+    preserved) log 'Preserved concurrently supplied Neptune instance configuration' ;;
+    *) log 'Refusing invalid or unpublished Neptune preparatory configuration'; return 1 ;;
+  esac
+}
+
 install_service_configuration() {
   local commit=$1
   verify_commit_identity "$commit" || return 1
@@ -485,6 +572,7 @@ install_service_configuration() {
   install_runtime_file_from_commit \
     "$commit" config/factory/instances/workout-agent.env \
     /etc/repo-factory/instances/workout-agent.env 0644 || return 1
+  stage_inactive_neptune_configuration "$commit" || return 1
   systemctl daemon-reload
 }
 

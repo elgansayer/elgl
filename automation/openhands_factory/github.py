@@ -35,7 +35,19 @@ from openhands_factory.neptune_merge import (
 from openhands_factory.pr_convergence import PullRequestRecord
 from openhands_factory.repository_guard import ProcessResult, run_process
 
-REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", "factory/independent-review"})
+INDEPENDENT_REVIEW_CHECK = "factory/independent-review"
+REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", INDEPENDENT_REVIEW_CHECK})
+CI_GATED_MERGE_CHECKS = frozenset({"CI / required"})
+
+
+def required_merge_checks(merge_review_policy: str) -> frozenset[str]:
+    if merge_review_policy == "ci-gated":
+        return CI_GATED_MERGE_CHECKS
+    if merge_review_policy == "independent-review":
+        return REQUIRED_FACTORY_MERGE_CHECKS
+    raise ValueError(f"Unknown merge review policy: {merge_review_policy!r}")
+
+
 MAX_FAILED_JOB_EXCERPTS = 4
 _LOG_TIMESTAMP = re.compile(r"^\d{4}-\d\d-\d\dT[\d:.]+Z ")
 _LOG_ANSI = re.compile(r"\x1b\[[0-9;]*m")
@@ -214,7 +226,9 @@ class GitHubClient:
         trusted_github_actors: Collection[str] = (),
         require_ready_label: bool = False,
         ready_label: str = "factory-ready",
+        merge_review_policy: str = "independent-review",
     ) -> None:
+        self.required_merge_checks = required_merge_checks(merge_review_policy)
         self.repository = repository
         self.workspace = workspace
         self.base_branch = base_branch
@@ -541,7 +555,9 @@ class GitHubClient:
                         "mergedAt": merged_at,
                     }
             try:
-                records.append(PullRequestRecord.from_payload(item))
+                records.append(
+                    PullRequestRecord.from_payload(item, required_checks=self.required_merge_checks)
+                )
             except (TypeError, ValueError) as error:
                 raise FactoryError(
                     "GitHub pull-request inventory contains invalid identity"
@@ -1453,6 +1469,14 @@ class GitHubClient:
         )
         item = json.loads(output)
         check_rollup = item.get("statusCheckRollup", [])
+        if INDEPENDENT_REVIEW_CHECK not in self.required_merge_checks:
+            # A retired review status (often left pending) must not hold a
+            # CI-verified head; it is neither required nor counted.
+            check_rollup = [
+                check
+                for check in check_rollup
+                if str(check.get("name") or check.get("context") or "") != INDEPENDENT_REVIEW_CHECK
+            ]
         review_decision = str(item.get("reviewDecision") or "")
         human_review_blocked = review_decision.upper() == "CHANGES_REQUESTED"
         conclusions: list[str] = []
@@ -1484,15 +1508,15 @@ class GitHubClient:
             for check in check_rollup
         )
         ci_required_failed = "CI / required" in failed_checks
-        missing_required = REQUIRED_FACTORY_MERGE_CHECKS - observed_checks
+        missing_required = self.required_merge_checks - observed_checks
         if missing_required:
             # GitHub creates workflow check-runs asynchronously. Treat an absent
             # canonical gate as pending rather than allowing a temporary partial
             # rollup to enter the scheduled merge queue.
             pending = True
-        required_passed = REQUIRED_FACTORY_MERGE_CHECKS.issubset(successful_checks)
+        required_passed = self.required_merge_checks.issubset(successful_checks)
         unsuccessful_required = (
-            REQUIRED_FACTORY_MERGE_CHECKS.intersection(observed_checks) - successful_checks
+            self.required_merge_checks.intersection(observed_checks) - successful_checks
         )
         failed_checks |= frozenset(unsuccessful_required)
         terminal_checks_passed = all(
@@ -1516,7 +1540,9 @@ class GitHubClient:
             checks_pending=pending or human_review_blocked,
             failed_checks=failed_checks,
             merge_state_status=str(item.get("mergeStateStatus") or "UNKNOWN").upper(),
-            workflow_run_ids=PullRequestRecord.from_payload(item).workflow_run_ids,
+            workflow_run_ids=PullRequestRecord.from_payload(
+                item, required_checks=self.required_merge_checks
+            ).workflow_run_ids,
             ci_required_passed=(
                 "CI / required" in successful_checks
                 and not ci_required_pending
