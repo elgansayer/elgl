@@ -71,3 +71,29 @@ until #536's live shared-session rollout, configured-account canary, actual
 deployment/restart and independent effective counts pass. Model-free process
 tests do not establish vendor health, account usage, real research extraction or
 Saturn parity. Preserve accepted reference builds, other services and active work.
+
+## Inactive instance preparation
+
+The ordinary verified updater also prepares a missing
+`/etc/repo-factory/instances/neptune.env` from an immutable accepted Git blob.
+It uses the existing runtime-file materialiser inside a private staging directory,
+checks the bounded template with isolated OS Python, and atomically links the
+validated file into place. An existing operator file, directory or symlink wins,
+including a concurrent creation. Existing configuration is neither read nor
+replaced. Invalid, active, funded, secret-bearing or unknown-key templates fail
+without publishing the file; temporary staging files are removed.
+
+The preparatory profile remains disabled, uses the existing shared broker/policy,
+requires trusted ready intake and green main, and retains one job with zero
+variable spend and no reserved review slot. The updater does not enable or start
+the Neptune service or its health timer. Root-owned installation stays in the
+existing trusted updater; workers receive no privileged installer interface.
+
+An updater already running older code can first adopt the new script and prepare
+the profile on its next ordinary timer invocation. A verified historical runtime
+without the template defers preparation; a Git read error still fails closed.
+Verify actual file identity,
+ownership/mode and disabled service/timer state after adoption. A staged profile
+does not provide a repository/cache, enrol manual accounts, establish provider
+health or pass the real-job/restart gate. Those remain prerequisites of #536/#33
+before activation. Preserve shared limits, operator configuration and credentials.
