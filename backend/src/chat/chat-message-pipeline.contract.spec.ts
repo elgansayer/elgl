@@ -61,7 +61,9 @@ describe('POST /chat/messages pipeline contract', () => {
     expect(insertIndex).toBeGreaterThanOrEqual(0);
     expect(source).toMatch(/sender_id:\s*senderId/);
     expect(source).toMatch(/message_type:\s*dto\.message_type/);
-    expect(source).toMatch(/text_content:\s*dto\.text_content\s*\? dto\.text_content\.replace\(\/\\0\/g, ''\)\s*:\s*null/);
+    expect(source).toMatch(
+      /text_content:\s*dto\.text_content\s*\? dto\.text_content\.replace\(\/\\0\/g, ''\)\s*:\s*null/,
+    );
     expect(source).toMatch(/delivery_status:\s*'sent'/);
     expect(source).toMatch(/\.single\(\)/);
     expect(savedIndex).toBeGreaterThan(insertIndex);
