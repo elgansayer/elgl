@@ -182,6 +182,12 @@ Issue work starts from fresh `origin/main` in an isolated branch and worktree. E
 remote branch in a separate worktree. Only trusted Factory code performs Git add, commit, push, status, and merge
 operations. Provider subprocesses do not receive GitHub or application secrets.
 
+`FACTORY_MERGE_REVIEW_POLICY` selects the merge gate per instance. `independent-review` (the default) is described
+below. `ci-gated` (Elgl since #9824) leaves `REVIEWING` as soon as exact-head `CI / required` passes, buys no review
+conversation, publishes no review status and ignores a retired one; a moved head still returns to verification, and
+missing, pending or failed CI still blocks. The scheduled `factory-merge.yml` fallback selects only `factory-reviewed`
+PRs, so ci-gated merges are executed by the daemon's `MERGE_QUEUED` step.
+
 Review approval publishes `factory/independent-review` on the exact reviewed head and adds `factory-reviewed`.
 Before every PR-backed AI phase, refresh, or base update, the Factory removes review labels and republishes that
 status as `PENDING` on the current SHA. A crash or timeout therefore leaves the merge gate closed. If GitHub

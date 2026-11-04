@@ -67,6 +67,11 @@ def parser() -> argparse.ArgumentParser:
     auth.add_argument("--force", action="store_true")
     models = subcommands.add_parser("models")
     models.add_argument("provider", choices=("opencode-go", "gemini"))
+    trial = subcommands.add_parser("opencode-profile")
+    trial.add_argument("--source", type=Path, required=True)
+    trial.add_argument("--catalogue", type=Path, required=True)
+    trial.add_argument("--output", type=Path, required=True)
+    trial.add_argument("--model", required=True)
     providers = subcommands.add_parser("providers")
     providers.add_argument("action", choices=("check",))
     legacy = subcommands.add_parser("legacy")
@@ -178,6 +183,12 @@ def main(arguments: list[str] | None = None) -> int:
     args = parser().parse_args(arguments)
     try:
         protect_process_credentials()
+        if args.command == "opencode-profile":
+            from openhands_factory.opencode_profile import prepare_profile
+
+            report = prepare_profile(args.source, args.catalogue, args.output, args.model)
+            print(json.dumps(report, indent=2))
+            return 0
         config = _config()
         if args.command == "doctor":
             checks = _doctor_checks(config, online=args.online)
@@ -332,6 +343,7 @@ def main(arguments: list[str] | None = None) -> int:
                 config.repository,
                 config.github_token.get_secret_value(),
                 base_branch=config.base_branch,
+                merge_review_policy=config.merge_review_policy,
             )
             jobs = JobStore(
                 config.state_dir / "jobs.json",

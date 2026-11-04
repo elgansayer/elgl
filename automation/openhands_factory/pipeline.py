@@ -193,6 +193,7 @@ class FactoryPipeline:
             trusted_github_actors=config.trusted_github_actors,
             require_ready_label=config.require_ready_label,
             ready_label=config.ready_label,
+            merge_review_policy=config.merge_review_policy,
         )
         self.jobs = JobStore(
             config.state_dir / "jobs.json",
@@ -1446,6 +1447,25 @@ class FactoryPipeline:
                 # Keep the review handoff durable. CI_PENDING would wait on the
                 # review status which only this phase can produce after CI passes.
                 job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+                return
+
+            if self.config.merge_review_policy == "ci-gated":
+                # Exact-head required CI is the merge gate. Buy no review
+                # conversation and publish no review status; CI_PENDING re-reads
+                # GitHub and a moved head returns to verification as before.
+                if job.pull_request is None:
+                    raise FactoryError("Pull request number is missing")
+                job.review_findings.clear()
+                if job.head_sha is None:
+                    job.head_sha = workflow.head_sha()
+                self.github.mark_ready(job.pull_request)
+                self._record_pr_lifecycle(
+                    job,
+                    "ci-gated",
+                    "Required CI passed on this exact head; the ci-gated merge policy "
+                    "skips the independent AI review.",
+                )
+                job.state = JobState.CI_PENDING
                 return
 
             # The worktree persists across retries of this state, so a review report

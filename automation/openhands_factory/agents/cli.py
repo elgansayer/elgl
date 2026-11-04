@@ -256,12 +256,16 @@ class CLIProvider:
         return (process_runner or self.process_runner).run(
             command,
             cwd=cwd,
-            env=provider_environment(),
+            env=provider_environment(extra=self.extra_environment()),
             stdin_text=stdin_text,
             timeout_seconds=timeout_seconds,
             max_output_bytes=max_output_bytes,
             home_mounts=self.home_mounts,
         )
+
+    def extra_environment(self) -> dict[str, str]:
+        """Provider-specific settings added after the credential-free allowlist."""
+        return {}
 
     def invalidate_health_cache(self) -> None:
         """Force the next circuit half-open check to execute a real probe."""
