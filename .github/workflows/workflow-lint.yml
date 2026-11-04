@@ -7,6 +7,7 @@ on:
       - 'config/systemd/**'
       - 'scripts/audit-workflows.mjs'
       - 'scripts/deploy-workflow-contract.test.mjs'
+      - 'scripts/dashboard-image-workflow-contract.test.mjs'
       - 'scripts/deploy-and-start-factory.sh'
       - 'scripts/maintain-factory-host-storage.sh'
       - 'scripts/relocate-home-cache-to-second-disk.sh'
@@ -17,6 +18,7 @@ on:
       - 'config/systemd/**'
       - 'scripts/audit-workflows.mjs'
       - 'scripts/deploy-workflow-contract.test.mjs'
+      - 'scripts/dashboard-image-workflow-contract.test.mjs'
       - 'scripts/deploy-and-start-factory.sh'
       - 'scripts/maintain-factory-host-storage.sh'
       - 'scripts/relocate-home-cache-to-second-disk.sh'
@@ -41,7 +43,7 @@ jobs:
         run: node scripts/audit-workflows.mjs
 
       - name: Verify deploy workflow safety contract
-        run: node --test scripts/deploy-workflow-contract.test.mjs
+        run: node --test scripts/deploy-workflow-contract.test.mjs scripts/dashboard-image-workflow-contract.test.mjs
 
       - name: Install actionlint
         env:

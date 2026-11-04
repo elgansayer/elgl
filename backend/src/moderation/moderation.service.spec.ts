@@ -311,7 +311,7 @@ describe('ModerationService', () => {
             data: [
               {
                 id: 'moment-1',
-                content_text: 'Hello world',
+                text_content: 'Hello world',
                 author: { display_name: 'Moment Author' },
               },
             ],
@@ -332,6 +332,14 @@ describe('ModerationService', () => {
         moment_content: 'Hello world',
         momentAuthorName: 'Moment Author',
       });
+      // moments has text_content and user_id (005_moments.sql). content_text
+      // and author_id do not exist, and PostgREST rejects a select naming them.
+      const [selected] = momentBuilder.select.mock.calls[0];
+      expect(selected).toContain('text_content');
+      expect(selected).toContain('user_id');
+      expect(selected).not.toMatch(/content_text|author_id/);
+      expect(selected).toContain('users!moments_user_id_fkey');
+      expect(momentBuilder.in).toHaveBeenCalledWith('id', ['moment-1']);
     });
 
     it('should handle missing moment content gracefully - batch fetch', async () => {
@@ -408,8 +416,8 @@ describe('ModerationService', () => {
 
       mockQueryBuilder.limit.mockResolvedValueOnce({
         data: [
-          { content_text: 'I want to find a boyfriend and get married' },
-          { content_text: 'Looking for romance and dating' },
+          { text_content: 'I want to find a boyfriend and get married' },
+          { text_content: 'Looking for romance and dating' },
         ],
         error: null,
       });
@@ -417,6 +425,32 @@ describe('ModerationService', () => {
       const result = await service.analyseUserForDatingBehaviour('user-1');
 
       expect(result.riskScore).toBeGreaterThan(0);
+      expect(result.flags.length).toBeGreaterThan(0);
+    });
+
+    it('should read recent Moments through user_id and text_content and score their text', async () => {
+      // The profile is clean, so any flag can only come from the Moments text.
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: mockUser,
+        error: null,
+      });
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: [
+          { text_content: 'I want to find a boyfriend and get married' },
+          { text_content: 'Looking for romance and dating' },
+        ],
+        error: null,
+      });
+
+      const result = await service.analyseUserForDatingBehaviour('user-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('moments');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith('id, text_content');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(mockQueryBuilder.eq).not.toHaveBeenCalledWith(
+        'author_id',
+        expect.anything(),
+      );
       expect(result.flags.length).toBeGreaterThan(0);
     });
 

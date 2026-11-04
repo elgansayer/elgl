@@ -22,7 +22,6 @@ import {
   LearnerKnowledgeService,
   LearnerKnowledgeProfile,
 } from '../learner-knowledge/learner-knowledge.service';
-import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendTypingDto } from './dto/send-typing.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -32,7 +31,6 @@ import {
   CorrectionPayload,
   ChatMessage,
   ChatRoomRecord,
-  FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import {
   ChatMessageEvent,
@@ -53,9 +51,42 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+function escapeLikePattern(value: string): string {
+  return value
+    .replaceAll('\\', '\\\\')
+    .replaceAll('%', '\\%')
+    .replaceAll('_', '\\_')
+    .replaceAll('*', '\\*')
+    .replaceAll('"', '\\"');
+}
+
 interface DeletedAwareMessage extends ChatMessage {
   is_deleted?: boolean;
   deleted_for_user_ids?: string[] | null;
+}
+
+interface SearchMembershipRow {
+  room_id: string;
+  is_locked?: boolean | null;
+}
+
+interface SearchMessageRow {
+  id: string;
+  room_id: string;
+  sender_id: string;
+  message_type: string;
+  text_content?: string | null;
+  is_encrypted?: boolean;
+  encrypted_payload?: string | null;
+  is_read: boolean;
+  created_at: string;
+  expires_at?: string | null;
+  is_deleted_for_everyone?: boolean;
+  deleted_for_user_ids?: string[] | null;
+  sender?: {
+    id: string;
+    display_name?: string | null;
+  } | null;
 }
 
 interface GroupMember {
@@ -715,38 +746,12 @@ export class ChatService {
     return messages;
   }
 
-  async addFavourite(userId: string, dto: AddFavouriteDto): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-
-    // Get the message to favourite
-    const messageResponse = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('id', dto.message_id)
-      .single();
-
-    if (messageResponse.error || !messageResponse.data) {
-      throw new Error('Message not found');
-    }
-
-    const message = messageResponse.data;
-
-    // Store the favourite
-    const { error } = await supabase.from('favourites').insert({
-      user_id: userId,
-      item_type: 'message',
-      item_payload: message,
-      notes: dto.note_text || null,
-    });
-
-    if (error) {
-      throw new Error('Failed to add favourite');
-    }
-  }
-
   /**
-   * Search messages across ALL rooms the user is a member of.
-   * Uses pg_trgm for fuzzy text search on text_content.
+   * Search messages across the rooms the user is a member of.
+   *
+   * Hidden (locked) chats are a private per-member preference whose content is revealed only
+   * after the client unlock flow clears the persisted lock, exactly as `getRooms` and the unread
+   * count treat them. They are never searchable while that lock remains set.
    */
   async searchAllMessages(
     userId: string,
@@ -757,17 +762,24 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
     const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
-    // Get all room IDs the user is a member of
+    // Get all rooms the user is a member of, with the per-member hidden-chat flag
     const { data: memberRooms, error: memberErr } = await supabase
       .from('chat_room_members')
-      .select('room_id')
+      .select('room_id, is_locked')
       .eq('user_id', userId);
 
-    if (memberErr || !memberRooms || memberRooms.length === 0) {
+    if (memberErr) {
+      this.logger.error('chat.message_search_membership_lookup_failed');
+      throw new ServiceUnavailableException();
+    }
+
+    if (!memberRooms || memberRooms.length === 0) {
       return [];
     }
 
-    let roomIds = memberRooms.map((r: { room_id: string }) => r.room_id);
+    let roomIds = memberRooms
+      .filter((r: SearchMembershipRow) => r.is_locked !== true)
+      .map((r: SearchMembershipRow) => r.room_id);
 
     // If a specific roomId is provided, limit to that room only
     if (roomId) {
@@ -775,73 +787,95 @@ export class ChatService {
       roomIds = [roomId];
     }
 
+    // Every joined room is hidden: a successful empty result, never a leak of hidden chats
+    if (roomIds.length === 0) return [];
+
     const trimmedTerm = term.trim();
     if (trimmedTerm.length < 2) return [];
+    const escapedTerm = escapeLikePattern(trimmedTerm);
 
-    let query = supabase
-      .from('chat_messages')
-      .select(
-        `
-        *,
+    const projection = `
+        id,
+        room_id,
+        sender_id,
+        message_type,
+        text_content,
+        is_encrypted,
+        encrypted_payload,
+        is_read,
+        created_at,
+        expires_at,
+        is_deleted_for_everyone,
+        deleted_for_user_ids,
         sender:users!chat_messages_sender_id_fkey (
           id,
-          display_name,
-          avatar_url
+          display_name
         )
-      `,
-      )
-      .in('room_id', roomIds)
-      .ilike('text_content', `%${trimmedTerm}%`)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      `;
+    const buildVisibleQuery = () => {
+      let query = supabase
+        .from('chat_messages')
+        .select(projection)
+        .in('room_id', roomIds)
+        .eq('is_deleted_for_everyone', false)
+        .not('deleted_for_user_ids', 'cs', `{${userId}}`);
 
-    if (blockedIds.length > 0) {
-      query = query.not('sender_id', 'in', blockedIds);
+      if (blockedIds.length > 0) {
+        query = query.not('sender_id', 'in', `(${blockedIds.join(',')})`);
+      }
+      return query;
+    };
+
+    const encryptedCandidateLimit = Math.min(limit * 4, 200);
+    const [plaintextResponse, encryptedResponse] = await Promise.all([
+      buildVisibleQuery()
+        .eq('is_encrypted', false)
+        .ilike('text_content', `%${escapedTerm}%`)
+        .order('created_at', { ascending: false })
+        .limit(limit),
+      buildVisibleQuery()
+        .eq('is_encrypted', true)
+        .order('created_at', { ascending: false })
+        .limit(encryptedCandidateLimit),
+    ]);
+
+    if (plaintextResponse.error || encryptedResponse.error) {
+      this.logger.error('chat.message_search_query_failed');
+      throw new ServiceUnavailableException();
     }
 
-    const response = await query;
-    if (response.error || !response.data) {
+    if (!plaintextResponse.data && !encryptedResponse.data) {
       return [];
     }
 
-    const messages: DeletedAwareMessage[] = response.data;
-
-    // Filter out deleted messages
-    return messages.filter((msg) => {
-      if (msg.is_deleted) return false;
-      if (
-        Array.isArray(msg.deleted_for_user_ids) &&
-        msg.deleted_for_user_ids.includes(userId)
-      )
-        return false;
-      return true;
-    });
-  }
-
-  async getFavourites(userId: string): Promise<FavouriteRecord[]> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('favourites')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (response.error || !response.data) {
-      return [];
+    const messages = new Map<string, SearchMessageRow>();
+    for (const message of [
+      ...(plaintextResponse.data ?? []),
+      ...(encryptedResponse.data ?? []),
+    ]) {
+      messages.set(message.id, message);
     }
-    return response.data;
-  }
 
-  async deleteFavourite(userId: string, favouriteId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('favourites')
-      .delete()
-      .eq('id', favouriteId)
-      .eq('user_id', userId);
-
-    if (error) throw new Error('Failed to delete favourite');
+    return [...messages.values()]
+      .sort((left, right) => right.created_at.localeCompare(left.created_at))
+      .filter(
+        (msg) =>
+          !msg.is_deleted_for_everyone &&
+          !msg.deleted_for_user_ids?.includes(userId),
+      )
+      .map((msg) => ({
+        id: msg.id,
+        room_id: msg.room_id,
+        sender_id: msg.sender_id,
+        message_type: msg.message_type,
+        text_content: msg.text_content,
+        is_encrypted: msg.is_encrypted,
+        encrypted_payload: msg.encrypted_payload,
+        is_read: msg.is_read,
+        created_at: msg.created_at,
+        expires_at: msg.expires_at,
+        sender: msg.sender,
+      }));
   }
 
   async getSuggestedReplies(

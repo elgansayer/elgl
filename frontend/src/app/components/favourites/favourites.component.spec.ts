@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FavouritesComponent } from './favourites.component';
 import { I18nService } from '../../services/i18n.service';
 import { FavouriteRecord } from '../../services/chat.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { FavouriteService } from '../../services/favourite.service';
 
 describe('FavouritesComponent', () => {
@@ -111,6 +112,7 @@ describe('FavouritesComponent', () => {
             },
           },
         },
+        { provide: ConfirmService, useValue: { confirm: vi.fn().mockResolvedValue(true) } },
         { provide: FavouriteService, useValue: mockFavouriteService },
       ],
     }).compileComponents();
@@ -270,6 +272,7 @@ describe('FavouritesComponent', () => {
 
     const firstDelete = component.deleteFavourite(mockFavourites[0]);
     const duplicateDelete = component.deleteFavourite(mockFavourites[0]);
+    await Promise.resolve();
 
     expect(component.isDeletingFavourite('fav-1')).toBe(true);
     expect(mockFavouriteService.removeFavourite).toHaveBeenCalledTimes(1);

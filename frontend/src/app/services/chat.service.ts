@@ -34,10 +34,36 @@ export interface GiftPayload {
   gift_name: string;
   gift_icon: string;
   coin_value: number;
-  animation_type?: string;
-  animation_url?: string;
-  sender_name?: string;
-  receiver_name?: string;
+  animation_type?: string | null;
+  animation_url?: string | null;
+  sender_name?: string | null;
+  receiver_name?: string | null;
+}
+
+function isBoundedString(value: unknown, maximumLength: number): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= maximumLength;
+}
+
+function isOptionalBoundedString(value: unknown, maximumLength: number): boolean {
+  return value == null || isBoundedString(value, maximumLength);
+}
+
+/** Validates gift data received from REST, cache, or an untrusted realtime publication. */
+export function isGiftPayload(value: unknown): value is GiftPayload {
+  if (!isRecord(value)) return false;
+
+  return (
+    isBoundedString(value['gift_id'], 128) &&
+    isBoundedString(value['gift_name'], 120) &&
+    isBoundedString(value['gift_icon'], 64) &&
+    typeof value['coin_value'] === 'number' &&
+    Number.isSafeInteger(value['coin_value']) &&
+    value['coin_value'] >= 0 &&
+    isOptionalBoundedString(value['animation_type'], 64) &&
+    isOptionalBoundedString(value['animation_url'], 512) &&
+    isOptionalBoundedString(value['sender_name'], 120) &&
+    isOptionalBoundedString(value['receiver_name'], 120)
+  );
 }
 
 export interface ChatMessage {
@@ -624,19 +650,6 @@ export class ChatService {
     );
   }
 
-  async addFavourite(messageId: string, noteText?: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/favourites`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getHeaders(),
-      },
-      body: JSON.stringify({ message_id: messageId, note_text: noteText }),
-    });
-    if (!response.ok) throw new Error('Failed to add favourite');
-    void this.chatCache.invalidateFavourites();
-  }
-
   async reportMessage(messageId: string, reason: string): Promise<void> {
     const response = await fetch('/safety/report', {
       method: 'POST',
@@ -655,53 +668,49 @@ export class ChatService {
 
   /**
    * Search messages across all conversations (or within a specific room).
-   * Calls GET /chat/search?term=...&roomId=...&limit=...
+   * Uses a request body so private search text is not exposed in the URL.
    */
   async searchMessages(term: string, roomId?: string, limit = 50): Promise<ChatMessage[]> {
     if (!this.authService.getAccessToken()) {
       return [];
     }
-    let params = new HttpParams().set('term', term.trim()).set('limit', String(limit));
-    if (roomId) {
-      params = params.set('roomId', roomId);
-    }
-    return firstValueFrom(
-      this.http.get<ChatMessage[]>(`${this.baseUrl}/search`, {
-        headers: this.getHeaders(),
-        params,
-      }),
-    );
-  }
-
-  async getFavourites(): Promise<FavouriteRecord[]> {
-    if (!this.authService.getAccessToken()) {
-      return [];
-    }
-
-    // Try cache first
-    const cached = await this.chatCache.getCachedFavourites();
-    if (cached) {
-      return cached;
-    }
-
-    const favourites = await firstValueFrom(
-      this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, {
-        headers: this.getHeaders(),
-      }),
+    const trimmedTerm = term.trim();
+    const messages = await firstValueFrom(
+      this.http.post<ChatMessage[]>(
+        `${this.baseUrl}/search`,
+        {
+          term: trimmedTerm,
+          ...(roomId ? { roomId } : {}),
+          limit,
+        },
+        { headers: this.getHeaders() },
+      ),
     );
 
-    // Cache the result
-    void this.chatCache.cacheFavourites(favourites);
-    return favourites;
-  }
-
-  async removeFavourite(favouriteId: string): Promise<void> {
-    await firstValueFrom(
-      this.http.delete(`${this.baseUrl}/favourites/${favouriteId}`, {
-        headers: this.getHeaders(),
+    const literalTerm = trimmedTerm.toLocaleLowerCase();
+    const searchableMessages = await Promise.all(
+      messages.map(async (message) => {
+        if (!message.is_encrypted || !message.encrypted_payload) return message;
+        try {
+          const textContent = await this.personalChatEncryption.decryptMessage(
+            message.room_id,
+            message.encrypted_payload,
+          );
+          return { ...message, text_content: textContent };
+        } catch {
+          return null;
+        }
       }),
     );
-    void this.chatCache.invalidateFavourites();
+
+    return searchableMessages
+      .filter((message): message is ChatMessage => message !== null)
+      .filter(
+        (message) =>
+          !message.is_encrypted ||
+          (message.text_content?.toLocaleLowerCase().includes(literalTerm) ?? false),
+      )
+      .slice(0, limit);
   }
 
   async loadBlockedUsers(): Promise<void> {

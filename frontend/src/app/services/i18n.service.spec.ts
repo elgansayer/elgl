@@ -117,6 +117,11 @@ describe('I18nService', () => {
       expect(translation).toBe('100 Coins');
     });
 
+    it('should localise the amount in an audio-room tip animation', () => {
+      const translation = service.translate('audioRoom.tipName', { amount: 50 });
+      expect(translation).toBe('50 Coins');
+    });
+
     it('should return the key itself if no translation is found', () => {
       const translation = service.translate('non.existent.key');
       expect(translation).toBe('non.existent.key');
@@ -130,6 +135,13 @@ describe('I18nService', () => {
         cost: 50,
       });
       expect(translation).toBe('🎉 Alice gifted Bob a Rose! (🪙 50 Coins)');
+    });
+
+    it('should expose inline gift fallbacks and coin copy', () => {
+      expect(service.translate('gift.someone')).toBe('Someone');
+      expect(service.translate('gift.you')).toBe('you');
+      expect(service.translate('gift.coinValue', { cost: 10 })).toBe('10 coins');
+      expect(service.translate('gift.unavailable')).toBe('Gift details unavailable');
     });
 
     it('should ignore params that do not appear as placeholders in the translation string', () => {
@@ -196,12 +208,27 @@ describe('I18nService', () => {
         target: 'English',
       }),
     ).toBe('Japanese → English');
-    expect(
-      service.translate('discovery.audioIntroFeed.resultCount', { count: 2 }),
-    ).toBe('Audio introduction results: 2');
+    expect(service.translate('discovery.audioIntroFeed.resultCount', { count: 2 })).toBe(
+      'Audio introduction results: 2',
+    );
     expect(service.translate('discovery.audioIntroFeed.noAudioIntros')).toBe(
       'No audio introductions available.',
     );
+  });
+
+  it('provides complete in-room message search copy', () => {
+    expect(service.translate('chatRoom.searchPlaceholder')).toBe('Search messages');
+    expect(service.translate('chatSearch.thisChat')).toBe('This chat');
+    expect(service.translate('chatSearch.allChats')).toBe('All chats');
+    expect(service.translate('chatSearch.searching')).toBe('Searching...');
+    expect(service.translate('chatSearch.noResults')).toBe('No messages found.');
+    expect(service.translate('chatSearch.unavailable')).toBe('Search is unavailable. Try again.');
+    expect(service.translate('chatSearch.messageType.all')).toBe('All');
+    expect(service.translate('chatSearch.messageType.text')).toBe('Text');
+    expect(service.translate('chatSearch.messageType.voice')).toBe('Voice');
+    expect(service.translate('chatSearch.messageType.correction')).toBe('Corrections');
+    expect(service.translate('chatSearch.messageType.doodle')).toBe('Doodles');
+    expect(service.translate('chatSearch.messageType.gift')).toBe('Gifts');
   });
 
   it('should interpolate parameters e.g. coins inside string', () => {
