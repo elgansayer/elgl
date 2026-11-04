@@ -77,8 +77,12 @@ def parser() -> argparse.ArgumentParser:
     legacy = subcommands.add_parser("legacy")
     legacy.add_argument("action", choices=("scan",))
     sessions = subcommands.add_parser("sessions")
-    sessions.add_argument("action", choices=("audit",))
+    sessions.add_argument("action", choices=("audit", "enrol"))
     sessions.add_argument("--codex-socket", type=Path)
+    sessions.add_argument("--provider", help="enrol: router provider key, e.g. claude or codex")
+    sessions.add_argument("--pid", type=int, help="enrol: the manual session's process ID")
+    sessions.add_argument("--label", help="enrol: short single-line session name")
+    sessions.add_argument("--wait-seconds", type=int, default=0)
     task = subcommands.add_parser("task")
     task.add_argument("action", choices=("run",))
     task.add_argument("--issue", type=int)
@@ -230,6 +234,27 @@ def main(arguments: list[str] | None = None) -> int:
                 )
             )
             return 1 if any(finding.active for finding in findings) else 0
+        if args.command == "sessions" and args.action == "enrol":
+            import signal
+
+            from openhands_factory.manual_enrolment import enrol_manual_session
+
+            if args.provider is None or args.pid is None or args.label is None:
+                print("sessions enrol requires --provider, --pid and --label", file=sys.stderr)
+                return 2
+            stopping: list[int] = []
+            for number in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+                signal.signal(number, lambda received, _frame: stopping.append(received))
+            enrolment = enrol_manual_session(
+                config,
+                args.provider,
+                args.pid,
+                args.label,
+                wait_seconds=args.wait_seconds,
+                stop=lambda: bool(stopping),
+            )
+            print(json.dumps(enrolment, indent=2))
+            return 0
         if args.command == "sessions":
             from openhands_factory.provider_capacity import (
                 ProviderCapacityStore,
