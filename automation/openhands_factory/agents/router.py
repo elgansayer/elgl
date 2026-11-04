@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import threading
 import uuid
@@ -11,7 +12,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from openhands_factory.agents.base import (
     AgentFailure,
@@ -24,10 +25,11 @@ from openhands_factory.agents.base import (
     ProviderHealth,
     ProviderStatus,
 )
-from openhands_factory.agents.cli import redact_agent_output
+from openhands_factory.agents.cli import CLIProvider, redact_agent_output
 from openhands_factory.agents.health import AgentCircuitBreaker, AgentHealthStore
 from openhands_factory.exceptions import (
     AgentTaskFailure,
+    ConfigurationError,
     FactoryError,
     ProviderCapacityUnavailable,
 )
@@ -35,6 +37,10 @@ from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
+from openhands_factory.session_identity import SessionIdentityJournal
+
+if TYPE_CHECKING:
+    from openhands_factory.session_supervision import SessionSupervisor
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_HOST_RESOURCE_SHARED_LIMIT = 2
@@ -129,6 +135,7 @@ class AgentRouter:
         self.policy = policy
         self.health_store = health_store
         self.capacity_store = capacity_store
+        self.session_supervisor: SessionSupervisor | None = None
         self.provider_limits = dict(provider_limits or {})
         self.provider_timeouts = dict(provider_timeouts or {})
         self.phase_timeouts = dict(phase_timeouts or {})
@@ -156,6 +163,24 @@ class AgentRouter:
     def shutdown(self) -> None:
         """Stop admitting provider attempts while active children are drained."""
         self._stopping.set()
+
+    def supervise_sessions(self, journal: SessionIdentityJournal) -> None:
+        """Opt in at coordinator startup, before any routed attempt starts."""
+        from openhands_factory.session_supervision import SessionSupervisor
+
+        if self.capacity_store is None or self.session_supervisor is not None:
+            raise ConfigurationError("Session supervision needs one existing shared capacity store")
+        unsupported = [
+            name
+            for name, provider in self.providers.items()
+            if not isinstance(provider, CLIProvider) and getattr(provider, "enabled", True)
+        ]
+        if unsupported:
+            raise ConfigurationError(
+                "Supervised sessions require supported direct CLI providers: "
+                + ", ".join(sorted(unsupported))
+            )
+        self.session_supervisor = SessionSupervisor(self.capacity_store, journal)
 
     def reserve_review_capacity(self, task_id: str) -> None:
         """Hold one provider slot for a scheduled pull request review job."""
@@ -408,9 +433,11 @@ class AgentRouter:
         now = datetime.now(UTC)
         breaker_health = [breaker.get_health() for breaker in self._breakers().values()]
         waits = [
-            max(1, int((item.retry_after - now).total_seconds()))
+            math.ceil((item.retry_after - now).total_seconds())
             for item in [*health.values(), *breaker_health]
-            if item.retry_after is not None
+            # An expired unrelated breaker cannot make a still-cooling route poll
+            # every second. Round up future waits so we never wake before expiry.
+            if item.retry_after is not None and item.retry_after > now
         ]
         return min(waits) if waits else None
 
@@ -428,6 +455,15 @@ class AgentRouter:
             raise ProviderCapacityUnavailable(
                 f"Provider capacity reserved for pull request review on {provider}",
                 retry_after_seconds=max(self.capacity_wait_seconds, 1),
+            )
+        if self.session_supervisor is not None:
+            if self.session_supervisor.store is not self.capacity_store:
+                raise ConfigurationError("Supervision must use the router's shared capacity store")
+            return self.session_supervisor.acquire(
+                provider,
+                owner,
+                limit=limit,
+                wait_seconds=0 if self.skip_busy_providers else self.capacity_wait_seconds,
             )
         timeout = request.timeout_seconds or 3600
         return self.capacity_store.acquire(
@@ -476,7 +512,9 @@ class AgentRouter:
         )
 
     def _release_capacity(self, provider: str, owner: str) -> None:
-        if self.capacity_store is not None:
+        if self.session_supervisor is not None:
+            self.session_supervisor.release(provider, owner)
+        elif self.capacity_store is not None:
             self.capacity_store.release(provider, owner=owner)
 
     @staticmethod
@@ -593,6 +631,10 @@ class AgentRouter:
                 raise ProviderCapacityUnavailable("Agent routing is stopping")
             provider = self.providers[name]
             provider_request = self._request_for(request, name)
+            if self.session_supervisor is not None and not isinstance(provider, CLIProvider):
+                raise ConfigurationError(
+                    "Supervised sessions require a supported direct CLI provider"
+                )
             owner = f"{job.task.identifier}:{request.phase.value}:{uuid.uuid4()}"
             try:
                 capacity_wait_seconds = self._reserve_capacity(
@@ -616,6 +658,11 @@ class AgentRouter:
                     job.provider_failover_count += 1
                 continue
             try:
+                if self.session_supervisor is not None:
+                    provider_request = replace(
+                        provider_request,
+                        process_runner=self.session_supervisor.runner(name, owner),
+                    )
                 if not self._permit_attempt(name):
                     any_busy = True
                     continue

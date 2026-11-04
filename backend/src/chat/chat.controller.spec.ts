@@ -18,6 +18,7 @@ vi.mock('dompurify', () => ({
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { UnauthorizedException } from '@nestjs/common';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { CentrifugoService } from './centrifugo.service';
@@ -25,6 +26,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { FavouritesService } from '../favourites/favourites.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import type { User } from '@supabase/supabase-js';
 import { AiGenerateReplyDto, SendMessageDto } from './dto/send-message.dto';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
@@ -43,6 +45,7 @@ describe('ChatController', () => {
   let centrifugoService: CentrifugoService;
   let conversationStarterService: ConversationStarterService;
   let translationService: TranslationService;
+  let personalChatEncryptionService: PersonalChatEncryptionService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -56,9 +59,6 @@ describe('ChatController', () => {
             getRooms: vi.fn(),
             getUnreadCount: vi.fn(),
             getMessages: vi.fn(),
-            addFavourite: vi.fn(),
-            getFavourites: vi.fn(),
-            deleteFavourite: vi.fn(),
             llmProxy: vi.fn(),
             generateAiReply: vi.fn(),
             getSuggestedReplies: vi.fn(),
@@ -82,6 +82,8 @@ describe('ChatController', () => {
         {
           provide: FavouritesService,
           useValue: {
+            addFavourite: vi.fn(),
+            removeFavourite: vi.fn(),
             getStarredMessages: vi.fn(),
           },
         },
@@ -108,6 +110,12 @@ describe('ChatController', () => {
             translateWithDetection: vi.fn(),
           },
         },
+        {
+          provide: PersonalChatEncryptionService,
+          useValue: {
+            getConversationKey: vi.fn(),
+          },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
@@ -122,6 +130,9 @@ describe('ChatController', () => {
       ConversationStarterService,
     );
     translationService = module.get<TranslationService>(TranslationService);
+    personalChatEncryptionService = module.get<PersonalChatEncryptionService>(
+      PersonalChatEncryptionService,
+    );
   });
 
   afterEach(() => {
@@ -311,15 +322,20 @@ describe('ChatController', () => {
         {} as unknown as AddFavouriteDto,
       );
       expect(result).toBeNull();
-      expect(chatService.addFavourite).not.toHaveBeenCalled();
+      expect(favouritesService.addFavourite).not.toHaveBeenCalled();
     });
 
-    it('should call chatService.addFavourite when user is provided', async () => {
+    it('should delegate to favouritesService.addFavourite when user is provided', async () => {
       const dto = { messageId: 'msg-1' } as unknown as AddFavouriteDto;
-      (chatService.addFavourite as Mock).mockResolvedValue(undefined);
+      (favouritesService.addFavourite as Mock).mockResolvedValue({
+        success: true,
+      });
 
       const result = await controller.addFavourite(mockUser(), dto);
-      expect(chatService.addFavourite).toHaveBeenCalledWith('user-1', dto);
+      expect(favouritesService.addFavourite).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
       expect(result).toEqual({ success: true });
     });
   });
@@ -362,14 +378,16 @@ describe('ChatController', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.deleteFavourite(null, 'fav-1');
       expect(result).toBeNull();
-      expect(chatService.deleteFavourite).not.toHaveBeenCalled();
+      expect(favouritesService.removeFavourite).not.toHaveBeenCalled();
     });
 
-    it('should call chatService.deleteFavourite when user is provided', async () => {
-      (chatService.deleteFavourite as Mock).mockResolvedValue(undefined);
+    it('should delegate to favouritesService.removeFavourite when user is provided', async () => {
+      (favouritesService.removeFavourite as Mock).mockResolvedValue({
+        success: true,
+      });
 
       const result = await controller.deleteFavourite(mockUser(), 'fav-1');
-      expect(chatService.deleteFavourite).toHaveBeenCalledWith(
+      expect(favouritesService.removeFavourite).toHaveBeenCalledWith(
         'user-1',
         'fav-1',
       );
@@ -888,6 +906,45 @@ describe('ChatController', () => {
         'user-1',
       );
       expect(result).toEqual(greeting);
+    });
+  });
+
+  describe('getRoomE2eeKey', () => {
+    it('rate-limits key material retrieval', () => {
+      expect(
+        Reflect.getMetadata(
+          'THROTTLER:LIMITdefault',
+          ChatController.prototype.getRoomE2eeKey,
+        ),
+      ).toBe(5);
+    });
+
+    it('throws UnauthorizedException if user is not authenticated', async () => {
+      await expect(controller.getRoomE2eeKey(null, 'room-1')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('returns E2EE key material for authenticated direct room member', async () => {
+      (
+        personalChatEncryptionService.getConversationKey as Mock
+      ).mockResolvedValueOnce({
+        e2eeKey: 'test-e2ee-key-material-32-chars-base64url',
+        roomId: 'room-1',
+        algorithm: 'AES-GCM-256',
+      });
+
+      const user = mockUser();
+      const result = await controller.getRoomE2eeKey(user, 'room-1');
+
+      expect(
+        personalChatEncryptionService.getConversationKey,
+      ).toHaveBeenCalledWith('room-1', 'user-1');
+      expect(result).toEqual({
+        e2ee_key: 'test-e2ee-key-material-32-chars-base64url',
+        room_id: 'room-1',
+        algorithm: 'AES-GCM-256',
+      });
     });
   });
 });

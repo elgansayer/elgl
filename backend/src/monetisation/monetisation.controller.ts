@@ -17,7 +17,6 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiHeader,
-  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -31,8 +30,6 @@ import {
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
-import { AppleNotificationDto } from './dto/apple-notification.dto';
-import { GoogleNotificationDto } from './dto/google-notification.dto';
 
 @ApiTags('Monetisation')
 @Controller('monetisation')
@@ -75,36 +72,6 @@ export class MonetisationController {
       req.rawBody,
       signature,
     );
-  }
-
-  @Post('webhooks/apple')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Handle Apple App Store server notifications',
-    description:
-      'Receives Apple App Store server notifications (v2) for subscription events, refunds, and renewal status changes. Verifies JWS signatures before processing. Called exclusively by Apple servers.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Apple notification processed successfully',
-  })
-  async handleAppleWebhook(@Body() dto: AppleNotificationDto) {
-    return await this.monetisationService.handleAppleNotification(dto);
-  }
-
-  @Post('webhooks/google')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Handle Google Play Pub/Sub notifications',
-    description:
-      'Receives Google Play Real-time Developer Notifications (RTDN) via Pub/Sub for subscription events, refunds, and status changes. Verifies Pub/Sub message authenticity before processing. Called exclusively by Google servers.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Google notification processed successfully',
-  })
-  async handleGoogleWebhook(@Body() dto: GoogleNotificationDto) {
-    return await this.monetisationService.handleGoogleNotification(dto);
   }
 
   @Post('generate-api-key')

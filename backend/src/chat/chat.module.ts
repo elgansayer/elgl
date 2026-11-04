@@ -14,6 +14,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
@@ -31,6 +32,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
 import { DisappearingMessagesCleanupService } from './disappearing-messages-cleanup.service';
 import { DisappearingMessagesInterceptor } from './disappearing-messages.interceptor';
 import { PersonalUnreadListener } from './listeners/personal-unread.listener';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 
 @Module({
   imports: [
@@ -47,6 +49,7 @@ import { PersonalUnreadListener } from './listeners/personal-unread.listener';
   ],
   controllers: [
     ChatController,
+    ChatSearchController,
     DirectConversationController,
     ChatSettingsController,
     ChatBackupController,
@@ -69,6 +72,7 @@ import { PersonalUnreadListener } from './listeners/personal-unread.listener';
     DisappearingMessagesCleanupService,
     DisappearingMessagesInterceptor,
     PersonalUnreadListener,
+    PersonalChatEncryptionService,
     {
       provide: APP_INTERCEPTOR,
       useExisting: DisappearingMessagesInterceptor,
@@ -84,6 +88,7 @@ import { PersonalUnreadListener } from './listeners/personal-unread.listener';
     DirectConversationService,
     SystemMessageService,
     ChatSettingsService,
+    PersonalChatEncryptionService,
   ],
 })
 export class ChatModule {}

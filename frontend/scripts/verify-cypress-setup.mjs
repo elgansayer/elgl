@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REQUIRED_FILES = [
+  'cypress/tsconfig.json',
   'cypress/support/e2e.ts',
   'cypress/support/commands.ts',
   'cypress/e2e/cypress-setup.cy.ts',
@@ -43,6 +44,23 @@ export function collectCypressSetupFailures({ pkg, lockfile, config, exists }) {
   }
   if (!pkg?.scripts?.['e2e:ci']?.includes('start-server-and-test')) {
     failures.push('e2e:ci must wait for the Angular app before Cypress');
+  }
+  if (!pkg?.scripts?.['test:cypress-setup']?.includes('verify-cypress-setup.test.mjs')) {
+    failures.push('test:cypress-setup must run the Cypress setup regression tests');
+  }
+  if (!pkg?.scripts?.pretest?.includes('npm run test:cypress-setup')) {
+    failures.push('pretest must run test:cypress-setup');
+  }
+  // Cypress transpiles specs without type-checking, so this script is the only place type errors
+  // in specs surface. It must stay inside the lint gate or it silently stops protecting anything.
+  if (!pkg?.scripts?.['check:cypress-types']?.includes('tsc -p cypress/tsconfig.json')) {
+    failures.push('check:cypress-types must type-check cypress/tsconfig.json');
+  }
+  if (!pkg?.scripts?.lint?.includes('npm run check:cypress-types')) {
+    failures.push('lint must run check:cypress-types');
+  }
+  if (!pkg?.scripts?.['lint:check']?.includes('npm run check:cypress-types')) {
+    failures.push('lint:check must run check:cypress-types');
   }
 
   const lockedRoot = lockfile?.packages?.['']?.devDependencies ?? {};
@@ -86,7 +104,9 @@ export function verifyCypressSetup(root = process.cwd()) {
   try {
     pkg = readJson(path.join(root, 'package.json'));
   } catch (error) {
-    return [`unable to read package.json: ${error instanceof Error ? error.message : 'unknown error'}`];
+    return [
+      `unable to read package.json: ${error instanceof Error ? error.message : 'unknown error'}`,
+    ];
   }
 
   try {

@@ -20,11 +20,14 @@ import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
+import { showErrorToast, showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
+import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
@@ -39,9 +42,16 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
     CulturalTipComponent,
     LinkPreviewCardComponent,
     VisualDiffComponent,
+    ChatSystemBubbleComponent,
+    GiftAnimationComponent,
   ],
   template: `
-    @if (!isBlocked()) {
+    @if (message().message_type === 'system') {
+      <app-chat-system-bubble
+        [eventType]="message().system_event?.type ?? ''"
+        [params]="message().system_event ?? {}"
+      ></app-chat-system-bubble>
+    } @else if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
         <app-cultural-tip [language]="lang" />
       }
@@ -65,21 +75,26 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
           [class.justify-start]="!isOwnMessage()"
         >
           <div
-            class="relative max-w-[70%] p-3 rounded-ss-lg rounded-se-lg"
-            [class.rounded-es-lg]="isOwnMessage()"
-            [class.rounded-ee-none]="isOwnMessage()"
-            [class.rounded-ee-lg]="!isOwnMessage()"
-            [class.rounded-es-none]="!isOwnMessage()"
-            [class.bg-primary]="isOwnMessage()"
-            [class.text-on-fill]="isOwnMessage()"
-            [class.bg-surface-300]="!isOwnMessage()"
+            class="relative max-w-[70%]"
+            [class.p-3]="message().message_type !== 'gift'"
+            [class.rounded-ss-lg]="message().message_type !== 'gift'"
+            [class.rounded-se-lg]="message().message_type !== 'gift'"
+            [class.rounded-es-lg]="message().message_type !== 'gift' && isOwnMessage()"
+            [class.rounded-ee-none]="message().message_type !== 'gift' && isOwnMessage()"
+            [class.rounded-ee-lg]="message().message_type !== 'gift' && !isOwnMessage()"
+            [class.rounded-es-none]="message().message_type !== 'gift' && !isOwnMessage()"
+            [class.bg-primary]="message().message_type !== 'gift' && isOwnMessage()"
+            [class.text-on-fill]="message().message_type !== 'gift' && isOwnMessage()"
+            [class.bg-surface-300]="message().message_type !== 'gift' && !isOwnMessage()"
           >
-            <span
-              class="chat-bubble-tail"
-              [class.chat-bubble-tail--sent]="isOwnMessage()"
-              [class.chat-bubble-tail--received]="!isOwnMessage()"
-              aria-hidden="true"
-            ></span>
+            @if (message().message_type !== 'gift') {
+              <span
+                class="chat-bubble-tail"
+                [class.chat-bubble-tail--sent]="isOwnMessage()"
+                [class.chat-bubble-tail--received]="!isOwnMessage()"
+                aria-hidden="true"
+              ></span>
+            }
             @if (message().is_forwarded) {
               <p class="text-xs mb-1 text-text-muted italic font-medium">
                 {{ 'chatRoom.forwarded' | t }}
@@ -104,6 +119,10 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
                   [siteName]="lp.siteName"
                 ></app-link-preview-card>
               }
+            }
+
+            @if (message().message_type === 'gift') {
+              <app-gift-animation [giftPayload]="message().gift_payload ?? null" />
             }
 
             @if (message().message_type === 'voice') {
@@ -167,6 +186,21 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
             }
 
             <p class="text-xs mt-1 opacity-60 text-end flex items-center justify-end gap-1">
+              @if (message().is_encrypted) {
+                <span
+                  class="inline-flex items-center text-success/80"
+                  [attr.title]="'chatRoom.e2eeMessageHint' | t"
+                  [attr.aria-label]="'chatRoom.e2eeMessageHint' | t"
+                >
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path
+                      fill-rule="evenodd"
+                      d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </span>
+              }
               {{ message().created_at | date: 'shortTime' }}
               @if (isOwnMessage() && (message().delivery_status || message().is_read)) {
                 <span class="inline-flex items-center">
@@ -415,8 +449,17 @@ export class ChatMessageComponent {
     navigator.clipboard.writeText(event.content).catch(console.error);
   }
 
-  onFavourite(event: { messageId: string; content: string; messageType: string }): void {
-    this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
+  async onFavourite(event: {
+    messageId: string;
+    content: string;
+    messageType: string;
+  }): Promise<void> {
+    try {
+      await this.favouriteService.addFavourite({ message_id: event.messageId });
+      showToast(this.i18n.translate('chatRoom.bookmarkSuccess'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('chatRoom.bookmarkError'));
+    }
   }
 
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {

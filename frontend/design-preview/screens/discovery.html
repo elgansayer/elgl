@@ -155,15 +155,6 @@
         background: rgb(var(--accent));
         color: rgb(var(--on-fill));
       }
-      .search {
-        margin-top: 10px;
-        border: 1px solid rgb(var(--surface-100));
-        border-radius: 999px;
-        background: rgb(var(--surface-200));
-        color: rgb(var(--text-muted));
-        padding: 9px 12px;
-        font-size: 12px;
-      }
       .matchmaking-controls {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -215,6 +206,66 @@
         width: 18px;
         height: 18px;
         accent-color: rgb(var(--primary));
+      }
+      .global-search {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 14px;
+        padding: 16px;
+        border: 1px solid rgb(var(--surface-100));
+        border-inline-start: 4px solid rgb(var(--secondary));
+        border-radius: 16px;
+        background: rgb(var(--surface-200));
+        box-shadow: 0 8px 20px rgb(var(--shadow) / 0.08);
+      }
+      .global-search h3 {
+        grid-column: 1 / -1;
+        margin: 0;
+        font-size: 16px;
+      }
+      .global-search label {
+        display: grid;
+        gap: 6px;
+        color: rgb(var(--text-secondary));
+        font-size: 10px;
+        font-weight: 800;
+      }
+      .global-search select {
+        min-width: 0;
+        min-height: 44px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 10px;
+        padding-inline: 10px;
+        background: rgb(var(--surface-300));
+        color: rgb(var(--text-primary));
+        font: inherit;
+      }
+      .global-search .audio-filter {
+        display: flex;
+        grid-column: 1 / -1;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        min-height: 44px;
+        padding: 10px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 10px;
+        background: rgb(var(--surface-300));
+      }
+      .audio-filter input {
+        width: 18px;
+        height: 18px;
+        accent-color: rgb(var(--primary));
+      }
+      .search-partners {
+        grid-column: 1 / -1;
+        min-height: 44px;
+        border: 0;
+        border-radius: 10px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-weight: 850;
+        cursor: pointer;
       }
       main {
         padding: 14px;
@@ -442,6 +493,7 @@
           flex-basis: min(270px, 82vw);
         }
         .matchmaking-controls,
+        .global-search,
         .state-contract {
           grid-template-columns: 1fr;
         }
@@ -511,10 +563,52 @@
             </label>
           </div>
         </div>
-        <div class="search">Search by name, language or interest</div>
       </header>
 
       <main>
+        <form
+          class="global-search"
+          role="search"
+          aria-labelledby="global-search-title"
+        >
+          <h3 id="global-search-title">Global Search</h3>
+          <label>
+            Native Language
+            <select>
+              <option>Any language</option>
+              <option>English</option>
+              <option>Spanish</option>
+              <option>Japanese</option>
+            </select>
+          </label>
+          <label>
+            Target Language
+            <select>
+              <option>Any language</option>
+              <option selected>Japanese</option>
+              <option>Spanish</option>
+              <option>English</option>
+            </select>
+          </label>
+          <label>
+            Proficiency Level
+            <select>
+              <option>Any level</option>
+              <option>A1 - Beginner</option>
+              <option>A2 - Elementary</option>
+              <option>B1 - Intermediate</option>
+              <option selected>B2 - Upper Intermediate</option>
+              <option>C1 - Advanced</option>
+              <option>C2 - Proficient</option>
+            </select>
+          </label>
+          <label class="audio-filter">
+            <input type="checkbox" />
+            <span>Audio Introduction</span>
+          </label>
+          <button class="search-partners" type="submit">Search Partners</button>
+        </form>
+
         <section class="recommended" aria-labelledby="recommended-title">
           <div class="recommended-head">
             <div>
@@ -631,10 +725,11 @@
     <p id="preview-feedback" class="caption" role="status" aria-live="polite"></p>
 
     <p class="caption">
-      The Discovery visual contract includes list-driven language filtering, a labelled distance
-      range, persisted Serious Learner intent, classified recovery states and touch-sized partner
-      actions. Controls reflow to one column at the mobile baseline and preserve RTL-safe
-      composition, keyboard operation, visible text state and light/dark parity.
+      The Discovery visual contract includes translated Native Language, Target Language and Level
+      dropdowns, a labelled distance range, persisted Serious Learner intent, classified recovery
+      states and touch-sized partner actions. Controls reflow to one column at the mobile baseline
+      and preserve RTL-safe composition, keyboard operation, visible text state and light/dark
+      parity.
     </p>
 
     <script>
@@ -643,6 +738,7 @@
       const distance = document.getElementById('preview-distance');
       const distanceValue = document.querySelector('output[for="preview-distance"]');
       const previewFeedback = document.getElementById('preview-feedback');
+      const globalSearch = document.querySelector('.global-search');
       light.addEventListener('click', () => {
         document.documentElement.classList.remove('dark');
         light.classList.add('active');
@@ -655,6 +751,10 @@
       });
       distance.addEventListener('input', () => {
         distanceValue.textContent = `${distance.value} km`;
+      });
+      globalSearch.addEventListener('submit', (event) => {
+        event.preventDefault();
+        previewFeedback.textContent = 'Discovery filters applied';
       });
       document.querySelectorAll('[data-preview-message]').forEach((action) => {
         action.addEventListener('click', () => {

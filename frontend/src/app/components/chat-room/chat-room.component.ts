@@ -10,12 +10,14 @@ import {
   input,
   effect,
   untracked,
+  afterRenderEffect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { ChatService, ChatMessage, ChatRoom, GroupMember } from '../../services/chat.service';
+import { FavouriteService } from '../../services/favourite.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { TypingService } from '../../services/typing.service';
@@ -48,8 +50,14 @@ import { AppCardComponent } from '../primitives/card/card.component';
 import { AppInputComponent } from '../primitives/input/input.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
-import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
+import { applyChatRoomRealtimeEvent, isChatMessage, isRecord } from './chat-room-realtime';
 import { UnreadCounterService } from '../../services/unread-counter.service';
+import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
+
+function isGroupMember(value: unknown): value is GroupMember {
+  return typeof value === 'object' && value !== null && 'user_id' in value;
+}
 
 @Component({
   selector: 'app-chat-room',
@@ -79,6 +87,7 @@ import { UnreadCounterService } from '../../services/unread-counter.service';
     AppInputComponent,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
+    GiftAnimationComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -86,6 +95,7 @@ import { UnreadCounterService } from '../../services/unread-counter.service';
 export class ChatRoomComponent implements OnDestroy {
   readonly centrifugeService = inject(CentrifugeService);
   private chatService = inject(ChatService);
+  private readonly favouriteService = inject(FavouriteService);
   readonly authService = inject(AuthService);
   private userService = inject(UserService);
   readonly typingService = inject(TypingService);
@@ -96,10 +106,19 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
   private readonly unreadCounter = inject(UnreadCounterService);
+  private readonly chatEncryption = inject(PersonalChatEncryptionService);
+  private readonly pendingMessageScroll = signal<string | null>(null);
 
   id = input.required<string>();
 
   constructor() {
+    afterRenderEffect(() => {
+      const messageId = this.pendingMessageScroll();
+      if (!messageId || !document.getElementById(`msg-${messageId}`)) return;
+      this.pendingMessageScroll.set(null);
+      this.scrollToMessage(messageId);
+    });
+
     effect(() => {
       const roomId = this.id();
       // Only the room id may re-run this effect. Saving the outgoing draft reads the reply target
@@ -154,6 +173,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly showParticipantDrawer = signal<boolean>(false);
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);
+  readonly isE2eeRoom = signal<boolean>(false);
   readonly autoPlayVoiceNotes = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
@@ -171,7 +191,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly partnerLanguage = signal<string | null>(null);
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
-    return this.messages().filter((m) => !blocked.includes(m.sender_id));
+    return this.messages().filter((m) => (m.sender_id ? !blocked.includes(m.sender_id) : true));
   });
 
   readonly replyingTo = signal<ChatMessage | null>(null);
@@ -202,9 +222,8 @@ export class ChatRoomComponent implements OnDestroy {
   private mentionRangeEnd = 0;
 
   readonly mentionItemToString = (value: unknown): string => {
-    if (!value || typeof value !== 'object' || !('user_id' in value)) return this.textInput;
-    const member = value as GroupMember;
-    const displayName = member.user?.display_name;
+    if (!isGroupMember(value)) return this.textInput;
+    const displayName = value.user?.display_name;
     if (!displayName) return this.textInput;
     return (
       this.textInput.slice(0, this.mentionRangeStart) +
@@ -314,8 +333,11 @@ export class ChatRoomComponent implements OnDestroy {
       const rooms = await this.chatService.getRooms();
       this.roomDetails = rooms.find((r) => r.id === this.roomId) || null;
       this.isLocked.set(this.roomDetails?.is_locked ?? false);
+      const isCapable = await this.chatEncryption.isRoomE2eeCapable(this.roomId);
+      this.isE2eeRoom.set(isCapable);
     } catch (e) {
       console.error('Failed to load room details:', e);
+      this.isE2eeRoom.set(false);
     }
   }
 
@@ -343,6 +365,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.subscribedRoomId = null;
       this.subscription = null;
     }
+    this.chatEncryption.clearKey(this.roomId);
     this.pendingReadReceipts.clear();
     this.typingService.disconnect();
     this.saveChatDrafts();
@@ -436,19 +459,28 @@ export class ChatRoomComponent implements OnDestroy {
     this.typingService.connect(this.roomId);
   }
 
-  private handleRealtimeEvent(data: unknown, eventRoomId: string): void {
+  private async handleRealtimeEvent(data: unknown, eventRoomId: string): Promise<void> {
     // A late callback from a previous subscription must never mutate the newly
     // selected room.
     if (eventRoomId !== this.roomId) return;
 
+    if (isRecord(data) && isChatMessage(data['message'])) {
+      const msg = data['message'];
+      if (msg.is_encrypted && msg.encrypted_payload) {
+        try {
+          msg.text_content = await this.chatEncryption.decryptMessage(
+            eventRoomId,
+            msg.encrypted_payload,
+          );
+        } catch {
+          msg.text_content = this.i18n.translate('chatRoom.encryptedMessageUnavailable');
+        }
+      }
+    }
+
     const currentUserId = this.authService.currentUser()?.id;
     const currentMessages = this.messages();
-    const result = applyChatRoomRealtimeEvent(
-      currentMessages,
-      data,
-      eventRoomId,
-      currentUserId,
-    );
+    const result = applyChatRoomRealtimeEvent(currentMessages, data, eventRoomId, currentUserId);
 
     if (result.messages !== currentMessages) {
       this.messages.set(result.messages);
@@ -551,10 +583,7 @@ export class ChatRoomComponent implements OnDestroy {
 
     this.isCheckingGrammar.set(true);
     try {
-      const grammar = await this.vocabStore.checkGrammar(
-        text,
-        this.partnerLanguage() ?? undefined,
-      );
+      const grammar = await this.vocabStore.checkGrammar(text, this.partnerLanguage() ?? undefined);
       const corrected = grammar.corrected.trim();
       if (grammar.errors_found > 0 && corrected && corrected !== text) {
         if (this.roomId === roomId) {
@@ -691,11 +720,12 @@ export class ChatRoomComponent implements OnDestroy {
 
   async bookmark(msg: ChatMessage): Promise<void> {
     try {
-      await this.chatService.addFavourite(msg.id, `Saved from room ${this.roomId}`);
-      showToast(this.i18n.translate('chatRoom.bookmarkedAlert'));
+      // Bookmarking is idempotent on the server, so saving an already saved message is not an error.
+      await this.favouriteService.addFavourite({ message_id: msg.id });
+      showToast(this.i18n.translate('chatRoom.bookmarkSuccess'), 'success');
     } catch (e) {
       console.error('Failed to bookmark message:', e);
-      showToast(this.i18n.translate('chatRoom.bookmarkErrorAlert'));
+      showErrorToast(this.i18n.translate('chatRoom.bookmarkError'));
     }
   }
 
@@ -819,7 +849,16 @@ export class ChatRoomComponent implements OnDestroy {
 
   onSearchResultSelect(message: ChatMessage): void {
     this.showSearchPanel.set(false);
-    if (message.room_id === this.roomId) this.scrollToMessage(message.id);
+    if (message.room_id !== this.roomId) return;
+
+    if (!this.messages().some((loadedMessage) => loadedMessage.id === message.id)) {
+      this.messages.update((loadedMessages) =>
+        [...loadedMessages, message].sort((left, right) =>
+          left.created_at.localeCompare(right.created_at),
+        ),
+      );
+    }
+    this.pendingMessageScroll.set(message.id);
   }
 
   async toggleParticipantDrawer(): Promise<void> {

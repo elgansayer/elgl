@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-import sys
 
 import pytest
 
@@ -84,8 +83,12 @@ else:
     raise AssertionError('Source reference is writable')
 print('source-readable-read-only')
 """
+    # The fixture intentionally masks HOME. A uv-managed coordinator Python
+    # can resolve inside HOME, so use the system interpreter for this stdlib probe.
+    interpreter = shutil.which("python3", path="/usr/bin:/bin")
+    assert interpreter is not None, "Namespace fixture needs a system Python outside HOME"
     result = AgentProcessRunner().run(
-        [sys.executable, "-c", script, str(reference)],
+        [interpreter, "-c", script, str(reference)],
         cwd=workspace,
         env=provider_environment({"HOME": str(home), "PATH": "/usr/bin:/bin"}),
         stdin_text=None,

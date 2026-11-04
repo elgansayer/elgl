@@ -11,6 +11,8 @@ function productionEnvironment(): Record<string, string> {
     SUPABASE_URL: 'https://elgl.supabase.co',
     SUPABASE_ANON_KEY: 'prod-anon-key',
     SUPABASE_SERVICE_ROLE_KEY: 'prod-service-role-key',
+    CHAT_E2EE_MASTER_SECRET:
+      'prod-chat-e2ee-master-secret-at-least-32-characters',
     DATABASE_URL: 'postgresql://postgres:secret@db.internal:5432/elgl',
     REDIS_URL: 'rediss://redis.internal:6379',
     CENTRIFUGO_URL: 'https://realtime.elgl.app',
@@ -77,6 +79,7 @@ describe('validateEnvironment', () => {
 
   it('keeps the production required-key inventory explicit and stable', () => {
     expect(PRODUCTION_REQUIRED_ENV_KEYS).toContain('SUPABASE_SERVICE_ROLE_KEY');
+    expect(PRODUCTION_REQUIRED_ENV_KEYS).toContain('CHAT_E2EE_MASTER_SECRET');
     expect(PRODUCTION_REQUIRED_ENV_KEYS).toContain('STRIPE_WEBHOOK_SECRET');
     expect(PRODUCTION_REQUIRED_ENV_KEYS).toContain('TRANSFER_SECRET');
     expect(PRODUCTION_REQUIRED_ENV_KEYS).toContain('LLM_API_KEY');

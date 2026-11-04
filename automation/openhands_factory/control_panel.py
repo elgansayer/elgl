@@ -678,6 +678,7 @@ class FactoryControlPanel:
             config.repository,
             config.github_token.get_secret_value(),
             base_branch=config.base_branch,
+            merge_review_policy=config.merge_review_policy,
         )
         self.clock = clock or (lambda: datetime.now(UTC))
         self.unit_state_reader = unit_state_reader

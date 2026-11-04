@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -6,13 +7,17 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Req,
+  UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
+
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -44,6 +49,7 @@ import {
 } from './interfaces/audio-room.interface';
 import { CallLogRecord } from './interfaces/call-log.interface';
 import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
+import { QuickPollResults } from './interfaces/quick-poll.interface';
 import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
 import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
@@ -69,7 +75,6 @@ import {
   CACHE_NO_STORE,
   CACHE_TAG_AUDIO_ROOMS,
   CACHE_TAG_AUDIO_ROOM_STAGE,
-  CACHE_TAG_AUDIO_ROOM_POLLS,
   CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
   CACHE_TAG_AUDIO_ROOM_NOTES,
 } from '../common/cache.interceptor';
@@ -122,7 +127,15 @@ export class AudioRoomsController {
       },
     },
   })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid, inactive or unaffordable tip.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Idempotency key subject conflict.',
+  })
   async createRoom(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: CreateAudioRoomDto,
@@ -746,8 +759,8 @@ export class AudioRoomsController {
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: CreateVoiceRoomNoteDto,
-  ): Promise<VoiceRoomNote | null> {
-    if (!user) return null;
+  ): Promise<VoiceRoomNote> {
+    if (!user) throw new UnauthorizedException();
     return await this.audioRoomsService.addNote(roomId, user.id, dto);
   }
 
@@ -777,7 +790,7 @@ export class AudioRoomsController {
   @ApiOperation({
     summary: 'Delete a note from an audio room',
     description:
-      'Deletes a specific note by ID. Only the note author can delete their own notes.',
+      'Deletes a specific note by ID. Note author, room host, or co-host can delete notes.',
   })
   @ApiParam({
     name: 'roomId',
@@ -796,11 +809,11 @@ export class AudioRoomsController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async deleteNote(
     @CurrentUser() user: AuthUser | null,
-    @Param('roomId') _roomId: string,
+    @Param('roomId') roomId: string,
     @Param('noteId') noteId: string,
   ): Promise<void> {
-    if (!user) return;
-    return await this.audioRoomsService.deleteNote(noteId, user.id);
+    if (!user) throw new UnauthorizedException();
+    await this.audioRoomsService.deleteNote(roomId, noteId, user.id);
   }
 
   /**
@@ -893,8 +906,8 @@ export class AudioRoomsController {
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: CreatePollDto,
-  ): Promise<{ poll_id: string } | null> {
-    if (!user) return null;
+  ): Promise<{ poll_id: string }> {
+    if (!user) throw new UnauthorizedException();
     return await this.audioRoomsService.createPoll(user.id, roomId, dto);
   }
 
@@ -914,16 +927,31 @@ export class AudioRoomsController {
     @CurrentUser() user: AuthUser | null,
     @Body() dto: SubmitVoteDto,
   ): Promise<void> {
-    if (!user) return;
+    if (!user) throw new UnauthorizedException();
     return await this.audioRoomsService.submitVote(user.id, dto);
   }
 
+  @Get(':roomId/polls/active')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Get the current active poll',
+    description:
+      'Returns the newest active poll and aggregate results for room recovery.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Active poll, or null when none exists.',
+  })
+  async getActivePoll(
+    @CurrentUser() user: AuthUser | null,
+    @Param('roomId') roomId: string,
+  ): Promise<QuickPollResults | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.audioRoomsService.getActivePoll(user.id, roomId);
+  }
+
   @Get(':roomId/polls/:pollId')
-  @UseInterceptors(
-    new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [
-      CACHE_TAG_AUDIO_ROOM_POLLS,
-    ]),
-  )
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Get poll results',
     description:
@@ -960,15 +988,12 @@ export class AudioRoomsController {
     },
   })
   async getPollResults(
-    @Param('roomId') _roomId: string,
+    @CurrentUser() user: AuthUser | null,
+    @Param('roomId') roomId: string,
     @Param('pollId') pollId: string,
-  ): Promise<{
-    question: string;
-    options: string[];
-    votes: number[];
-    totalVotes: number;
-  }> {
-    return this.audioRoomsService.getPollResults(_roomId, pollId);
+  ): Promise<QuickPollResults> {
+    if (!user) throw new UnauthorizedException();
+    return this.audioRoomsService.getPollResults(user.id, roomId, pollId);
   }
 
   @Get('soundboard/list')
@@ -1066,7 +1091,7 @@ export class AudioRoomsController {
   @ApiParam({
     name: 'roomId',
     description: 'Audio room ID',
-    example: 'room_a1b2c3d4',
+    example: '63eedbd6-03f9-433f-a481-98227dfd62af',
   })
   @ApiResponse({
     status: 201,
@@ -1080,25 +1105,36 @@ export class AudioRoomsController {
           type: 'string',
           example: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
         },
-        receiver_new_balance: { type: 'number', example: 260 },
+        sender_new_balance: { type: 'number', example: 90 },
       },
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Room participation required.' })
+  @ApiResponse({ status: 429, description: 'Too many tip attempts.' })
+  @ApiResponse({
+    status: 503,
+    description: 'Tip delivery is temporarily unavailable.',
+  })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async tipHost(
     @CurrentUser() user: AuthUser | null,
-    @Param('roomId') roomId: string,
+    @Param('roomId', new ParseUUIDPipe({ version: '4' })) roomId: string,
     @Body() dto: TipHostDto,
   ): Promise<{
     tip_id: string;
     amount_coins: number;
     receiver_id: string;
-    receiver_new_balance: number;
+    sender_new_balance: number;
   } | null> {
     if (!user) return null;
+    if (dto.room_id !== roomId) {
+      throw new BadRequestException('audioRoom.tipValidationError');
+    }
     return await this.audioRoomsService.tipHost(user.id, {
       room_id: roomId,
       amount_coins: dto.amount_coins,
+      idempotency_key: dto.idempotency_key,
     });
   }
 }

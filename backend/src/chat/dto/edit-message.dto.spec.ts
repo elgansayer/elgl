@@ -40,4 +40,14 @@ describe('EditMessageDto', () => {
     const messages = await validationMessages(dto);
     expect(messages.some((message) => message.includes('128'))).toBe(true);
   });
+
+  it('rejects an encrypted edit without an authenticated envelope', async () => {
+    const dto = new EditMessageDto();
+    dto.text_content = 'Encrypted message';
+    dto.is_encrypted = true;
+
+    await expect(validationMessages(dto)).resolves.toContain(
+      'encrypted_payload must be a bounded e2ee:v1 envelope when is_encrypted is true and absent otherwise',
+    );
+  });
 });

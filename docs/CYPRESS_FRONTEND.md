@@ -17,9 +17,20 @@ cd frontend
 npm run cypress:open
 npm run e2e
 npm run e2e:ci
+npm run check:cypress-types
 ```
 
-`npm run e2e:ci` starts the Angular development server and waits for port 4200 before running Cypress.
+`npm run e2e:ci` starts the Angular development server and waits for port 4200 before running Cypress. `npm run check:cypress-types` type-checks the Cypress support files and specs (see "TypeScript project" below).
+
+## Installing the binary
+
+`npm ci` installs the `cypress` npm package and downloads the Cypress binary into the Cypress cache (`~/.cache/Cypress` on Linux, or the folder named by `CYPRESS_CACHE_FOLDER`). Jobs that only lint or build set `CYPRESS_INSTALL_BINARY=0` to skip the download; the type-check does not need the binary because the type definitions ship in the npm package. If `npx cypress verify` reports a missing binary, run `npx cypress install`.
+
+## TypeScript project
+
+`frontend/cypress/tsconfig.json` is the TypeScript project for the support files and specs. It sets `moduleDetection` to `force` so every file is its own module. Specs normally declare no imports or exports, so without this setting they share one global scope, and the same helper name in two specs (for example `setupCommonMocks`) fails the type-check with `TS2393: Duplicate function implementation` even though Cypress bundles each spec separately.
+
+Cypress transpiles specs without type-checking them, so `npm run check:cypress-types` (`tsc -p cypress/tsconfig.json --noEmit`) is the only place type errors in specs surface. It is part of `npm run lint` and `npm run lint:check`, so the standard frontend gate and the `frontend / static-analysis` CI job enforce it, and the Cypress contract workflow runs it as well. It needs no browser and no Cypress binary.
 
 ## Setup verification
 
@@ -28,7 +39,7 @@ The setup has a dependency-free verifier so package/configuration drift can be d
 ```bash
 cd frontend
 node scripts/verify-cypress-setup.mjs
-node --test scripts/verify-cypress-setup.test.mjs
+npm run test:cypress-setup
 ```
 
 The verifier checks that:
@@ -36,10 +47,14 @@ The verifier checks that:
 - `cypress` and `start-server-and-test` are frontend development dependencies;
 - `package-lock.json` contains matching root declarations and installed-package entries for both tools;
 - the `cypress:open`, `e2e`, and `e2e:ci` scripts still invoke the intended runners;
+- `test:cypress-setup` runs the regression tests and the standard `pretest` gate includes it;
+- the `check:cypress-types` script type-checks `cypress/tsconfig.json` and both lint modes run it;
 - the canonical base URL, support file, and spec pattern remain configured;
-- the support, commands, setup, app, Moments, and Chat smoke files remain present.
+- the TypeScript project, support, commands, setup, app, Moments, and Chat smoke files remain present.
 
 Lockfile verification is deliberate. A package declaration without a matching lockfile can look configured locally but make `npm ci` fail in a clean checkout before Cypress ever starts.
+
+The verifier's regression tests also run the verifier against the real frontend package. They are part of `npm test` (through `pretest`), so contract drift fails the standard frontend gate and not only the path-filtered Cypress workflow.
 
 ## CI contract
 
@@ -48,7 +63,8 @@ Lockfile verification is deliberate. A package declaration without a matching lo
 1. installs the exact frontend lockfile with `npm ci`;
 2. verifies the Cypress binary;
 3. runs the reusable setup verifier and its Node regression tests;
-4. starts the Angular app and runs `cypress-setup.cy.ts`, `app.cy.ts`, `moments-flow.cy.ts`, and `chat-flow.cy.ts` in Electron.
+4. type-checks the Cypress support files and specs with `npm run check:cypress-types`;
+5. starts the Angular app and runs `cypress-setup.cy.ts`, `app.cy.ts`, `moments-flow.cy.ts`, and `chat-flow.cy.ts` in Electron.
 
 A failure means the Cypress installation/configuration is no longer usable from a clean checkout. Do not bypass the check with `continue-on-error` or by replacing the smoke test with a command that never starts the application.
 
@@ -64,6 +80,7 @@ Keep installation/configuration failures distinct from product-flow failures:
 
 - dependency or lockfile drift should fail in `verify-cypress-setup.mjs` with a specific contract message;
 - a missing Cypress binary should fail at `npx cypress verify`;
+- a type error or duplicate declaration in a spec should fail in `check:cypress-types` with the TypeScript diagnostic, before any browser starts;
 - Angular startup or browser-flow failures should fail only after the static setup checks have passed.
 
 This ordering keeps CI diagnostics actionable without logging browser session data, credentials, or private application content.
@@ -74,6 +91,6 @@ Cypress PR jobs must use synthetic test data and must not receive production cre
 
 ## Rollout and rollback
 
-The setup verifier is additive and read-only. It can ship independently of product features because it only checks repository state already required by Cypress.
+The setup verifier and the type-check are additive and read-only. They can ship independently of product features because they only check repository state already required by Cypress.
 
-If the verification contract itself is incorrect, revert the verifier, its regression tests, workflow wiring, and this documentation together. Do not remove the frontend Cypress dependency, configuration, support file, or existing product specs as a rollback for an unrelated browser-test failure.
+If the verification contract itself is incorrect, revert the verifier, its regression tests, the `check:cypress-types` script and its `lint`/`lint:check` wiring, the workflow step, and this documentation together. Reverting only `moduleDetection` brings back the duplicate-declaration errors unless the specs gain explicit `export {}` statements. Do not remove the frontend Cypress dependency, configuration, support file, or existing product specs as a rollback for an unrelated browser-test failure.
