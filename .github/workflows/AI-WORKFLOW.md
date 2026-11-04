@@ -73,7 +73,9 @@ the current head to review.
 - A reviewed head that becomes behind `main` loses eligibility, receives an expected-SHA base update, and is
   verified and reviewed again.
 - The merge call is atomically bound to the inspected head SHA with `--match-head-commit`.
-- `CI / required` and `factory/independent-review` must both report literal `SUCCESS` for autonomous merge.
+- Under the `independent-review` policy, `CI / required` and `factory/independent-review` must both report literal
+  `SUCCESS` for autonomous merge. Under `ci-gated` (Elgl since #9824), only exact-head `CI / required` is required;
+  no review conversation is bought and a retired review status is ignored.
   Missing, skipped, neutral, pending, or failed required contexts fail closed.
 - A baseline ruleset on `main` requires pull requests and strict `CI / required`. A review-only ruleset requires
   `factory/independent-review`. The sole optional bypass actor on either ruleset is the exact repository-owner

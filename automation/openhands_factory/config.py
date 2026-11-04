@@ -419,6 +419,11 @@ class FactoryConfig(BaseModel):
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
     repository_profile: Literal["hellotalk", "workout-agent", "neptune"] = "hellotalk"
+    # "independent-review" buys an AI review and publishes factory/independent-review
+    # before merge. "ci-gated" merges once exact-head required CI passes; it buys no
+    # review conversation and ignores a retired review status. Separate from
+    # tests_only_merging, which also selects Neptune admission and merge behaviour.
+    merge_review_policy: Literal["independent-review", "ci-gated"] = "independent-review"
     neptune_activation_enabled: bool = False
     neptune_intake_dir: Path | None = None
     prompt_dir: Path = Path("/var/lib/hellotalk-factory/repository/automation/prompts")
@@ -949,6 +954,10 @@ class FactoryConfig(BaseModel):
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
+                merge_review_policy=cast(
+                    Literal["independent-review", "ci-gated"],
+                    env.get("FACTORY_MERGE_REVIEW_POLICY", "independent-review"),
+                ),
                 trusted_github_actors=trusted_github_actors,
                 control_github_actors=control_github_actors,
                 require_ready_label=boolean("FACTORY_REQUIRE_READY_LABEL", False),

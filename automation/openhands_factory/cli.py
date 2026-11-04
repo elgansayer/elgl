@@ -343,6 +343,7 @@ def main(arguments: list[str] | None = None) -> int:
                 config.repository,
                 config.github_token.get_secret_value(),
                 base_branch=config.base_branch,
+                merge_review_policy=config.merge_review_policy,
             )
             jobs = JobStore(
                 config.state_dir / "jobs.json",
