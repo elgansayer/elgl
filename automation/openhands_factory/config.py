@@ -177,6 +177,7 @@ class AgentsRoutingConfig(BaseModel):
 class AgentsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    repository_scope: str | None = None
     routing_enabled: bool = True
     providers: dict[str, ProviderConfig] = Field(
         default_factory=lambda: {
@@ -269,6 +270,13 @@ class AgentsConfig(BaseModel):
     routing: AgentsRoutingConfig = Field(default_factory=AgentsRoutingConfig)
     timeouts: AgentTimeoutsConfig = Field(default_factory=AgentTimeoutsConfig)
     circuit_breaker: AgentCircuitBreakerConfig = Field(default_factory=AgentCircuitBreakerConfig)
+
+    @field_validator("repository_scope")
+    @classmethod
+    def valid_repository_scope(cls, value: str | None) -> str | None:
+        if value is not None and not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", value):
+            raise ValueError("agent repository scope must be owner/repository")
+        return value
 
     @model_validator(mode="before")
     @classmethod
@@ -645,6 +653,11 @@ class FactoryConfig(BaseModel):
             raise ValueError(
                 "OPENCODE_GO_API_KEY and OPENCODE_GO_MODEL must either both be set or both be empty"
             )
+        if (
+            self.agents.repository_scope is not None
+            and self.agents.repository_scope.casefold() != self.github_repository.casefold()
+        ):
+            raise ValueError("agent configuration is scoped to a different repository")
         self._validate_neptune_profile()
         return self
 
