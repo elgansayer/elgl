@@ -353,3 +353,9 @@ def test_update_scope_compares_immutable_runtime_inputs(
     assert invalid.returncode != 0
     assert 'runtime_inputs_match "$runtime_source_sha" "$remote_sha"' in updater
     assert "Application-only update: preserving running factories" in updater
+
+
+def test_ci_probe_prefers_the_dedicated_source_repository():
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text()
+    function = updater.split("candidate_ci_green() {", 1)[1].split("\n}\n", 1)[0]
+    assert '"${REPO_FACTORY_SOURCE_REPOSITORY:-${GITHUB_REPOSITORY:-}}"' in function
