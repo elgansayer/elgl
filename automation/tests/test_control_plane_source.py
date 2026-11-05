@@ -43,7 +43,7 @@ def test_production_uses_subscription_first_phase_routing() -> None:
     assert providers["codex"]["enabled"] is True
     assert providers["opencode"]["enabled"] is True
     assert providers["google"]["enabled"] is True
-    assert providers["pi"]["enabled"] is True
+    assert providers["pi"]["enabled"] is False
     assert providers["openhands"]["enabled"] is False
     assert providers["openhands"]["transport"] == "openhands-sdk"
     assert providers["openhands"]["emergency_only"] is True
