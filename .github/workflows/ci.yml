@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  # A burst of serial Factory merges should test the newest integrated main,
+  # A burst of serial merges should test the newest integrated main,
   # not consume runners validating every superseded intermediate push.
   group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
   cancel-in-progress: true
