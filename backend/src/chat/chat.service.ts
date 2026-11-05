@@ -138,7 +138,7 @@ export class ChatService {
     });
   }
 
-  private async generateCorrectionPayloadIfNeeded(
+  protected async generateCorrectionPayloadIfNeeded(
     correctionPayload: unknown,
   ): Promise<CorrectionPayload | null> {
     if (!isRecord(correctionPayload)) {
