@@ -55,12 +55,12 @@
       }
     },
     "opencode": {
-      "enabled": false,
+      "enabled": true,
       "command": "opencode",
       "auth_mode": "subscription",
       "transport": "cli",
       "max_concurrency": 2,
-      "model": "opencode-go/deepseek-v4-flash",
+      "model": "opencode-go/minimax-m3",
       "credential_paths": [".config/opencode", ".local/share/opencode"],
       "runtime_paths": [".local/bin", ".npm-global", ".opencode"]
     },
@@ -94,14 +94,14 @@
     }
   },
   "routing": {
-    "planning": ["google", "claude", "codex", "pi"],
-    "architecture": ["google", "claude", "codex", "pi"],
-    "implementation": ["google", "claude", "codex", "pi"],
-    "security_review": ["google", "claude", "codex", "pi"],
-    "quality_repair": ["google", "pi", "codex", "claude"],
-    "code_review": ["claude", "google", "codex", "pi"],
-    "ci_repair": ["google", "pi", "claude", "codex"],
-    "general_action": ["google", "pi", "claude", "codex"],
+    "planning": ["google", "claude", "codex", "pi", "opencode"],
+    "architecture": ["google", "claude", "codex", "pi", "opencode"],
+    "implementation": ["google", "claude", "codex", "pi", "opencode"],
+    "security_review": ["google", "claude", "codex", "pi", "opencode"],
+    "quality_repair": ["google", "pi", "codex", "claude", "opencode"],
+    "code_review": ["claude", "google", "codex", "pi", "opencode"],
+    "ci_repair": ["google", "pi", "claude", "codex", "opencode"],
+    "general_action": ["google", "pi", "claude", "codex", "opencode"],
     "skip_busy_providers": true,
     "same_provider_retries": 0
   },

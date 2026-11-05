@@ -37,4 +37,5 @@ def test_production_claude_uses_haiku_for_bounded_stall_diagnostics() -> None:
         "pi",
         "claude",
         "codex",
+        "opencode",
     ]
