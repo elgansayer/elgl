@@ -31,6 +31,8 @@ jobs:
       - name: Checkout trusted exact-duplicate guard
         uses: actions/checkout@v7
         with:
+          repository: elgansayer/repo-factory
+          ref: main
           fetch-depth: 1
           persist-credentials: false
           sparse-checkout: automation/openhands_factory/exact_duplicate_pr_guard.py
@@ -61,6 +63,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Checkout the standalone Factory
+        uses: actions/checkout@v7
+        with:
+          repository: elgansayer/repo-factory
+          ref: main
+          path: .repo-factory
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
@@ -71,11 +82,11 @@ jobs:
         with:
           version: '0.12.5'
           enable-cache: true
-          cache-dependency-glob: automation/uv.lock
+          cache-dependency-glob: .repo-factory/automation/uv.lock
 
       - name: Install frozen Factory dependencies
         run: uv sync --frozen --extra development
-        working-directory: automation
+        working-directory: .repo-factory/automation
 
       - name: Audit branches with the canonical Factory classifier
         run: |
@@ -85,7 +96,7 @@ jobs:
             --workspace "$GITHUB_WORKSPACE" \
             --base "$BASE_BRANCH" \
             > "$RUNNER_TEMP/branch-hygiene.json"
-        working-directory: automation
+        working-directory: .repo-factory/automation
 
       - name: Summarize branch classifications
         run: |
