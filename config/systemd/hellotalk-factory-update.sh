@@ -60,6 +60,9 @@ runtime_inputs_match() {
 }
 
 candidate_ci_green() {
+  # The control checkout's GitHub repository. It defaults to the primary
+  # instance's repository; set REPO_FACTORY_SOURCE_REPOSITORY when the factory
+  # source lives in its own repository (elgansayer/elgl#9822).
   # This standard-library probe must work before the new package is installed.
   # Inherit authentication privately, never through process arguments.
   local GH_TOKEN=${GITHUB_TOKEN:-}
@@ -67,7 +70,7 @@ candidate_ci_green() {
   timeout "${GIT_TIMEOUT}s" \
     runuser -u "$FACTORY_USER" --preserve-environment -- env \
       HOME="$FACTORY_HOME" PATH=/usr/local/bin:/usr/bin:/bin \
-      "$FACTORY_VENV/bin/python" - "${GITHUB_REPOSITORY:-}" "$1" \
+      "$FACTORY_VENV/bin/python" - "${REPO_FACTORY_SOURCE_REPOSITORY:-${GITHUB_REPOSITORY:-}}" "$1" \
       "${FACTORY_BASE_BRANCH:-main}" <<'PY'
 import json
 import re
