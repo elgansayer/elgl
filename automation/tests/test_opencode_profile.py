@@ -24,6 +24,10 @@ def source_path() -> Path:
     return Path(__file__).parents[2] / "config/factory/agents.production.json"
 
 
+def _native(route: list[str]) -> list[str]:
+    return [name for name in route if name != "opencode"]
+
+
 @pytest.fixture
 def source(source_path: Path) -> AgentsConfig:
     return AgentsConfig.model_validate_json(source_path.read_bytes())
@@ -41,11 +45,11 @@ def test_profile_preserves_native_providers_and_constrains_the_trial(source: Age
     assert worker.phase_models == {}
     assert worker.max_concurrency == 1 and worker.timeout_seconds == 600
     assert worker.max_output_bytes <= source.providers["opencode"].max_output_bytes
-    assert profile.routing.implementation == ["opencode", *source.routing.implementation]
-    assert profile.routing.quality_repair == ["opencode", *source.routing.quality_repair]
-    assert profile.routing.general_action == ["opencode", *source.routing.general_action]
-    assert profile.routing.planning == source.routing.planning
-    assert profile.routing.code_review == source.routing.code_review
+    assert profile.routing.implementation == ["opencode", *_native(source.routing.implementation)]
+    assert profile.routing.quality_repair == ["opencode", *_native(source.routing.quality_repair)]
+    assert profile.routing.general_action == ["opencode", *_native(source.routing.general_action)]
+    assert profile.routing.planning == _native(source.routing.planning)
+    assert profile.routing.code_review == _native(source.routing.code_review)
     assert profile.timeouts == source.timeouts
     assert profile.circuit_breaker == source.circuit_breaker
 

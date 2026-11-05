@@ -36,14 +36,14 @@ def test_production_provider_policy_is_locked() -> None:
     routing = config["routing"]
     breaker = config["circuit_breaker"]
     expected_routes = {
-        "planning": ["google", "claude", "codex", "pi"],
-        "architecture": ["google", "claude", "codex", "pi"],
-        "implementation": ["google", "claude", "codex", "pi"],
-        "security_review": ["google", "claude", "codex", "pi"],
-        "quality_repair": ["google", "pi", "codex", "claude"],
-        "code_review": ["claude", "google", "codex", "pi"],
-        "ci_repair": ["google", "pi", "claude", "codex"],
-        "general_action": ["google", "pi", "claude", "codex"],
+        "planning": ["google", "claude", "codex", "pi", "opencode"],
+        "architecture": ["google", "claude", "codex", "pi", "opencode"],
+        "implementation": ["google", "claude", "codex", "pi", "opencode"],
+        "security_review": ["google", "claude", "codex", "pi", "opencode"],
+        "quality_repair": ["google", "pi", "codex", "claude", "opencode"],
+        "code_review": ["claude", "google", "codex", "pi", "opencode"],
+        "ci_repair": ["google", "pi", "claude", "codex", "opencode"],
+        "general_action": ["google", "pi", "claude", "codex", "opencode"],
     }
 
     assert config["routing_enabled"] is True
@@ -55,7 +55,7 @@ def test_production_provider_policy_is_locked() -> None:
     }
     assert providers["opencode"] == {
         **providers["opencode"],
-        "enabled": False,
+        "enabled": True,
         "auth_mode": "subscription",
         "transport": "cli",
     }
@@ -77,8 +77,9 @@ def test_production_provider_policy_is_locked() -> None:
     assert "openhands" not in routing["planning"]
 
     # Production evidence favours Google and the fast Pi tier for bounded repair.
-    # Codex remains the final repair route for complex fallback work.
-    assert routing["ci_repair"][-1] == "codex"
+    # Codex remains the final repair route for complex fallback work; OpenCode Go
+    # only runs once every native provider is unavailable.
+    assert routing["ci_repair"][-2:] == ["codex", "opencode"]
     assert providers["google"]["phase_models"]["ci_repair"].endswith("flash-low")
     assert providers["claude"]["phase_models"]["ci_repair"] == "haiku"
     # Quality repair judges review and quality findings; flash-low returned no
