@@ -65,7 +65,7 @@ def test_production_provider_policy_is_locked() -> None:
     assert providers["google"]["enabled"] is True
     assert providers["google"]["auth_mode"] == "subscription"
     assert providers["google"]["transport"] == "cli"
-    assert providers["pi"]["enabled"] is True
+    assert providers["pi"]["enabled"] is False
     assert providers["pi"]["auth_mode"] == "subscription"
     assert providers["pi"]["transport"] == "cli"
     assert providers["openhands"]["enabled"] is False
@@ -106,7 +106,8 @@ def test_ci_repair_rotation_reaches_codex_in_second_candidate_window() -> None:
     job = Job(task)
 
     first_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
-    assert first_window == ["google", "pi"]
+    # Pi is disabled for now, so Claude fills its slot in the fast tier.
+    assert first_window == ["google", "claude"]
 
     job.provider_history.extend(
         {
@@ -118,15 +119,17 @@ def test_ci_repair_rotation_reaches_codex_in_second_candidate_window() -> None:
     )
     second_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
 
-    assert second_window == ["codex", "claude"]
+    assert second_window == ["codex", "opencode"]
 
 
 def test_ci_repair_stays_cheap_when_preferred_provider_is_unhealthy() -> None:
     raw_config = _production_config()
     config = AgentsConfig.model_validate(raw_config)
-    for unavailable, expected_first in (
-        ("google", ["pi", "claude"]),
-        ("claude", ["google", "pi"]),
+    # Pi is disabled for now, so Codex joins the first window and OpenCode Go is
+    # the next untried fallback before retrying the fast tier.
+    for unavailable, expected_first, expected_second in (
+        ("google", ["claude", "codex"], ["opencode", "claude"]),
+        ("claude", ["google", "codex"], ["opencode", "google"]),
     ):
         providers = [
             _Provider(
@@ -157,5 +160,4 @@ def test_ci_repair_stays_cheap_when_preferred_provider_is_unhealthy() -> None:
         )
         second_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
 
-        assert second_window[0] == "codex"
-        assert len(second_window) == 2
+        assert second_window == expected_second
