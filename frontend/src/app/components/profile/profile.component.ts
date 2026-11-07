@@ -9,12 +9,9 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { NgxSkeletonLoaderComponent } from 'ngx-skeleton-loader';
 import { I18nService } from '../../services/i18n.service';
-import {
-  UserService,
-  UserProfile,
-  VisitorLog,
-  BusinessCatalogItem,
-} from '../../services/user.service';
+import { UserService, UserProfile, BusinessCatalogItem } from '../../services/user.service';
+import { ProfileVisitsService } from '../../services/profile-visits.service';
+import type { ProfileVisit } from '../../interfaces/profile-visit.interface';
 import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
 import { HobbyTagsComponent } from '../hobby-tags/hobby-tags.component';
 import {
@@ -42,6 +39,40 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
+
+/** The profile panel is a short preview; the full paginated log lives at /profile/me/visitors. */
+const VISITOR_PREVIEW_LIMIT = 5;
+
+/**
+ * Presentation model for one visit. A masked card deliberately has no identity fields at all, so a
+ * template change can never render a name, avatar or identifier for a visitor the server withheld.
+ */
+type ProfileVisitorCard =
+  | {
+      readonly kind: 'visible';
+      readonly id: string;
+      readonly createdAt: string;
+      readonly displayName: string | undefined;
+      readonly avatarUrl: string | null;
+      readonly initial: string;
+    }
+  | { readonly kind: 'masked'; readonly id: string; readonly createdAt: string };
+
+function toVisitorCard(visit: ProfileVisit, identityVisible: boolean): ProfileVisitorCard {
+  if (!identityVisible || visit.is_blurred) {
+    return { kind: 'masked', id: visit.id, createdAt: visit.created_at };
+  }
+
+  const displayName = visit.visitor.display_name;
+  return {
+    kind: 'visible',
+    id: visit.id,
+    createdAt: visit.created_at,
+    displayName,
+    avatarUrl: visit.visitor.avatar_url ?? null,
+    initial: Array.from(displayName ?? '')[0] ?? '?',
+  };
+}
 
 @Component({
   selector: 'app-profile',
@@ -73,6 +104,7 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
 })
 export class ProfileComponent implements OnInit {
   private userService = inject(UserService);
+  private readonly profileVisitsService = inject(ProfileVisitsService);
   private readonly i18n = inject(I18nService);
   private safetyService = inject(SafetyService);
 
@@ -81,15 +113,23 @@ export class ProfileComponent implements OnInit {
   readonly isEditing = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
   readonly successMessage = signal<string>('');
-  readonly visitors = signal<VisitorLog[]>([]);
+  readonly visitors = signal<ProfileVisit[]>([]);
   readonly isBlocked = computed(() => {
     const prof = this.profile();
     if (!prof) return false;
     return this.safetyService.blockedUserIdsSignal().has(prof.id);
   });
   readonly visitorsLoading = signal(false);
-  readonly visitorsError = signal<string>('');
+  readonly visitorsError = signal(false);
+  readonly visitorsIdentityVisible = signal(false);
   readonly showVisitors = signal(false);
+  readonly visitorCards = computed<ProfileVisitorCard[]>(() => {
+    const identityVisible = this.visitorsIdentityVisible();
+    return this.visitors().map((visit) => toVisitorCard(visit, identityVisible));
+  });
+  readonly hasMaskedVisitors = computed(() =>
+    this.visitorCards().some((card) => card.kind === 'masked'),
+  );
 
   readonly avatarPreviewUrl = signal<string>('');
 
@@ -180,14 +220,19 @@ export class ProfileComponent implements OnInit {
 
   async loadVisitors(): Promise<void> {
     this.visitorsLoading.set(true);
-    this.visitorsError.set('');
+    this.visitorsError.set(false);
     try {
-      const visits = await this.userService.getMyVisitors();
-      // Limit to 5 for display
-      this.visitors.set(visits.slice(0, 5));
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      this.visitorsError.set(message);
+      // The canonical endpoint owns the VIP decision. The service has already removed identity
+      // data from masked pages, so this component never sees a name or avatar the server withheld.
+      const page = await this.profileVisitsService.getMyVisitors(VISITOR_PREVIEW_LIMIT, 0);
+      this.visitorsIdentityVisible.set(page.identity_visible);
+      this.visitors.set(page.items.slice(0, VISITOR_PREVIEW_LIMIT));
+    } catch {
+      // Show a localised retry state rather than an empty list or a raw provider message, and
+      // keep no stale identities from an earlier successful load.
+      this.visitors.set([]);
+      this.visitorsIdentityVisible.set(false);
+      this.visitorsError.set(true);
     } finally {
       this.visitorsLoading.set(false);
     }

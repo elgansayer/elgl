@@ -208,6 +208,7 @@ export class I18nService {
 
     // Events
     'events.createTitle': 'Create Event',
+    'events.load_more': 'Load more',
     'events.title': 'Event Title',
     'events.datetime': 'Date & Time',
     'events.languagePair': 'Language Pair',
@@ -1463,6 +1464,10 @@ export class I18nService {
     'profile.chipMatching': '🌐 Exchange matching',
     'profile.upgradeTitle': 'Upgrade for full visitor identities and advanced features',
     'profile.upgradePrice': '8 UKP / $10 USD per month',
+    'profile.visitorsTitle': 'Who viewed me',
+    'profile.visitorsLink': 'Show visitors',
+    'profile.visitorsHide': 'Hide visitors',
+    'profile.anonymousVisitor': 'Hidden visitor',
     'profile.aboutMe': 'About me',
     'profile.noBio': 'No bio provided yet.',
     'profile.nationality': 'Nationality',

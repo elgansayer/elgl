@@ -1,4 +1,4 @@
-import { UserProfile, ProfileVisitor } from './user.service';
+import { UserProfile } from './user.service';
 import { AppUser } from './auth.service';
 
 export const MOCK_CURRENT_USER: AppUser = {
@@ -100,22 +100,6 @@ export const MOCK_PARTNERS: UserProfile[] = [
     created_at: new Date().toISOString(),
     is_followed_by_me: false,
     is_liked_by_me: true,
-  },
-];
-
-export const MOCK_VISITORS: ProfileVisitor[] = [
-  {
-    id: 'visit-1',
-    visitor_id: 'partner-1',
-    viewed_id: 'mock-user-123',
-    created_at: new Date().toISOString(),
-    visitor: {
-      id: 'partner-1',
-      display_name: 'Kenji',
-      avatar_url: 'https://i.pravatar.cc/150?u=partner-1',
-      native_languages: ['ja'],
-      target_languages: ['en'],
-    },
   },
 ];
 

@@ -1,5 +1,7 @@
 # Profile visit tracking
 
+> **Status: superseded legacy design.** The code described below (`backend/src/users/profile-visits.service.ts`, `profile-visits.controller.ts` and `interceptors/profile-visits.interceptor.ts`) is not registered in any Nest module, so `GET /users/:id/visitors` is not a live route and visits are not recorded from `GET /users/:id`. Do not register it: it returns visitor identities without the VIP check. The supported design is the `profile-visits` module described in `docs/profile-visitor-logs.md` (`POST /profile-visits/:viewedId`, `GET /profile-visits/my-visitors`) and its UI contract in `docs/who-viewed-me-ui.md`. This file is kept for history until the unregistered code is deleted.
+
 Profile visits are recorded when an authenticated user successfully opens another user's profile through `GET /users/:id`. The tracking path is deliberately secondary to the profile read: unavailable privacy state or persistence failure does not fabricate data and does not make the profile itself unavailable.
 
 ## Privacy and authorization

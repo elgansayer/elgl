@@ -8,10 +8,8 @@ import { AuthService } from './auth.service';
 import {
   UserService,
   UserProfile,
-  ProfileVisitor,
 } from './user.service';
 import { environment } from '../../environments/environment';
-import { MOCK_USER_PROFILE, MOCK_VISITORS } from './mock-data';
 
 class AuthServiceStub {
   getAccessToken(): string | undefined {
@@ -139,21 +137,10 @@ describe('UserService', () => {
       expect(await resultPromise).toEqual(profile);
     });
 
-    it('should return a mock user when the profile exists in mock data and request fails', async () => {
-      const mockId = MOCK_USER_PROFILE.id;
-      const resultPromise = service.getUserProfile(mockId);
+    it('should return null when the profile request fails', async () => {
+      const resultPromise = service.getUserProfile('other');
 
-      const req = httpMock.expectOne(`${baseUrl}/${mockId}`);
-      req.flush('error', { status: 404, statusText: 'Not Found' });
-
-      const result = await resultPromise;
-      expect(result).toEqual(MOCK_USER_PROFILE);
-    });
-
-    it('should return null when the profile is not in mock data and request fails', async () => {
-      const resultPromise = service.getUserProfile('nonexistent-id');
-
-      const req = httpMock.expectOne(`${baseUrl}/nonexistent-id`);
+      const req = httpMock.expectOne(`${baseUrl}/other`);
       req.flush('error', { status: 404, statusText: 'Not Found' });
 
       expect(await resultPromise).toBeNull();
@@ -232,47 +219,24 @@ describe('UserService', () => {
       expect(await resultPromise).toEqual(updatedProfile);
     });
 
-    it('should fall back to mock data on error', async () => {
+    it('should fail closed when the profile update fails', async () => {
       const update = { bio_text: 'New bio' };
       const resultPromise = service.updateMyProfile(update);
 
       const req = httpMock.expectOne(`${baseUrl}/me`);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      const result = await resultPromise;
-      expect(result).toBeTruthy();
-      expect(result?.bio_text).toBe('New bio');
+      await expect(resultPromise).rejects.toBeTruthy();
     });
   });
 
-  describe('getProfileVisitors', () => {
-    it('should GET /users/me/visitors and return the visitors', async () => {
-      const visitors: ProfileVisitor[] = [
-        {
-          id: 'visit-1',
-          visitor_id: 'u-1',
-          viewed_id: 'u-2',
-          created_at: '2024-01-01T00:00:00Z',
-        },
-      ];
-      const resultPromise = service.getProfileVisitors();
-
-      const req = httpMock.expectOne(`${baseUrl}/me/visitors`);
-      expect(req.request.method).toBe('GET');
-      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
-      req.flush(visitors);
-
-      expect(await resultPromise).toEqual(visitors);
-    });
-
-    it('should fall back to MOCK_VISITORS on error', async () => {
-      const resultPromise = service.getProfileVisitors();
-
-      const req = httpMock.expectOne(`${baseUrl}/me/visitors`);
-      req.flush('error', { status: 500, statusText: 'Error' });
-
-      const result = await resultPromise;
-      expect(result).toEqual(MOCK_VISITORS);
+  describe('visitor log ownership', () => {
+    it('leaves visitor-log reads to ProfileVisitsService so masking has one owner', () => {
+      // The VIP identity decision and the privacy normalisation live in ProfileVisitsService. A
+      // second read method here would bypass both and, before this was removed, fabricated mock
+      // visitor identities when the request failed.
+      expect('getMyVisitors' in service).toBe(false);
+      expect('getProfileVisitors' in service).toBe(false);
     });
   });
 
@@ -470,31 +434,6 @@ describe('UserService', () => {
     });
   });
 
-  describe('getMyVisitors', () => {
-    it('should GET /profile-visits/my-visitors', async () => {
-      const visitsUrl = `${environment.apiUrl}/profile-visits`;
-      const visitors = [
-        {
-          id: 'v-1',
-          created_at: '2024-01-01T00:00:00Z',
-          is_blurred: false,
-          visitor: {
-            id: 'u-1',
-            native_languages: ['en'],
-            target_languages: ['fr'],
-          },
-        },
-      ];
-      const resultPromise = service.getMyVisitors();
-
-      const req = httpMock.expectOne(`${visitsUrl}/my-visitors`);
-      expect(req.request.method).toBe('GET');
-      req.flush(visitors);
-
-      await expect(resultPromise).resolves.toEqual(visitors);
-    });
-  });
-
   describe('getPresignedUploadUrl', () => {
     it('should POST to /media/presigned-url', async () => {
       const mediaUrl = `${environment.apiUrl}/media`;
@@ -630,15 +569,13 @@ describe('UserService', () => {
       await expect(resultPromise).resolves.toEqual(settings);
     });
 
-    it('should fall back to mock data on error', async () => {
+    it('should fail closed when the privacy settings read fails', async () => {
       const resultPromise = service.getMyPrivacySettings();
 
       const req = httpMock.expectOne(`${baseUrl}/me/privacy-settings`);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      const result = await resultPromise;
-      expect(result).toBeTruthy();
-      expect(typeof result.privacy_hide_age).toBe('boolean');
+      await expect(resultPromise).rejects.toBeTruthy();
     });
   });
 
@@ -830,15 +767,13 @@ describe('UserService', () => {
       await expect(resultPromise).resolves.toEqual(updatedProfile);
     });
 
-    it('should fall back to mock profile on error', async () => {
+    it('should fail closed when the privacy settings update fails', async () => {
       const resultPromise = service.updatePrivacySettings({ incognito_visits: true });
 
       const req = httpMock.expectOne(`${baseUrl}/me/privacy`);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      const result = await resultPromise;
-      expect(result).toBeTruthy();
-      expect(result.id).toBeDefined();
+      await expect(resultPromise).rejects.toBeTruthy();
     });
   });
 
@@ -1049,15 +984,13 @@ describe('UserService', () => {
       await expect(resultPromise).resolves.toEqual(updatedProfile);
     });
 
-    it('should fall back to mock profile on error', async () => {
+    it('should fail closed when the dnd schedule update fails', async () => {
       const resultPromise = service.setDoNotDisturbSchedule({ do_not_disturb: false });
 
       const req = httpMock.expectOne(`${baseUrl}/me/dnd`);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      const result = await resultPromise;
-      expect(result).toBeTruthy();
-      expect(result.id).toBeDefined();
+      await expect(resultPromise).rejects.toBeTruthy();
     });
   });
 });

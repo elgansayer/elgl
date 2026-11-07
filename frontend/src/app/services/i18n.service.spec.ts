@@ -365,6 +365,43 @@ describe('I18nService', () => {
     });
   });
 
+  describe('visitor log copy', () => {
+    // Every key rendered by the profile "Who viewed me" panel and the /visitors page. A missing key
+    // is printed verbatim ("profile.visitorsLink"), and component specs that stub translate() as an
+    // identity function cannot detect that, so the dictionary itself is asserted here.
+    const VISITOR_SURFACE_KEYS = [
+      'profile.visitorsTitle',
+      'profile.visitorsLink',
+      'profile.visitorsHide',
+      'profile.anonymousVisitor',
+      'profile.upgradeTitle',
+      'profile.upgradePrice',
+      'visitors.title',
+      'visitors.loading',
+      'visitors.empty',
+      'visitors.vipOnly',
+      'visitors.vipBannerDesc',
+      'common.error_generic',
+      'common.retry',
+      'common.unknownUser',
+      'vip.seePlans',
+      'events.load_more',
+    ];
+
+    it.each(VISITOR_SURFACE_KEYS)('defines English copy for %s', (key) => {
+      const text = service.translate(key);
+
+      expect(text).not.toBe(key);
+      expect(text.trim().length).toBeGreaterThan(0);
+    });
+
+    it('uses distinct, state-specific labels for the visitor panel toggle', () => {
+      expect(service.translate('profile.visitorsLink')).not.toBe(
+        service.translate('profile.visitorsHide'),
+      );
+    });
+  });
+
   describe('dictionary value hygiene', () => {
     // Interpolation and attribute bindings print text verbatim, so entities are never decoded.
     const HTML_ENTITY = /&(?:#\d+|#x[\da-f]+|[a-z][a-z0-9]{1,8});/i;

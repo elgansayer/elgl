@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, catchError, of } from 'rxjs';
-import { MOCK_USER_PROFILE, MOCK_VISITORS, MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import type { ProficiencyLevel } from './proficiency.service';
@@ -91,35 +90,6 @@ export interface BusinessCatalogItem {
   image_url?: string;
 }
 
-export interface VisitorLog {
-  id: string;
-  created_at: string;
-  is_blurred: boolean;
-  visitor: {
-    id: string;
-    display_name?: string;
-    avatar_url?: string | null;
-    native_languages: string[];
-    target_languages: string[];
-    bio_text?: string;
-    is_vip?: boolean;
-  };
-}
-
-export interface ProfileVisitor {
-  id: string;
-  visitor_id: string;
-  viewed_id: string;
-  created_at: string;
-  visitor?: {
-    id: string;
-    display_name?: string;
-    avatar_url?: string;
-    native_languages?: string[];
-    target_languages?: string[];
-  };
-}
-
 export interface LinkedAccount {
   provider: string;
   /** Display name of the linked account (e.g. email) */
@@ -171,12 +141,9 @@ export class UserService {
 
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     return firstValueFrom(
-      this.http.get<UserProfile>(`${this.baseUrl}/${userId}`, { headers: this.getHeaders() }).pipe(
-        catchError(() => {
-          const user = [MOCK_USER_PROFILE, ...MOCK_PARTNERS].find((u) => u.id === userId);
-          return of(user || null);
-        }),
-      ),
+      this.http
+        .get<UserProfile>(`${this.baseUrl}/${userId}`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of(null))),
     );
   }
 
@@ -268,20 +235,7 @@ export class UserService {
     },
   ): Promise<UserProfile> {
     return firstValueFrom(
-      this.http
-        .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
-        .pipe(
-          catchError(() => {
-            const updated: UserProfile = {
-              ...MOCK_USER_PROFILE,
-              status_text: 'Learning new languages!',
-              ...update,
-              auto_download_wifi_only: update.auto_download_wifi_only ?? false,
-              last_active_at: new Date().toISOString(),
-            };
-            return of(updated);
-          }),
-        ),
+      this.http.patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() }),
     );
   }
 
@@ -295,20 +249,6 @@ export class UserService {
 
   async updateTargetLanguages(targetLanguages: string[]): Promise<UserProfile> {
     return this.updateMyProfile({ target_languages: targetLanguages });
-  }
-
-  async getMyVisitors(): Promise<VisitorLog[]> {
-    return firstValueFrom(
-      this.http.get<VisitorLog[]>(`${this.visitsUrl}/my-visitors`, { headers: this.getHeaders() }),
-    );
-  }
-
-  async getProfileVisitors(): Promise<ProfileVisitor[]> {
-    return firstValueFrom(
-      this.http
-        .get<ProfileVisitor[]>(`${this.baseUrl}/me/visitors`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of(MOCK_VISITORS))),
-    );
   }
 
   async recordVisit(viewedUserId: string): Promise<unknown> {
@@ -464,25 +404,7 @@ export class UserService {
           privacy_hide_exact_location: boolean;
           privacy_hide_online_status: boolean;
           privacy_hide_vip_status: boolean;
-        }>(`${this.baseUrl}/me/privacy-settings`, { headers: this.getHeaders() })
-        .pipe(
-          catchError(() => {
-            const profile = MOCK_USER_PROFILE;
-            return of({
-              privacy_hide_age: profile.privacy_hide_age ?? false,
-              privacy_hide_location: profile.privacy_hide_location ?? false,
-              privacy_hide_from_search: profile.privacy_hide_from_search ?? false,
-              privacy_hide_gender: profile.privacy_hide_gender ?? false,
-              privacy_last_seen: profile.privacy_last_seen ?? 'everyone',
-              privacy_profile_photo: profile.privacy_profile_photo ?? 'everyone',
-              privacy_about_info: profile.privacy_about_info ?? 'everyone',
-              privacy_status: profile.privacy_status ?? 'everyone',
-              privacy_hide_exact_location: profile.privacy_hide_exact_location ?? false,
-              privacy_hide_online_status: profile.privacy_hide_online_status ?? false,
-              privacy_hide_vip_status: profile.privacy_hide_vip_status ?? false,
-            });
-          }),
-        ),
+        }>(`${this.baseUrl}/me/privacy-settings`, { headers: this.getHeaders() }),
     );
   }
 
@@ -650,8 +572,7 @@ export class UserService {
       this.http
         .patch<UserProfile>(`${this.baseUrl}/me/privacy`, settings, {
           headers: this.getHeaders(),
-        })
-        .pipe(catchError(() => of(MOCK_USER_PROFILE))),
+        }),
     );
   }
 
@@ -822,8 +743,7 @@ export class UserService {
       this.http
         .patch<UserProfile>(`${this.baseUrl}/me/dnd`, settings, {
           headers: this.getHeaders(),
-        })
-        .pipe(catchError(() => of(MOCK_USER_PROFILE))),
+        }),
     );
   }
 

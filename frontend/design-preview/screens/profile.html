@@ -435,6 +435,88 @@
         color: rgb(var(--danger));
       }
 
+      .visitors-panel {
+        margin-top: 12px;
+      }
+      .visitors-panel h3 {
+        margin: 0 0 6px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: rgb(var(--text-secondary));
+      }
+      .visitors-panel .variant-label {
+        margin: 0 0 6px;
+        font-size: 11px;
+        color: rgb(var(--text-secondary));
+      }
+      .visitor-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .visitor-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-200));
+        padding: 4px 12px 4px 8px;
+        font-size: 12px;
+      }
+      .visitor-chip .dot {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgb(var(--surface-300));
+        font-size: 8px;
+        color: rgb(var(--text-secondary));
+      }
+      .visitor-chip time {
+        color: rgb(var(--text-secondary));
+      }
+      .visitor-chip .blurred {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        filter: blur(4px);
+        user-select: none;
+        pointer-events: none;
+      }
+      .visitor-chip .bar {
+        width: 64px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-300));
+      }
+      .visitor-chip .vip-only {
+        border: 1px solid rgb(var(--vip) / 0.3);
+        border-radius: 999px;
+        background: rgb(var(--vip) / 0.15);
+        padding: 0 8px;
+        font-weight: 600;
+        color: rgb(var(--text-primary));
+      }
+      .visitor-note {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .visitor-note a {
+        color: rgb(var(--primary));
+        font-weight: 600;
+      }
+
       .caption {
         max-width: 390px;
         margin: 18px auto 0;
@@ -478,6 +560,48 @@
             <button class="btn-primary">Edit</button>
           </div>
         </div>
+
+        <section class="visitors-panel" aria-labelledby="visitors-panel-title">
+          <h3 id="visitors-panel-title">Who viewed me</h3>
+          <p class="variant-label">VIP: identities are visible</p>
+          <ul class="visitor-chips">
+            <li class="visitor-chip">
+              <span class="dot" aria-hidden="true">Y</span>
+              <span>Yuki Tanaka</span>
+              <time datetime="2026-11-05T09:00:00Z">05/11/2026, 09:00</time>
+            </li>
+            <li class="visitor-chip">
+              <span class="dot" aria-hidden="true">M</span>
+              <span>Marco Rossi</span>
+              <time datetime="2026-11-04T18:30:00Z">04/11/2026, 18:30</time>
+            </li>
+          </ul>
+        </section>
+
+        <section class="visitors-panel" aria-labelledby="visitors-panel-free-title">
+          <h3 id="visitors-panel-free-title">Who viewed me</h3>
+          <p class="variant-label">Free plan: blurred, no identity data is sent to the browser</p>
+          <ul class="visitor-chips">
+            <li class="visitor-chip">
+              <span class="blurred" aria-hidden="true"
+                ><span class="dot"></span><span class="bar"></span
+              ></span>
+              <time datetime="2026-11-05T09:00:00Z">05/11/2026, 09:00</time>
+              <span class="vip-only">VIP only</span>
+            </li>
+            <li class="visitor-chip">
+              <span class="blurred" aria-hidden="true"
+                ><span class="dot"></span><span class="bar"></span
+              ></span>
+              <time datetime="2026-11-04T18:30:00Z">04/11/2026, 18:30</time>
+              <span class="vip-only">VIP only</span>
+            </li>
+          </ul>
+          <p class="visitor-note">
+            <span>Visitor details are blurred on the free tier.</span>
+            <a href="#">See Plans</a>
+          </p>
+        </section>
 
         <div class="stat-grid">
           <div>

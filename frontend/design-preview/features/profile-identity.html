@@ -1076,54 +1076,22 @@
           <span class="state-label">Loading · empty</span>
           <p class="muted pulse" role="status" style="margin: 0">Loading visitors...</p>
           <p class="muted" style="margin: 0">No visitors yet.</p>
-        </div>
-        <footer>States shown: visible · blurred (free tier) · VIP upsell · loading · empty</footer>
-      </section>
-
-      <!-- 13 -->
-      <section class="specimen" data-component="components/visitor-logs">
-        <header>
-          <h2>Visitor log</h2>
-          <code>components/visitor-logs</code>
-        </header>
-        <div class="body">
-          <div class="stack">
-            <span class="title" style="font-size: 16px">Who viewed me</span
-            ><span class="muted">Recent profile visitors and language matches.</span>
-          </div>
-          <div class="alert warning">
-            <strong>Unlock full visitor identities with VIP</strong><br />Visitor details are
-            blurred on the free tier. <span class="badge vip">8 UKP / $10 USD VIP</span>
-          </div>
-          <div class="row">
-            <span class="chip on">Visible: 3</span><span class="chip">Blurred: 5</span
-            ><span class="grow"></span
-            ><button type="button" class="btn ghost" style="min-height: 36px">Hide blurred</button>
-          </div>
-          <div class="list">
-            <div class="row">
-              <div class="avatar">A</div>
-              <div class="grow">
-                <div class="title">Ana Ruiz</div>
-                <div class="muted">Language partner</div>
-              </div>
-              <span class="badge success">Visible</span>
-            </div>
-            <div class="row">
-              <div class="avatar ember blur">K</div>
-              <div class="grow blur"><div class="title">Kenji</div></div>
-              <span class="badge vip">VIP only</span>
-            </div>
-          </div>
-          <span class="state-label">Error</span>
+          <span class="state-label">Error · load more</span>
           <div class="alert error" role="alert">
             Something went wrong. Please try again.
             <button type="button" class="btn ghost" style="min-height: 32px">Retry</button>
           </div>
+          <button type="button" class="btn ghost" style="min-height: 44px; width: 100%">
+            Load more
+          </button>
         </div>
-        <footer>States shown: counts · show all / hide blurred · VIP banner · error + retry</footer>
+        <footer>
+          States shown: visible · blurred (free tier) · VIP upsell · loading · empty · error + retry
+          · load more
+        </footer>
       </section>
 
+      <!-- 13 was the unrouted legacy visitor-logs component, removed in issue 1847 -->
       <!-- 14 -->
       <section class="specimen" data-component="components/earned-badges">
         <header>

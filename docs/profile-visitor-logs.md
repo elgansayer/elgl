@@ -42,7 +42,11 @@ Rows for visitors that are now hidden, deleted, or deletion-pending are filtered
 
 ## Frontend integration
 
-`ProfileVisitorsComponent` consumes only `ProfileVisitsService` and `/profile-visits/my-visitors`. It has explicit loading, empty, error/retry, masked-upgrade, and paginated states. It does not fall back to `MOCK_VISITORS` or render a profile link for masked visitors.
+`ProfileVisitorsComponent` consumes only `ProfileVisitsService` and `/profile-visits/my-visitors`. It has explicit loading, empty, error/retry, masked-upgrade, and paginated states. It never fabricates visitor data and does not render a profile link for masked visitors.
+
+The "Who viewed me" panel on the owner's profile (`ProfileComponent`) uses the same service for a five-row preview. For free users it renders blurred, non-identifying "VIP only" cards with a plans link; for VIP users it renders names and avatars. It does not call any `UserService` visitor method, because none remain: the former `getMyVisitors()` was typed as an array although this endpoint returns a page, and `getProfileVisitors()` substituted `MOCK_VISITORS` on failure.
+
+`ProfileVisitsService` normalises every response before returning it (`normaliseProfileVisitorsPage`): identities survive only when the page is `identity_visible` and no row is flagged `is_blurred`, otherwise every row becomes an opaque masked entry. A response that is not a visitor page is an error, not an empty list. See `docs/who-viewed-me-ui.md` for the full UI, privacy and accessibility contract.
 
 `UserDetailComponent` records a visit only after a profile has loaded successfully. It suppresses repeated attempts for the same profile in one component lifetime and never sends a self-view. Visitor-log failure is non-blocking for profile rendering; a later reload may retry safely because the database dedupe key is authoritative.
 
@@ -85,7 +89,10 @@ Regression coverage includes:
 - visitor-list storage failures surface as errors;
 - the deprecated endpoint cannot bypass server-side VIP masking;
 - successful external-profile loads call the visit API and logging failures do not break profile rendering;
-- the Angular visitor list has real error/retry, masked, VIP, and load-more states.
+- the Angular visitor list has real error/retry, masked, VIP, and load-more states;
+- the profile "Who viewed me" panel consumes the paged contract, renders blurred cards for free users, never renders identity for masked rows and shows a translated retry state instead of raw errors;
+- the service strips identity from masked or inconsistent pages and rejects non-page payloads;
+- every translation key these surfaces render is defined in the base dictionary.
 
 ## Rollout
 

@@ -12,74 +12,105 @@ const PAGE_SIZE = 20;
 @Component({
   selector: 'app-profile-visitors',
   imports: [HlmButton, DatePipe, RouterLink, TranslatePipe],
+  host: { class: 'block' },
   template: `
-    <section class="profile-visitors" aria-labelledby="profile-visitors-title">
-      <h2 id="profile-visitors-title" class="profile-visitors-title">
+    <section class="profile-visitors p-4" aria-labelledby="profile-visitors-title">
+      <h2 id="profile-visitors-title" class="mb-4 text-xl font-bold text-text-primary">
         {{ 'visitors.title' | t }}
       </h2>
 
       @if (isLoading() && visitors().length === 0) {
-        <div class="profile-visitors-loading" role="status" aria-live="polite">
-          <div class="visitor-spinner" aria-hidden="true"></div>
+        <div
+          class="profile-visitors-loading flex min-h-32 flex-col items-center justify-center gap-3 p-8 text-center text-sm text-text-secondary"
+          role="status"
+          aria-live="polite"
+        >
+          <div
+            class="visitor-spinner size-8 animate-spin rounded-full border-2 border-surface-100 border-t-primary motion-reduce:animate-none"
+            aria-hidden="true"
+          ></div>
           <p>{{ 'visitors.loading' | t }}</p>
         </div>
       } @else if (error() && visitors().length === 0) {
-        <div class="profile-visitors-error" role="alert">
+        <div
+          class="profile-visitors-error flex min-h-32 flex-col items-center justify-center gap-3 p-8 text-center text-sm text-danger-ink"
+          role="alert"
+        >
           <p>{{ 'common.error_generic' | t }}</p>
           <button hlmBtn type="button" variant="secondary" size="touch" (click)="retry()">
             {{ 'common.retry' | t }}
           </button>
         </div>
       } @else if (visitors().length === 0) {
-        <div class="profile-visitors-empty">
+        <div
+          class="profile-visitors-empty flex min-h-32 flex-col items-center justify-center gap-3 p-8 text-center text-sm text-text-secondary"
+        >
           <p>{{ 'visitors.empty' | t }}</p>
         </div>
       } @else if (identityVisible()) {
-        <div class="profile-visitors-list">
+        <div class="profile-visitors-list flex flex-col gap-2">
           @for (visit of visitors(); track visit.id) {
-            <a [routerLink]="['/profile', visit.visitor.id]" class="profile-visitor-item">
-              <div class="profile-visitor-avatar">
+            <a
+              [routerLink]="['/profile', visit.visitor.id]"
+              class="profile-visitor-item flex min-h-14 items-center gap-3 rounded-card border border-surface-100 bg-surface-300 p-3 no-underline transition-colors hover:bg-surface-200 focus-visible:bg-surface-200 focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none"
+            >
+              <div class="profile-visitor-avatar size-10 shrink-0 overflow-hidden rounded-full">
                 @if (visit.visitor.avatar_url) {
                   <img
                     [src]="visit.visitor.avatar_url"
                     alt=""
-                    class="profile-visitor-avatar-img"
+                    loading="lazy"
+                    class="profile-visitor-avatar-img size-full object-cover"
                   />
                 } @else {
-                  <div class="profile-visitor-avatar-placeholder" aria-hidden="true">
+                  <div
+                    class="profile-visitor-avatar-initial flex size-full items-center justify-center bg-surface-100 text-lg text-text-secondary"
+                    aria-hidden="true"
+                  >
                     {{ (visit.visitor.display_name || '?')[0] }}
                   </div>
                 }
               </div>
-              <div class="profile-visitor-info">
-                <p class="profile-visitor-name">
+              <div class="profile-visitor-info min-w-0 flex-1">
+                <p class="profile-visitor-name mb-0.5 text-sm font-semibold text-text-primary">
                   {{ visit.visitor.display_name || ('common.unknownUser' | t) }}
                 </p>
-                <p class="profile-visitor-time">
-                  {{ visit.created_at | date: 'medium' }}
+                <p class="profile-visitor-time text-xs text-text-secondary">
+                  <time [attr.datetime]="visit.created_at">{{
+                    visit.created_at | date: 'medium'
+                  }}</time>
                 </p>
               </div>
             </a>
           }
         </div>
       } @else {
-        <div class="profile-visitors-blurred">
-          <div class="profile-visitors-placeholders" aria-hidden="true">
+        <div class="profile-visitors-blurred relative min-h-64">
+          <div
+            class="profile-visitors-masked-cards pointer-events-none flex select-none flex-col gap-2 blur-sm"
+            aria-hidden="true"
+          >
             @for (visit of visitors(); track visit.id) {
-              <div class="profile-visitor-placeholder">
-                <div class="profile-visitor-placeholder-avatar"></div>
-                <div class="profile-visitor-placeholder-lines">
-                  <div class="profile-visitor-placeholder-line w-24"></div>
-                  <div class="profile-visitor-placeholder-line w-32"></div>
+              <div
+                class="profile-visitor-masked-card flex min-h-14 items-center gap-3 rounded-card border border-surface-100 bg-surface-300 p-3"
+              >
+                <div
+                  class="profile-visitor-masked-card-avatar size-10 shrink-0 rounded-full bg-surface-100"
+                ></div>
+                <div class="profile-visitor-masked-card-lines flex flex-1 flex-col gap-1.5">
+                  <div class="profile-visitor-masked-card-line h-2.5 w-24 rounded bg-surface-100"></div>
+                  <div class="profile-visitor-masked-card-line h-2.5 w-32 rounded bg-surface-100"></div>
                 </div>
               </div>
             }
           </div>
 
-          <div class="profile-visitors-overlay">
-            <div class="profile-visitors-overlay-content">
+          <div
+            class="profile-visitors-overlay absolute inset-0 flex items-center justify-center rounded-card bg-surface-500/80"
+          >
+            <div class="profile-visitors-overlay-content max-w-xs p-6 text-center">
               <svg
-                class="profile-visitors-lock-icon"
+                class="profile-visitors-lock-icon mx-auto mb-3 block size-12 text-vip"
                 width="48"
                 height="48"
                 fill="none"
@@ -94,16 +125,17 @@ const PAGE_SIZE = 20;
                   d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                 />
               </svg>
-              <h3 class="profile-visitors-upgrade-title">
+              <h3 class="profile-visitors-upgrade-title mb-1 text-base font-bold text-text-primary">
                 {{ 'profile.upgradeTitle' | t }}
               </h3>
-              <p class="profile-visitors-upgrade-price">
+              <p class="profile-visitors-upgrade-price mb-4 text-sm font-semibold text-text-secondary">
                 {{ 'profile.upgradePrice' | t }}
               </p>
               <button
                 hlmBtn
                 type="button"
-                class="profile-visitors-upgrade-btn"
+                size="touch"
+                class="profile-visitors-upgrade-btn rounded-pill font-bold"
                 (click)="onUpgradeClick()"
               >
                 {{ 'vip.seePlans' | t }}
@@ -114,7 +146,10 @@ const PAGE_SIZE = 20;
       }
 
       @if (error() && visitors().length > 0) {
-        <div class="profile-visitors-inline-error" role="alert">
+        <div
+          class="profile-visitors-inline-error mt-4 flex items-center justify-between gap-4 text-danger-ink"
+          role="alert"
+        >
           <p>{{ 'common.error_generic' | t }}</p>
           <button hlmBtn type="button" variant="secondary" size="touch" (click)="retry()">
             {{ 'common.retry' | t }}
@@ -128,7 +163,7 @@ const PAGE_SIZE = 20;
           type="button"
           variant="secondary"
           size="touch"
-          class="profile-visitors-load-more"
+          class="profile-visitors-load-more mt-4 w-full"
           [disabled]="isLoadingMore()"
           [attr.aria-busy]="isLoadingMore() ? 'true' : null"
           (click)="loadMore()"
@@ -142,196 +177,6 @@ const PAGE_SIZE = 20;
       }
     </section>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-      .profile-visitors {
-        padding: 1rem;
-      }
-      .profile-visitors-title {
-        margin: 0 0 1rem;
-        color: var(--color-text-primary, #e2e8f0);
-        font-size: 1.25rem;
-        font-weight: 700;
-      }
-      .profile-visitors-loading,
-      .profile-visitors-error,
-      .profile-visitors-empty {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        min-height: 8rem;
-        padding: 2rem;
-        text-align: center;
-        color: var(--color-text-secondary, #64748b);
-        font-size: 0.875rem;
-      }
-      .visitor-spinner {
-        width: 2rem;
-        height: 2rem;
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        border-top-color: var(--color-primary, #60a5fa);
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      .profile-visitors-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-      .profile-visitor-item,
-      .profile-visitor-placeholder {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        min-height: 3.5rem;
-        padding: 0.75rem;
-        border: 1px solid var(--color-surface-border, rgba(255, 255, 255, 0.05));
-        border-radius: 0.75rem;
-        background: var(--color-surface-300, rgba(255, 255, 255, 0.035));
-      }
-      .profile-visitor-item {
-        text-decoration: none;
-        transition: background 0.2s;
-      }
-      .profile-visitor-item:hover,
-      .profile-visitor-item:focus-visible {
-        background: var(--color-surface-200, rgba(255, 255, 255, 0.05));
-      }
-      .profile-visitor-avatar,
-      .profile-visitor-placeholder-avatar {
-        width: 2.5rem;
-        height: 2.5rem;
-        border-radius: 50%;
-        overflow: hidden;
-        flex-shrink: 0;
-      }
-      .profile-visitor-avatar-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .profile-visitor-avatar-placeholder,
-      .profile-visitor-placeholder-avatar,
-      .profile-visitor-placeholder-line {
-        background: var(--color-surface-100, rgba(255, 255, 255, 0.08));
-      }
-      .profile-visitor-avatar-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--color-text-secondary, #94a3b8);
-        font-size: 1.125rem;
-      }
-      .profile-visitor-info {
-        flex: 1;
-        min-width: 0;
-      }
-      .profile-visitor-name {
-        margin: 0 0 0.125rem;
-        color: var(--color-text-primary, #e2e8f0);
-        font-size: 0.875rem;
-        font-weight: 600;
-      }
-      .profile-visitor-time {
-        margin: 0;
-        color: var(--color-text-secondary, #64748b);
-        font-size: 0.75rem;
-      }
-      .profile-visitors-blurred {
-        position: relative;
-      }
-      .profile-visitors-placeholders {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        filter: blur(6px);
-        user-select: none;
-        pointer-events: none;
-      }
-      .profile-visitor-placeholder-lines {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 0.375rem;
-      }
-      .profile-visitor-placeholder-line {
-        height: 0.625rem;
-        border-radius: 0.25rem;
-      }
-      .w-24 {
-        width: 6rem;
-      }
-      .w-32 {
-        width: 8rem;
-      }
-      .profile-visitors-overlay {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 0.75rem;
-        background: rgba(18, 18, 18, 0.76);
-      }
-      .profile-visitors-overlay-content {
-        max-width: 20rem;
-        padding: 1.5rem;
-        text-align: center;
-      }
-      .profile-visitors-lock-icon {
-        display: block;
-        width: 3rem;
-        height: 3rem;
-        margin: 0 auto 0.75rem;
-        color: #f59e0b;
-      }
-      .profile-visitors-upgrade-title {
-        margin: 0 0 0.25rem;
-        color: var(--color-text-primary, #f1f5f9);
-        font-size: 1rem;
-        font-weight: 700;
-      }
-      .profile-visitors-upgrade-price {
-        margin: 0 0 1rem;
-        color: #fbbf24;
-        font-size: 0.8125rem;
-        font-weight: 600;
-      }
-      .profile-visitors-upgrade-btn {
-        min-height: 2.75rem;
-        border-radius: 9999px;
-        font-size: 0.8125rem;
-        font-weight: 700;
-      }
-      .profile-visitors-inline-error {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-top: 1rem;
-        color: var(--color-danger, #ef4444);
-      }
-      .profile-visitors-inline-error p {
-        margin: 0;
-      }
-      .profile-visitors-load-more {
-        width: 100%;
-        margin-top: 1rem;
-      }
-    `,
-  ],
 })
 export class ProfileVisitorsComponent {
   private readonly profileVisitsService = inject(ProfileVisitsService);
@@ -398,9 +243,13 @@ export class ProfileVisitorsComponent {
       const page = await this.profileVisitsService.getMyVisitors(PAGE_SIZE, offset);
       if (requestId !== this.latestRequestId) return;
 
+      // If the owner's entitlement changed between pages (for example VIP lapsing), rows loaded
+      // under the previous state are discarded rather than mixed with the new presentation, so
+      // identities never survive into a masked list and masked cards never receive profile links.
+      const keepPrevious = !reset && this.identityVisible() === page.identity_visible;
       this.identityVisible.set(page.identity_visible);
       this.visitors.update((current) => {
-        const combined = reset ? page.items : [...current, ...page.items];
+        const combined = keepPrevious ? [...current, ...page.items] : page.items;
         return Array.from(new Map(combined.map((visit) => [visit.id, visit])).values());
       });
       this.hasMore.set(page.has_more);
