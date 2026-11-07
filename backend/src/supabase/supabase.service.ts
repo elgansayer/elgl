@@ -2288,7 +2288,7 @@ export interface Database {
           earned_coins: number;
         }[];
       };
-      claim_daily_checkin_reward: {
+      claim_daily_checkin: {
         Args: {
           p_user_id: string;
           p_reward: number;
