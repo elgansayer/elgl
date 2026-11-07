@@ -133,9 +133,19 @@
               <p class="app-muted font-bold uppercase">{{ 'developer.activeKeyLabel' | t }}</p>
               <code class="text-sm font-black text-text-primary">{{ key }}</code>
             </div>
-            <app-chip customClass="bg-success/20 text-success">{{
-              'developer.activeRpm' | t
-            }}</app-chip>
+            <div class="flex flex-wrap items-center gap-2">
+              <app-chip customClass="bg-success/20 text-success">{{
+                'developer.activeRpm' | t
+              }}</app-chip>
+              <app-button-secondary
+                (clicked)="revokeKey()"
+                [disabled]="isRevokingApiKey()"
+                customClass="ps-3 pe-3 pt-2 pb-2 text-xs"
+                [ariaLabel]="'developer.revokeBtn' | t"
+              >
+                {{ 'developer.revokeBtn' | t }}
+              </app-button-secondary>
+            </div>
           </div>
         } @else {
           <div class="app-empty-state">{{ 'developer.noKey' | t }}</div>

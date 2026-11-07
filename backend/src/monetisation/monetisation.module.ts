@@ -13,6 +13,8 @@ import { SubscriptionPlansService } from './services/subscription-plans.service'
 import { StripeController } from './controllers/stripe.controller';
 import { StripeService } from './services/stripe.service';
 import { VipGuard } from './guards/vip.guard';
+import { DeveloperApiKeyGuard } from './guards/developer-api-key.guard';
+import { DeveloperApiUsageInterceptor } from './interceptors/developer-api-usage.interceptor';
 
 @Module({
   imports: [HttpModule, SharedLoggerModule],
@@ -31,6 +33,8 @@ import { VipGuard } from './guards/vip.guard';
     SubscriptionPlansService,
     StripeService,
     VipGuard,
+    DeveloperApiKeyGuard,
+    DeveloperApiUsageInterceptor,
   ],
   exports: [
     MonetisationService,
