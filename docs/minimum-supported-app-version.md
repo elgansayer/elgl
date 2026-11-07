@@ -24,12 +24,23 @@ The minimum-supported version is local configuration and does not depend on GitH
 
 Malformed configured minimum versions are deployment errors and stop service construction. Operators should fix the environment value rather than silently falling back to a different policy.
 
+## Observability
+
+The endpoint reads in-memory configuration, so the signals that matter are the shared ones:
+
+- `MetricsInterceptor` (registered globally by `MetricsModule`) records request count and latency labelled by method, route and status code, which exposes unusual volume or error rates for `/version/minimum`.
+- The shared structured request logger (`SharedLoggerModule`) emits one `request completed` line per call with `authorization` and `cookie` headers redacted. The endpoint adds no logging of its own because it handles no personal data.
+- A malformed `MINIMUM_SUPPORTED_APP_VERSION` stops the backend at start-up with an error that names the variable and does not echo the rejected value.
+
 ## Verification
 
 Focused backend coverage lives in:
 
-- `backend/src/version/version.controller.spec.ts`, which locks the `GET /version/minimum` route and service delegation;
-- `backend/src/version/version.service.spec.ts`, which covers configured/default values, whitespace normalisation, and rejection of malformed stable-version strings.
+- `backend/src/version/version.controller.spec.ts`, which locks the `GET /version/minimum` route, service delegation, the absence of any guard (the endpoint must stay public) and the `Cache-Control: no-store` header;
+- `backend/src/version/version.service.spec.ts`, which covers configured/default values, whitespace normalisation, and rejection of malformed stable-version strings;
+- `backend/test/app.e2e-spec.ts`, which boots the full `AppModule` with `MINIMUM_SUPPORTED_APP_VERSION` configured and asserts over HTTP that `GET /version/minimum` returns exactly `{ "minimumSupported": "<configured value>" }` as JSON with `Cache-Control: no-store`, and that `GET /version` (the response the Angular shell enforces) reports the same value.
+
+The E2E suite does not apply the `/api` global prefix (only `main.ts` does), so it requests `/version/minimum`; the prefixed path is `/api/version/minimum` in a running deployment.
 
 The repository backend unit, lint, build, and E2E workflows remain the authoritative merge validation.
 
