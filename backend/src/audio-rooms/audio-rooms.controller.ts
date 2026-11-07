@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   UnauthorizedException,
@@ -39,6 +40,8 @@ import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
+  RoomChatMessagePage,
+  RoomChatMessageRecord,
   RoomTokenResponse,
 } from './interfaces/audio-room.interface';
 import { CallLogRecord } from './interfaces/call-log.interface';
@@ -50,6 +53,11 @@ import { CreatePrivatePartyDto } from './dto/create-private-party.dto';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { TipHostDto } from './dto/tip-host.dto';
 import { ReorderStageDto } from './dto/reorder-stage.dto';
+import { Throttle } from '@nestjs/throttler';
+import {
+  ListRoomChatMessagesQueryDto,
+  SendRoomChatMessageDto,
+} from './dto/room-chat-message.dto';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -404,6 +412,61 @@ export class AudioRoomsController {
   })
   async getStage(@Param('id') roomId: string): Promise<StageInfo> {
     return this.audioRoomsService.getStage(roomId);
+  }
+
+  @Get(':id/messages')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'List live-room text messages',
+    description:
+      'Returns a bounded newest-first page for an authenticated room participant.',
+  })
+  @ApiResponse({ status: 200, description: 'Bounded room-message page.' })
+  @ApiResponse({ status: 400, description: 'The room id is not a UUID.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'The user has not joined this room.',
+  })
+  async listRoomChatMessages(
+    @CurrentUser() user: AuthUser | null,
+    @Param('id', new ParseUUIDPipe()) roomId: string,
+    @Query() query: ListRoomChatMessagesQueryDto,
+  ): Promise<RoomChatMessagePage> {
+    if (!user) throw new UnauthorizedException();
+    return this.audioRoomsService.listRoomChatMessages(user.id, roomId, query);
+  }
+
+  @Post(':id/messages')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Send a live-room text message',
+    description:
+      'Persists an idempotent text message and publishes it to the room channel.',
+  })
+  @ApiResponse({ status: 201, description: 'Message persisted and published.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input, an ended room or a reused retry key.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'The user has not joined this room.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Message persisted but delivery must be retried.',
+  })
+  async sendRoomChatMessage(
+    @CurrentUser() user: AuthUser | null,
+    @Param('id', new ParseUUIDPipe()) roomId: string,
+    @Body() dto: SendRoomChatMessageDto,
+  ): Promise<RoomChatMessageRecord> {
+    if (!user) throw new UnauthorizedException();
+    return this.audioRoomsService.sendRoomChatMessage(user.id, roomId, dto);
   }
 
   @Post(':id/stage/reorder')

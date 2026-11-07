@@ -2,6 +2,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { buildSeedMomentGraph, type SeedMomentGraph } from './data/moments';
+import { buildSeedRoomChat } from './data/audio-room-chat';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -181,10 +182,66 @@ async function seedMomentGraph(
   }
 }
 
+interface SeedRoomChatUser {
+  id: string;
+  display_name: string | null;
+}
+
+/**
+ * Gives each seeded room a short host and partner conversation, so the live
+ * chat overlay is populated in local development. Participant rows are seeded
+ * with it because only recorded participants may read a room's messages.
+ */
+async function seedAudioRoomChat(
+  supabase: SupabaseClient,
+  rooms: { id: string; host_id: string }[],
+  users: SeedRoomChatUser[],
+) {
+  let seededMessages = 0;
+  for (const room of rooms) {
+    const host = users.find((user) => user.id === room.host_id);
+    const partner = users.find((user) => user.id !== room.host_id);
+    if (!host || !partner) continue;
+
+    const chat = buildSeedRoomChat({
+      roomId: room.id,
+      host: {
+        id: host.id,
+        displayName: host.display_name ?? 'Language Partner',
+      },
+      partner: {
+        id: partner.id,
+        displayName: partner.display_name ?? 'Language Partner',
+      },
+    });
+
+    const { error: participantErr } = await supabase
+      .from('audio_room_participants')
+      .insert(chat.participants);
+    if (participantErr) {
+      console.error('Failed to seed audio room participants:', participantErr);
+      continue;
+    }
+
+    const { error: messageErr } = await supabase
+      .from('audio_room_messages')
+      .insert(chat.messages);
+    if (messageErr) {
+      console.error('Failed to seed live-room chat messages:', messageErr);
+      continue;
+    }
+    seededMessages += chat.messages.length;
+  }
+
+  if (seededMessages > 0) {
+    console.log(`✅ Seeded ${seededMessages} live-room chat messages`);
+  }
+}
+
 async function seedMomentsAndAudioRooms(supabase: any) {
   const { data: usersList } = await supabase
     .from('users')
-    .select('id, email')
+    .select('id, email, display_name')
     .limit(5);
   if (usersList && usersList.length >= 2) {
     const host = usersList[0];
@@ -199,24 +256,29 @@ async function seedMomentsAndAudioRooms(supabase: any) {
       }),
     );
 
-    await supabase.from('audio_rooms').insert([
-      {
-        room_name: 'room_global_en_ja',
-        host_id: host.id,
-        language_pair: 'en-ja',
-        topic_tag: 'Casual Weekend Language Exchange',
-        is_active: true,
-        participants_count: 12,
-      },
-      {
-        room_name: 'room_arabic_de',
-        host_id: partner.id,
-        language_pair: 'ar-de',
-        topic_tag: 'Arabic & German Fluency Stage',
-        is_active: true,
-        participants_count: 8,
-      },
-    ]);
+    const { data: seededRooms } = await supabase
+      .from('audio_rooms')
+      .insert([
+        {
+          room_name: 'room_global_en_ja',
+          host_id: host.id,
+          language_pair: 'en-ja',
+          topic_tag: 'Casual Weekend Language Exchange',
+          is_active: true,
+          participants_count: 12,
+        },
+        {
+          room_name: 'room_arabic_de',
+          host_id: partner.id,
+          language_pair: 'ar-de',
+          topic_tag: 'Arabic & German Fluency Stage',
+          is_active: true,
+          participants_count: 8,
+        },
+      ])
+      .select('id, host_id');
+
+    await seedAudioRoomChat(supabase, seededRooms ?? [], [host, partner]);
   }
 }
 

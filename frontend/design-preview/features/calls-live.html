@@ -1453,10 +1453,24 @@
           <div class="card muted">
             No messages in this live room yet. Say hello to the stage speakers!
           </div>
+          <span class="state-label">Loading</span>
+          <div class="card muted">Loading recent room messages...</div>
+          <span class="state-label">History error</span>
+          <div class="card stack">
+            <span class="muted">Recent room messages could not be loaded.</span>
+            <div class="row"><button class="btn secondary-btn grow">Retry</button></div>
+          </div>
+          <span class="state-label">Send error</span>
+          <div class="card muted">
+            Your message was not delivered. Your draft is ready to retry.
+          </div>
+          <span class="state-label">Before joining</span>
+          <div class="card muted">Join the live room to use text chat.</div>
         </div>
         <footer>
-          States: chat · subtitles · empty chat · empty subtitles · speaker caption composer. Embeds
-          the soundboard. <span class="note-flag">All copy hard-coded English (no i18n).</span>
+          States: chat · subtitles · empty chat · empty subtitles · speaker caption composer ·
+          loading · history error with retry · send error · before joining. Embeds the soundboard.
+          <span class="note-flag">All copy hard-coded English (no i18n).</span>
         </footer>
       </section>
 

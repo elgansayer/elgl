@@ -1790,11 +1790,17 @@ export class I18nService {
     'rooms.roomChat.emptySubtitles':
       'No live subtitles yet. When speakers talk on stage or use speech-to-text, closed captions broadcast here!',
     'rooms.roomChat.speakerCaptionPrefix': '🎙️ {{name}} (Live AI caption):',
-    'rooms.roomChat.inputPlaceholder': 'Send a chat message to the room...',
     'rooms.roomChat.sendBtn': 'Send',
-    'rooms.roomChat.subtitlePlaceholder': 'Simulate speech-to-text live subtitle broadcast...',
     'rooms.roomChat.broadcastBtn': 'Broadcast caption',
     'rooms.roomChat.broadcastAiBtn': 'Broadcast AI Caption',
+    'rooms.roomChat.loading': 'Loading recent room messages...',
+    'rooms.roomChat.loadError': 'Recent room messages could not be loaded.',
+    'rooms.roomChat.retry': 'Retry',
+    'rooms.roomChat.sendError': 'Your message was not delivered. Your draft is ready to retry.',
+    'rooms.roomChat.unavailable': 'Join the live room to use text chat.',
+    'rooms.roomChat.messageListAria': 'Live-room text messages',
+    'rooms.roomChat.inputLabel': 'Message the live room',
+    'rooms.roomChat.captionLabel': 'Broadcast a live subtitle caption',
 
     // Text to Speech
     'tts.speaking': '🔊 Speaking...',

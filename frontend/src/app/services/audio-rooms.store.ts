@@ -1,6 +1,7 @@
 import { showToast } from './toast.service';
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { SubscriptionState, type Subscription } from 'centrifuge';
 import { firstValueFrom } from 'rxjs';
 import {
   createLocalVideoTrack,
@@ -93,8 +94,10 @@ export interface CaptionRecord {
 
 export interface RoomChatMessage {
   id: string;
+  room_id: string;
   sender_id: string;
   sender_name: string;
+  client_message_id: string;
   text_content: string;
   created_at: string;
 }
@@ -125,6 +128,8 @@ export class AudioRoomsStore {
   readonly isRecording = signal<boolean>(false);
   readonly captions = signal<CaptionRecord[]>([]);
   readonly roomMessages = signal<RoomChatMessage[]>([]);
+  /** True when the last attempt to merge in missed room messages failed. */
+  readonly roomChatRecoveryFailed = signal<boolean>(false);
   readonly isLoading = signal<boolean>(false);
   readonly selectedLanguageGroup = signal<string | null>(null);
   readonly stageInfo = signal<StageInfo | null>(null);
@@ -168,7 +173,7 @@ export class AudioRoomsStore {
   });
 
   private livekitRoom: Room | null = null;
-  private roomSubscription: unknown = null;
+  private roomSubscription: Subscription | null = null;
   private onTrackSubscribedBound: ((
     track: RemoteTrack,
     publication: RemoteTrackPublication,
@@ -321,6 +326,7 @@ export class AudioRoomsStore {
     this.currentRoom.set(room);
     this.captions.set([]);
     this.roomMessages.set([]);
+    this.roomChatRecoveryFailed.set(false);
 
     // Start monitoring service health for degradation indicators
     this.degradationService.startMonitoring();
@@ -587,7 +593,9 @@ export class AudioRoomsStore {
           coinValue: typeof p.coin_value === 'number' ? p.coin_value : 0,
         });
       } else if (p.type === 'chat_message' && p.message) {
-        this.roomMessages.update((list) => [...list.slice(-99), p.message!]);
+        if (isRoomChatMessage(p.message)) {
+          this.addRoomMessage(p.message);
+        }
       } else if (p.type === 'hand_dismissed' && p.target_user_id) {
         this.currentRoom.update((r) => {
           if (!r) return r;
@@ -601,6 +609,22 @@ export class AudioRoomsStore {
         this.leaveRoom();
       }
     });
+    this.recoverRoomChatWhenSubscribed(this.roomSubscription);
+  }
+
+  /**
+   * The history snapshot can predate the realtime subscription, for example
+   * while a speaker answers the microphone prompt, and a message published in
+   * between is in neither. Once the server confirms the subscription, merge the
+   * newest page in so no message falls through that gap.
+   */
+  private recoverRoomChatWhenSubscribed(subscription: Subscription | null): void {
+    if (!subscription) return;
+    if (subscription.state === SubscriptionState.Subscribed) {
+      void this.recoverRoomChatMessages();
+      return;
+    }
+    subscription.once('subscribed', () => void this.recoverRoomChatMessages());
   }
 
   private async publishLocalCamera(): Promise<void> {
@@ -929,21 +953,66 @@ export class AudioRoomsStore {
     return '🪙';
   }
 
-  async sendRoomChatMessage(text: string): Promise<void> {
+  async getRoomChatMessages(roomId: string, limit = 50, offset = 0): Promise<RoomChatMessagePage> {
+    return firstValueFrom(
+      this.http.get<RoomChatMessagePage>(`${this.baseUrl}/${roomId}/messages`, {
+        headers: this.getHeaders(),
+        params: { limit, offset },
+      }),
+    );
+  }
+
+  async sendRoomChatMessage(text: string, clientMessageId: string): Promise<RoomChatMessage> {
     const room = this.currentRoom();
-    if (!room || !text.trim()) return;
-    const user = this.authService.currentUser();
-    const msg: RoomChatMessage = {
-      id: `rc_${Date.now()}_${crypto.randomUUID()}`,
-      sender_id: user?.id || 'anon',
-      sender_name: user?.email ? user.email.split('@')[0] : 'Language Partner',
-      text_content: text.trim(),
-      created_at: new Date().toISOString(),
-    };
-    // Publish directly via Centrifugo for instant room sync
-    await this.centrifugeService.publish(`room_${room.id}`, {
-      type: 'chat_message',
-      message: msg,
+    const textContent = text.trim();
+    if (!room || !textContent) {
+      throw new Error('A joined room and non-empty message are required.');
+    }
+    const message = await firstValueFrom(
+      this.http.post<RoomChatMessage>(
+        `${this.baseUrl}/${room.id}/messages`,
+        {
+          client_message_id: clientMessageId,
+          text_content: textContent,
+        },
+        { headers: this.getHeaders() },
+      ),
+    );
+    this.addRoomMessage(message);
+    return message;
+  }
+
+  /**
+   * Re-reads the newest page so messages published while realtime delivery was
+   * not listening are not lost. Merging by persisted ID makes the call safe to
+   * repeat. A failure never throws: it is reported through
+   * `roomChatRecoveryFailed` so the panel can offer a retry.
+   */
+  async recoverRoomChatMessages(): Promise<void> {
+    const room = this.currentRoom();
+    if (!room || !this.isConnectedToLiveKit()) return;
+    try {
+      const page = await this.getRoomChatMessages(room.id);
+      // Oldest first, so the newest messages end up last.
+      for (const message of [...page.messages].reverse()) {
+        this.addRoomMessage(message);
+      }
+      this.roomChatRecoveryFailed.set(false);
+    } catch {
+      this.roomChatRecoveryFailed.set(true);
+    }
+  }
+
+  /**
+   * Adds a persisted message to the current room. A message for any other room
+   * is dropped, so a slow response can never surface in a room that the
+   * participant joined afterwards.
+   */
+  addRoomMessage(message: RoomChatMessage): void {
+    if (message.room_id !== this.currentRoom()?.id) return;
+    this.roomMessages.update((list) => {
+      if (list.some((existing) => existing.id === message.id)) return list;
+      return [...list.slice(-99), message];
     });
   }
 
@@ -1013,10 +1082,40 @@ export class AudioRoomsStore {
     this.isConnectedToLiveKit.set(false);
     this.currentRoom.set(null);
     this.isSpeaker.set(false);
+    this.captions.set([]);
+    this.roomMessages.set([]);
+    this.roomChatRecoveryFailed.set(false);
     this.stageInfo.set(null);
     this.stageParticipants.set([]);
     this.audienceCount.set(0);
     this.unpublishLocalCamera();
     this.remoteVideoTracksByIdentity.set(new Map());
   }
+}
+
+export interface RoomChatMessagePage {
+  messages: RoomChatMessage[];
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
+function isRoomChatMessage(value: unknown): value is RoomChatMessage {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  return (
+    'id' in value &&
+    typeof value.id === 'string' &&
+    'room_id' in value &&
+    typeof value.room_id === 'string' &&
+    'sender_id' in value &&
+    typeof value.sender_id === 'string' &&
+    'sender_name' in value &&
+    typeof value.sender_name === 'string' &&
+    'client_message_id' in value &&
+    typeof value.client_message_id === 'string' &&
+    'text_content' in value &&
+    typeof value.text_content === 'string' &&
+    'created_at' in value &&
+    typeof value.created_at === 'string'
+  );
 }

@@ -45,6 +45,8 @@ describe('AudioRoomsController', () => {
             inviteCoHost: vi.fn(),
             removeCoHost: vi.fn(),
             sendCaption: vi.fn(),
+            listRoomChatMessages: vi.fn(),
+            sendRoomChatMessage: vi.fn(),
             archiveRoom: vi.fn(),
             addNote: vi.fn(),
             getNotes: vi.fn(),
@@ -259,6 +261,77 @@ describe('AudioRoomsController', () => {
       const result = await controller.sendCaption({ id: 'user-1' }, dto);
       expect(audioRoomsService.sendCaption).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(caption);
+    });
+  });
+
+  describe('room chat messages', () => {
+    it('rejects message history without an authenticated user', async () => {
+      await expect(
+        controller.listRoomChatMessages(null, 'room-1', {
+          limit: 50,
+          offset: 0,
+        }),
+      ).rejects.toThrow('Unauthorized');
+      expect(audioRoomsService.listRoomChatMessages).not.toHaveBeenCalled();
+    });
+
+    it('passes bounded history pagination and the authenticated user to the service', async () => {
+      const page = {
+        messages: [],
+        limit: 25,
+        offset: 50,
+        has_more: false,
+      };
+      (audioRoomsService.listRoomChatMessages as Mock).mockResolvedValue(page);
+
+      await expect(
+        controller.listRoomChatMessages({ id: 'user-1' }, 'room-1', {
+          limit: 25,
+          offset: 50,
+        }),
+      ).resolves.toEqual(page);
+      expect(audioRoomsService.listRoomChatMessages).toHaveBeenCalledWith(
+        'user-1',
+        'room-1',
+        { limit: 25, offset: 50 },
+      );
+    });
+
+    it('rejects message sends without an authenticated user', async () => {
+      await expect(
+        controller.sendRoomChatMessage(null, 'room-1', {
+          client_message_id: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
+          text_content: 'Hello',
+        }),
+      ).rejects.toThrow('Unauthorized');
+      expect(audioRoomsService.sendRoomChatMessage).not.toHaveBeenCalled();
+    });
+
+    it('passes an idempotent send to the service', async () => {
+      const dto = {
+        client_message_id: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
+        text_content: 'Hello',
+      };
+      const message = {
+        id: 'message-1',
+        room_id: 'room-1',
+        sender_id: 'user-1',
+        sender_name: 'Host User',
+        ...dto,
+        created_at: '2026-11-03T10:00:00.000Z',
+      };
+      (audioRoomsService.sendRoomChatMessage as Mock).mockResolvedValue(
+        message,
+      );
+
+      await expect(
+        controller.sendRoomChatMessage({ id: 'user-1' }, 'room-1', dto),
+      ).resolves.toEqual(message);
+      expect(audioRoomsService.sendRoomChatMessage).toHaveBeenCalledWith(
+        'user-1',
+        'room-1',
+        dto,
+      );
     });
   });
 

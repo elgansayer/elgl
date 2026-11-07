@@ -151,6 +151,18 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - `blocks`: `id`, `blocker_id`, `blocked_id`, `created_at`
 - `reports`: `id`, `reporter_id`, `reported_user_id`, `reason_category`, `description`, `context_url`, `status`, `created_at`
 
+### Table: `audio_room_messages` (Live-Room Text Chat)
+
+- `id` (UUID, Primary Key)
+- `room_id` (UUID, Foreign Key referencing `audio_rooms.id`, `ON DELETE CASCADE`)
+- `sender_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`)
+- `sender_name` (String, sender display-name snapshot)
+- `client_message_id` (UUID, client retry key)
+- `text_content` (Text, 1 to 1,000 non-whitespace characters)
+- `created_at` (Timestamp with time zone, default `now()`, indexed newest-first by room)
+- Unique constraint on (`room_id`, `sender_id`, `client_message_id`) makes concurrent retries idempotent.
+- Rows remain until the room or sender account is deleted. Authenticated clients can read only rooms recorded in `audio_room_participants`; writes go through the NestJS API.
+
 ---
 
 ## 2. Backend Routing & Integrations (NestJS Modules)
@@ -209,11 +221,13 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - **Virtual Gift:** `{ "type": "gift", "giftId": "golden_dragon", "coinValue": 50, "animationUrl": "https://r2.cdn.com/animations/dragon.json" }`
 - **Unread counts changed:** `{ "type": "unread_counts_changed", "source": "chat" | "notifications" }` on `user_{user_id}`. The payload is a count-only invalidation signal. The client refreshes the existing authenticated unread endpoint for the indicated source and never receives message, room, profile, or token data in this event.
 - **System:** `{ "type": "groupRenamed", "name": "Language Buddies" }`
+- **Audio room text:** `{ "type": "chat_message", "message": { "id", "room_id", "sender_id", "sender_name", "client_message_id", "text_content", "created_at" } }` on `room_{audio_room_id}`. The API persists the row before publishing it.
 
 ---
 
 ## 4. Live Audio & Video Rooms Architecture (LiveKit SFU)
 
+- **Room Text Chat:** `POST /audio-rooms/:id/messages` accepts a UUID retry key, verifies persisted room participation, saves one canonical row and publishes it on `room_{id}`. `GET /audio-rooms/:id/messages` provides bounded recovery history, which clients merge in by message ID on join, once the room subscription is confirmed and after a reconnect.
 - **Room Creation:** `POST /audio-rooms/create` creates room in database and initialises LiveKit room via `RoomServiceClient`.
 - **Stage Protocol (Raise Hand):**
   1. Listener emits `/audio-rooms/raise-hand` payload via REST or Centrifugo.

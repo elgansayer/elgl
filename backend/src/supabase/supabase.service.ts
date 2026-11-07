@@ -156,6 +156,16 @@ type AudioRoomParticipantRow = {
   joined_at?: string;
 };
 
+type AudioRoomMessageRow = {
+  id: string;
+  room_id: string;
+  sender_id: string;
+  sender_name: string;
+  client_message_id: string;
+  text_content: string;
+  created_at: string;
+};
+
 type AudioRoomTipRow = {
   id: string;
   room_id: string;
@@ -854,6 +864,12 @@ export interface Database {
         Row: AudioRoomParticipantRow;
         Insert: Partial<AudioRoomParticipantRow>;
         Update: Partial<AudioRoomParticipantRow>;
+        Relationships: [];
+      };
+      audio_room_messages: {
+        Row: AudioRoomMessageRow;
+        Insert: Partial<AudioRoomMessageRow>;
+        Update: Partial<AudioRoomMessageRow>;
         Relationships: [];
       };
       audio_room_tips: {

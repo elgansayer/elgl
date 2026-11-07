@@ -215,6 +215,39 @@ describe('UsersService', () => {
     });
   });
 
+  describe('getDisplayName', () => {
+    it('should read only the display name column for a known account', async () => {
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: { display_name: 'HelloUser' },
+        error: null,
+      });
+
+      await expect(service.getDisplayName('user-1')).resolves.toBe('HelloUser');
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith('display_name');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
+      expect(mockQueryBuilder.single).not.toHaveBeenCalled();
+    });
+
+    it('should return null for an account without a display name', async () => {
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: null,
+        error: null,
+      });
+
+      await expect(service.getDisplayName('user-1')).resolves.toBeNull();
+    });
+
+    it('should return null instead of throwing when the lookup fails', async () => {
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: null,
+        error: { code: '08006', message: 'Connection failed' },
+      });
+
+      await expect(service.getDisplayName('user-1')).resolves.toBeNull();
+    });
+  });
+
   describe('updateProfile', () => {
     it('should throw BadRequestException when non-VIP tries to set more than 1 target language', async () => {
       const dto = { target_languages: ['EN', 'FR'] };

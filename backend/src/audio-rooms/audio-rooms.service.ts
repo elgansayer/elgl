@@ -44,8 +44,14 @@ import { RoomPreviewDto } from './dto/room-preview.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
+  RoomChatMessagePage,
+  RoomChatMessageRecord,
   RoomTokenResponse,
 } from './interfaces/audio-room.interface';
+import {
+  ListRoomChatMessagesQueryDto,
+  SendRoomChatMessageDto,
+} from './dto/room-chat-message.dto';
 
 interface AudioRoomRow {
   id: string;
@@ -105,6 +111,44 @@ export interface StageInfo {
   }>;
   raised_hands: string[];
   listeners_count: number;
+}
+
+interface AudioRoomAccessRow {
+  id: string;
+  is_active: boolean;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isAudioRoomAccessRow(value: unknown): value is AudioRoomAccessRow {
+  return (
+    isRecord(value) &&
+    typeof value['id'] === 'string' &&
+    typeof value['is_active'] === 'boolean'
+  );
+}
+
+function isRoomChatMessageRecord(
+  value: unknown,
+): value is RoomChatMessageRecord {
+  return (
+    isRecord(value) &&
+    typeof value['id'] === 'string' &&
+    typeof value['room_id'] === 'string' &&
+    typeof value['sender_id'] === 'string' &&
+    typeof value['sender_name'] === 'string' &&
+    typeof value['client_message_id'] === 'string' &&
+    typeof value['text_content'] === 'string' &&
+    typeof value['created_at'] === 'string'
+  );
+}
+
+function databaseErrorCode(value: unknown): string | null {
+  return isRecord(value) && typeof value['code'] === 'string'
+    ? value['code']
+    : null;
 }
 
 @Injectable()
@@ -1293,6 +1337,235 @@ export class AudioRoomsService implements OnModuleInit {
     });
 
     return caption;
+  }
+
+  async listRoomChatMessages(
+    userId: string,
+    roomId: string,
+    query: ListRoomChatMessagesQueryDto,
+  ): Promise<RoomChatMessagePage> {
+    await this.assertRoomParticipant(userId, roomId, false);
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_room_messages')
+      .select(
+        'id, room_id, sender_id, sender_name, client_message_id, text_content, created_at',
+      )
+      .eq('room_id', roomId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(query.offset, query.offset + query.limit);
+
+    if (response.error || !Array.isArray(response.data)) {
+      this.logger.warn(
+        {
+          event: 'audio_room_chat_history_failed',
+          roomId,
+          code: databaseErrorCode(response.error) ?? 'invalid_response',
+        },
+        'Live-room message history query failed',
+      );
+      throw new ServiceUnavailableException(
+        'Live-room messages are temporarily unavailable.',
+      );
+    }
+
+    const parsed = response.data.filter(isRoomChatMessageRecord);
+    if (parsed.length !== response.data.length) {
+      this.logger.warn(
+        { event: 'audio_room_chat_history_invalid', roomId },
+        'Live-room message history returned an unexpected shape',
+      );
+      throw new ServiceUnavailableException(
+        'Live-room messages are temporarily unavailable.',
+      );
+    }
+
+    return {
+      messages: parsed.slice(0, query.limit),
+      limit: query.limit,
+      offset: query.offset,
+      has_more: parsed.length > query.limit,
+    };
+  }
+
+  async sendRoomChatMessage(
+    userId: string,
+    roomId: string,
+    dto: SendRoomChatMessageDto,
+  ): Promise<RoomChatMessageRecord> {
+    await this.assertRoomParticipant(userId, roomId, true);
+    const textContent = dto.text_content.trim();
+
+    const existing = await this.findRoomChatMessage(
+      roomId,
+      userId,
+      dto.client_message_id,
+    );
+    if (existing) {
+      if (existing.text_content !== textContent) {
+        throw new BadRequestException(
+          'client_message_id is already associated with a different message.',
+        );
+      }
+      await this.publishRoomChatMessage(existing);
+      return existing;
+    }
+
+    const profileName = await this.usersService.getDisplayName(userId);
+    const senderName = (profileName?.trim() || 'Language Partner').slice(
+      0,
+      255,
+    );
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_room_messages')
+      .insert({
+        room_id: roomId,
+        sender_id: userId,
+        sender_name: senderName,
+        client_message_id: dto.client_message_id,
+        text_content: textContent,
+      })
+      .select(
+        'id, room_id, sender_id, sender_name, client_message_id, text_content, created_at',
+      )
+      .single();
+
+    let message = isRoomChatMessageRecord(response.data) ? response.data : null;
+    if (!message && databaseErrorCode(response.error) === '23505') {
+      message = await this.findRoomChatMessage(
+        roomId,
+        userId,
+        dto.client_message_id,
+      );
+    }
+    if (!message) {
+      this.logger.warn(
+        {
+          event: 'audio_room_chat_persistence_failed',
+          roomId,
+          code: databaseErrorCode(response.error) ?? 'invalid_response',
+        },
+        'Live-room message could not be persisted',
+      );
+      throw new ServiceUnavailableException(
+        'The live-room message could not be saved. Please retry.',
+      );
+    }
+    if (message.text_content !== textContent) {
+      throw new BadRequestException(
+        'client_message_id is already associated with a different message.',
+      );
+    }
+
+    await this.publishRoomChatMessage(message);
+    return message;
+  }
+
+  private async assertRoomParticipant(
+    userId: string,
+    roomId: string,
+    requireActive: boolean,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const roomResponse = await supabase
+      .from('audio_rooms')
+      .select('id, is_active')
+      .eq('id', roomId)
+      .single();
+    if (roomResponse.error) {
+      if (databaseErrorCode(roomResponse.error) === 'PGRST116') {
+        throw new NotFoundException('Room not found');
+      }
+      this.logger.warn(
+        {
+          event: 'audio_room_chat_room_lookup_failed',
+          roomId,
+          code: databaseErrorCode(roomResponse.error) ?? 'unknown',
+        },
+        'Live-room lookup failed',
+      );
+      throw new ServiceUnavailableException(
+        'Live-room messages are temporarily unavailable.',
+      );
+    }
+    if (!isAudioRoomAccessRow(roomResponse.data)) {
+      throw new NotFoundException('Room not found');
+    }
+
+    const participantResponse = await supabase
+      .from('audio_room_participants')
+      .select('room_id')
+      .eq('room_id', roomId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (participantResponse.error) {
+      this.logger.warn(
+        {
+          event: 'audio_room_chat_participant_lookup_failed',
+          roomId,
+          code: databaseErrorCode(participantResponse.error) ?? 'unknown',
+        },
+        'Live-room participation lookup failed',
+      );
+      throw new ServiceUnavailableException(
+        'Live-room messages are temporarily unavailable.',
+      );
+    }
+    if (!participantResponse.data) {
+      throw new ForbiddenException(
+        'Join the live room before reading or sending messages.',
+      );
+    }
+
+    if (requireActive && !roomResponse.data.is_active) {
+      throw new BadRequestException('This live room has ended.');
+    }
+  }
+
+  private async findRoomChatMessage(
+    roomId: string,
+    senderId: string,
+    clientMessageId: string,
+  ): Promise<RoomChatMessageRecord | null> {
+    const response = await this.supabaseService
+      .getClient()
+      .from('audio_room_messages')
+      .select(
+        'id, room_id, sender_id, sender_name, client_message_id, text_content, created_at',
+      )
+      .eq('room_id', roomId)
+      .eq('sender_id', senderId)
+      .eq('client_message_id', clientMessageId)
+      .maybeSingle();
+
+    return isRoomChatMessageRecord(response.data) ? response.data : null;
+  }
+
+  private async publishRoomChatMessage(
+    message: RoomChatMessageRecord,
+  ): Promise<void> {
+    const published = await this.centrifugoService.publish(
+      `room_${message.room_id}`,
+      {
+        type: 'chat_message',
+        message,
+      },
+    );
+    if (!published) {
+      this.logger.warn(
+        {
+          event: 'audio_room_chat_delivery_failed',
+          roomId: message.room_id,
+          messageId: message.id,
+        },
+        'Live-room message delivery failed',
+      );
+      throw new ServiceUnavailableException(
+        'The message was saved but live delivery failed. Please retry.',
+      );
+    }
   }
 
   async broadcastAICaption(dto: SendCaptionDto): Promise<void> {

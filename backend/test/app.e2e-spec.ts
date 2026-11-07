@@ -9,6 +9,7 @@ import { VipGuard } from './../src/monetisation/guards/vip.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 import { NlpService } from './../src/nlp/nlp.service';
 import { LlmProxyService } from './../src/llm-proxy/llm-proxy.service';
+import { CentrifugoService } from './../src/chat/centrifugo.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 let AppModule: typeof import('../src/app.module').AppModule;
@@ -244,6 +245,11 @@ describe('HelloTalk API E2E Integration Suite', () => {
       .useValue(mockNlpService)
       .overrideProvider(LlmProxyService)
       .useValue(mockLlmProxyService)
+      .overrideProvider(CentrifugoService)
+      .useValue({
+        publish: vi.fn().mockResolvedValue(true),
+        publishTranslated: vi.fn().mockResolvedValue(true),
+      })
       .overrideGuard(VipGuard)
       .useValue({
         canActivate: () => true,
@@ -860,6 +866,261 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .expect(400);
 
       expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('moments');
+    });
+  });
+
+  describe('Live-room text chat (#1846)', () => {
+    const roomId = '4d72ae50-6153-4c54-a638-334fe24ab7e2';
+    const clientMessageId = 'd290f1ee-6c54-4b01-90e6-d701748f0851';
+
+    const storedMessage = {
+      id: 'd1a28d8e-81c4-4ea1-aaf2-f53bcedb1871',
+      room_id: roomId,
+      sender_id: 'e2e-user-1',
+      sender_name: 'E2E Learner',
+      client_message_id: clientMessageId,
+      text_content: 'Could you repeat that?',
+      created_at: '2026-11-03T10:00:00.000Z',
+    };
+
+    interface ChatFixture {
+      room?: { id: string; is_active: boolean } | null;
+      participant?: { room_id: string } | null;
+      history?: unknown[];
+      existing?: unknown;
+      stored?: unknown;
+      insertError?: { code: string; message: string } | null;
+    }
+
+    /**
+     * Wire the audio-room tables the chat endpoints read and write.
+     *
+     * `audio_room_messages` answers the idempotency lookup with `existing`,
+     * a range query with the history rows and an insert with `stored`, so the
+     * retry, recovery and first-write paths share one table double.
+     */
+    function wireChat({
+      room = { id: roomId, is_active: true },
+      participant = { room_id: roomId },
+      history = [],
+      existing = null,
+      stored = null,
+      insertError = null,
+    }: ChatFixture): { inserts: unknown[] } {
+      const inserts: unknown[] = [];
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'audio_rooms') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi
+              .fn()
+              .mockResolvedValue(
+                room === null
+                  ? { data: null, error: { code: 'PGRST116' } }
+                  : { data: room, error: null },
+              ),
+          };
+        }
+        if (table === 'audio_room_participants') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi
+              .fn()
+              .mockResolvedValue(
+                participant === null
+                  ? { data: null, error: null }
+                  : { data: participant, error: null },
+              ),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { display_name: 'E2E Learner' },
+              error: null,
+            }),
+          };
+        }
+        if (table === 'audio_room_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            range: vi.fn().mockResolvedValue({ data: history, error: null }),
+            insert: vi.fn((row: unknown) => {
+              inserts.push(row);
+              return {
+                select: vi.fn().mockReturnThis(),
+                single: vi
+                  .fn()
+                  .mockResolvedValue(
+                    insertError
+                      ? { data: null, error: insertError }
+                      : { data: stored ?? storedMessage, error: null },
+                  ),
+              };
+            }),
+            maybeSingle: vi
+              .fn()
+              .mockResolvedValue({ data: existing, error: null }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          then: vi.fn((resolve: (value: unknown) => unknown) =>
+            resolve({ data: [], error: null }),
+          ),
+        };
+      });
+      return { inserts };
+    }
+
+    it('serves bounded newest-first history to a room participant', async () => {
+      wireChat({ history: [storedMessage] });
+
+      const res = await request(app.getHttpServer())
+        .get(`/audio-rooms/${roomId}/messages`)
+        .expect(200);
+
+      expect(res.body.messages).toHaveLength(1);
+      expect(res.body.messages[0]).toMatchObject({
+        id: storedMessage.id,
+        text_content: storedMessage.text_content,
+      });
+      expect(res.body.has_more).toBe(false);
+    });
+
+    it('rejects history reads from accounts that never joined the room', async () => {
+      wireChat({ participant: null });
+
+      await request(app.getHttpServer())
+        .get(`/audio-rooms/${roomId}/messages`)
+        .expect(403);
+    });
+
+    it('reports an unknown room rather than leaking message history', async () => {
+      wireChat({ room: null });
+
+      await request(app.getHttpServer())
+        .get(`/audio-rooms/${roomId}/messages`)
+        .expect(404);
+    });
+
+    it('answers a malformed room id with a client error instead of a service outage', async () => {
+      wireChat({ stored: storedMessage });
+
+      await request(app.getHttpServer())
+        .get('/audio-rooms/not-a-room-id/messages')
+        .expect(400);
+      await request(app.getHttpServer())
+        .post('/audio-rooms/not-a-room-id/messages')
+        .send({
+          client_message_id: clientMessageId,
+          text_content: 'Could you repeat that?',
+        })
+        .expect(400);
+    });
+
+    it('persists a message and returns the canonical stored row', async () => {
+      const { inserts } = wireChat({ stored: storedMessage });
+
+      const res = await request(app.getHttpServer())
+        .post(`/audio-rooms/${roomId}/messages`)
+        .send({
+          client_message_id: clientMessageId,
+          text_content: '  Could you repeat that?  ',
+        })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        id: storedMessage.id,
+        room_id: roomId,
+        sender_id: 'e2e-user-1',
+        text_content: 'Could you repeat that?',
+      });
+      expect(inserts).toHaveLength(1);
+      expect(inserts[0]).toMatchObject({
+        room_id: roomId,
+        sender_id: 'e2e-user-1',
+        client_message_id: clientMessageId,
+        text_content: 'Could you repeat that?',
+      });
+    });
+
+    it('is idempotent for a repeated retry key and rejects reuse with new text', async () => {
+      const { inserts } = wireChat({
+        existing: storedMessage,
+        stored: storedMessage,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/audio-rooms/${roomId}/messages`)
+        .send({
+          client_message_id: clientMessageId,
+          text_content: 'Could you repeat that?',
+        })
+        .expect(201);
+
+      expect(res.body.id).toBe(storedMessage.id);
+      expect(inserts).toHaveLength(0);
+
+      await request(app.getHttpServer())
+        .post(`/audio-rooms/${roomId}/messages`)
+        .send({
+          client_message_id: clientMessageId,
+          text_content: 'A different question',
+        })
+        .expect(400);
+    });
+
+    it('refuses blank text, an unknown room and an ended room', async () => {
+      wireChat({ stored: storedMessage });
+
+      await request(app.getHttpServer())
+        .post(`/audio-rooms/${roomId}/messages`)
+        .send({ client_message_id: clientMessageId, text_content: '   ' })
+        .expect(400);
+
+      wireChat({ room: null, stored: storedMessage });
+      await request(app.getHttpServer())
+        .post(`/audio-rooms/${roomId}/messages`)
+        .send({
+          client_message_id: clientMessageId,
+          text_content: 'Could you repeat that?',
+        })
+        .expect(404);
+
+      wireChat({
+        room: { id: roomId, is_active: false },
+        stored: storedMessage,
+      });
+      await request(app.getHttpServer())
+        .post(`/audio-rooms/${roomId}/messages`)
+        .send({
+          client_message_id: clientMessageId,
+          text_content: 'Could you repeat that?',
+        })
+        .expect(400);
+    });
+
+    it('reports a retryable failure when the message cannot be stored', async () => {
+      wireChat({
+        insertError: { code: '08006', message: 'connection failure' },
+      });
+
+      await request(app.getHttpServer())
+        .post(`/audio-rooms/${roomId}/messages`)
+        .send({
+          client_message_id: clientMessageId,
+          text_content: 'Could you repeat that?',
+        })
+        .expect(503);
     });
   });
 });

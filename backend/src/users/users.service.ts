@@ -127,6 +127,32 @@ export class UsersService {
     return profile;
   }
 
+  /**
+   * Resolve the display name shown next to a user's messages.
+   *
+   * Live-room chat sends one message per participant action, so only the
+   * display name column is loaded. The full profile load in `getProfile`
+   * would repeat its follower, corrector and XP lookups for every message.
+   * A lookup failure is not fatal: the caller supplies its own fallback.
+   */
+  async getDisplayName(userId: string): Promise<string | null> {
+    const response = await this.supabaseService
+      .getClient()
+      .from('users')
+      .select('display_name')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (response.error) {
+      Logger.error('Failed to load user display name', {
+        code: response.error.code,
+      });
+      return null;
+    }
+
+    return response.data?.display_name ?? null;
+  }
+
   async searchUsers(
     query: string,
     currentUserId: string,

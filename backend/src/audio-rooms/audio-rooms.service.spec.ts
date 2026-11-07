@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { AudioRoomsService } from './audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -111,6 +112,7 @@ describe('AudioRoomsService', () => {
               display_name: 'Host User',
               avatar_url: 'avatar.png',
             }),
+            getDisplayName: vi.fn().mockResolvedValue('Host User'),
           },
         },
         {
@@ -1312,6 +1314,331 @@ describe('AudioRoomsService', () => {
           text_content: 'Test',
         }),
       ).rejects.toThrow('Failed to save caption: DB error');
+    });
+  });
+
+  describe('room chat messages', () => {
+    const message = {
+      id: 'd1a28d8e-81c4-4ea1-aaf2-f53bcedb1871',
+      room_id: '4d72ae50-6153-4c54-a638-334fe24ab7e2',
+      sender_id: 'user-1',
+      sender_name: 'Host User',
+      client_message_id: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
+      text_content: 'Welcome everyone',
+      created_at: '2026-11-03T10:00:00.000Z',
+    };
+
+    function queryBuilder(result: {
+      data: unknown;
+      error: unknown;
+    }): Record<string, Mock> {
+      const builder: Record<string, Mock> = {};
+      for (const method of ['select', 'eq', 'insert', 'order', 'limit']) {
+        builder[method] = vi.fn(() => builder);
+      }
+      builder['single'] = vi.fn().mockResolvedValue(result);
+      builder['maybeSingle'] = vi.fn().mockResolvedValue(result);
+      builder['range'] = vi.fn().mockResolvedValue(result);
+      return builder;
+    }
+
+    /**
+     * Queues one builder per expected `audio_room_messages` query. A query
+     * beyond the queue throws, so an empty queue proves the table was never
+     * touched. The queued builders are returned for call assertions.
+     */
+    function allowParticipant(
+      messageResults: Array<{ data: unknown; error: unknown }>,
+      roomIsActive = true,
+    ): Array<Record<string, Mock>> {
+      const room = queryBuilder({
+        data: { id: message.room_id, is_active: roomIsActive },
+        error: null,
+      });
+      const participant = queryBuilder({
+        data: { room_id: message.room_id },
+        error: null,
+      });
+      const issued = messageResults.map(queryBuilder);
+      const pending = [...issued];
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'audio_rooms') return room;
+        if (table === 'audio_room_participants') return participant;
+        const next = pending.shift();
+        if (!next) throw new Error(`Unexpected ${table} query`);
+        return next;
+      });
+      return issued;
+    }
+
+    it('returns bounded newest-first history only to room participants', async () => {
+      allowParticipant([{ data: [message], error: null }]);
+
+      await expect(
+        service.listRoomChatMessages('user-1', message.room_id, {
+          limit: 50,
+          offset: 0,
+        }),
+      ).resolves.toEqual({
+        messages: [message],
+        limit: 50,
+        offset: 0,
+        has_more: false,
+      });
+    });
+
+    it('rejects users who have not joined the room', async () => {
+      const room = queryBuilder({
+        data: { id: message.room_id, is_active: true },
+        error: null,
+      });
+      const participant = queryBuilder({ data: null, error: null });
+      mockSupabaseClient.from.mockImplementation((table: string) =>
+        table === 'audio_rooms' ? room : participant,
+      );
+
+      await expect(
+        service.listRoomChatMessages('outsider', message.room_id, {
+          limit: 50,
+          offset: 0,
+        }),
+      ).rejects.toThrow(
+        'Join the live room before reading or sending messages.',
+      );
+    });
+
+    it('persists before publishing the canonical room payload', async () => {
+      allowParticipant([
+        { data: null, error: null },
+        { data: message, error: null },
+      ]);
+
+      await expect(
+        service.sendRoomChatMessage('user-1', message.room_id, {
+          client_message_id: message.client_message_id,
+          text_content: `  ${message.text_content}  `,
+        }),
+      ).resolves.toEqual(message);
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        `room_${message.room_id}`,
+        { type: 'chat_message', message },
+      );
+    });
+
+    it('retries delivery without inserting a duplicate message', async () => {
+      const [existing] = allowParticipant([{ data: message, error: null }]);
+
+      await expect(
+        service.sendRoomChatMessage('user-1', message.room_id, {
+          client_message_id: message.client_message_id,
+          text_content: message.text_content,
+        }),
+      ).resolves.toEqual(message);
+      expect(existing['insert']).not.toHaveBeenCalled();
+      expect(centrifugoService.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports a retryable partial failure after persistence when publication fails', async () => {
+      allowParticipant([
+        { data: null, error: null },
+        { data: message, error: null },
+      ]);
+      (centrifugoService.publish as Mock).mockResolvedValueOnce(false);
+
+      await expect(
+        service.sendRoomChatMessage('user-1', message.room_id, {
+          client_message_id: message.client_message_id,
+          text_content: message.text_content,
+        }),
+      ).rejects.toThrow(
+        'The message was saved but live delivery failed. Please retry.',
+      );
+    });
+
+    it('rejects reuse of an idempotency key with different content', async () => {
+      allowParticipant([{ data: message, error: null }]);
+
+      await expect(
+        service.sendRoomChatMessage('user-1', message.room_id, {
+          client_message_id: message.client_message_id,
+          text_content: 'Different content',
+        }),
+      ).rejects.toThrow(
+        'client_message_id is already associated with a different message.',
+      );
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('stores the trimmed text with a snapshot of the sender display name', async () => {
+      const [, insertAttempt] = allowParticipant([
+        { data: null, error: null },
+        { data: message, error: null },
+      ]);
+
+      await service.sendRoomChatMessage('user-1', message.room_id, {
+        client_message_id: message.client_message_id,
+        text_content: `  ${message.text_content}  `,
+      });
+
+      expect(usersService.getDisplayName).toHaveBeenCalledWith('user-1');
+      expect(insertAttempt['insert']).toHaveBeenCalledWith({
+        room_id: message.room_id,
+        sender_id: 'user-1',
+        sender_name: 'Host User',
+        client_message_id: message.client_message_id,
+        text_content: message.text_content,
+      });
+    });
+
+    it('falls back to a neutral sender name when the account has no display name', async () => {
+      (usersService.getDisplayName as Mock).mockResolvedValueOnce(null);
+      const [, insertAttempt] = allowParticipant([
+        { data: null, error: null },
+        { data: message, error: null },
+      ]);
+
+      await service.sendRoomChatMessage('user-1', message.room_id, {
+        client_message_id: message.client_message_id,
+        text_content: message.text_content,
+      });
+
+      expect(insertAttempt['insert']).toHaveBeenCalledWith(
+        expect.objectContaining({ sender_name: 'Language Partner' }),
+      );
+    });
+
+    it('reuses the winning row when a concurrent send claims the retry key first', async () => {
+      const [, insertAttempt] = allowParticipant([
+        { data: null, error: null },
+        { data: null, error: { code: '23505' } },
+        { data: message, error: null },
+      ]);
+
+      await expect(
+        service.sendRoomChatMessage('user-1', message.room_id, {
+          client_message_id: message.client_message_id,
+          text_content: message.text_content,
+        }),
+      ).resolves.toEqual(message);
+      expect(insertAttempt['insert']).toHaveBeenCalledTimes(1);
+      expect(centrifugoService.publish).toHaveBeenCalledTimes(1);
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        `room_${message.room_id}`,
+        { type: 'chat_message', message },
+      );
+    });
+
+    it('rejects a concurrent claim of the retry key that carries different text', async () => {
+      allowParticipant([
+        { data: null, error: null },
+        { data: null, error: { code: '23505' } },
+        { data: { ...message, text_content: 'Someone else' }, error: null },
+      ]);
+
+      await expect(
+        service.sendRoomChatMessage('user-1', message.room_id, {
+          client_message_id: message.client_message_id,
+          text_content: message.text_content,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('reports a retryable failure and publishes nothing when storage fails', async () => {
+      allowParticipant([
+        { data: null, error: null },
+        { data: null, error: { code: '08006' } },
+      ]);
+
+      await expect(
+        service.sendRoomChatMessage('user-1', message.room_id, {
+          client_message_id: message.client_message_id,
+          text_content: message.text_content,
+        }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('lets participants read an ended room but refuses new messages', async () => {
+      allowParticipant([{ data: [message], error: null }], false);
+      await expect(
+        service.listRoomChatMessages('user-1', message.room_id, {
+          limit: 50,
+          offset: 0,
+        }),
+      ).resolves.toMatchObject({ messages: [message] });
+
+      // An empty queue throws on any message query, so the rejection below
+      // proves the ended room is refused before persistence is attempted.
+      allowParticipant([], false);
+      await expect(
+        service.sendRoomChatMessage('user-1', message.room_id, {
+          client_message_id: message.client_message_id,
+          text_content: message.text_content,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('reports an unknown room before consulting participation', async () => {
+      const missingRoom = queryBuilder({
+        data: null,
+        error: { code: 'PGRST116' },
+      });
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'audio_rooms') return missingRoom;
+        throw new Error(`Unexpected ${table} query`);
+      });
+
+      await expect(
+        service.listRoomChatMessages('user-1', message.room_id, {
+          limit: 50,
+          offset: 0,
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        service.sendRoomChatMessage('user-1', message.room_id, {
+          client_message_id: message.client_message_id,
+          text_content: message.text_content,
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('fetches one extra row to report has_more without exceeding the page size', async () => {
+      const older = { ...message, id: 'a0000000-0000-4000-8000-000000000000' };
+      const [history] = allowParticipant([
+        { data: [message, older], error: null },
+      ]);
+
+      await expect(
+        service.listRoomChatMessages('user-1', message.room_id, {
+          limit: 1,
+          offset: 0,
+        }),
+      ).resolves.toEqual({
+        messages: [message],
+        limit: 1,
+        offset: 0,
+        has_more: true,
+      });
+      expect(history['range']).toHaveBeenCalledWith(0, 1);
+      expect(history['order']).toHaveBeenNthCalledWith(1, 'created_at', {
+        ascending: false,
+      });
+      expect(history['order']).toHaveBeenNthCalledWith(2, 'id', {
+        ascending: false,
+      });
+    });
+
+    it('refuses a malformed history page instead of returning partial rows', async () => {
+      allowParticipant([{ data: [message, { id: 'broken' }], error: null }]);
+
+      await expect(
+        service.listRoomChatMessages('user-1', message.room_id, {
+          limit: 50,
+          offset: 0,
+        }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
   });
 

@@ -43,3 +43,20 @@ export interface CaptionRecord {
   text_content: string;
   created_at: string;
 }
+
+export interface RoomChatMessageRecord {
+  id: string;
+  room_id: string;
+  sender_id: string;
+  sender_name: string;
+  client_message_id: string;
+  text_content: string;
+  created_at: string;
+}
+
+export interface RoomChatMessagePage {
+  messages: RoomChatMessageRecord[];
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
