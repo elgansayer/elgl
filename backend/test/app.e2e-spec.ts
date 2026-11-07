@@ -98,6 +98,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
     process.env.GOOGLE_PUBSUB_AUDIENCE = 'https://pubsub.googleapis.com/test';
     process.env.GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL = 'test@example.com';
     process.env.LLM_API_KEY = 'test-llm-key';
+    process.env.MINIMUM_SUPPORTED_APP_VERSION = '2.4.1';
     ({ AppModule } = await import('./../src/app.module'));
   });
 
@@ -289,6 +290,26 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .get('/')
         .expect(200)
         .expect('Hey there!');
+    });
+
+    it('/version/minimum (GET) - should publish the configured minimum supported app version without a session or caching', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/version/minimum')
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
+        .expect('Cache-Control', 'no-store');
+
+      expect(response.body).toEqual({ minimumSupported: '2.4.1' });
+    });
+
+    it('/version (GET) - should expose the same minimum supported app version the Angular shell enforces', async () => {
+      const [full, minimum] = await Promise.all([
+        request(app.getHttpServer()).get('/version').expect(200),
+        request(app.getHttpServer()).get('/version/minimum').expect(200),
+      ]);
+
+      expect(full.body.minimumSupported).toBe('2.4.1');
+      expect(full.body.minimumSupported).toBe(minimum.body.minimumSupported);
     });
 
     it('/nlp/detect-language (POST) - should detect language accurately', () => {
