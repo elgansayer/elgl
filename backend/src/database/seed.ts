@@ -2,6 +2,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { buildSeedMomentGraph, type SeedMomentGraph } from './data/moments';
+import { buildSeedNotifications } from './data/notifications';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -218,6 +219,47 @@ async function seedMomentsAndAudioRooms(supabase: any) {
       },
     ]);
   }
+}
+
+async function seedNotifications(supabase: SupabaseClient) {
+  const { data: usersList } = await supabase
+    .from('users')
+    .select('id')
+    .limit(5);
+  const users: { id: string }[] = usersList ?? [];
+  if (users.length < 2) return;
+
+  const [recipient, ...actors] = users;
+
+  // Re-running the seeder must not stack duplicate inbox rows.
+  const { count } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('recipient_id', recipient.id);
+  if ((count ?? 0) > 0) {
+    console.log('↪ Notifications already seeded, skipping');
+    return;
+  }
+
+  const { data: moment } = await supabase
+    .from('moments')
+    .select('id')
+    .eq('user_id', recipient.id)
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+
+  const rows = buildSeedNotifications({
+    recipientId: recipient.id,
+    actorIds: actors.map((actor) => actor.id),
+    momentId: moment?.id,
+  });
+  const { error } = await supabase.from('notifications').insert(rows);
+  if (error) {
+    console.error('Failed to seed notifications:', error);
+    return;
+  }
+
+  console.log(`✅ Seeded ${rows.length} inbox notifications`);
 }
 
 async function seedSubscriptions(supabase: any) {
@@ -452,6 +494,7 @@ async function runSeed() {
 
   await seedUsersAndProfiles(supabase);
   await seedMomentsAndAudioRooms(supabase);
+  await seedNotifications(supabase);
   await seedSubscriptions(supabase);
   await seedSubscriptionEvents(supabase);
   await seedAchievements(supabase);
