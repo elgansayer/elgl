@@ -25,12 +25,12 @@ read `project.projectId` from `design-sync.manifest.json`.
    `gh pr merge --auto --squash --delete-branch`. Never use `--admin`.
 7. **Follow-ups** (search open issues by title first; update instead of duplicating):
    - each pulled ID → issue `Design-first change: implement <id>` with labels
-     `design-improvement,factory-ready`, body = the diff between old and new preview and the
+     `design-improvement`, body = the diff between old and new preview and the
      acceptance rule "runtime matches preview; keep Relay tokens, a11y, RTL".
-   - each conflict → issue `Design sync conflict: <id>` with labels `design-sync-conflict,factory-ready`,
+   - each conflict → issue `Design sync conflict: <id>` with labels `design-sync-conflict`,
      attaching both versions from `reports/design-sync-conflicts/<id>/` (commit them on the sync branch)
      and the priority rules from section 4 of the sync contract.
    - each unmapped remote path → issue `Unmapped Claude Design artefact: <path>` with label
-     `design-improvement,factory-ready` asking for a manifest item or removal.
+     `design-improvement` asking for a manifest item or removal.
    - if a `Claude Design sync blocked` issue is open, close it with a comment.
 8. Print a final line `SYNC_DONE pushed=<n> pulled=<n> conflicts=<n>`.

@@ -5,16 +5,16 @@ import { FavouritesService } from '../favourites/favourites.service';
 import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import type { FavouriteRecord } from './interfaces/chat-message.interface';
 
 describe('ChatController favourites contract', () => {
   let controller: ChatController;
-  let chatService: {
-    addFavourite: ReturnType<typeof vi.fn>;
-    deleteFavourite: ReturnType<typeof vi.fn>;
-  };
+  let chatService: Record<string, never>;
   let favouritesService: {
+    addFavourite: ReturnType<typeof vi.fn>;
+    removeFavourite: ReturnType<typeof vi.fn>;
     getStarredMessages: ReturnType<typeof vi.fn>;
   };
 
@@ -24,11 +24,12 @@ describe('ChatController favourites contract', () => {
   } as AddFavouriteDto;
 
   beforeEach(() => {
-    chatService = {
-      addFavourite: vi.fn().mockResolvedValue(undefined),
-      deleteFavourite: vi.fn().mockResolvedValue(undefined),
-    };
+    // The legacy /chat/favourites routes must not reach ChatService at all:
+    // an empty object makes any accidental call fail loudly.
+    chatService = {};
     favouritesService = {
+      addFavourite: vi.fn().mockResolvedValue({ success: true }),
+      removeFavourite: vi.fn().mockResolvedValue({ success: true }),
       getStarredMessages: vi.fn().mockResolvedValue({
         items: [],
         has_more: false,
@@ -42,14 +43,15 @@ describe('ChatController favourites contract', () => {
       {} as CentrifugoService,
       {} as ConversationStarterService,
       {} as TranslationService,
+      {} as PersonalChatEncryptionService,
     );
   });
 
-  it('adds a favourite for the authenticated user', async () => {
+  it('adds a favourite for the authenticated user through the shared service', async () => {
     await expect(controller.addFavourite(user, dto)).resolves.toEqual({
       success: true,
     });
-    expect(chatService.addFavourite).toHaveBeenCalledWith('user-1', dto);
+    expect(favouritesService.addFavourite).toHaveBeenCalledWith('user-1', dto);
   });
 
   it('adds a favourite with note text for the authenticated user', async () => {
@@ -60,15 +62,22 @@ describe('ChatController favourites contract', () => {
     await expect(controller.addFavourite(user, dtoWithNote)).resolves.toEqual({
       success: true,
     });
-    expect(chatService.addFavourite).toHaveBeenCalledWith(
+    expect(favouritesService.addFavourite).toHaveBeenCalledWith(
       'user-1',
       dtoWithNote,
     );
   });
 
+  it('propagates service failures instead of reporting success', async () => {
+    const failure = new Error('Failed to add favourite');
+    favouritesService.addFavourite.mockRejectedValue(failure);
+
+    await expect(controller.addFavourite(user, dto)).rejects.toBe(failure);
+  });
+
   it('does not add a favourite without an authenticated user', async () => {
     await expect(controller.addFavourite(null, dto)).resolves.toBeNull();
-    expect(chatService.addFavourite).not.toHaveBeenCalled();
+    expect(favouritesService.addFavourite).not.toHaveBeenCalled();
   });
 
   it('returns only the authenticated user favourites', async () => {
@@ -120,15 +129,22 @@ describe('ChatController favourites contract', () => {
     expect(favouritesService.getStarredMessages).not.toHaveBeenCalled();
   });
 
-  it('deletes a favourite in the authenticated user scope', async () => {
-    await expect(controller.deleteFavourite(user, 'fav-1')).resolves.toEqual({
+  it('deletes a favourite in the authenticated user scope through the shared service', async () => {
+    const favouriteId = '00000000-0000-4000-8000-0000000000f1';
+
+    await expect(
+      controller.deleteFavourite(user, favouriteId),
+    ).resolves.toEqual({
       success: true,
     });
-    expect(chatService.deleteFavourite).toHaveBeenCalledWith('user-1', 'fav-1');
+    expect(favouritesService.removeFavourite).toHaveBeenCalledWith(
+      'user-1',
+      favouriteId,
+    );
   });
 
   it('does not delete a favourite without an authenticated user', async () => {
     await expect(controller.deleteFavourite(null, 'fav-1')).resolves.toBeNull();
-    expect(chatService.deleteFavourite).not.toHaveBeenCalled();
+    expect(favouritesService.removeFavourite).not.toHaveBeenCalled();
   });
 });

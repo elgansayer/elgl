@@ -1,5 +1,6 @@
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { showToast, showErrorToast } from '../../services/toast.service';
 import {
   Component,
@@ -17,6 +18,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { ChatService, ChatMessage, ChatRoom, GroupMember } from '../../services/chat.service';
+import { FavouriteService } from '../../services/favourite.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { TypingService } from '../../services/typing.service';
@@ -63,6 +65,7 @@ function isGroupMember(value: unknown): value is GroupMember {
   imports: [
     HlmButton,
     ...HlmAutocompleteImports,
+    ...HlmDialogImports,
     CommonModule,
     TranslatePipe,
     TypingIndicatorComponent,
@@ -94,6 +97,7 @@ function isGroupMember(value: unknown): value is GroupMember {
 export class ChatRoomComponent implements OnDestroy {
   readonly centrifugeService = inject(CentrifugeService);
   private chatService = inject(ChatService);
+  private readonly favouriteService = inject(FavouriteService);
   readonly authService = inject(AuthService);
   private userService = inject(UserService);
   readonly typingService = inject(TypingService);
@@ -189,7 +193,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly partnerLanguage = signal<string | null>(null);
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
-    return this.messages().filter((m) => !blocked.includes(m.sender_id));
+    return this.messages().filter((m) => (m.sender_id ? !blocked.includes(m.sender_id) : true));
   });
 
   readonly replyingTo = signal<ChatMessage | null>(null);
@@ -683,6 +687,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send doodle:', e);
+      showErrorToast(this.i18n.translate('chatRoom.doodleSendFailed'));
     }
   }
 
@@ -718,11 +723,12 @@ export class ChatRoomComponent implements OnDestroy {
 
   async bookmark(msg: ChatMessage): Promise<void> {
     try {
-      await this.chatService.addFavourite(msg.id, `Saved from room ${this.roomId}`);
-      showToast(this.i18n.translate('chatRoom.bookmarkedAlert'));
+      // Bookmarking is idempotent on the server, so saving an already saved message is not an error.
+      await this.favouriteService.addFavourite({ message_id: msg.id });
+      showToast(this.i18n.translate('chatRoom.bookmarkSuccess'), 'success');
     } catch (e) {
       console.error('Failed to bookmark message:', e);
-      showToast(this.i18n.translate('chatRoom.bookmarkErrorAlert'));
+      showErrorToast(this.i18n.translate('chatRoom.bookmarkError'));
     }
   }
 

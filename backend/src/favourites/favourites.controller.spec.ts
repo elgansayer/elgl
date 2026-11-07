@@ -1,4 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { FavouritesController } from './favourites.controller';
 import { FavouritesService } from './favourites.service';
 
@@ -27,6 +28,44 @@ describe('FavouritesController', () => {
     controller = new FavouritesController(
       service as unknown as FavouritesService,
     );
+  });
+
+  it('requires authentication on every route', () => {
+    expect(Reflect.getMetadata('__guards__', FavouritesController)).toContain(
+      SupabaseAuthGuard,
+    );
+  });
+
+  it('bookmarks a message for the authenticated user only', async () => {
+    const dto = {
+      message_id: '00000000-0000-4000-8000-000000000001',
+      note_text: 'Useful phrase',
+    };
+
+    await expect(controller.addFavourite(request, dto)).resolves.toEqual({
+      success: true,
+    });
+    expect(service.addFavourite).toHaveBeenCalledWith('user-1', dto);
+  });
+
+  it('propagates add failures instead of reporting success', async () => {
+    const failure = new Error('Failed to add favourite');
+    service.addFavourite.mockRejectedValue(failure);
+
+    await expect(
+      controller.addFavourite(request, {
+        message_id: '00000000-0000-4000-8000-000000000001',
+      }),
+    ).rejects.toBe(failure);
+  });
+
+  it('removes a bookmark in the authenticated user scope', async () => {
+    const favouriteId = '00000000-0000-4000-8000-0000000000f1';
+
+    await expect(
+      controller.removeFavourite(request, favouriteId),
+    ).resolves.toEqual({ success: true });
+    expect(service.removeFavourite).toHaveBeenCalledWith('user-1', favouriteId);
   });
 
   it('reads the authenticated user favourites without a user id parameter', async () => {

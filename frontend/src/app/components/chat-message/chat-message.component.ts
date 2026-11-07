@@ -20,11 +20,13 @@ import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
+import { showErrorToast, showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
+import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 type VoicePlaybackSpeed = 1 | 1.5 | 2;
@@ -40,10 +42,16 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
     CulturalTipComponent,
     LinkPreviewCardComponent,
     VisualDiffComponent,
+    ChatSystemBubbleComponent,
     GiftAnimationComponent,
   ],
   template: `
-    @if (!isBlocked()) {
+    @if (message().message_type === 'system') {
+      <app-chat-system-bubble
+        [eventType]="message().system_event?.type ?? ''"
+        [params]="message().system_event ?? {}"
+      ></app-chat-system-bubble>
+    } @else if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
         <app-cultural-tip [language]="lang" />
       }
@@ -172,7 +180,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
               <img
                 [src]="message().media_url"
                 class="max-w-full rounded"
-                alt="Doodle"
+                [alt]="'chatRoom.doodleImageAlt' | t"
                 loading="lazy"
               />
             }
@@ -441,8 +449,17 @@ export class ChatMessageComponent {
     navigator.clipboard.writeText(event.content).catch(console.error);
   }
 
-  onFavourite(event: { messageId: string; content: string; messageType: string }): void {
-    this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
+  async onFavourite(event: {
+    messageId: string;
+    content: string;
+    messageType: string;
+  }): Promise<void> {
+    try {
+      await this.favouriteService.addFavourite({ message_id: event.messageId });
+      showToast(this.i18n.translate('chatRoom.bookmarkSuccess'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('chatRoom.bookmarkError'));
+    }
   }
 
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {

@@ -14,15 +14,19 @@ Issue #776 adds two account-level privacy controls without changing the underlyi
 
 The controls reuse existing authenticated user endpoints rather than introducing a parallel settings store:
 
-| Operation | Endpoint | Payload |
-| --- | --- | --- |
-| Read both controls | `GET /users/me` | none |
-| Hide/show online status | `PATCH /users/me` | `{ "privacy_hide_online_status": boolean }` |
-| Hide/show VIP status | `PATCH /users/me/privacy` | `{ "privacy_hide_vip_status": boolean }` |
+| Operation               | Endpoint                  | Payload                                     |
+| ----------------------- | ------------------------- | ------------------------------------------- |
+| Read both controls      | `GET /users/me`           | none                                        |
+| Hide/show online status | `PATCH /users/me`         | `{ "privacy_hide_online_status": boolean }` |
+| Hide/show VIP status    | `PATCH /users/me/privacy` | `{ "privacy_hide_vip_status": boolean }`    |
 
 `PATCH /users/me` already validates `privacy_hide_online_status` through `UpdateProfileDto`. `PATCH /users/me/privacy` validates `privacy_hide_vip_status` through `PrivacySettingsDto`. All endpoints remain protected by the existing Supabase authentication guard.
 
+The frontend client accepts exactly one status-privacy field per mutation and selects the owning endpoint from that field. Empty or combined payloads are rejected before any request, which keeps retries idempotent and avoids a partial two-endpoint write.
+
 For `GET /users/:id` and `GET /users/:id/stats`, the controller applies member-facing masking only when the requester is not the profile owner. This avoids using presentation privacy as an authorization signal and prevents clients from recovering hidden state from the canonical profile response.
+
+Discovery responses apply the same presentation boundary before returning member cards. Standard discovery queries select both privacy flags with the existing bounded user query. The PostGIS nearby RPC keeps its stable result shape and receives one bounded privacy-state hydration query for its returned IDs. If that hydration fails or omits a member, the API fails closed by masking both activity and VIP state for that member.
 
 ## Data model and migration
 
@@ -62,6 +66,7 @@ Targeted automated coverage includes:
 - HTTP contract/error propagation for `PrivacyStatusService`.
 - Privacy Settings loading, persistence, rollback, retry, keyboard, and screen-reader behavior.
 - Server-side owner-versus-other-member masking for profile and stats endpoints.
+- Discovery projection and nearby-RPC fail-closed masking for hidden activity and VIP state.
 - Profile-detail VIP badge suppression.
 
 The repository CI remains the source of truth for lint, type checking, unit tests, migration checks, translation safety, and UI design coverage.
