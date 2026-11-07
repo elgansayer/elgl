@@ -1,15 +1,24 @@
 import type { Mock } from 'vitest';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { TwoFactorGuard } from '../two-factor/two-factor.guard';
+import { ReportUserDto } from '../safety/dto/safety.dto';
+import { SafetyService } from '../safety/safety.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
   let usersService: UsersService;
   let mediaService: MediaService;
+  let safetyService: SafetyService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -48,9 +57,6 @@ describe('UsersController', () => {
             getNotificationPreferences: vi.fn(),
             updateGreetingMessage: vi.fn(),
             updateAwayMessage: vi.fn(),
-            blockUser: vi.fn(),
-            unblockUser: vi.fn(),
-            reportUser: vi.fn(),
             updateNotificationPreferences: vi.fn(),
           },
         },
@@ -60,6 +66,14 @@ describe('UsersController', () => {
             generatePresignedUrl: vi.fn(),
             generateCoverPresignedUrl: vi.fn(),
             confirmCoverUpload: vi.fn(),
+          },
+        },
+        {
+          provide: SafetyService,
+          useValue: {
+            blockUser: vi.fn(),
+            unblockUser: vi.fn(),
+            reportUser: vi.fn(),
           },
         },
       ],
@@ -73,6 +87,7 @@ describe('UsersController', () => {
     controller = module.get<UsersController>(UsersController);
     usersService = module.get<UsersService>(UsersService);
     mediaService = module.get<MediaService>(MediaService);
+    safetyService = module.get<SafetyService>(SafetyService);
   });
 
   afterEach(() => {
@@ -374,122 +389,154 @@ describe('UsersController', () => {
   });
 
   describe('blockUser', () => {
+    const target = '22222222-2222-4222-8222-222222222222';
+
     it('should throw UnauthorizedException when no user', async () => {
-      await expect(controller.blockUser(null, 'target-user')).rejects.toThrow(
+      await expect(controller.blockUser(null, target)).rejects.toThrow(
         'Unauthorized',
       );
-      expect(usersService.blockUser).not.toHaveBeenCalled();
+      expect(safetyService.blockUser).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when blocking yourself', async () => {
-      await expect(
-        controller.blockUser({ id: 'user-1' } as any, 'user-1'),
-      ).rejects.toThrow('Cannot block yourself');
-      expect(usersService.blockUser).not.toHaveBeenCalled();
-    });
-
-    it('should block the target user on behalf of the current user', async () => {
-      (usersService.blockUser as Mock).mockResolvedValue({
+    it('should delegate to the shared safety boundary on behalf of the current user', async () => {
+      (safetyService.blockUser as Mock).mockResolvedValue({
         success: true,
+        blocked_id: target,
+        already_blocked: false,
       });
+
       const result = await controller.blockUser(
         { id: 'user-1' } as any,
-        'target-user',
+        target,
       );
-      expect(usersService.blockUser).toHaveBeenCalledWith(
-        'user-1',
-        'target-user',
+
+      expect(safetyService.blockUser).toHaveBeenCalledWith('user-1', {
+        blocked_id: target,
+      });
+      expect(result).toEqual({
+        success: true,
+        blocked_id: target,
+        already_blocked: false,
+      });
+    });
+
+    it('should surface the self-block rejection from the safety boundary', async () => {
+      (safetyService.blockUser as Mock).mockRejectedValue(
+        new BadRequestException('You cannot block yourself'),
       );
-      expect(result).toEqual({ success: true });
+
+      await expect(
+        controller.blockUser({ id: target } as any, target),
+      ).rejects.toThrow('You cannot block yourself');
+    });
+
+    it('should not keep a second block implementation on UsersService', () => {
+      expect('blockUser' in usersService).toBe(false);
+      expect('unblockUser' in usersService).toBe(false);
+      expect('reportUser' in usersService).toBe(false);
     });
   });
 
   describe('unblockUser', () => {
+    const target = '22222222-2222-4222-8222-222222222222';
+
     it('should throw UnauthorizedException when no user', async () => {
-      await expect(controller.unblockUser(null, 'target-user')).rejects.toThrow(
+      await expect(controller.unblockUser(null, target)).rejects.toThrow(
         'Unauthorized',
       );
-      expect(usersService.unblockUser).not.toHaveBeenCalled();
+      expect(safetyService.unblockUser).not.toHaveBeenCalled();
     });
 
-    it('should unblock the target user on behalf of the current user', async () => {
-      (usersService.unblockUser as Mock).mockResolvedValue({
+    it('should unblock through the shared safety boundary for the current user', async () => {
+      (safetyService.unblockUser as Mock).mockResolvedValue({
         success: true,
       });
+
       const result = await controller.unblockUser(
         { id: 'user-1' } as any,
-        'target-user',
+        target,
       );
-      expect(usersService.unblockUser).toHaveBeenCalledWith(
-        'user-1',
-        'target-user',
-      );
+
+      expect(safetyService.unblockUser).toHaveBeenCalledWith('user-1', target);
       expect(result).toEqual({ success: true });
     });
   });
 
   describe('reportUser', () => {
+    const dto = {
+      reported_id: '22222222-2222-4222-8222-222222222222',
+      reason_category: 'spam' as const,
+      description: 'unwanted messages',
+      context_url: 'https://example.com/chat',
+    };
+
     it('should throw UnauthorizedException when no user', async () => {
-      await expect(
-        controller.reportUser(null, {
-          reported_id: 'target-user',
-          reason_category: 'spam',
-        }),
-      ).rejects.toThrow('Unauthorized');
-      expect(usersService.reportUser).not.toHaveBeenCalled();
+      await expect(controller.reportUser(null, dto)).rejects.toThrow(
+        'Unauthorized',
+      );
+      expect(safetyService.reportUser).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when required fields are missing', async () => {
-      await expect(
-        controller.reportUser({ id: 'user-1' } as any, {
-          reported_id: '',
-          reason_category: 'spam',
-        }),
-      ).rejects.toThrow('Bad Request');
-      await expect(
-        controller.reportUser({ id: 'user-1' } as any, {
-          reported_id: 'target-user',
-          reason_category: '',
-        }),
-      ).rejects.toThrow('Bad Request');
-      expect(usersService.reportUser).not.toHaveBeenCalled();
-    });
+    it('should file the report through the shared safety boundary', async () => {
+      (safetyService.reportUser as Mock).mockResolvedValue({
+        id: 'report-1',
+        duplicate: false,
+      });
 
-    it('should call reportUser with the reporter id and normalised dto', async () => {
-      (usersService.reportUser as Mock).mockResolvedValue({
+      const result = await controller.reportUser({ id: 'user-1' } as any, dto);
+
+      expect(safetyService.reportUser).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual({
         success: true,
         message: 'Report submitted',
+        report_id: 'report-1',
+        duplicate: false,
       });
-      const result = await controller.reportUser({ id: 'user-1' } as any, {
-        reported_id: 'target-user',
-        reason_category: 'spam',
-        description: 'unwanted messages',
-        context_url: 'https://example.com/chat',
-      });
-      expect(usersService.reportUser).toHaveBeenCalledWith('user-1', {
-        reported_id: 'target-user',
-        reason_category: 'spam',
-        description: 'unwanted messages',
-        context_url: 'https://example.com/chat',
-      });
-      expect(result).toEqual({ success: true, message: 'Report submitted' });
     });
 
-    it('should omit optional fields when not provided', async () => {
-      (usersService.reportUser as Mock).mockResolvedValue({
-        success: true,
-        message: 'Report submitted',
+    it('should report a repeat of an open report as a duplicate', async () => {
+      (safetyService.reportUser as Mock).mockResolvedValue({
+        id: 'report-1',
+        duplicate: true,
       });
-      await controller.reportUser({ id: 'user-1' } as any, {
-        reported_id: 'target-user',
-        reason_category: 'spam',
+
+      await expect(
+        controller.reportUser({ id: 'user-1' } as any, dto),
+      ).resolves.toMatchObject({ report_id: 'report-1', duplicate: true });
+    });
+
+    it('should let abuse-limit failures reach the client', async () => {
+      (safetyService.reportUser as Mock).mockRejectedValue(
+        new HttpException('Report limit reached', HttpStatus.TOO_MANY_REQUESTS),
+      );
+
+      await expect(
+        controller.reportUser({ id: 'user-1' } as any, dto),
+      ).rejects.toMatchObject({ status: 429 });
+    });
+
+    it('should validate the body with the shared safety DTO', async () => {
+      const pipe = new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
       });
-      expect(usersService.reportUser).toHaveBeenCalledWith('user-1', {
-        reported_id: 'target-user',
-        reason_category: 'spam',
-        description: undefined,
-        context_url: undefined,
-      });
+      const validate = (body: unknown) =>
+        pipe.transform(body, { type: 'body', metatype: ReportUserDto });
+
+      await expect(validate(dto)).resolves.toBeInstanceOf(ReportUserDto);
+      await expect(
+        validate({ ...dto, reported_id: 'not-a-uuid' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        validate({ ...dto, reason_category: 'scam' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        validate({ ...dto, description: 'x'.repeat(501) }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        validate({ ...dto, status: 'approved' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 

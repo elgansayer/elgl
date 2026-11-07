@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import type { User } from '@supabase/supabase-js';
 import type { MediaService } from '../media/media.service';
+import type { SafetyService } from '../safety/safety.service';
 import { UsersController } from './users.controller';
 import type { UsersService } from './users.service';
 
@@ -16,6 +17,7 @@ describe('UsersController pagination boundary', () => {
   const controller = new UsersController(
     usersService as unknown as UsersService,
     {} as MediaService,
+    {} as SafetyService,
   );
   const user = { id: 'user-1' } as User;
 

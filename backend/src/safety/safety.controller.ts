@@ -6,41 +6,65 @@ import {
   UseGuards,
   Req,
   Param,
+  ParseUUIDPipe,
   ForbiddenException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BlockUserDto, ReportUserDto, UnblockUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
-import { SafetyService } from './safety.service';
+import { BlockResult, SafetyCategory, SafetyService } from './safety.service';
 
+/** Public response for a report. `duplicate` marks an already-open report. */
+export interface ReportSubmissionResponse {
+  success: boolean;
+  message: string;
+  report_id: string;
+  duplicate: boolean;
+}
+
+/**
+ * Block and report endpoints for personal and business accounts. Every route
+ * requires an authenticated caller and only ever acts on that caller's own
+ * trust graph. Mutations are throttled and validated before they reach the
+ * service.
+ */
 @Controller('safety')
 @UseGuards(SupabaseAuthGuard)
 export class SafetyController {
   constructor(private readonly safetyService: SafetyService) {}
 
   @Get('report-categories')
-  getReportCategories() {
+  getReportCategories(): SafetyCategory[] {
     return this.safetyService.getCategories();
   }
 
   @Post('report')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async reportUser(
     @Req() req: { user: { id: string } },
     @Body() dto: ReportUserDto,
-  ): Promise<{ success: boolean; message: string }> {
-    await this.safetyService.reportUser(req.user.id, dto);
-    return { success: true, message: 'Report submitted successfully' };
+  ): Promise<ReportSubmissionResponse> {
+    const result = await this.safetyService.reportUser(req.user.id, dto);
+    return {
+      success: true,
+      message: 'Report submitted successfully',
+      report_id: result.id,
+      duplicate: result.duplicate,
+    };
   }
 
   @Post('block')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async blockUser(
     @Req() req: { user: { id: string } },
     @Body() dto: BlockUserDto,
-  ): Promise<{ success: boolean; blocked_id: string }> {
+  ): Promise<BlockResult> {
     return this.safetyService.blockUser(req.user.id, dto);
   }
 
   @Post('unblock')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async unblockUser(
     @Req() req: { user: { id: string } },
     @Body() dto: UnblockUserDto,
@@ -92,17 +116,19 @@ export class SafetyController {
   }
 
   @Post('block/:blockedId')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async blockUserByParam(
     @Req() req: { user: { id: string } },
-    @Param('blockedId') blockedId: string,
-  ): Promise<{ success: boolean; blocked_id: string }> {
+    @Param('blockedId', new ParseUUIDPipe()) blockedId: string,
+  ): Promise<BlockResult> {
     return this.safetyService.blockUser(req.user.id, { blocked_id: blockedId });
   }
 
   @Post('unblock/:blockedId')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async unblockUserByParam(
     @Req() req: { user: { id: string } },
-    @Param('blockedId') blockedId: string,
+    @Param('blockedId', new ParseUUIDPipe()) blockedId: string,
   ): Promise<{ success: boolean }> {
     return this.safetyService.unblockUser(req.user.id, blockedId);
   }

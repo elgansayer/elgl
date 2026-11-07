@@ -48,8 +48,30 @@
         @if (!isOwnProfile()) {
           <div class="flex gap-2">
             @if (profile()) {
-              <app-report-button [userId]="profile()!.id" />
+              <app-report-button
+                [userId]="profile()!.id"
+                [targetType]="reportTargetType()"
+              />
             }
+
+            <button
+              hlmBtn
+              type="button"
+              variant="secondary"
+              size="sm"
+              (click)="toggleBlock()"
+              [disabled]="blockPending()"
+              [attr.aria-busy]="blockPending() ? 'true' : null"
+              [attr.aria-label]="
+                (isBlocked() ? 'userProfile.unblockUser' : 'userProfile.blockUser') | t
+              "
+              class="rounded-full border border-surface-100 bg-surface-300 text-text-primary transition-colors"
+            >
+              {{ (isBlocked() ? 'userProfile.unblockUser' : 'userProfile.blockUser') | t }}
+            </button>
+            <span class="sr-only" aria-live="polite">{{
+              blockPending() ? ('userProfile.blockPending' | t) : ''
+            }}</span>
 
             <button
               hlmBtn
@@ -88,6 +110,12 @@
       @if (followErrorKey()) {
         <p [id]="followStatusId()" class="mb-4 text-sm text-danger-ink" role="status" aria-live="polite">
           {{ followErrorKey() | t }}
+        </p>
+      }
+
+      @if (blockErrorKey()) {
+        <p class="mb-4 text-sm text-danger-ink" role="alert">
+          {{ blockErrorKey() | t }}
         </p>
       }
 

@@ -430,7 +430,7 @@
       "claudeDesignPath": "features/chat-messaging.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1748-explain-this-corrected-text-2026-10-30 (Explain this action and grammar explanation dialog states in the chat-messaging preview); issue-1663-chat-list-unread-count (chat unread counting refinement and removal of non-authoritative list override; chat messaging layout and visual contract are unchanged); issue-1195-e2ee-personal-messages (encryption status icon is conditionally rendered in message metadata; chat messaging layout and visual contract are unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1748-explain-this-corrected-text-2026-10-30 (Explain this action and grammar explanation dialog states in the chat-messaging preview); issue-1663-chat-list-unread-count (chat unread counting refinement and removal of non-authoritative list override; chat messaging layout and visual contract are unchanged); issue-1195-e2ee-personal-messages (encryption status icon is conditionally rendered in message metadata; chat messaging layout and visual contract are unchanged); issue-1831-block-report (bubble padding class refactor only, visual contract unchanged)",
       "requiredStates": ["light", "dark", "loading", "error", "empty", "390px", "rtl", "400%-zoom"]
     },
     {

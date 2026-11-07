@@ -2,10 +2,33 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, of, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { I18nService } from './i18n.service';
+
+/**
+ * Reason categories the API accepts. These are contract identifiers, not copy:
+ * the human-readable label and description come from the translation
+ * dictionary, and the backend validates against the same closed set.
+ */
+export const SAFETY_REPORT_CATEGORIES = [
+  'harassment',
+  'spam',
+  'inappropriate_content',
+  'fake_profile',
+  'other',
+] as const;
+
+export type SafetyReportCategory = (typeof SAFETY_REPORT_CATEGORIES)[number];
+
+/**
+ * Personal accounts and business accounts share the same `users` record, so the
+ * same endpoint handles both. The target type only changes the wording shown
+ * to the reporter.
+ */
+export type SafetyReportTargetType = 'user' | 'business';
 
 export interface ReportUserDto {
   reported_id: string;
-  reason_category: string;
+  reason_category: SafetyReportCategory;
   description?: string;
   context_url?: string;
 }
@@ -13,10 +36,21 @@ export interface ReportUserDto {
 export interface ReportResponse {
   success: boolean;
   message: string;
+  /** Identifier of the moderation case, whether it was created now or reused. */
+  report_id: string;
+  /** True when an open report for this target and reason already existed. */
+  duplicate: boolean;
+}
+
+export interface BlockResponse {
+  success: boolean;
+  blocked_id: string;
+  /** True when the account was already blocked and the request was a no-op. */
+  already_blocked: boolean;
 }
 
 export interface ReportCategory {
-  value: string;
+  value: SafetyReportCategory;
   label: string;
   icon?: string;
   description?: string;
@@ -43,6 +77,7 @@ import { AuthService } from './auth.service';
 export class SafetyService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private i18n = inject(I18nService);
   private apiUrl = environment.apiUrl;
 
   // Local cache for blocked user IDs (bidirectional: blocked + blocker)
@@ -312,16 +347,13 @@ export class SafetyService {
     return this.reportUser(dto);
   }
 
-  blockUser(blockedId: string): Promise<{ success: boolean; blocked_id: string }> {
+  blockUser(blockedId: string): Promise<BlockResponse> {
     return firstValueFrom(
-      this.http.post<{ success: boolean; blocked_id: string }>(
-        `${this.apiUrl}/safety/block/${blockedId}`,
-        {},
-      ),
+      this.http.post<BlockResponse>(`${this.apiUrl}/safety/block/${blockedId}`, {}),
     );
   }
 
-  async blockUserAsync(blockedId: string): Promise<{ success: boolean; blocked_id: string }> {
+  async blockUserAsync(blockedId: string): Promise<BlockResponse> {
     const res = await this.blockUser(blockedId);
     this._blockedUserIds.update((prev) => {
       const next = new Set(prev);
@@ -389,7 +421,9 @@ export class SafetyService {
     return firstValueFrom(
       this.http.get<ReportCategory[]>(`${this.apiUrl}/safety/report-categories`).pipe(
         catchError(() => {
-          console.warn('Failed to fetch report categories from backend, using static fallback.');
+          console.warn(
+            'Failed to fetch report categories from backend, using the translated fallback.',
+          );
           return of(this.getStaticReportCategories());
         }),
       ),
@@ -400,43 +434,18 @@ export class SafetyService {
     return this.getReportCategories();
   }
 
-  /** Static fallback category list used when the backend is unreachable. */
+  /**
+   * Offline fallback category list. Every label and description is resolved
+   * from the translation dictionary, so the fallback is localised too and the
+   * service carries no user-facing copy of its own.
+   */
   getStaticReportCategories(): ReportCategory[] {
-    return this.staticReportCategories;
+    return SAFETY_REPORT_CATEGORIES.map((value) => ({
+      value,
+      label: this.i18n.translate(`report.category.${value}.label`),
+      description: this.i18n.translate(`report.category.${value}.description`),
+    }));
   }
-
-  private staticReportCategories: ReportCategory[] = [
-    {
-      value: 'harassment',
-      label: 'Harassment',
-      icon: '🚫',
-      description: 'Unwanted advances, threats, or abusive behaviour',
-    },
-    {
-      value: 'spam',
-      label: 'Spam',
-      icon: '📧',
-      description: 'Unsolicited promotions, phishing, or fraudulent activity',
-    },
-    {
-      value: 'inappropriate_content',
-      label: 'Inappropriate Content',
-      icon: '🔞',
-      description: 'Sexually explicit, violent, or offensive material',
-    },
-    {
-      value: 'fake_profile',
-      label: 'Fake Profile',
-      icon: '🎭',
-      description: 'Pretending to be someone else or using false identity',
-    },
-    {
-      value: 'other',
-      label: 'Other',
-      icon: '📝',
-      description: 'Something else not listed above',
-    },
-  ];
 
   async getBlockedUserIds(userId: string): Promise<string[]> {
     if (!this.authService.getAccessToken()) return [];

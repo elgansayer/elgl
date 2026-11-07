@@ -11,6 +11,7 @@ import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
 import { LegacyProfileVisitorsPrivacyInterceptor } from './interceptors/legacy-profile-visitors-privacy.interceptor';
 import { ProfileUpdateIntegrityInterceptor } from './interceptors/profile-update-integrity.interceptor';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { SafetyModule } from '../safety/safety.module';
 
 import { NotificationsModule } from '../notifications/notifications.module';
 import { XpModule } from '../xp/xp.module';
@@ -24,6 +25,7 @@ ApiBearerAuth('bearer')(UsersController);
 @Module({
   imports: [
     SupabaseModule,
+    SafetyModule,
     NotificationsModule,
     MediaModule,
     XpModule,

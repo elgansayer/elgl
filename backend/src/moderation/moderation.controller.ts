@@ -27,6 +27,9 @@ import {
 } from '@nestjs/swagger';
 import { ModerationItem, ModerationService } from './moderation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { RequireAdminCapabilities } from '../admin/decorators/require-admin-capabilities.decorator';
+import { AdminCapabilityGuard } from '../admin/guards/admin-capability.guard';
+import { AdminGuard } from '../admin/guards/admin.guard';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
@@ -38,6 +41,8 @@ export class ModerationController {
   constructor(private readonly moderationService: ModerationService) {}
 
   @Get('items')
+  @UseGuards(AdminGuard, AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.read')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({
     summary: 'List moderation queue items',
@@ -127,6 +132,9 @@ export class ModerationController {
   })
   @ApiBadRequestResponse({ description: 'Invalid type parameter' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  @ApiForbiddenResponse({
+    description: 'Caller lacks the moderation.cases.read capability',
+  })
   @ApiTooManyRequestsResponse({
     description: 'Rate limit exceeded (30 req/min)',
   })
@@ -150,37 +158,29 @@ export class ModerationController {
   @HttpCode(HttpStatus.CREATED)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
-    summary: 'Report a user',
+    summary: 'Report a user or business',
     description:
-      'Creates a new report against a user. The authenticated user becomes the reporter. The report status is set to "pending" for moderator review.',
+      'Creates a report against a personal or business account. The authenticated user becomes the reporter and the report starts in "pending" status for moderator review. Validation, de-duplication and abuse limits are shared with POST /safety/report: repeating an open report returns the existing report with duplicate=true.',
   })
   @ApiCreatedResponse({
-    description: 'Report created successfully',
+    description: 'Report created, or the existing open report returned',
     schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'Report record ID (UUID)' },
-          reporter_id: { type: 'string', description: 'Reporter user UUID' },
-          reported_user_id: {
-            type: 'string',
-            description: 'Reported user UUID',
-          },
-          reason_category: { type: 'string', description: 'Reason category' },
-          description: { type: 'string', nullable: true },
-          status: {
-            type: 'string',
-            description: 'Report status (always "pending")',
-          },
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        report_id: { type: 'string', description: 'Report record ID (UUID)' },
+        duplicate: {
+          type: 'boolean',
+          description: 'True when an open report already existed',
         },
       },
     },
   })
   @ApiBadRequestResponse({ description: 'Invalid report payload' })
+  @ApiNotFoundResponse({ description: 'Reported account not found' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
   @ApiTooManyRequestsResponse({
-    description: 'Rate limit exceeded (5 req/min)',
+    description: 'Rate limit or daily report limit exceeded',
   })
   async reportUser(
     @Req() req: { user: { id: string } },
@@ -190,6 +190,8 @@ export class ModerationController {
   }
 
   @Post('approve')
+  @UseGuards(AdminGuard, AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.manage')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
@@ -219,6 +221,8 @@ export class ModerationController {
   }
 
   @Post('reject')
+  @UseGuards(AdminGuard, AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.manage')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
@@ -248,6 +252,8 @@ export class ModerationController {
   }
 
   @Get('analyse/:userId')
+  @UseGuards(AdminGuard, AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.read')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary: 'Analyse user for dating behaviour risk',
@@ -284,6 +290,9 @@ export class ModerationController {
   })
   @ApiNotFoundResponse({ description: 'User not found' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  @ApiForbiddenResponse({
+    description: 'Caller lacks the moderation.cases.read capability',
+  })
   @ApiTooManyRequestsResponse({
     description: 'Rate limit exceeded (5 req/min)',
   })

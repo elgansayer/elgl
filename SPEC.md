@@ -110,8 +110,8 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 
 ### Table: `blocks` & `reports` (Trust and Safety)
 
-- `blocks`: `id`, `blocker_id`, `blocked_id`, `created_at`
-- `reports`: `id`, `reporter_id`, `reported_user_id`, `reason_category`, `description`, `context_url`, `status`, `created_at`
+- `blocks`: `id`, `blocker_id`, `blocked_id`, `created_at`. Unique on `(blocker_id, blocked_id)`; `CHECK (blocker_id <> blocked_id)` for new rows (`blocks_no_self_block`).
+- `reports`: `id`, `reporter_id`, `reported_user_id`, `reason_category`, `description`, `context_url`, `status`, `created_at`. One open (`pending`) report per reporter, target and reason for reports created from migration `20261104090000` onward (`reports_open_user_report_unique_idx`). Business accounts share the `users` record, so the same tables serve personal and business targets. See `docs/block-report-users-businesses.md`.
 
 ---
 

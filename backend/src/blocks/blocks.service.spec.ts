@@ -2,13 +2,16 @@ import { InternalServerErrorException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BlocksService } from './blocks.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { MetricsService } from '../metrics/metrics.service';
+import { SafetyService } from '../safety/safety.service';
 
 describe('BlocksService', () => {
   let service: BlocksService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
-  let mockMetricsService: any;
+  let mockSafetyService: {
+    blockUser: ReturnType<typeof vi.fn>;
+    unblockUser: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -27,8 +30,13 @@ describe('BlocksService', () => {
       from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
-    mockMetricsService = {
-      recordTsBlockRemoved: vi.fn(),
+    mockSafetyService = {
+      blockUser: vi.fn().mockResolvedValue({
+        success: true,
+        blocked_id: 'blocked-user',
+        already_blocked: false,
+      }),
+      unblockUser: vi.fn().mockResolvedValue({ success: true }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -41,8 +49,8 @@ describe('BlocksService', () => {
           },
         },
         {
-          provide: MetricsService,
-          useValue: mockMetricsService,
+          provide: SafetyService,
+          useValue: mockSafetyService,
         },
       ],
     }).compile();
@@ -156,50 +164,67 @@ describe('BlocksService', () => {
   });
 
   describe('blockUser', () => {
-    it('uses an idempotent upsert for retry-safe block creation', async () => {
-      mockQueryBuilder._response = { error: null };
-
+    it('delegates to the shared safety boundary so rules, metrics and caches match', async () => {
       const result = await service.blockUser('user-1', 'blocked-user');
 
-      expect(mockQueryBuilder.upsert).toHaveBeenCalledWith(
-        { blocker_id: 'user-1', blocked_id: 'blocked-user' },
-        { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true },
-      );
+      expect(mockSafetyService.blockUser).toHaveBeenCalledWith('user-1', {
+        blocked_id: 'blocked-user',
+      });
       expect(result).toEqual({ success: true });
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    it('rejects self-blocking without touching persistence', async () => {
+    it('treats a repeated block as a successful no-op', async () => {
+      mockSafetyService.blockUser.mockResolvedValue({
+        success: true,
+        blocked_id: 'blocked-user',
+        already_blocked: true,
+      });
+
+      await expect(
+        service.blockUser('user-1', 'blocked-user'),
+      ).resolves.toEqual({ success: true });
+    });
+
+    it('rejects self-blocking without touching persistence or the safety boundary', async () => {
       expect(await service.blockUser('user-1', 'user-1')).toEqual({
         success: false,
       });
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+      expect(mockSafetyService.blockUser).not.toHaveBeenCalled();
+    });
+
+    it('propagates safety boundary failures instead of fabricating success', async () => {
+      mockSafetyService.blockUser.mockRejectedValue(
+        new InternalServerErrorException('Unable to block user'),
+      );
+
+      await expect(service.blockUser('user-1', 'blocked-user')).rejects.toThrow(
+        'Unable to block user',
+      );
     });
   });
 
   describe('unblockUser', () => {
-    it('is retry-safe and records the successful removal metric', async () => {
-      mockQueryBuilder._response = { error: null };
-
+    it('delegates to the shared safety boundary, which is retry-safe and records the metric', async () => {
       const result = await service.unblockUser('user-1', 'blocked-user');
 
-      expect(mockQueryBuilder.delete).toHaveBeenCalled();
-      expect(mockQueryBuilder.match).toHaveBeenCalledWith({
-        blocker_id: 'user-1',
-        blocked_id: 'blocked-user',
-      });
-      expect(mockMetricsService.recordTsBlockRemoved).toHaveBeenCalledTimes(1);
+      expect(mockSafetyService.unblockUser).toHaveBeenCalledWith(
+        'user-1',
+        'blocked-user',
+      );
       expect(result).toEqual({ success: true });
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    it('does not expose database error details when delete fails', async () => {
-      mockQueryBuilder._response = {
-        error: { message: 'delete failed: private detail' },
-      };
+    it('propagates sanitised failures from the safety boundary', async () => {
+      mockSafetyService.unblockUser.mockRejectedValue(
+        new InternalServerErrorException('Unable to unblock user'),
+      );
 
       await expect(
         service.unblockUser('user-1', 'blocked-user'),
-      ).rejects.toThrow('Unable to update block state');
-      expect(mockMetricsService.recordTsBlockRemoved).not.toHaveBeenCalled();
+      ).rejects.toThrow('Unable to unblock user');
     });
   });
 });

@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
+import { isUUID } from 'class-validator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BlocksService } from './blocks.service';
@@ -43,7 +44,7 @@ function validateUserId(value: unknown, fieldName: string): string {
     throw new BadRequestException(`${fieldName} is required`);
   }
   const id = value.trim();
-  if (!id || id.length > 128) {
+  if (!isUUID(id)) {
     throw new BadRequestException(`${fieldName} is invalid`);
   }
   return id;

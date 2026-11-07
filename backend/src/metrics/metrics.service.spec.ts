@@ -140,6 +140,20 @@ describe('MetricsService', () => {
       expect(() => service.recordTsBlockRemoved()).not.toThrow();
     });
 
+    it('should record safety operation outcomes with a bounded label set', async () => {
+      service.recordTsSafetyOperation('report', 'success');
+      service.recordTsSafetyOperation('report', 'duplicate');
+      service.recordTsSafetyOperation('report', 'rate_limited');
+      service.recordTsSafetyOperation('block', 'failure');
+      service.recordTsSafetyOperation('unblock', 'rejected');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_ts_safety_operations_total');
+      expect(metrics).toContain('operation="report",outcome="duplicate"');
+      expect(metrics).toContain('operation="block",outcome="failure"');
+      expect(metrics).toContain('operation="unblock",outcome="rejected"');
+    });
+
     it('should set pending reports gauge', () => {
       expect(() => service.setTsPendingReports(15)).not.toThrow();
     });

@@ -1,6 +1,7 @@
 import type { Mock } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import { MediaService } from '../media/media.service';
+import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -42,7 +43,11 @@ describe('UsersController member visibility', () => {
       getProfile,
       getUserStats,
     } as unknown as UsersService;
-    controller = new UsersController(usersService, {} as MediaService);
+    controller = new UsersController(
+      usersService,
+      {} as MediaService,
+      {} as SafetyService,
+    );
   });
 
   it('masks hidden presence and VIP entitlement for another member', async () => {

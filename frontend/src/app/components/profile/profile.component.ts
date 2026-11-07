@@ -2,7 +2,7 @@ import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, viewChild, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, viewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -22,7 +22,6 @@ import {
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
 import { CelebrationOverlayComponent } from '../celebration-overlay/celebration-overlay.component';
-import { SafetyService } from '../../services/safety.service';
 import { showToast } from '../../services/toast.service';
 import { AchievementsComponent } from '../../achievements/achievements.component';
 import { AudioIntroRecorderComponent } from '../audio-intro-recorder/audio-intro-recorder.component';
@@ -74,7 +73,6 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
 export class ProfileComponent implements OnInit {
   private userService = inject(UserService);
   private readonly i18n = inject(I18nService);
-  private safetyService = inject(SafetyService);
 
   readonly profile = signal<UserProfile | null>(null);
   readonly isLoading = signal<boolean>(true);
@@ -82,11 +80,6 @@ export class ProfileComponent implements OnInit {
   readonly errorMessage = signal<string>('');
   readonly successMessage = signal<string>('');
   readonly visitors = signal<VisitorLog[]>([]);
-  readonly isBlocked = computed(() => {
-    const prof = this.profile();
-    if (!prof) return false;
-    return this.safetyService.blockedUserIdsSignal().has(prof.id);
-  });
   readonly visitorsLoading = signal(false);
   readonly visitorsError = signal<string>('');
   readonly showVisitors = signal(false);
@@ -342,63 +335,6 @@ export class ProfileComponent implements OnInit {
   onAudioIntroSaved(mediaUrl: string): void {
     this.profile.update((p) => (p ? { ...p, audio_intro_url: mediaUrl } : p));
     showToast(this.i18n.translate('profile.audioIntroSaved'), 'success', 3000);
-  }
-
-  async blockProfile(): Promise<void> {
-    const user = this.profile();
-    if (!user) return;
-    const confirmed = confirm(this.i18n.translate('safety.confirmBlockBtn'));
-    if (!confirmed) return;
-    try {
-      await this.safetyService.blockUserAsync(user.id);
-      showToast(this.i18n.translate('profile.blockedSuccess'), 'success', 4000);
-    } catch {
-      showToast(this.i18n.translate('profile.blockError'), 'error', 4000);
-    }
-  }
-
-  async unblockProfile(): Promise<void> {
-    const user = this.profile();
-    if (!user) return;
-    try {
-      await this.safetyService.unblockUserAsync(user.id);
-      showToast(this.i18n.translate('profile.unblockUser'), 'success', 4000);
-    } catch {
-      showToast(this.i18n.translate('profile.blockError'), 'error', 4000);
-    }
-  }
-
-  async reportUser(): Promise<void> {
-    const user = this.profile();
-    if (!user) return;
-    try {
-      const categories = await this.safetyService.getReportCategories();
-      if (!categories.length) {
-        this.errorMessage.set(this.i18n.translate('profile.reportError'));
-        return;
-      }
-      const options = categories.map((c, i) => `${i + 1}. ${c.label}`).join('\n');
-      const title = this.i18n.translate('profile.reportSelectReason');
-      const rawNumber = prompt(`${title}\n${options}`);
-      if (!rawNumber) return;
-      const idx = parseInt(rawNumber.trim(), 10) - 1;
-      if (isNaN(idx) || idx < 0 || idx >= categories.length) {
-        this.errorMessage.set(this.i18n.translate('profile.reportInvalidReason'));
-        return;
-      }
-      const category = categories[idx];
-      const descPrompt = this.i18n.translate('profile.reportDescriptionOptional');
-      const descriptionInput = prompt(descPrompt);
-      const description = descriptionInput ? descriptionInput.trim() : undefined;
-      await this.safetyService.reportUserAsync({
-        reported_id: user.id,
-        reason_category: category.value,
-        description,
-      });
-      showToast(this.i18n.translate('profile.reportSuccess'), 'success', 4000);
-    } catch {
-      showToast(this.i18n.translate('profile.reportError'), 'error', 4000);
-    }
   }
 
   onCoverUploaded(coverUrl: string): void {

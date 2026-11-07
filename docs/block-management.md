@@ -21,7 +21,7 @@ Issue #1672 exposes the authenticated block APIs as a production user-facing man
 
 Rows are selected newest-block first. The service clamps limits again internally so non-HTTP callers cannot trigger an unbounded query. The Angular client requests 100-row pages sequentially and stops at a short page or 500 rows, whichever comes first. Profile hydration is a single `users ... IN (...)` query per page rather than an N+1 lookup, and the resulting profiles are restored to block-recency order.
 
-Read requests are throttled to 60/minute per configured throttler policy; block and unblock mutations are throttled to 30/minute. Block creation uses the existing `(blocker_id, blocked_id)` uniqueness contract through an idempotent upsert, and self-block attempts are rejected. Deleting an already-absent block remains retry-safe.
+Read requests are throttled to 60/minute per configured throttler policy; block and unblock mutations are throttled to 30/minute. Block creation and removal are delegated to the shared `SafetyService` (see `docs/block-report-users-businesses.md`), so this route shares one set of rules with `/safety/*`, `/users/*` and the report flow: UUID validation, an idempotent upsert on the `(blocker_id, blocked_id)` uniqueness contract, rejected self-blocks, metrics that only count real state changes, and cache invalidation. Repeating a block or deleting an already-absent block remains retry-safe, and the database enforces the self-block rule with `blocks_no_self_block`.
 
 ## Authentication and privacy
 

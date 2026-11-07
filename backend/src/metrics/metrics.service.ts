@@ -48,6 +48,7 @@ export class MetricsService {
   readonly tsDatingRiskScore: Histogram<string>;
   readonly tsReportsByCategory: Counter<string>;
   readonly tsModerationQueueLatency: Histogram<string>;
+  readonly tsSafetyOperations: Counter<string>;
 
   // LingQ Reading Engine metrics
   readonly readingEngineSessions: Counter<string>;
@@ -279,6 +280,13 @@ export class MetricsService {
       help: 'Time taken for moderation actions (approve/reject) to complete',
       labelNames: ['action'],
       buckets: [0.1, 0.5, 1, 2, 5, 10],
+      registers: [this.register],
+    });
+
+    this.tsSafetyOperations = new Counter({
+      name: 'hellotalk_ts_safety_operations_total',
+      help: 'Block, unblock and report requests by operation and outcome (success, duplicate, rejected, rate_limited, failure)',
+      labelNames: ['operation', 'outcome'],
       registers: [this.register],
     });
 
@@ -799,6 +807,18 @@ export class MetricsService {
 
   recordTsBlockRemoved(): void {
     this.tsBlocksRemoved.inc();
+  }
+
+  /**
+   * Records the outcome of a block, unblock or report request. Both labels come
+   * from closed vocabularies so the series count stays bounded regardless of
+   * what a client sends.
+   */
+  recordTsSafetyOperation(
+    operation: 'report' | 'block' | 'unblock',
+    outcome: 'success' | 'duplicate' | 'rejected' | 'rate_limited' | 'failure',
+  ): void {
+    this.tsSafetyOperations.inc({ operation, outcome });
   }
 
   setTsPendingReports(count: number): void {

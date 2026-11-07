@@ -36,6 +36,7 @@ prometheus_scrape:
       - hellotalk_ts_reports_submitted_total: counter
       - hellotalk_ts_blocks_created_total: counter
       - hellotalk_ts_blocks_removed_total: counter
+      - hellotalk_ts_safety_operations_total: counter
       - hellotalk_ts_pending_reports: gauge
       - hellotalk_ts_active_blocks_total: gauge
       - hellotalk_ts_moderation_actions_total: counter

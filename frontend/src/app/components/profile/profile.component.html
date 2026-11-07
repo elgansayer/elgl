@@ -430,34 +430,6 @@
         <div class="mt-8">
           <app-hobby-tags [targetLanguage]="targetLanguages[0] || 'en'" />
         </div>
-
-        <!-- Block / Report buttons -->
-        <div class="mt-4 flex gap-2">
-          @if (isBlocked()) {
-            <app-button-secondary
-              (clicked)="unblockProfile()"
-              customClass="text-xs"
-              [ariaLabel]="'profile.unblockUser' | t"
-            >
-              {{ 'profile.unblockUser' | t }}
-            </app-button-secondary>
-          } @else {
-            <app-button-secondary
-              (clicked)="blockProfile()"
-              customClass="text-xs text-danger-ink"
-              [ariaLabel]="'profile.blockUser' | t"
-            >
-              {{ 'profile.blockUser' | t }}
-            </app-button-secondary>
-          }
-          <app-button-secondary
-            (clicked)="reportUser()"
-            customClass="text-xs"
-            [ariaLabel]="'profile.reportUser' | t"
-          >
-            {{ 'profile.reportUser' | t }}
-          </app-button-secondary>
-        </div>
       }
 
       @if (isEditing()) {

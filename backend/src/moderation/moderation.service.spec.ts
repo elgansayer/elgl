@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ModerationService } from './moderation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { SafetyService } from '../safety/safety.service';
 import { PinoLogger } from 'nestjs-pino';
 
 const mockPinoLogger = {
@@ -16,6 +17,7 @@ describe('ModerationService', () => {
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let mockMetricsService: any;
+  let mockSafetyService: { reportUser: ReturnType<typeof vi.fn> };
   let mockLogger: any;
 
   beforeEach(async () => {
@@ -52,9 +54,15 @@ describe('ModerationService', () => {
       recordAdminReportResolution: vi.fn(),
     };
 
+    mockSafetyService = { reportUser: vi.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ModerationService,
+        {
+          provide: SafetyService,
+          useValue: mockSafetyService,
+        },
         {
           provide: 'PinoLogger:ModerationService',
           useValue: mockPinoLogger,
@@ -94,58 +102,75 @@ describe('ModerationService', () => {
   });
 
   describe('reportUser', () => {
-    it('should insert a report and return success', async () => {
-      mockQueryBuilder._response = { error: null };
+    const TARGET = '22222222-2222-4222-8222-222222222222';
 
-      const dto = {
-        reportedUserId: 'bad-user',
-        reasonCategory: 'harassment',
-        description: 'Being abusive',
-      };
-
-      const result = await service.reportUser('reporter-1', dto);
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
-      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
-        reporter_id: 'reporter-1',
-        reported_user_id: 'bad-user',
-        reason_category: 'harassment',
-        description: 'Being abusive',
-        status: 'pending',
+    it('files the report through the shared safety boundary', async () => {
+      mockSafetyService.reportUser.mockResolvedValue({
+        id: 'report-1',
+        duplicate: false,
       });
-      expect(result).toEqual({ success: true });
-    });
-
-    it('should insert a report without description when description is undefined', async () => {
-      mockQueryBuilder._response = { error: null };
-
-      const dto = { reportedUserId: 'bad-user', reasonCategory: 'spam' };
-      await service.reportUser('reporter-1', dto);
-
-      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
-        reporter_id: 'reporter-1',
-        reported_user_id: 'bad-user',
-        reason_category: 'spam',
-        description: null,
-        status: 'pending',
-      });
-    });
-
-    it('should return degraded response when insert fails', async () => {
-      mockQueryBuilder._response = {
-        data: null,
-        error: { message: 'db error' },
-      };
 
       const result = await service.reportUser('reporter-1', {
-        reportedUserId: 'bad-user',
+        reportedUserId: TARGET,
+        reasonCategory: 'harassment',
+        description: 'Being abusive',
+      });
+
+      expect(mockSafetyService.reportUser).toHaveBeenCalledWith('reporter-1', {
+        reported_id: TARGET,
+        reason_category: 'harassment',
+        description: 'Being abusive',
+      });
+      expect(result).toEqual({
+        success: true,
+        report_id: 'report-1',
+        duplicate: false,
+      });
+    });
+
+    it('does not write to the reports table itself', async () => {
+      mockSafetyService.reportUser.mockResolvedValue({
+        id: 'report-1',
+        duplicate: false,
+      });
+
+      await service.reportUser('reporter-1', {
+        reportedUserId: TARGET,
         reasonCategory: 'spam',
       });
 
-      expect(result).toEqual({
-        success: false,
-        error: 'Failed to create report',
+      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
+      expect(mockMetricsService.recordTsReportSubmitted).not.toHaveBeenCalled();
+    });
+
+    it('returns the existing open report for a repeat submission', async () => {
+      mockSafetyService.reportUser.mockResolvedValue({
+        id: 'report-1',
+        duplicate: true,
       });
+
+      await expect(
+        service.reportUser('reporter-1', {
+          reportedUserId: TARGET,
+          reasonCategory: 'spam',
+        }),
+      ).resolves.toEqual({
+        success: true,
+        report_id: 'report-1',
+        duplicate: true,
+      });
+    });
+
+    it('propagates validation and persistence failures instead of returning success false', async () => {
+      const failure = new Error('Unable to submit report');
+      mockSafetyService.reportUser.mockRejectedValue(failure);
+
+      await expect(
+        service.reportUser('reporter-1', {
+          reportedUserId: TARGET,
+          reasonCategory: 'spam',
+        }),
+      ).rejects.toBe(failure);
     });
   });
 

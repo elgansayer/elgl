@@ -6,7 +6,7 @@
     class="w-full mx-auto bg-surface-200 rounded-t-sheet sm:rounded-sheet shadow-lift border border-surface-100 max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-md"
   >
     <div class="flex items-center justify-between p-5 border-b border-surface-100 shrink-0">
-      <h2 [id]="titleId" class="text-xl font-bold text-text-primary">{{ 'report.title' | t }}</h2>
+      <h2 [id]="titleId" class="text-xl font-bold text-text-primary">{{ title() }}</h2>
       <button
         hlmBtn
         variant="ghost"
@@ -34,6 +34,8 @@
     </div>
 
     <div class="p-5 overflow-y-auto overscroll-contain">
+      <p class="text-sm text-text-secondary mb-5">{{ intro() }}</p>
+
       @if (errorMessage()) {
         <div
           class="bg-danger/10 border border-danger/20 text-danger-ink px-4 py-3 rounded-card mb-5 text-sm font-medium"
@@ -134,14 +136,19 @@
         </div>
 
         <label
-          class="flex items-center gap-4 mb-2 p-4 rounded-card bg-surface-100/50 border border-surface-100 cursor-pointer hover:bg-surface-100 transition-colors"
+          class="flex items-start gap-4 mb-2 p-4 rounded-card bg-surface-100/50 border border-surface-100 cursor-pointer hover:bg-surface-100 transition-colors"
         >
           <hlm-checkbox
-            class="size-5"
+            class="size-5 mt-0.5"
             [formField]="reportForm.blockUser"
             [aria-label]="'report.block_user' | t"
           />
-          <span class="text-sm font-bold text-text-primary">{{ 'report.block_user' | t }}</span>
+          <span class="flex flex-col">
+            <span class="text-sm font-bold text-text-primary">{{ 'report.block_user' | t }}</span>
+            <span class="text-xs mt-1 text-text-secondary">{{
+              'report.block_user.consequence' | t
+            }}</span>
+          </span>
         </label>
       }
     </div>

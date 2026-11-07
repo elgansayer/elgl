@@ -1,4 +1,3 @@
-import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -7,7 +6,6 @@ import { vi } from 'vitest';
 import { ProfileComponent } from './profile.component';
 import { UserService, UserProfile } from '../../services/user.service';
 import { I18nService } from '../../services/i18n.service';
-import { SafetyService } from '../../services/safety.service';
 import { AudioIntroRecorderComponent } from '../audio-intro-recorder/audio-intro-recorder.component';
 
 describe('ProfileComponent', () => {
@@ -56,7 +54,6 @@ describe('ProfileComponent', () => {
       providers: [
         provideRouter([]),
         { provide: UserService, useValue: mockUserService },
-        { provide: SafetyService, useValue: { blockedUserIdsSignal: signal(new Set()) } },
         { provide: I18nService, useValue: { translate: vi.fn((key) => key) } },
       ],
     }).compileComponents();
@@ -276,5 +273,24 @@ describe('ProfileComponent', () => {
     mockUserService.getMyProfile.mockRejectedValue(new Error('Network error'));
     await fixture.componentInstance.loadProfile();
     expect(fixture.componentInstance.errorMessage()).toBe('Network error');
+  });
+
+  it('should not offer to block or report the members own account', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const text: string = fixture.nativeElement.textContent;
+    for (const key of [
+      'profile.blockUser',
+      'profile.unblockUser',
+      'profile.reportUser',
+      'userProfile.blockUser',
+      'userProfile.unblockUser',
+      'report.button_label',
+    ]) {
+      expect(text).not.toContain(key);
+    }
+    expect(fixture.nativeElement.querySelector('app-report-button')).toBeNull();
   });
 });

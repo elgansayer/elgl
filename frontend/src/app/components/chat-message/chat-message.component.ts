@@ -20,6 +20,7 @@ import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
+import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
@@ -434,15 +435,29 @@ export class ChatMessageComponent {
     this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
   }
 
-  onBlockToggle(event: { senderId: string; blocked: boolean }): void {
+  /**
+   * Blocks or unblocks the sender of this message. Blocking is high impact, so
+   * it is confirmed first with the consequences spelled out. The shared block
+   * cache only changes once the API has accepted the request, and the effect in
+   * the constructor then hides the message, so a failed request never leaves
+   * the thread showing a block that does not exist.
+   */
+  async onBlockToggle(event: { senderId: string; blocked: boolean }): Promise<void> {
     if (event.blocked) {
-      this.safetyService.blockUser(event.senderId).catch(console.error);
-    } else {
-      this.safetyService.unblockUser(event.senderId).catch(console.error);
+      const confirmed = await this.confirmService.confirm(this.i18n.translate('chat.blockConfirm'));
+      if (!confirmed) return;
     }
-    this.isBlocked.set(event.blocked);
-    if (event.blocked) {
-      this.messageBlocked.emit(event.senderId);
+
+    try {
+      if (event.blocked) {
+        await this.safetyService.blockUserAsync(event.senderId);
+        showToast(this.i18n.translate('chat.blockSuccess'), 'success');
+      } else {
+        await this.safetyService.unblockUserAsync(event.senderId);
+        showToast(this.i18n.translate('chat.unblockSuccess'), 'success');
+      }
+    } catch {
+      showToast(this.i18n.translate('chat.blockError'), 'error');
     }
   }
 
@@ -451,15 +466,20 @@ export class ChatMessageComponent {
       this.i18n.translate('report.confirmMessage'),
     );
     if (!confirmed) return;
-    this.safetyService
-      .reportUser({
+
+    try {
+      const result = await this.safetyService.reportUser({
         reported_id: event.senderId,
         reason_category: 'other',
-        description: 'Reported from message context menu',
+        description: this.i18n.translate('report.chat_description'),
         context_url: window.location.href,
-      })
-      .catch((err: unknown) => {
-        console.error('Report failed', err);
       });
+      showToast(
+        this.i18n.translate(result.duplicate ? 'report.toast_duplicate' : 'report.toast_success'),
+        'success',
+      );
+    } catch {
+      showToast(this.i18n.translate('report.toast_error'), 'error');
+    }
   }
 }

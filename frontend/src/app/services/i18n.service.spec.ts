@@ -420,4 +420,95 @@ describe('I18nService', () => {
       }
     });
   });
+
+  describe('block and report copy', () => {
+    const HTML_ENTITY = /&(?:#\d+|#x[\da-f]+|[a-z][a-z0-9]{1,8});/i;
+    const INFRASTRUCTURE = /cloudflare|\bR2\b|supabase|centrifugo|livekit|redis|postgres/i;
+    const CATEGORY_KEYS = ['harassment', 'spam', 'inappropriate_content', 'fake_profile', 'other'].flatMap(
+      (category) => [`report.category.${category}.label`, `report.category.${category}.description`],
+    );
+    const REQUIRED_KEYS = [
+      'report.button_label',
+      'report.title.user',
+      'report.title.business',
+      'report.intro.user',
+      'report.intro.business',
+      'report.block_user',
+      'report.block_user.consequence',
+      'report.category_required',
+      'report.confirmMessage',
+      'report.chat_description',
+      'report.toast_success',
+      'report.toast_duplicate',
+      'report.toast_error',
+      'report.block_success',
+      'report.block_failed',
+      'report.rate_limited',
+      'report.target_not_found',
+      'userProfile.blockUser',
+      'userProfile.unblockUser',
+      'userProfile.blockConfirmUser',
+      'userProfile.blockConfirmBusiness',
+      'userProfile.blockSuccess',
+      'userProfile.unblockSuccess',
+      'userProfile.blockError',
+      'userProfile.blockPending',
+      'chat.blockConfirm',
+      'chat.blockSuccess',
+      'chat.unblockSuccess',
+      'chat.blockError',
+      'economy.reportSubmitted',
+      'economy.reportFailed',
+      'economy.blockSucceeded',
+      'economy.blockFailed',
+      'common.unknownUser',
+      ...CATEGORY_KEYS,
+    ];
+
+    it.each(REQUIRED_KEYS)('provides copy for %s', (key) => {
+      expect(service.translate(key), key).not.toBe(key);
+    });
+
+    it('interpolates the account name into the block confirmation and results', () => {
+      expect(service.translate('userProfile.blockConfirmUser', { name: 'Partner One' })).toContain(
+        'Partner One',
+      );
+      expect(
+        service.translate('userProfile.blockConfirmBusiness', { name: 'Corner Cafe Tokyo' }),
+      ).toContain('Corner Cafe Tokyo');
+      expect(service.translate('userProfile.blockSuccess', { name: 'Partner One' })).toContain(
+        'Partner One',
+      );
+      expect(service.translate('userProfile.unblockSuccess', { name: 'Partner One' })).toContain(
+        'Partner One',
+      );
+    });
+
+    it('words a business report differently from a personal report', () => {
+      expect(service.translate('report.title.business')).not.toBe(
+        service.translate('report.title.user'),
+      );
+      expect(service.translate('report.intro.business')).toMatch(/business/i);
+      expect(service.translate('userProfile.blockConfirmBusiness', { name: 'x' })).toMatch(
+        /business/i,
+      );
+    });
+
+    it('spells out the consequences of blocking before the person commits', () => {
+      for (const key of ['report.block_user.consequence', 'chat.blockConfirm']) {
+        expect(service.translate(key), key).toMatch(/message you/i);
+      }
+      expect(service.translate('userProfile.blockConfirmUser', { name: 'x' })).toMatch(
+        /message you/i,
+      );
+    });
+
+    it('keeps the copy free of infrastructure names and HTML entities', () => {
+      for (const key of REQUIRED_KEYS) {
+        const value = service.translate(key);
+        expect(value, key).not.toMatch(INFRASTRUCTURE);
+        expect(value, key).not.toMatch(HTML_ENTITY);
+      }
+    });
+  });
 });

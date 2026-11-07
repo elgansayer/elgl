@@ -76,6 +76,42 @@
       }
     },
     {
+      "name": "[T&S] Block and report request failures",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_ts_safety_operations_total{outcome:failure} by {operation}.as_count() > 5",
+      "message": "{{#is_alert}}\nBlock, unblock or report requests are failing on the server ({{operation.name}}). People may be unable to protect themselves or to report abuse, and the app shows an error rather than a false success.\n\n**Current value:** {{value}} failures / 10 min\n**Threshold:** 5\n\n**Actions:**\n1. Search the API logs for the structured events safety.report.insert_failed, safety.block.insert_failed, safety.unblock.delete_failed and safety.*.target_lookup_failed. They carry a database error code and never the report text.\n2. Check Supabase health and connection limits.\n3. If the failures started after a deployment, follow the rollback steps in docs/block-report-users-businesses.md.\n{{/is_alert}}\n\n{{#is_warning}}\nBlock and report failures are elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-and-safety", "severity:critical"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 5,
+          "warning": 2
+        }
+      }
+    },
+    {
+      "name": "[T&S] Daily report limit reached",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_ts_safety_operations_total{operation:report,outcome:rate_limited} by {service}.as_count() > 10",
+      "message": "{{#is_alert}}\nReport submissions are being refused because reporters reached the rolling daily limit. This is usually a bot or a harassment campaign, but a genuine mass-abuse incident could also hit it.\n\n**Current value:** {{value}} refused reports / 30 min\n**Threshold:** 10\n\n**Actions:**\n1. Find the reporters with the most recent reports in the reports table.\n2. Decide whether this is abuse of the report feature (restrict the account) or a real incident that needs a temporary limit increase.\n{{/is_alert}}\n\n{{#is_warning}}\nSome reporters are reaching the daily report limit.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-and-safety", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 10,
+          "warning": 5
+        }
+      }
+    },
+    {
       "name": "[T&S] Dating risk score threshold exceeded",
       "type": "query alert",
       "query": "avg(last_10m):avg:hellotalk_ts_dating_risk_score{*} > 75",

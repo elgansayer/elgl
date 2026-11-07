@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { SafetyService } from '../safety/safety.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
@@ -26,6 +27,12 @@ export interface ModerationItem {
 export interface ModerationDegradedResponse {
   success: boolean;
   error?: string;
+}
+
+export interface ModerationReportResponse {
+  success: boolean;
+  report_id: string;
+  duplicate: boolean;
 }
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -94,6 +101,7 @@ export class ModerationService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
+    private readonly safetyService: SafetyService,
     @InjectPinoLogger(ModerationService.name)
     private readonly logger: PinoLogger,
   ) {
@@ -228,30 +236,22 @@ export class ModerationService {
     return result;
   }
 
+  /**
+   * Files a report through the shared trust-and-safety boundary so this legacy
+   * route cannot bypass target validation, de-duplication or the daily report
+   * limit. Failures surface as proper HTTP errors instead of a created response
+   * with `success: false`.
+   */
   async reportUser(
     reporterId: string,
     dto: ReportUserDto,
-  ): Promise<ModerationDegradedResponse> {
-    try {
-      const { error } = await this.supabase.from('reports').insert({
-        reporter_id: reporterId,
-        reported_user_id: dto.reportedUserId,
-        reason_category: dto.reasonCategory,
-        description: dto.description ?? null,
-        status: 'pending',
-      });
-
-      if (error) {
-        this.logger.warn(error, 'Failed to create report');
-        return { success: false, error: 'Failed to create report' };
-      }
-
-      this.metricsService.recordTsReportSubmitted(dto.reasonCategory);
-      return { success: true };
-    } catch (err) {
-      this.logger.warn(err, 'Failed to create report, degraded');
-      return { success: false, error: 'Service temporarily unavailable' };
-    }
+  ): Promise<ModerationReportResponse> {
+    const result = await this.safetyService.reportUser(reporterId, {
+      reported_id: dto.reportedUserId,
+      reason_category: dto.reasonCategory,
+      description: dto.description,
+    });
+    return { success: true, report_id: result.id, duplicate: result.duplicate };
   }
 
   async approveItem(

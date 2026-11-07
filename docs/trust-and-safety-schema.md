@@ -12,6 +12,16 @@ The migration establishes three trust and safety tables:
 
 All table and index creation uses `IF NOT EXISTS`, so historical replay is safe. The migration contains no destructive `DROP` or `TRUNCATE` operations.
 
+## Hardening for block and report (#1831)
+
+`supabase/migrations/20261104090000_harden_block_and_report_invariants.sql` adds three forward-only invariants without modifying historical data:
+
+- `blocks_no_self_block` (`CHECK (blocker_id <> blocked_id) NOT VALID`) rejects self-blocks for new rows.
+- `reports_open_user_report_unique_idx` is a partial unique index that allows one open (`pending`) user report per reporter, target and reason for reports created after the migration.
+- The `reports_insert_own` policy only admits an open, non-self report with a known category and bounded text from a direct authenticated client.
+
+See `docs/block-report-users-businesses.md` for the query patterns, rollout order and manual rollback statements.
+
 ## Security and privacy
 
 The Angular client does not connect directly to these tables. NestJS remains the application API boundary.

@@ -1292,6 +1292,16 @@ export class I18nService {
     'userProfile.following': 'Following',
     'userProfile.followersLabel': 'Followers',
     'userProfile.followingLabel': 'Following',
+    'userProfile.blockUser': 'Block',
+    'userProfile.unblockUser': 'Unblock',
+    'userProfile.blockConfirmUser':
+      'Block {{name}}? They will not be able to message you, and you will no longer see their posts, comments or moments.',
+    'userProfile.blockConfirmBusiness':
+      'Block {{name}}? You will no longer see this business, and you will not be able to message it.',
+    'userProfile.blockSuccess': '{{name}} has been blocked.',
+    'userProfile.unblockSuccess': '{{name}} has been unblocked.',
+    'userProfile.blockError': 'We could not update the block. Please try again.',
+    'userProfile.blockPending': 'Updating the block...',
 
     // Followers / Following List Component
     'followList.followersTitle': 'Followers',
@@ -1467,17 +1477,6 @@ export class I18nService {
     'profile.proficiencyB2': 'B2 - Upper Intermediate',
     'profile.proficiencyC1': 'C1 - Advanced',
     'profile.proficiencyC2': 'C2 - Proficient',
-    'profile.blockUser': 'Block user',
-    'profile.unblockUser': 'Unblock',
-    'profile.reportUser': 'Report user',
-    'profile.blockedSuccess': 'User blocked',
-    'profile.blockError': 'Failed to block user',
-    'profile.reportReasonPrompt': 'Enter a reason for reporting',
-    'profile.reportSelectReason': 'Select a reason for reporting',
-    'profile.reportDescriptionOptional': 'Additional details (optional)',
-    'profile.reportInvalidReason': 'Invalid reason selection',
-    'profile.reportSuccess': 'User reported',
-    'profile.reportError': 'Failed to report user',
     'profile.displayNamePlaceholder': 'Display name',
     'profile.nativePlaceholder': 'Native language (ISO)',
     'profile.targetPlaceholder': 'Target languages (comma separated)',
@@ -1717,6 +1716,12 @@ export class I18nService {
       'You have already claimed your daily reward. Come back tomorrow!',
     'economy.offlinePurchaseUnavailable':
       'Purchase unavailable while offline. Please check your connection.',
+    'economy.reportSubmitted':
+      'Thank you. Your report has been sent to our Trust & Safety team for review.',
+    'economy.reportFailed': 'Failed to submit report. Please try again.',
+    'economy.blockSucceeded':
+      'Blocked. Posts, comments and direct messages from this account are now hidden.',
+    'economy.blockFailed': 'Failed to block this account. Please try again.',
 
     // Coin Economy Dashboard
     'coinEconomy.title': 'Virtual Coin Economy',
@@ -1824,6 +1829,12 @@ export class I18nService {
     // Report User Modal
     'report.button_label': 'Report',
     'report.title': 'Report user',
+    'report.title.user': 'Report user',
+    'report.title.business': 'Report business',
+    'report.intro.user':
+      'Our Trust & Safety team reviews every report. Tell us what this person has done.',
+    'report.intro.business':
+      'Our Trust & Safety team reviews every report. Tell us what this business has done.',
     'report.close': 'Close',
     'report.reason_label': 'Reason for reporting',
     'report.category.harassment.label': 'Harassment',
@@ -1840,15 +1851,30 @@ export class I18nService {
     'report.category_required': 'Please select a reason before submitting.',
     'report.details_label': 'Additional details (optional)',
     'report.details_placeholder': 'Describe what happened...',
-    'report.block_user': 'Also block this user',
+    'report.block_user': 'Also block this account',
+    'report.block_user.consequence':
+      'They will not be able to message you, and you will no longer see their posts, comments or moments.',
     'report.cancel': 'Cancel',
     'report.submit': 'Submit report',
     'report.submitting': 'Submitting...',
     'report.load_error': 'Could not load report categories.',
     'report.retry': 'Retry',
     'report.toast_success': 'Report submitted successfully.',
+    'report.toast_duplicate':
+      'You already have an open report for this account. Our team is reviewing it.',
     'report.toast_error': 'Failed to submit report. Please try again.',
+    'report.block_failed': 'We could not block this account. Please try again.',
+    'report.block_success':
+      'Account blocked. You will no longer see their posts, comments or moments.',
+    'report.rate_limited': "You have reached today's report limit. Please try again later.",
+    'report.target_not_found': 'We could not find this account. It may have been removed.',
+    'report.chat_description': 'Reported from the message context menu.',
     'chat.message_blocked': 'This message is from a blocked user',
+    'chat.blockConfirm':
+      'Block this person? They will not be able to message you, and you will no longer see their posts, comments or moments.',
+    'chat.blockSuccess': 'Blocked. Messages from this account are now hidden.',
+    'chat.unblockSuccess': 'Unblocked. You will see messages from this account again.',
+    'chat.blockError': 'We could not update the block. Please try again.',
     'chat.quickReply.hello': 'Hello! How can I help you today?',
     'chat.quickReply.whereFrom': 'Where are you from?',
     'chat.quickReply.whatLanguages': 'What languages do you speak?',

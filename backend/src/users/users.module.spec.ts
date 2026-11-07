@@ -6,6 +6,7 @@ import { DataExportWorker } from './data-export.worker';
 import { AccountDeletionCron } from './cron/account-deletion.cron';
 import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { SafetyModule } from '../safety/safety.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { MediaModule } from '../media/media.module';
 import { XpModule } from '../xp/xp.module';
@@ -37,6 +38,8 @@ describe('UsersModule', () => {
       (Reflect.getMetadata('imports', UsersModule) as unknown[]) ?? [];
 
     expect(importsMetadata).toContain(SupabaseModule);
+    // The legacy block/report routes delegate to SafetyService.
+    expect(importsMetadata).toContain(SafetyModule);
     expect(importsMetadata).toContain(NotificationsModule);
     expect(importsMetadata).toContain(MediaModule);
     expect(importsMetadata).toContain(XpModule);

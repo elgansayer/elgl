@@ -1,10 +1,13 @@
 import { HttpClient, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { of, throwError } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
-import { SafetyService } from './safety.service';
+import { I18nService } from './i18n.service';
+import { SAFETY_REPORT_CATEGORIES, SafetyService } from './safety.service';
 
 describe('SafetyService muted words', () => {
   const currentUser = signal<{ id: string } | null>({ id: 'user-a' });
@@ -207,5 +210,188 @@ describe('SafetyService muted words', () => {
         'Invalid block graph response',
       );
     }
+  });
+});
+
+describe('SafetyService block and report API', () => {
+  const TARGET_ID = '22222222-2222-4222-8222-222222222222';
+  const OTHER_ID = '33333333-3333-4333-8333-333333333333';
+  const api = environment.apiUrl;
+  let service: SafetyService;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        SafetyService,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: signal({ id: 'user-a' }),
+            getAccessToken: vi.fn(() => 'token'),
+          },
+        },
+        { provide: I18nService, useValue: { translate: (key: string) => `t:${key}` } },
+      ],
+    });
+    service = TestBed.inject(SafetyService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    vi.restoreAllMocks();
+    TestBed.resetTestingModule();
+  });
+
+  describe('reporting', () => {
+    it('posts the report to the safety API and exposes whether it was a repeat', async () => {
+      const dto = {
+        reported_id: TARGET_ID,
+        reason_category: 'harassment' as const,
+        description: 'Abusive messages',
+        context_url: '/chat/room-1',
+      };
+
+      const pending = service.reportUserAsync(dto);
+      const request = http.expectOne(`${api}/safety/report`);
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual(dto);
+      request.flush({
+        success: true,
+        message: 'Report submitted successfully',
+        report_id: 'report-1',
+        duplicate: true,
+      });
+
+      await expect(pending).resolves.toEqual({
+        success: true,
+        message: 'Report submitted successfully',
+        report_id: 'report-1',
+        duplicate: true,
+      });
+    });
+
+    it('rejects when the API refuses the report so callers never show a false success', async () => {
+      const pending = service.reportUserAsync({
+        reported_id: TARGET_ID,
+        reason_category: 'spam',
+      });
+      http
+        .expectOne(`${api}/safety/report`)
+        .flush(
+          { message: 'Report limit reached' },
+          { status: 429, statusText: 'Too Many Requests' },
+        );
+
+      await expect(pending).rejects.toMatchObject({ status: 429 });
+    });
+  });
+
+  describe('blocking', () => {
+    it('adds the account to the shared cache only after the API accepted the block', async () => {
+      const pending = service.blockUserAsync(TARGET_ID);
+      expect(service.isUserBlockedCached(TARGET_ID)).toBe(false);
+
+      const request = http.expectOne(`${api}/safety/block/${TARGET_ID}`);
+      expect(request.request.method).toBe('POST');
+      request.flush({ success: true, blocked_id: TARGET_ID, already_blocked: false });
+
+      await expect(pending).resolves.toEqual({
+        success: true,
+        blocked_id: TARGET_ID,
+        already_blocked: false,
+      });
+      expect(service.isUserBlockedCached(TARGET_ID)).toBe(true);
+      expect(service.blockedUserIdsSignal().has(TARGET_ID)).toBe(true);
+    });
+
+    it('treats a repeated block as success and keeps a single cache entry', async () => {
+      const pending = service.blockUserAsync(TARGET_ID);
+      http
+        .expectOne(`${api}/safety/block/${TARGET_ID}`)
+        .flush({ success: true, blocked_id: TARGET_ID, already_blocked: true });
+
+      const result = await pending;
+
+      expect(result.already_blocked).toBe(true);
+      expect([...service.blockedUserIdsSignal()]).toEqual([TARGET_ID]);
+    });
+
+    it('leaves the cache untouched and rejects when the block fails', async () => {
+      service.setBlockedUserLocal(OTHER_ID, true);
+
+      const pending = service.blockUserAsync(TARGET_ID);
+      http
+        .expectOne(`${api}/safety/block/${TARGET_ID}`)
+        .flush({ message: 'Unable to block user' }, { status: 500, statusText: 'Server Error' });
+
+      await expect(pending).rejects.toMatchObject({ status: 500 });
+      expect(service.isUserBlockedCached(TARGET_ID)).toBe(false);
+      expect(service.isUserBlockedCached(OTHER_ID)).toBe(true);
+    });
+
+    it('removes the account from the cache once the unblock succeeded', async () => {
+      service.setBlockedUserLocal(TARGET_ID, true);
+      service.setBlockedUserLocal(OTHER_ID, true);
+
+      const pending = service.unblockUserAsync(TARGET_ID);
+      const request = http.expectOne(`${api}/safety/unblock/${TARGET_ID}`);
+      expect(request.request.method).toBe('POST');
+      request.flush({ success: true });
+
+      await expect(pending).resolves.toEqual({ success: true });
+      expect([...service.blockedUserIdsSignal()]).toEqual([OTHER_ID]);
+    });
+
+    it('keeps the block in the cache and rejects when the unblock fails', async () => {
+      service.setBlockedUserLocal(TARGET_ID, true);
+
+      const pending = service.unblockUserAsync(TARGET_ID);
+      http
+        .expectOne(`${api}/safety/unblock/${TARGET_ID}`)
+        .flush({ message: 'Unable to unblock user' }, { status: 500, statusText: 'Server Error' });
+
+      await expect(pending).rejects.toMatchObject({ status: 500 });
+      expect(service.isUserBlockedCached(TARGET_ID)).toBe(true);
+    });
+  });
+
+  describe('report categories', () => {
+    it('returns the catalogue served by the API', async () => {
+      const categories = [{ value: 'spam', label: 'Spam', description: 'Unsolicited promotions' }];
+
+      const pending = service.getReportCategories();
+      http.expectOne(`${api}/safety/report-categories`).flush(categories);
+
+      await expect(pending).resolves.toEqual(categories);
+    });
+
+    it('falls back to the translated contract categories when the API is unavailable', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      const pending = service.getReportCategories();
+      http
+        .expectOne(`${api}/safety/report-categories`)
+        .flush(null, { status: 503, statusText: 'Service Unavailable' });
+
+      const categories = await pending;
+
+      expect(categories.map((category) => category.value)).toEqual([...SAFETY_REPORT_CATEGORIES]);
+      expect(categories.map((category) => category.value)).toEqual([
+        'harassment',
+        'spam',
+        'inappropriate_content',
+        'fake_profile',
+        'other',
+      ]);
+      for (const category of categories) {
+        expect(category.label).toBe(`t:report.category.${category.value}.label`);
+        expect(category.description).toBe(`t:report.category.${category.value}.description`);
+      }
+    });
   });
 });

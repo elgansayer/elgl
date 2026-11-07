@@ -12,6 +12,9 @@ import { DirectConversationService } from '../../services/direct-conversation.se
 import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { ReportButtonComponent } from '../report-user-modal/report-button.component';
 import { AchievementsComponent } from '../../achievements/achievements.component';
+import { SafetyService, type SafetyReportTargetType } from '../../services/safety.service';
+import { ConfirmService } from '../../services/confirm.service';
+import { showToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-user-detail',
@@ -35,6 +38,8 @@ export class UserDetailComponent {
   private profileVisitsService = inject(ProfileVisitsService);
   private directConversationService = inject(DirectConversationService);
   private relationshipService = inject(ProfileRelationshipService);
+  private readonly safetyService = inject(SafetyService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly i18n = inject(I18nService);
   private translationContextKey = '';
   private readonly visitAttempts = new Set<string>();
@@ -52,6 +57,26 @@ export class UserDetailComponent {
 
   readonly isOpeningChat = signal<boolean>(false);
   readonly chatErrorKey = signal<string>('');
+
+  readonly blockPending = signal<boolean>(false);
+  readonly blockErrorKey = signal<string>('');
+
+  /**
+   * Personal and business accounts share one `users` record, so both are
+   * blockable and reportable. A business account is detected from its business
+   * profile so the wording and the confirmation match what the member sees.
+   */
+  readonly isBusinessAccount = computed(() =>
+    Boolean(this.profile()?.business_name?.trim()),
+  );
+  readonly reportTargetType = computed<SafetyReportTargetType>(() =>
+    this.isBusinessAccount() ? 'business' : 'user',
+  );
+  readonly isBlocked = computed(() => {
+    const profile = this.profile();
+    if (!profile) return false;
+    return this.safetyService.blockedUserIdsSignal().has(profile.id);
+  });
 
   readonly translatedBioText = signal<string>('');
   readonly showTranslated = signal<boolean>(false);
@@ -260,6 +285,67 @@ export class UserDetailComponent {
     } catch (e) {
       this.isLiked.set(currentlyLiked);
       console.error('Like error:', e);
+    }
+  }
+
+  /** Display name shown in confirmations and toasts. */
+  targetDisplayName(): string {
+    const profile = this.profile();
+    if (!profile) return this.i18n.translate('common.unknownUser');
+    return (
+      profile.display_name?.trim() ||
+      profile.business_name?.trim() ||
+      this.i18n.translate('common.unknownUser')
+    );
+  }
+
+  /**
+   * Blocks or unblocks the member or business shown on this page. Blocking is
+   * a high-impact action, so it is confirmed with the consequences spelled out
+   * before the request is sent.
+   */
+  async toggleBlock(): Promise<void> {
+    const profile = this.profile();
+    if (!profile || this.isOwnProfile() || this.blockPending()) return;
+
+    const name = this.targetDisplayName();
+    const wasBlocked = this.isBlocked();
+
+    if (!wasBlocked) {
+      const confirmed = await this.confirmService.confirm(
+        this.i18n.translate(
+          this.isBusinessAccount()
+            ? 'userProfile.blockConfirmBusiness'
+            : 'userProfile.blockConfirmUser',
+          { name },
+        ),
+      );
+      if (!confirmed) return;
+      if (this.profile()?.id !== profile.id) return;
+    }
+
+    this.blockPending.set(true);
+    this.blockErrorKey.set('');
+
+    try {
+      if (wasBlocked) {
+        await this.safetyService.unblockUserAsync(profile.id);
+        showToast(
+          this.i18n.translate('userProfile.unblockSuccess', { name }),
+          'success',
+        );
+      } else {
+        await this.safetyService.blockUserAsync(profile.id);
+        showToast(
+          this.i18n.translate('userProfile.blockSuccess', { name }),
+          'success',
+        );
+      }
+    } catch {
+      this.blockErrorKey.set('userProfile.blockError');
+      showToast(this.i18n.translate('userProfile.blockError'), 'error');
+    } finally {
+      this.blockPending.set(false);
     }
   }
 

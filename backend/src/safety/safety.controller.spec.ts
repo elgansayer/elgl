@@ -1,6 +1,7 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, ParseUUIDPipe } from '@nestjs/common';
+import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { SafetyController } from './safety.controller';
 import { SafetyService } from './safety.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -59,26 +60,65 @@ describe('SafetyController', () => {
   });
 
   describe('reportUser', () => {
-    it('should call service reportUser when user is provided', async () => {
+    it('files the report for the authenticated caller and returns the report id', async () => {
       const dto: any = { reported_id: 'bad-1', reason_category: 'spam' };
-      (safetyService.reportUser as Mock).mockResolvedValue(undefined);
+      (safetyService.reportUser as Mock).mockResolvedValue({
+        id: 'report-1',
+        duplicate: false,
+      });
 
       const result = await controller.reportUser(
         { user: { id: 'user-1' } },
         dto,
       );
+
       expect(safetyService.reportUser).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual({
         success: true,
         message: 'Report submitted successfully',
+        report_id: 'report-1',
+        duplicate: false,
       });
+    });
+
+    it('marks a repeat of an open report as a duplicate without failing', async () => {
+      (safetyService.reportUser as Mock).mockResolvedValue({
+        id: 'report-1',
+        duplicate: true,
+      });
+
+      const result = await controller.reportUser({ user: { id: 'user-1' } }, {
+        reported_id: 'bad-1',
+        reason_category: 'spam',
+      } as any);
+
+      expect(result.success).toBe(true);
+      expect(result.duplicate).toBe(true);
+      expect(result.report_id).toBe('report-1');
+    });
+
+    it('propagates service failures instead of fabricating a success', async () => {
+      (safetyService.reportUser as Mock).mockRejectedValue(
+        new ForbiddenException('nope'),
+      );
+
+      await expect(
+        controller.reportUser({ user: { id: 'user-1' } }, {
+          reported_id: 'bad-1',
+          reason_category: 'spam',
+        } as any),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 
   describe('blockUser', () => {
     it('should call service blockUser when user is provided', async () => {
       const dto: any = { blocked_id: 'bad-2' };
-      const response: any = { success: true, blocked_id: 'bad-2' };
+      const response: any = {
+        success: true,
+        blocked_id: 'bad-2',
+        already_blocked: false,
+      };
       (safetyService.blockUser as Mock).mockResolvedValue(response);
 
       const result = await controller.blockUser(
@@ -270,5 +310,45 @@ describe('SafetyController', () => {
       );
       expect(result).toEqual(details);
     });
+  });
+
+  describe('abuse resistance metadata', () => {
+    const throttle = (handler: keyof SafetyController) => ({
+      limit: Reflect.getMetadata(
+        'THROTTLER:LIMITdefault',
+        SafetyController.prototype[handler],
+      ),
+      ttl: Reflect.getMetadata(
+        'THROTTLER:TTLdefault',
+        SafetyController.prototype[handler],
+      ),
+    });
+
+    it.each([
+      ['reportUser', 5],
+      ['blockUser', 30],
+      ['unblockUser', 30],
+      ['blockUserByParam', 30],
+      ['unblockUserByParam', 30],
+    ] as const)('throttles %s to %i requests a minute', (handler, limit) => {
+      expect(throttle(handler)).toEqual({ limit, ttl: 60000 });
+    });
+
+    it.each(['blockUserByParam', 'unblockUserByParam'] as const)(
+      'validates the %s path parameter as a UUID',
+      (handler) => {
+        const args = Reflect.getMetadata(
+          ROUTE_ARGS_METADATA,
+          SafetyController,
+          handler,
+        );
+        const paramEntry = Object.values<any>(args).find(
+          (entry) => entry.data === 'blockedId',
+        );
+        expect(
+          paramEntry.pipes.some((p: unknown) => p instanceof ParseUUIDPipe),
+        ).toBe(true);
+      },
+    );
   });
 });

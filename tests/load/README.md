@@ -128,6 +128,12 @@ Every request also carries an `X-Load-Test-Id` header (via the `beforeRequest` h
 ### Blocks Module (`/blocks`)
 - `GET /blocks` - Get blocked users list
 
+### Trust & Safety limits to expect under load
+- Report routes (`POST /safety/report`, `POST /moderation/report`, `POST /users/report`) are throttled to 5 requests per minute per client, and each account may file 20 distinct reports in a rolling 24 hours. Sustained load from one token is therefore expected to return `429`; use many distinct tokens, or measure the `429` rate instead of treating it as a failure.
+- Block and unblock routes are throttled to 30 requests per minute per client. Repeating a block or unblock is idempotent and succeeds.
+- `GET /moderation/items` and `GET /moderation/analyse/:userId` require an admin token with the `moderation.cases.read` capability.
+- Account identifiers must be UUIDs. See `docs/block-report-users-businesses.md`.
+
 ### Spam Detection (`/spam-detection`)
 - `POST /spam-detection/check` - Content spam check
 

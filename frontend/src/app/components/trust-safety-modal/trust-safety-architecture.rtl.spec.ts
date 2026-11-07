@@ -247,8 +247,8 @@ describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
         template = templates.get('ReportButton')!;
       });
 
-      it('should use TranslatePipe for report.button_label', () => {
-        expect(template).toContain("'report.button_label' | t");
+      it('should use TranslatePipe for the report button label key', () => {
+        expect(template).toContain('labelKey() | t');
       });
     });
   });

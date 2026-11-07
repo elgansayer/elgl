@@ -3,6 +3,7 @@ import { Component, inject, input } from '@angular/core';
 
 import { ReportUserModalService } from './report-user-modal.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import type { SafetyReportTargetType } from '../../services/safety.service';
 
 @Component({
   selector: 'app-report-button',
@@ -25,16 +26,22 @@ import { TranslatePipe } from '../../services/translate.pipe';
           d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"
         />
       </svg>
-      {{ 'report.button_label' | t }}
+      {{ labelKey() | t }}
     </button>
   `,
 })
 export class ReportButtonComponent {
   readonly userId = input.required<string>();
   readonly contextUrl = input<string>();
+  /**
+   * Personal and business accounts are both reportable. The type only changes
+   * the wording shown to the reporter.
+   */
+  readonly targetType = input<SafetyReportTargetType>('user');
+  readonly labelKey = input<string>('report.button_label');
   private readonly reportModalService = inject(ReportUserModalService);
 
   openReportModal(): void {
-    this.reportModalService.open(this.userId(), this.contextUrl());
+    this.reportModalService.open(this.userId(), this.contextUrl(), this.targetType());
   }
 }

@@ -1,6 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
+import { EconomyStore } from '../../services/economy.store';
+import { I18nService } from '../../services/i18n.service';
+import {
+  SAFETY_REPORT_CATEGORIES,
+  SafetyService,
+  type ReportCategory,
+} from '../../services/safety.service';
+import { TrustSafetyModalComponent } from './trust-safety-modal.component';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = resolve(__filename, '..');
@@ -141,5 +151,112 @@ describe('TrustSafetyModalComponent', () => {
       expect(templateContent).toContain("'safety.submitReportAria'");
       expect(templateContent).toContain("'safety.confirmBlockAria'");
     });
+  });
+});
+
+describe('TrustSafetyModalComponent behaviour', () => {
+  const TARGET_ID = '22222222-2222-4222-8222-222222222222';
+  const CATEGORIES: ReportCategory[] = [
+    { value: 'harassment', label: 'Harassment' },
+    { value: 'spam', label: 'Spam' },
+  ];
+  let getReportCategories: ReturnType<typeof vi.fn>;
+  let store: { reportUser: ReturnType<typeof vi.fn>; blockUser: ReturnType<typeof vi.fn> };
+  let translations: Record<string, string>;
+
+  function create() {
+    const fixture = TestBed.createComponent(TrustSafetyModalComponent);
+    fixture.componentRef.setInput('targetId', TARGET_ID);
+    fixture.componentRef.setInput('targetName', 'Partner One');
+    return fixture.componentInstance;
+  }
+
+  beforeEach(async () => {
+    translations = {};
+    getReportCategories = vi.fn().mockResolvedValue(CATEGORIES);
+    store = {
+      reportUser: vi.fn().mockResolvedValue(undefined),
+      blockUser: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [TrustSafetyModalComponent],
+      providers: [
+        { provide: EconomyStore, useValue: store },
+        { provide: SafetyService, useValue: { getReportCategories } },
+        {
+          provide: I18nService,
+          useValue: { translate: (key: string) => translations[key] ?? key },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  it('carries no hard-coded reason list and shows the catalogue once it has loaded', async () => {
+    const component = create();
+
+    expect(component.reportCategories()).toEqual([]);
+    expect(component.categoriesLoading()).toBe(true);
+
+    await vi.waitFor(() => expect(component.categoriesLoading()).toBe(false));
+    expect(component.reportCategories()).toEqual(CATEGORIES);
+  });
+
+  it('keeps the list empty when the API offers no reasons', async () => {
+    getReportCategories.mockResolvedValue([]);
+    const component = create();
+
+    await vi.waitFor(() => expect(component.categoriesLoading()).toBe(false));
+
+    expect(component.reportCategories()).toEqual([]);
+  });
+
+  it('stops loading and keeps the list empty when the catalogue request fails', async () => {
+    getReportCategories.mockRejectedValue(new Error('offline'));
+    const component = create();
+
+    await vi.waitFor(() => expect(component.categoriesLoading()).toBe(false));
+
+    expect(component.reportCategories()).toEqual([]);
+  });
+
+  it('starts on a reason the API accepts', () => {
+    const component = create();
+
+    expect(SAFETY_REPORT_CATEGORIES).toContain(component.reportReason);
+  });
+
+  it('localises reason labels from the dictionary and falls back to the API label', () => {
+    const component = create();
+    translations['report.category.spam.label'] = 'Spam (translated)';
+
+    expect(component.categoryLabel({ value: 'spam', label: 'Spam' })).toBe('Spam (translated)');
+    expect(component.categoryLabel({ value: 'harassment', label: 'Harassment' })).toBe(
+      'Harassment',
+    );
+  });
+
+  it('files the chosen reason and details through the store, then closes', async () => {
+    const component = create();
+    const closed = vi.fn();
+    component.closed.subscribe(closed);
+    component.reportReason = 'spam';
+    component.reportDetails = 'Sells followers';
+
+    await component.submitReport();
+
+    expect(store.reportUser).toHaveBeenCalledWith(TARGET_ID, 'spam', 'Sells followers');
+    expect(closed).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks the account through the store, then closes', async () => {
+    const component = create();
+    const closed = vi.fn();
+    component.closed.subscribe(closed);
+
+    await component.confirmBlock();
+
+    expect(store.blockUser).toHaveBeenCalledWith(TARGET_ID);
+    expect(closed).toHaveBeenCalledTimes(1);
   });
 });

@@ -1412,6 +1412,22 @@
           States: loading · error with retry · empty · table
         </footer>
       </section>
+      <section class="specimen" data-component="components/user-detail-block">
+        <header>
+          <h2>User detail block actions</h2>
+          <code>components/user-detail</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <button class="btn secondary-btn">Report</button
+            ><button class="btn secondary-btn">Block user</button>
+          </div>
+          <button class="btn secondary-btn" aria-busy="true" disabled>Block user</button>
+          <button class="btn secondary-btn">Unblock user</button>
+          <div class="alert error" role="alert">Could not update block. Try again.</div>
+        </div>
+        <footer>States: block · unblock · pending · error</footer>
+      </section>
     </main>
 
     <script>

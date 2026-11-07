@@ -1,25 +1,62 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Logger } from '@nestjs/common';
 import { SafetyService } from './safety.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
 
+const VIEWER = '11111111-1111-4111-8111-111111111111';
+const BUSINESS = '44444444-4444-4444-8444-444444444444';
+
+type Result = { data?: unknown; error?: unknown; count?: number | null };
+
+/**
+ * Minimal chainable query fake. Each table gets its own queue of results for
+ * `maybeSingle`, `single` and for awaiting the builder directly.
+ */
+function fakeTable(results: {
+  maybeSingle?: Result[];
+  single?: Result[];
+  awaited?: Result[];
+}) {
+  const maybeSingle = [...(results.maybeSingle ?? [])];
+  const single = [...(results.single ?? [])];
+  const awaited = [...(results.awaited ?? [])];
+  const builder: Record<string, ReturnType<typeof vi.fn>> = {};
+  for (const method of [
+    'select',
+    'eq',
+    'in',
+    'gte',
+    'order',
+    'limit',
+    'insert',
+    'upsert',
+  ]) {
+    builder[method] = vi.fn().mockReturnValue(builder);
+  }
+  builder.maybeSingle = vi.fn(() =>
+    Promise.resolve(maybeSingle.shift() ?? { data: null, error: null }),
+  );
+  builder.single = vi.fn(() =>
+    Promise.resolve(single.shift() ?? { data: null, error: null }),
+  );
+  builder.then = vi.fn((resolve: (value: unknown) => unknown) =>
+    Promise.resolve(
+      awaited.shift() ?? { data: [], error: null, count: 0 },
+    ).then(resolve),
+  );
+  return builder;
+}
+
 describe('SafetyService business target contract', () => {
   let service: SafetyService;
-  let query: {
-    insert: ReturnType<typeof vi.fn>;
-    select: ReturnType<typeof vi.fn>;
-    eq: ReturnType<typeof vi.fn>;
-    single: ReturnType<typeof vi.fn>;
-    maybeSingle: ReturnType<typeof vi.fn>;
-    then: ReturnType<typeof vi.fn>;
-    response: { data?: unknown; error?: unknown };
-  };
   let from: ReturnType<typeof vi.fn>;
   let metrics: {
     recordTsReportSubmitted: ReturnType<typeof vi.fn>;
     recordTsBlockCreated: ReturnType<typeof vi.fn>;
     recordTsBlockRemoved: ReturnType<typeof vi.fn>;
+    recordTsSafetyOperation: ReturnType<typeof vi.fn>;
   };
   let cache: {
     invalidateUserCaches: ReturnType<typeof vi.fn>;
@@ -28,22 +65,13 @@ describe('SafetyService business target contract', () => {
   };
 
   beforeEach(() => {
-    query = {
-      insert: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn(),
-      maybeSingle: vi.fn(),
-      response: { data: null, error: null },
-      then: vi.fn((resolve: (value: unknown) => void) =>
-        resolve(query.response),
-      ),
-    };
-    from = vi.fn().mockReturnValue(query);
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    from = vi.fn();
     metrics = {
       recordTsReportSubmitted: vi.fn(),
       recordTsBlockCreated: vi.fn(),
       recordTsBlockRemoved: vi.fn(),
+      recordTsSafetyOperation: vi.fn(),
     };
     cache = {
       invalidateUserCaches: vi.fn().mockResolvedValue(undefined),
@@ -59,66 +87,86 @@ describe('SafetyService business target contract', () => {
   });
 
   it('blocks a business account through the same user safety boundary', async () => {
-    query.maybeSingle
-      .mockResolvedValueOnce({ data: { id: 'business-user' }, error: null })
-      .mockResolvedValueOnce({ data: null, error: null });
-    query.response = { error: null };
-
-    const result = await service.blockUser('viewer-user', {
-      blocked_id: 'business-user',
+    const users = fakeTable({
+      maybeSingle: [{ data: { id: BUSINESS }, error: null }],
     });
+    const blocks = fakeTable({
+      awaited: [{ data: [{ id: 'block-1' }], error: null }],
+    });
+    from.mockImplementation((table: string) =>
+      table === 'users' ? users : blocks,
+    );
 
-    expect(result).toEqual({ success: true, blocked_id: 'business-user' });
+    const result = await service.blockUser(VIEWER, { blocked_id: BUSINESS });
+
+    expect(result).toEqual({
+      success: true,
+      blocked_id: BUSINESS,
+      already_blocked: false,
+    });
     expect(from).toHaveBeenCalledWith('users');
     expect(from).toHaveBeenCalledWith('blocks');
-    expect(query.insert).toHaveBeenCalledWith({
-      blocker_id: 'viewer-user',
-      blocked_id: 'business-user',
-    });
+    expect(blocks.upsert).toHaveBeenCalledWith(
+      { blocker_id: VIEWER, blocked_id: BUSINESS },
+      { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true },
+    );
     expect(metrics.recordTsBlockCreated).toHaveBeenCalledTimes(1);
     expect(cache.invalidateUserPairCaches).toHaveBeenCalledWith(
-      'viewer-user',
-      'business-user',
+      VIEWER,
+      BUSINESS,
     );
   });
 
   it('reports a business account through the same user safety boundary', async () => {
-    query.single
-      .mockResolvedValueOnce({ data: { id: 'business-user' }, error: null })
-      .mockResolvedValueOnce({ data: { id: 'report-1' }, error: null });
+    const users = fakeTable({
+      maybeSingle: [{ data: { id: BUSINESS }, error: null }],
+    });
+    const reports = fakeTable({
+      maybeSingle: [{ data: null, error: null }],
+      awaited: [{ count: 0, error: null }],
+      single: [{ data: { id: 'report-1' }, error: null }],
+    });
+    from.mockImplementation((table: string) =>
+      table === 'users' ? users : reports,
+    );
 
-    const result = await service.reportUser('viewer-user', {
-      reported_id: 'business-user',
+    const result = await service.reportUser(VIEWER, {
+      reported_id: BUSINESS,
       reason_category: 'spam',
       description: 'Unwanted promotion',
       context_url: '/profile/business-user',
     });
 
-    expect(result).toEqual({ id: 'report-1' });
+    expect(result).toEqual({ id: 'report-1', duplicate: false });
     expect(from).toHaveBeenCalledWith('users');
     expect(from).toHaveBeenCalledWith('reports');
-    expect(query.insert).toHaveBeenCalledWith({
-      reporter_id: 'viewer-user',
-      reported_user_id: 'business-user',
+    expect(reports.insert).toHaveBeenCalledWith({
+      reporter_id: VIEWER,
+      reported_user_id: BUSINESS,
       reason_category: 'spam',
       description: 'Unwanted promotion',
       context_url: '/profile/business-user',
       status: 'pending',
     });
     expect(metrics.recordTsReportSubmitted).toHaveBeenCalledWith('spam');
-    expect(cache.invalidateUserCaches).toHaveBeenCalledWith('business-user');
+    expect(cache.invalidateUserCaches).toHaveBeenCalledWith(BUSINESS);
   });
 
   it('does not require a separate business identity table for safety actions', async () => {
-    query.maybeSingle
-      .mockResolvedValueOnce({ data: { id: 'business-user' }, error: null })
-      .mockResolvedValueOnce({ data: null, error: null });
-    query.response = { error: null };
+    const users = fakeTable({
+      maybeSingle: [{ data: { id: BUSINESS }, error: null }],
+    });
+    const blocks = fakeTable({
+      awaited: [{ data: [{ id: 'block-1' }], error: null }],
+    });
+    from.mockImplementation((table: string) =>
+      table === 'users' ? users : blocks,
+    );
 
-    await service.blockUser('viewer-user', { blocked_id: 'business-user' });
+    await service.blockUser(VIEWER, { blocked_id: BUSINESS });
 
     const tables = from.mock.calls.map(([table]) => table);
-    expect(tables).toEqual(['users', 'blocks', 'blocks']);
+    expect(tables).toEqual(['users', 'blocks']);
     expect(tables).not.toContain('business_profiles');
   });
 });

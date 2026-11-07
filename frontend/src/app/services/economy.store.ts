@@ -6,7 +6,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
-import { SafetyService } from './safety.service';
+import { SafetyService, type SafetyReportCategory } from './safety.service';
 import { GiftAnimationService, GiftAnimationType } from './gift-animation.service';
 import { OfflineEconomyService } from './offline-economy.service';
 import { NetworkStatusService } from './network-status.service';
@@ -474,19 +474,24 @@ export class EconomyStore {
     }
   }
 
-  async reportUser(reportedId: string, reason: string, details?: string): Promise<void> {
+  async reportUser(
+    reportedId: string,
+    reason: SafetyReportCategory,
+    details?: string,
+  ): Promise<void> {
     try {
-      await this.safetyService.reportUser({
+      const result = await this.safetyService.reportUser({
         reported_id: reportedId,
         reason_category: reason,
         description: details,
       });
       showToast(
-        '🛡️ Thank you. Your report has been submitted to our Trust & Safety moderation team for review within 24 hours.',
+        this.i18n.translate(result.duplicate ? 'report.toast_duplicate' : 'economy.reportSubmitted'),
+        'success',
       );
     } catch (e) {
       console.error('Report user error:', e);
-      showToast('Failed to submit report.');
+      showToast(this.i18n.translate('economy.reportFailed'), 'error');
     }
   }
 
@@ -496,12 +501,10 @@ export class EconomyStore {
       const set = new Set(this.blockedUserIds());
       set.add(blockedId);
       this.blockedUserIds.set(set);
-      showToast(
-        '🚫 User blocked. All posts, moments, and direct messages from this user are now hidden across the platform.',
-      );
+      showToast(this.i18n.translate('economy.blockSucceeded'), 'success');
     } catch (e) {
       console.error('Block user error:', e);
-      showToast('Failed to block user.');
+      showToast(this.i18n.translate('economy.blockFailed'), 'error');
     }
   }
 

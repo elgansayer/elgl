@@ -69,6 +69,7 @@ describe('ReportUserModalComponent', () => {
         "'report.details_label'",
         "'report.details_placeholder'",
         "'report.block_user'",
+        "'report.block_user.consequence'",
         "'report.cancel'",
         "'report.submitting'",
         "'report.submit'",
@@ -76,6 +77,15 @@ describe('ReportUserModalComponent', () => {
       for (const key of keys) {
         expect(templateContent).toContain(key);
       }
+    });
+
+    it('should word the heading and introduction for the reported account type', () => {
+      expect(templateContent).toContain('{{ title() }}');
+      expect(templateContent).toContain('{{ intro() }}');
+    });
+
+    it('should expose a failure as readable text inside an alert region', () => {
+      expect(templateContent).toMatch(/role="alert"[\s\S]*?\{\{ errorMessage\(\) \}\}/);
     });
 
     it('should not hardcode English user-facing strings', () => {
@@ -153,7 +163,7 @@ describe('ReportUserModalComponent', () => {
     });
 
     it('should use i18n translate pipe for the button label', () => {
-      expect(templateContent).toContain("'report.button_label'");
+      expect(templateContent).toContain('labelKey() | t');
     });
 
     it('should not hardcode English text in the template', () => {

@@ -3,6 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ModerationController } from './moderation.controller';
 import { ModerationService } from './moderation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { AdminCapabilityGuard } from '../admin/guards/admin-capability.guard';
+import { AdminGuard } from '../admin/guards/admin.guard';
+import { ADMIN_CAPABILITIES_METADATA_KEY } from '../admin/decorators/require-admin-capabilities.decorator';
 
 describe('ModerationController', () => {
   let controller: ModerationController;
@@ -25,6 +28,10 @@ describe('ModerationController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(AdminGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(AdminCapabilityGuard)
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
@@ -83,9 +90,14 @@ describe('ModerationController', () => {
 
   describe('reportUser', () => {
     it('should call service reportUser with reporter id and dto', async () => {
-      const dto = { reportedUserId: 'bad-user', reasonCategory: 'spam' };
+      const dto = {
+        reportedUserId: '22222222-2222-4222-8222-222222222222',
+        reasonCategory: 'spam' as const,
+      };
       (moderationService.reportUser as Mock).mockResolvedValue({
-        id: 'report-1',
+        success: true,
+        report_id: 'report-1',
+        duplicate: false,
       });
 
       const result = await controller.reportUser(
@@ -97,7 +109,54 @@ describe('ModerationController', () => {
         'reporter-1',
         dto,
       );
-      expect(result).toEqual({ id: 'report-1' });
+      expect(result).toEqual({
+        success: true,
+        report_id: 'report-1',
+        duplicate: false,
+      });
+    });
+  });
+
+  describe('authorisation boundaries', () => {
+    const guardsFor = (handler: keyof ModerationController) =>
+      Reflect.getMetadata(
+        '__guards__',
+        ModerationController.prototype[handler],
+      ) ?? [];
+    const capabilitiesFor = (handler: keyof ModerationController) =>
+      Reflect.getMetadata(
+        ADMIN_CAPABILITIES_METADATA_KEY,
+        ModerationController.prototype[handler],
+      );
+
+    it.each([
+      ['getItems', ['moderation.cases.read']],
+      ['analyseUser', ['moderation.cases.read']],
+      ['approve', ['moderation.cases.manage']],
+      ['reject', ['moderation.cases.manage']],
+    ] as const)(
+      'requires admin capabilities %s -> %j so any signed-in user cannot read the queue or resolve reports',
+      (handler, capabilities) => {
+        expect(guardsFor(handler)).toEqual([AdminGuard, AdminCapabilityGuard]);
+        expect(capabilitiesFor(handler)).toEqual(capabilities);
+      },
+    );
+
+    it('keeps report submission open to any authenticated user', () => {
+      expect(guardsFor('reportUser')).toEqual([]);
+      expect(capabilitiesFor('reportUser')).toBeUndefined();
+      expect(Reflect.getMetadata('__guards__', ModerationController)).toEqual([
+        SupabaseAuthGuard,
+      ]);
+    });
+
+    it('throttles report submission to 5 requests a minute', () => {
+      expect(
+        Reflect.getMetadata(
+          'THROTTLER:LIMITdefault',
+          ModerationController.prototype.reportUser,
+        ),
+      ).toBe(5);
     });
   });
 

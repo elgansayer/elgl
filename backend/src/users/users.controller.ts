@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -32,6 +33,9 @@ import {
 } from './interfaces/user-profile.interface';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
+import { ReportUserDto } from '../safety/dto/safety.dto';
+import type { ReportSubmissionResponse } from '../safety/safety.controller';
+import { BlockResult, SafetyService } from '../safety/safety.service';
 
 @Controller('users')
 @UseGuards(SupabaseAuthGuard)
@@ -39,6 +43,7 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly mediaService: MediaService,
+    private readonly safetyService: SafetyService,
   ) {}
 
   private parsePaginationInteger(
@@ -448,46 +453,46 @@ export class UsersController {
     return this.usersService.unfollowUser(user.id, id);
   }
 
+  /**
+   * Legacy block, unblock and report routes. They delegate to `SafetyService`
+   * so they share target validation, idempotency, the daily report ceiling,
+   * metrics and cache invalidation with `/safety/*`, `/blocks` and
+   * `/moderation/report` instead of keeping a weaker second implementation.
+   */
   @Post('block/:id')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async blockUser(
     @CurrentUser() user: User | null,
-    @Param('id') targetId: string,
-  ): Promise<{ success: boolean }> {
+    @Param('id', new ParseUUIDPipe()) targetId: string,
+  ): Promise<BlockResult> {
     if (!user) throw new UnauthorizedException();
-    if (user.id === targetId)
-      throw new BadRequestException('Cannot block yourself');
-    return this.usersService.blockUser(user.id, targetId);
+    return this.safetyService.blockUser(user.id, { blocked_id: targetId });
   }
 
   @Delete('block/:id')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async unblockUser(
     @CurrentUser() user: User | null,
-    @Param('id') targetId: string,
+    @Param('id', new ParseUUIDPipe()) targetId: string,
   ): Promise<{ success: boolean }> {
     if (!user) throw new UnauthorizedException();
-    return this.usersService.unblockUser(user.id, targetId);
+    return this.safetyService.unblockUser(user.id, targetId);
   }
 
   @Post('report')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async reportUser(
     @CurrentUser() user: User | null,
-    @Body()
-    dto: {
-      reported_id: string;
-      reason_category: string;
-      description?: string;
-      context_url?: string;
-    },
-  ): Promise<{ success: boolean; message: string }> {
+    @Body() dto: ReportUserDto,
+  ): Promise<ReportSubmissionResponse> {
     if (!user) throw new UnauthorizedException();
-    if (!dto.reported_id || !dto.reason_category)
-      throw new BadRequestException();
-    return this.usersService.reportUser(user.id, {
-      reported_id: String(dto.reported_id),
-      reason_category: String(dto.reason_category),
-      description: dto.description ? String(dto.description) : undefined,
-      context_url: dto.context_url ? String(dto.context_url) : undefined,
-    });
+    const result = await this.safetyService.reportUser(user.id, dto);
+    return {
+      success: true,
+      message: 'Report submitted',
+      report_id: result.id,
+      duplicate: result.duplicate,
+    };
   }
 
   @Get('me/privacy-settings')

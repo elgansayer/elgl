@@ -6,7 +6,12 @@ import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { HlmTextareaImports } from '@spartan-ng/helm/textarea';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EconomyStore } from '../../services/economy.store';
-import { SafetyService, ReportCategory } from '../../services/safety.service';
+import {
+  SafetyService,
+  ReportCategory,
+  type SafetyReportCategory,
+} from '../../services/safety.service';
+import { I18nService } from '../../services/i18n.service';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
@@ -128,7 +133,7 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
                   selectClass="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium"
                 >
                   @for (category of reportCategories(); track category.value) {
-                    <option [value]="category.value">{{ category.label }}</option>
+                    <option [value]="category.value">{{ categoryLabel(category) }}</option>
                   }
                 </hlm-native-select>
               </div>
@@ -210,18 +215,13 @@ export class TrustSafetyModalComponent {
 
   readonly store = inject(EconomyStore);
   private readonly safetyService = inject(SafetyService);
+  private readonly i18n = inject(I18nService);
   readonly mode = signal<'report' | 'block'>('report');
   readonly dialogState = computed<HlmDialogState>(() => (this.open() ? 'open' : 'closed'));
-  reportReason = 'harassment';
+  reportReason: SafetyReportCategory = 'harassment';
   reportDetails = '';
   readonly categoriesLoading = signal(false);
-  readonly reportCategories = signal<ReportCategory[]>([
-    { value: 'harassment', label: 'Harassment / Bullying' },
-    { value: 'spam', label: 'Spam / Commercial Advertising' },
-    { value: 'inappropriate', label: 'Inappropriate / Offensive Language' },
-    { value: 'scam', label: 'Suspicious Link / Scam' },
-    { value: 'other', label: 'Other Violation' },
-  ]);
+  readonly reportCategories = signal<ReportCategory[]>([]);
 
   constructor() {
     void this.loadCategories();
@@ -237,10 +237,21 @@ export class TrustSafetyModalComponent {
       const categories = await this.safetyService.getReportCategories();
       if (categories.length > 0) this.reportCategories.set(categories);
     } catch {
-      // Default categories remain available when the service is unavailable.
+      // The service falls back to the translated category list when the API is
+      // unavailable, so an empty list here means the API offered no categories.
     } finally {
       this.categoriesLoading.set(false);
     }
+  }
+
+  /**
+   * Categories are resolved from the translation dictionary so the reason list
+   * is localised even when the API returns its own English label.
+   */
+  categoryLabel(category: ReportCategory): string {
+    const key = `report.category.${category.value}.label`;
+    const translated = this.i18n.translate(key);
+    return translated === key ? category.label : translated;
   }
 
   switchTab(tab: 'report' | 'block'): void {

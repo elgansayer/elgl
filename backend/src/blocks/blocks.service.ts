@@ -4,7 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { MetricsService } from '../metrics/metrics.service';
+import { SafetyService } from '../safety/safety.service';
 
 export interface BlockedUserSummary {
   id: string;
@@ -22,7 +22,7 @@ export class BlocksService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly metricsService: MetricsService,
+    private readonly safetyService: SafetyService,
   ) {}
 
   async getBlockedUsers(
@@ -80,6 +80,11 @@ export class BlocksService {
       .filter((user): user is BlockedUserSummary => user !== undefined);
   }
 
+  /**
+   * Block creation is owned by `SafetyService` so every entry point shares one
+   * set of rules: target validation, an idempotent race-safe write, metrics
+   * and cache invalidation. A repeat request is a successful no-op.
+   */
   async blockUser(
     blockerId: string,
     blockedId: string,
@@ -88,39 +93,17 @@ export class BlocksService {
       return { success: false };
     }
 
-    const client = this.supabaseService.getClient();
-    const { error } = await client
-      .from('blocks')
-      .upsert(
-        { blocker_id: blockerId, blocked_id: blockedId },
-        { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true },
-      );
-
-    if (error) {
-      this.logger.warn('Block creation failed');
-      throw new InternalServerErrorException('Unable to update block state');
-    }
-
-    return { success: true };
+    const result = await this.safetyService.blockUser(blockerId, {
+      blocked_id: blockedId,
+    });
+    return { success: result.success };
   }
 
+  /** Removal is delegated for the same reasons; repeats are no-ops. */
   async unblockUser(
     blockerId: string,
     blockedId: string,
   ): Promise<{ success: boolean }> {
-    const client = this.supabaseService.getClient();
-
-    const { error } = await client
-      .from('blocks')
-      .delete()
-      .match({ blocker_id: blockerId, blocked_id: blockedId });
-
-    if (error) {
-      this.logger.warn('Block removal failed');
-      throw new InternalServerErrorException('Unable to update block state');
-    }
-
-    this.metricsService.recordTsBlockRemoved();
-    return { success: true };
+    return this.safetyService.unblockUser(blockerId, blockedId);
   }
 }

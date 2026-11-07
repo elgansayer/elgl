@@ -121,6 +121,9 @@ describe('UserDetailComponent bio translation', () => {
       .overrideProvider(SafetyService, {
         useValue: {
           getBlockedUserIds: vi.fn().mockReturnValue(of([])),
+          blockedUserIdsSignal: signal(new Set<string>()).asReadonly(),
+          blockUserAsync: vi.fn(),
+          unblockUserAsync: vi.fn(),
         },
       })
       .compileComponents();
