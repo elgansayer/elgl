@@ -67,6 +67,7 @@ Regression coverage includes:
 
 - `backend/src/chat/chat-typing.service.spec.ts`: membership authorization, server-owned identity, bounded metadata, provider degradation, and publish failure;
 - `backend/src/chat/chat-typing.controller.spec.ts`: authenticated principal binding and unauthenticated rejection;
+- `backend/src/chat/chat.module.spec.ts`: the typing controller and service stay registered on the chat module so the authenticated endpoint remains mapped;
 - `frontend/src/app/services/typing.service.spec.ts`: authenticated API publication, anonymous suppression, request minimization, throttling, remote payload validation, expiry, bounds, and room-switch races;
 - `frontend/src/app/components/primitives/typing-indicator/typing-indicator.component.spec.ts`: translated live-region semantics and decorative media;
 - `frontend/src/app/components/chat-list/chat-list.component.spec.ts`: authoritative online filtering and visible non-colour status text.

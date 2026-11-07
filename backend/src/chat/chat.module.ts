@@ -15,7 +15,9 @@ import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatSearchController } from './chat-search.controller';
+import { ChatTypingController } from './chat-typing.controller';
 import { ChatService } from './chat.service';
+import { ChatTypingService } from './chat-typing.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -50,6 +52,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
   controllers: [
     ChatController,
     ChatSearchController,
+    ChatTypingController,
     DirectConversationController,
     ChatSettingsController,
     ChatBackupController,
@@ -62,6 +65,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatTypingService,
     ConversationStarterService,
     DirectConversationService,
     SystemMessageService,
