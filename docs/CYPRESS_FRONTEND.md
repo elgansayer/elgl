@@ -26,6 +26,8 @@ npm run check:cypress-types
 
 `npm ci` installs the `cypress` npm package and downloads the Cypress binary into the Cypress cache (`~/.cache/Cypress` on Linux, or the folder named by `CYPRESS_CACHE_FOLDER`). Jobs that only lint or build set `CYPRESS_INSTALL_BINARY=0` to skip the download; the type-check does not need the binary because the type definitions ship in the npm package. If `npx cypress verify` reports a missing binary, run `npx cypress install`.
 
+`npm run e2e` launches Cypress through `scripts/cypress-e2e.mjs`. The Factory verification sandbox binds the deployment-owned cache read-only at `/tmp/cypress-cache`, where Cypress's first-run verification would otherwise fail writing `binary_state.json` (`EROFS`). The wrapper mirrors a read-only `CYPRESS_CACHE_FOLDER` into a writable `$TMPDIR/cypress-e2e-cache` before spawning the real Cypress CLI, so binary verification and the specs themselves run unchanged against the dev server while the deployment cache stays untouched. Writable caches (local development, GitHub Actions) pass through with no copying.
+
 ## TypeScript project
 
 `frontend/cypress/tsconfig.json` is the TypeScript project for the support files and specs. It sets `moduleDetection` to `force` so every file is its own module. Specs normally declare no imports or exports, so without this setting they share one global scope, and the same helper name in two specs (for example `setupCommonMocks`) fails the type-check with `TS2393: Duplicate function implementation` even though Cypress bundles each spec separately.
