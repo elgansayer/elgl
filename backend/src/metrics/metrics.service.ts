@@ -19,6 +19,14 @@ import type {
 export type MatchmakingDailyJobOutcome =
   'success' | 'partial' | 'failed' | 'skipped';
 
+/**
+ * Decision taken by the Centrifugo connection-token rate limiter: `limited`
+ * means the caller was refused with HTTP 429, `degraded` means the limiter
+ * failed open because its Redis client was unavailable or errored.
+ */
+export type CentrifugoConnectionRateLimitOutcome =
+  'allowed' | 'limited' | 'degraded';
+
 @Injectable()
 export class MetricsService {
   private readonly register: Registry;
@@ -123,6 +131,9 @@ export class MetricsService {
   readonly linkPreviewRequests: Counter<string>;
   readonly linkPreviewFailures: Counter<string>;
   readonly linkPreviewFetchDuration: Histogram<string>;
+
+  // Centrifugo connection-token rate limiter metrics
+  readonly centrifugoConnectionRateLimitDecisions: Counter<string>;
 
   constructor() {
     this.register = new Registry();
@@ -716,6 +727,15 @@ export class MetricsService {
       registers: [this.register],
       buckets: [0.1, 0.25, 0.5, 1, 2, 4, 6, 8, 10],
     });
+
+    // --- Centrifugo connection-token rate limiter Metrics ---
+
+    this.centrifugoConnectionRateLimitDecisions = new Counter({
+      name: 'hellotalk_centrifugo_connection_rate_limit_total',
+      help: 'Total Centrifugo connection-token rate limit decisions by outcome (allowed, limited, degraded)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -1156,6 +1176,19 @@ export class MetricsService {
         details.durationSeconds,
       );
     }
+  }
+
+  // --- Centrifugo connection-token rate limiter metric helpers ---
+
+  /**
+   * Records one connection rate-limit decision. The label is a closed enum so
+   * no user id, IP address or token is ever exported through the metrics
+   * endpoint.
+   */
+  recordCentrifugoConnectionRateLimit(
+    outcome: CentrifugoConnectionRateLimitOutcome,
+  ): void {
+    this.centrifugoConnectionRateLimitDecisions.inc({ outcome });
   }
 
   setModerationQueueSize(count: number): void {

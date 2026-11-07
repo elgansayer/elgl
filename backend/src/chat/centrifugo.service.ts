@@ -4,6 +4,7 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
 import Redis from 'ioredis';
 import { randomUUID } from 'crypto';
+import { MetricsService } from '../metrics/metrics.service';
 
 const CONNECTION_TOKEN_TTL_SECONDS = 60 * 60;
 const CONNECTION_TOKEN_SIGNING_ERROR =
@@ -17,6 +18,31 @@ const CONNECTION_TOKEN_SIGNING_ERROR =
 export interface ConnectionRateLimitResult {
   allowed: boolean;
   retryAfterMs: number;
+}
+
+/**
+ * Closed set of reasons the limiter failed open. Safe to log and to alert on
+ * because it never carries Redis hostnames, user ids or request data.
+ */
+type RateLimiterDegradedReason =
+  'redis_unavailable' | 'redis_error' | 'malformed_reply';
+
+/**
+ * Reduces an unknown Redis failure to its class name and optional error code
+ * (for example `ECONNREFUSED`). The message is deliberately dropped because
+ * driver messages can embed connection details.
+ */
+function describeRedisFailure(error: unknown): {
+  errorName: string;
+  errorCode?: string;
+} {
+  if (!(error instanceof Error)) {
+    return { errorName: 'UnknownError' };
+  }
+  if ('code' in error && typeof error.code === 'string') {
+    return { errorName: error.name, errorCode: error.code };
+  }
+  return { errorName: error.name };
 }
 
 /**
@@ -68,6 +94,7 @@ export class CentrifugoService implements OnModuleInit {
     private readonly configService: ConfigService,
     @InjectPinoLogger(CentrifugoService.name)
     private readonly logger: PinoLogger,
+    private readonly metrics: MetricsService,
   ) {
     this.connectionRateLimitPerWindow = this.parseLimit(
       this.configService.get<string>('CENTRIFUGO_CONNECTION_RATE_LIMIT'),
@@ -119,10 +146,18 @@ export class CentrifugoService implements OnModuleInit {
       if (typeof sha === 'string' && sha.length === 40) {
         this.slidingWindowLuaSha = sha;
       }
-    } catch {
+    } catch (error) {
       this.redis?.disconnect();
       this.redis = null;
       this.slidingWindowLuaSha = null;
+      this.logger.warn(
+        {
+          event: 'centrifugo_connection_rate_limiter_disabled',
+          reason: 'redis_unavailable_at_startup',
+          ...describeRedisFailure(error),
+        },
+        'Centrifugo connection rate limiter disabled: Redis unavailable at startup',
+      );
     }
   }
 
@@ -135,12 +170,14 @@ export class CentrifugoService implements OnModuleInit {
    * serialised. Falls back to per-user counting with a pipeline when the Lua
    * script SHA is not available.
    *
-   * When Redis is unavailable the connection is always allowed.
+   * When Redis is unavailable the connection is always allowed (fail open).
+   * Every decision is counted in `hellotalk_centrifugo_connection_rate_limit_total`
+   * and refusals and fail-open decisions are logged without the user id, IP
+   * address or token.
    *
    * @param userId  The authenticated user id.
-   * @param ip      Client IP address, used as a secondary key when userId is
-   *                unavailable and as a co-limit key to prevent multi-account
-   *                abuse.
+   * @param ip      Client IP address, used as the key only when userId is
+   *                empty.
    */
   async checkConnectionRateLimit(
     userId: string,
@@ -149,7 +186,7 @@ export class CentrifugoService implements OnModuleInit {
     const identityKey = userId || ip || 'anonymous';
 
     if (!this.redis) {
-      return { allowed: true, retryAfterMs: 0 };
+      return this.failOpen('redis_unavailable');
     }
 
     const key = `centrifugo:conn_rate:${identityKey}`;
@@ -171,10 +208,12 @@ export class CentrifugoService implements OnModuleInit {
           this.connectionRateWindowSec.toString(),
         );
 
-        const result = Array.isArray(raw) ? raw : [];
-        const allowed = result.length >= 1 ? Number(result[0]) === 1 : true;
-        const retryAfterMs = result.length >= 2 ? Number(result[1]) || 0 : 0;
-        return { allowed, retryAfterMs };
+        if (!Array.isArray(raw) || raw.length === 0) {
+          return this.failOpen('malformed_reply');
+        }
+        const allowed = Number(raw[0]) === 1;
+        const retryAfterMs = raw.length >= 2 ? Number(raw[1]) || 0 : 0;
+        return this.recordDecision({ allowed, retryAfterMs });
       }
 
       // Fallback pipeline approach (not fully atomic under contention)
@@ -184,25 +223,78 @@ export class CentrifugoService implements OnModuleInit {
       const results = await multi.exec();
 
       if (!results) {
-        return { allowed: true, retryAfterMs: 0 };
+        return this.failOpen('malformed_reply');
       }
 
       const [, countResult] = results;
       const count = (countResult?.[1] as number) ?? 0;
 
       if (count >= this.connectionRateLimitPerWindow) {
-        return {
+        return this.recordDecision({
           allowed: false,
           retryAfterMs: this.connectionRateWindowSec * 1000,
-        };
+        });
       }
 
       await this.redis.zadd(key, now.toString(), member);
       await this.redis.expire(key, this.connectionRateWindowSec);
-      return { allowed: true, retryAfterMs: 0 };
-    } catch {
-      return { allowed: true, retryAfterMs: 0 }; // allow on Redis error
+      return this.recordDecision({ allowed: true, retryAfterMs: 0 });
+    } catch (error) {
+      return this.failOpen('redis_error', error); // allow on Redis error
     }
+  }
+
+  /**
+   * Counts one limiter decision and logs refusals. The log carries only the
+   * configured limit and the retry hint; the user id and IP address are never
+   * logged so a refusal is correlated through the request-scoped log context.
+   */
+  private recordDecision(
+    result: ConnectionRateLimitResult,
+  ): ConnectionRateLimitResult {
+    if (result.allowed) {
+      this.metrics.recordCentrifugoConnectionRateLimit('allowed');
+      return result;
+    }
+
+    this.metrics.recordCentrifugoConnectionRateLimit('limited');
+    this.logger.warn(
+      {
+        event: 'centrifugo_connection_rate_limited',
+        retryAfterMs: result.retryAfterMs,
+        limit: this.connectionRateLimitPerWindow,
+        windowSec: this.connectionRateWindowSec,
+      },
+      'Centrifugo connection rate limit exceeded',
+    );
+    return result;
+  }
+
+  /**
+   * Allows the request when the limiter itself is unhealthy, but makes the
+   * degradation visible: the decision is counted as `degraded` and logged with
+   * a closed reason instead of being silently swallowed.
+   */
+  private failOpen(
+    reason: RateLimiterDegradedReason,
+    error?: unknown,
+  ): ConnectionRateLimitResult {
+    this.metrics.recordCentrifugoConnectionRateLimit('degraded');
+
+    const context = {
+      event: 'centrifugo_connection_rate_limiter_degraded',
+      reason,
+      ...(error === undefined ? {} : describeRedisFailure(error)),
+    };
+    const message =
+      'Centrifugo connection rate limiter degraded; allowing connection token request';
+    if (reason === 'redis_error') {
+      this.logger.error(context, message);
+    } else {
+      this.logger.warn(context, message);
+    }
+
+    return { allowed: true, retryAfterMs: 0 };
   }
 
   /**

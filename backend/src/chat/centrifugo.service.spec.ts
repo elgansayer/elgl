@@ -2,6 +2,7 @@ import type { Mock, MockInstance } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { CentrifugoService } from './centrifugo.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { PinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
 import Redis from 'ioredis';
@@ -36,6 +37,7 @@ describe('CentrifugoService', () => {
     info: Mock;
     debug: Mock;
   };
+  let mockMetrics: { recordCentrifugoConnectionRateLimit: Mock };
 
   beforeEach(async () => {
     // Rebuild the mock's properties without touching its identity.
@@ -73,6 +75,7 @@ describe('CentrifugoService', () => {
       info: vi.fn(),
       debug: vi.fn(),
     };
+    mockMetrics = { recordCentrifugoConnectionRateLimit: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -93,6 +96,7 @@ describe('CentrifugoService', () => {
           provide: `PinoLogger:${CentrifugoService.name}`,
           useValue: mockLogger,
         },
+        { provide: MetricsService, useValue: mockMetrics },
       ],
     }).compile();
 
@@ -120,6 +124,38 @@ describe('CentrifugoService', () => {
       });
       expect(mockRedis.connect).toHaveBeenCalled();
       expect(mockRedis.script).toHaveBeenCalledWith('LOAD', expect.any(String));
+    });
+
+    it('warns without credentials and then fails open visibly when Redis cannot connect at startup', async () => {
+      mockRedis.connect.mockRejectedValueOnce(
+        Object.assign(
+          new Error('connect ECONNREFUSED redis://:hunter2@cache:6379'),
+          { code: 'ECONNREFUSED' },
+        ),
+      );
+
+      await service.onModuleInit();
+
+      expect(mockRedis.disconnect).toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        {
+          event: 'centrifugo_connection_rate_limiter_disabled',
+          reason: 'redis_unavailable_at_startup',
+          errorName: 'Error',
+          errorCode: 'ECONNREFUSED',
+        },
+        'Centrifugo connection rate limiter disabled: Redis unavailable at startup',
+      );
+      expect(JSON.stringify(mockLogger.warn.mock.calls)).not.toContain(
+        'hunter2',
+      );
+
+      const result = await service.checkConnectionRateLimit('user-1');
+
+      expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
+      expect(
+        mockMetrics.recordCentrifugoConnectionRateLimit,
+      ).toHaveBeenCalledWith('degraded');
     });
   });
 
@@ -203,6 +239,253 @@ describe('CentrifugoService', () => {
       const result = await service.checkConnectionRateLimit('user-1');
       expect(result.allowed).toBe(true);
     });
+
+    describe('observability', () => {
+      const degradedMessage =
+        'Centrifugo connection rate limiter degraded; allowing connection token request';
+      const withoutLuaScript = () => {
+        (
+          service as unknown as { slidingWindowLuaSha: string | null }
+        ).slidingWindowLuaSha = null;
+      };
+      const pipelineReturning = (exec: Mock) => {
+        mockRedis.multi.mockReturnValue({
+          zremrangebyscore: vi.fn().mockReturnThis(),
+          zcard: vi.fn().mockReturnThis(),
+          exec,
+        });
+      };
+
+      it('counts an allowed decision without logging', async () => {
+        mockRedis.evalsha.mockResolvedValue([1, 0]);
+
+        await service.checkConnectionRateLimit('user-1');
+
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledWith('allowed');
+        expect(mockLogger.warn).not.toHaveBeenCalled();
+        expect(mockLogger.error).not.toHaveBeenCalled();
+      });
+
+      it('counts and logs a refusal with the retry hint but no identity', async () => {
+        mockRedis.evalsha.mockResolvedValue([0, 3500]);
+
+        await service.checkConnectionRateLimit('user-secret-id', '203.0.113.9');
+
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledWith('limited');
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          {
+            event: 'centrifugo_connection_rate_limited',
+            retryAfterMs: 3500,
+            limit: 5,
+            windowSec: 60,
+          },
+          'Centrifugo connection rate limit exceeded',
+        );
+        const logged = JSON.stringify(mockLogger.warn.mock.calls);
+        expect(logged).not.toContain('user-secret-id');
+        expect(logged).not.toContain('203.0.113.9');
+      });
+
+      it('counts and logs a refusal on the pipeline fallback', async () => {
+        withoutLuaScript();
+        pipelineReturning(
+          vi.fn().mockResolvedValue([
+            [null, 1],
+            [null, 5],
+          ]),
+        );
+
+        const result = await service.checkConnectionRateLimit('user-1');
+
+        expect(result.allowed).toBe(false);
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledWith('limited');
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          {
+            event: 'centrifugo_connection_rate_limited',
+            retryAfterMs: 60000,
+            limit: 5,
+            windowSec: 60,
+          },
+          'Centrifugo connection rate limit exceeded',
+        );
+      });
+
+      it('counts an allowed decision on the pipeline fallback', async () => {
+        withoutLuaScript();
+        pipelineReturning(
+          vi.fn().mockResolvedValue([
+            [null, 1],
+            [null, 2],
+          ]),
+        );
+        mockRedis.zadd.mockResolvedValue(1);
+        mockRedis.expire.mockResolvedValue(1);
+
+        const result = await service.checkConnectionRateLimit('user-1');
+
+        expect(result.allowed).toBe(true);
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledWith('allowed');
+        expect(mockLogger.warn).not.toHaveBeenCalled();
+      });
+
+      it('fails open visibly when Redis is unavailable', async () => {
+        (service as unknown as { redis: unknown }).redis = null;
+
+        const result = await service.checkConnectionRateLimit('user-1');
+
+        expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledWith('degraded');
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          {
+            event: 'centrifugo_connection_rate_limiter_degraded',
+            reason: 'redis_unavailable',
+          },
+          degradedMessage,
+        );
+      });
+
+      it('fails open visibly on a Redis error, logging the error class and code but never the message or identity', async () => {
+        mockRedis.evalsha.mockRejectedValue(
+          Object.assign(
+            new Error('connect ECONNREFUSED redis://:hunter2@cache:6379'),
+            { code: 'ECONNREFUSED' },
+          ),
+        );
+
+        const result = await service.checkConnectionRateLimit(
+          'user-secret-id',
+          '203.0.113.9',
+        );
+
+        expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledWith('degraded');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          {
+            event: 'centrifugo_connection_rate_limiter_degraded',
+            reason: 'redis_error',
+            errorName: 'Error',
+            errorCode: 'ECONNREFUSED',
+          },
+          degradedMessage,
+        );
+        const logged = JSON.stringify(mockLogger.error.mock.calls);
+        expect(logged).not.toContain('hunter2');
+        expect(logged).not.toContain('user-secret-id');
+        expect(logged).not.toContain('203.0.113.9');
+      });
+
+      it('logs an unknown error class when a non-Error value is thrown', async () => {
+        mockRedis.evalsha.mockRejectedValue('boom');
+
+        await service.checkConnectionRateLimit('user-1');
+
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          {
+            event: 'centrifugo_connection_rate_limiter_degraded',
+            reason: 'redis_error',
+            errorName: 'UnknownError',
+          },
+          degradedMessage,
+        );
+      });
+
+      it('treats an unusable Lua reply as degraded, not as a genuine allow', async () => {
+        mockRedis.evalsha.mockResolvedValue(null);
+
+        const result = await service.checkConnectionRateLimit('user-1');
+
+        expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledWith('degraded');
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).not.toHaveBeenCalledWith('allowed');
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          {
+            event: 'centrifugo_connection_rate_limiter_degraded',
+            reason: 'malformed_reply',
+          },
+          degradedMessage,
+        );
+      });
+
+      it('exports decisions through the real metrics registry', async () => {
+        const realModule = await Test.createTestingModule({
+          providers: [
+            CentrifugoService,
+            MetricsService,
+            {
+              provide: ConfigService,
+              useValue: {
+                get: vi.fn((key: string) => {
+                  if (key === 'CENTRIFUGO_URL') return 'http://localhost:8000';
+                  if (key === 'CENTRIFUGO_API_KEY') return 'test-api-key';
+                  if (key === 'CENTRIFUGO_SECRET') return 'test-secret';
+                  if (key === 'REDIS_URL') return 'redis://localhost:6379';
+                  return null;
+                }),
+              },
+            },
+            {
+              provide: `PinoLogger:${CentrifugoService.name}`,
+              useValue: mockLogger,
+            },
+          ],
+        }).compile();
+        const realService = realModule.get(CentrifugoService);
+        await realService.onModuleInit();
+
+        mockRedis.evalsha.mockResolvedValueOnce([1, 0]);
+        mockRedis.evalsha.mockResolvedValueOnce([0, 1000]);
+        await realService.checkConnectionRateLimit('user-1');
+        await realService.checkConnectionRateLimit('user-1');
+
+        const exported = await realModule.get(MetricsService).getMetrics();
+        expect(exported).toContain(
+          'hellotalk_centrifugo_connection_rate_limit_total{outcome="allowed"} 1',
+        );
+        expect(exported).toContain(
+          'hellotalk_centrifugo_connection_rate_limit_total{outcome="limited"} 1',
+        );
+      });
+
+      it('treats an aborted pipeline as degraded, not as a genuine allow', async () => {
+        withoutLuaScript();
+        pipelineReturning(vi.fn().mockResolvedValue(null));
+
+        const result = await service.checkConnectionRateLimit('user-1');
+
+        expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).toHaveBeenCalledWith('degraded');
+        expect(
+          mockMetrics.recordCentrifugoConnectionRateLimit,
+        ).not.toHaveBeenCalledWith('allowed');
+      });
+    });
   });
 
   describe('getRateWindowSec', () => {
@@ -232,6 +515,7 @@ describe('CentrifugoService', () => {
             provide: `PinoLogger:${CentrifugoService.name}`,
             useValue: mockLogger,
           },
+          { provide: MetricsService, useValue: mockMetrics },
         ],
       }).compile();
       const srv = mod.get<CentrifugoService>(CentrifugoService);

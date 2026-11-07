@@ -40,6 +40,10 @@ CENTRIFUGO_ALLOWED_ORIGINS="https://app.example.com https://www.example.com"
 
 Do not set production to `*`. Wildcard browser origins weaken the WebSocket origin boundary and make cross-origin connection abuse easier. Changes to public domains must update the deployment environment before the replacement Centrifugo container starts.
 
+## Connection limits
+
+`config/centrifugo/config.json` bounds new connections with `client_connection_rate_limit` (new connections per second, per node), `client_user_connection_limit` (concurrent connections per user, per node) and `client_channel_limit` (subscriptions per client). Centrifugo treats `0` as unlimited for the first two, so the contract requires positive integers for all three. See `docs/centrifugo-connection-rate-limiting.md` for how these combine with the nginx edge limits, the `POST /chat/token` limiter and the browser backoff, including their metrics, logs, tuning and rollback.
+
 ## Failure behavior
 
 - Missing, blank, whitespace-padded or repository-known placeholder Centrifugo credentials fail the application configuration/startup boundary.
@@ -65,6 +69,7 @@ The contract verifies:
 - backend and websocket service-DNS wiring in development, default and production Compose files;
 - shared credential injection;
 - an explicit, fail-fast production browser-origin allowlist;
+- positive node connection-rate, per-user connection and per-client channel limits, the nginx edge zones on `/centrifugo/` and the example connection-token budget;
 - example environment ownership; and
 - Prometheus metrics scraping.
 

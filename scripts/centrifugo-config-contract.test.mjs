@@ -88,3 +88,69 @@ test('Prometheus scrapes the Centrifugo internal metrics endpoint', () => {
   const prometheus = read('prometheus/prometheus.yml');
   assert.match(prometheus, /targets: \['websocket:8000'\]/);
 });
+
+// WebSocket connection rate limiting (#1849). The layers below are documented in
+// docs/centrifugo-connection-rate-limiting.md. Centrifugo treats 0 as "unlimited",
+// so each node-level limit must be a positive integer to stay enabled.
+test('Centrifugo bounds the node connection rate, per-user connections and per-client channels', () => {
+  for (const option of [
+    'client_connection_rate_limit',
+    'client_user_connection_limit',
+    'client_channel_limit',
+  ]) {
+    assert.ok(
+      Number.isInteger(config[option]) && config[option] > 0,
+      `${option} must be a positive integer, otherwise Centrifugo leaves it unlimited`,
+    );
+  }
+});
+
+test('nginx rate limits and caps WebSocket connections per client address at the Centrifugo edge', () => {
+  const nginx = read('config/nginx/nginx.conf');
+  assert.match(
+    nginx,
+    /limit_req_zone\s+\$binary_remote_addr\s+zone=centrifugo_limit:\d+m\s+rate=[1-9]\d*r\/s;/,
+  );
+  assert.match(nginx, /limit_conn_zone\s+\$binary_remote_addr\s+zone=centrifugo_conn_limit:\d+m;/);
+
+  const location = nginx.match(/location \/centrifugo\/ \{([^}]*)\}/);
+  assert.ok(location, 'missing the /centrifugo/ proxy location');
+  assert.match(location[1], /limit_req\s+zone=centrifugo_limit\s+burst=[1-9]\d*(?:\s+nodelay)?;/);
+  assert.match(location[1], /limit_conn\s+centrifugo_conn_limit\s+[1-9]\d*;/);
+  assert.match(location[1], /proxy_pass\s+http:\/\/websocket:8000\/;/);
+});
+
+for (const path of ['.env.example', 'backend/.env.example']) {
+  test(`${path} declares a positive connection-token rate limit and window`, () => {
+    const env = read(path);
+    assert.match(env, /^CENTRIFUGO_CONNECTION_RATE_LIMIT=[1-9]\d*$/m);
+    assert.match(env, /^CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC=[1-9]\d*$/m);
+  });
+}
+
+test('connection rate limiting documentation names every enforcement layer and its tunables', () => {
+  const doc = read('docs/centrifugo-connection-rate-limiting.md');
+  for (const name of [
+    'client_connection_rate_limit',
+    'client_user_connection_limit',
+    'client_channel_limit',
+    'centrifugo_limit',
+    'centrifugo_conn_limit',
+    'CENTRIFUGO_CONNECTION_RATE_LIMIT',
+    'CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC',
+    'hellotalk_centrifugo_connection_rate_limit_total',
+    'centrifugo_connection_rate_limited',
+    'centrifugo_connection_rate_limiter_degraded',
+    'centrifugo_connection_rate_limiter_disabled',
+    'Retry-After',
+  ]) {
+    assert.ok(
+      doc.includes(name),
+      `docs/centrifugo-connection-rate-limiting.md must document ${name}`,
+    );
+  }
+  assert.ok(
+    !doc.includes(String.fromCharCode(0x2014)),
+    'documentation must not contain an em dash',
+  );
+});

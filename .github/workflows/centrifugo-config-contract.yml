@@ -4,25 +4,31 @@ on:
   pull_request:
     paths:
       - 'config/centrifugo/**'
+      - 'config/nginx/**'
       - 'docker-compose.yml'
       - 'docker-compose.dev.yml'
       - 'docker-compose.prod.yml'
       - '.env.example'
+      - 'backend/.env.example'
       - 'prometheus/prometheus.yml'
       - 'scripts/centrifugo-config-contract.test.mjs'
       - 'docs/centrifugo-server-config.md'
+      - 'docs/centrifugo-connection-rate-limiting.md'
       - '.github/workflows/centrifugo-config-contract.yml'
   push:
     branches: [main, develop]
     paths:
       - 'config/centrifugo/**'
+      - 'config/nginx/**'
       - 'docker-compose.yml'
       - 'docker-compose.dev.yml'
       - 'docker-compose.prod.yml'
       - '.env.example'
+      - 'backend/.env.example'
       - 'prometheus/prometheus.yml'
       - 'scripts/centrifugo-config-contract.test.mjs'
       - 'docs/centrifugo-server-config.md'
+      - 'docs/centrifugo-connection-rate-limiting.md'
       - '.github/workflows/centrifugo-config-contract.yml'
   merge_group:
 

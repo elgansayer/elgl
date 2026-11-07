@@ -10,6 +10,7 @@
 - The endpoint returns only `{ "token": "..." }` on success. The signing secret is never returned to the browser.
 - Connection attempts are additionally constrained by the controller throttle and the Redis-backed Centrifugo connection-rate limiter.
 - Rate-limit failures return HTTP 429 and a `Retry-After` response header. Authentication failures return HTTP 401.
+- Every limiter decision is counted in `hellotalk_centrifugo_connection_rate_limit_total` and refusals or fail-open decisions are logged without the user id, address or token. See `docs/centrifugo-connection-rate-limiting.md` for the budget, failure behaviour, signals and tuning.
 - Signing failures are errors. The backend must not return an empty, fabricated, or unsigned token as a successful response.
 
 The browser should request a new token when establishing or re-establishing its Centrifugo connection rather than persisting a token as long-lived application state.

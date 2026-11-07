@@ -658,4 +658,38 @@ describe('MetricsService', () => {
       );
     });
   });
+
+  describe('Centrifugo connection rate limit metrics', () => {
+    it('counts rate limit decisions by outcome', async () => {
+      service.recordCentrifugoConnectionRateLimit('allowed');
+      service.recordCentrifugoConnectionRateLimit('allowed');
+      service.recordCentrifugoConnectionRateLimit('limited');
+      service.recordCentrifugoConnectionRateLimit('degraded');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_centrifugo_connection_rate_limit_total{outcome="allowed"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_centrifugo_connection_rate_limit_total{outcome="limited"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_centrifugo_connection_rate_limit_total{outcome="degraded"} 1',
+      );
+    });
+
+    it('exports only the closed outcome label so no identity reaches the metrics endpoint', async () => {
+      service.recordCentrifugoConnectionRateLimit('limited');
+
+      const metrics = await service.getMetrics();
+      const samples = metrics
+        .split('\n')
+        .filter((line) =>
+          line.startsWith('hellotalk_centrifugo_connection_rate_limit_total{'),
+        );
+      expect(samples).toEqual([
+        'hellotalk_centrifugo_connection_rate_limit_total{outcome="limited"} 1',
+      ]);
+    });
+  });
 });
