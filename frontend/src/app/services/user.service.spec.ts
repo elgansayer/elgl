@@ -232,16 +232,14 @@ describe('UserService', () => {
       expect(await resultPromise).toEqual(updatedProfile);
     });
 
-    it('should fall back to mock data on error', async () => {
+    it('should reject when the server does not confirm the update', async () => {
       const update = { bio_text: 'New bio' };
       const resultPromise = service.updateMyProfile(update);
 
       const req = httpMock.expectOne(`${baseUrl}/me`);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      const result = await resultPromise;
-      expect(result).toBeTruthy();
-      expect(result?.bio_text).toBe('New bio');
+      await expect(resultPromise).rejects.toMatchObject({ status: 500 });
     });
   });
 
