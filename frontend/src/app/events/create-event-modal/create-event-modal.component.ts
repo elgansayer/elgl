@@ -189,16 +189,16 @@ const venueLocationValidator: ValidatorFn = (
                 selectClass="min-h-11 w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
               >
                 <option value="">{{ 'events.noLanguagePair' | t }}</option>
-                <option value="en-es">English ↔ Spanish</option>
-                <option value="en-ja">English ↔ Japanese</option>
-                <option value="en-ko">English ↔ Korean</option>
-                <option value="en-zh">English ↔ Chinese</option>
-                <option value="en-fr">English ↔ French</option>
-                <option value="en-de">English ↔ German</option>
-                <option value="en-ar">English ↔ Arabic</option>
-                <option value="en-pt">English ↔ Portuguese</option>
-                <option value="en-ru">English ↔ Russian</option>
-                <option value="en-it">English ↔ Italian</option>
+                <option value="en-es">{{ 'audioRoom.languagePair.en-es' | t }}</option>
+                <option value="en-ja">{{ 'audioRoom.languagePair.en-ja' | t }}</option>
+                <option value="en-ko">{{ 'audioRoom.languagePair.en-ko' | t }}</option>
+                <option value="en-zh">{{ 'audioRoom.languagePair.en-zh' | t }}</option>
+                <option value="en-fr">{{ 'audioRoom.languagePair.en-fr' | t }}</option>
+                <option value="en-de">{{ 'audioRoom.languagePair.en-de' | t }}</option>
+                <option value="en-ar">{{ 'audioRoom.languagePair.en-ar' | t }}</option>
+                <option value="en-pt">{{ 'audioRoom.languagePair.en-pt' | t }}</option>
+                <option value="en-ru">{{ 'audioRoom.languagePair.en-ru' | t }}</option>
+                <option value="en-it">{{ 'audioRoom.languagePair.en-it' | t }}</option>
               </hlm-native-select>
             </div>
 

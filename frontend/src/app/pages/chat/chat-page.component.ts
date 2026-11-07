@@ -843,7 +843,7 @@ export class ChatPageComponent implements OnInit {
   async viewMedia(_msg: ChatMessage): Promise<void> {
     // mark view-once media as viewed (future implementation)
     if (typeof window !== 'undefined') {
-      alert('View-once media will be shown here for one time.');
+      alert(this.i18n.translate('chat.viewOnceNotice'));
     }
   }
 

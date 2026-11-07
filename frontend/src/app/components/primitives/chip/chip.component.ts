@@ -1,10 +1,11 @@
 import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { TranslatePipe } from '../../../services/translate.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-chip',
-  imports: [...HlmButtonImports],
+  imports: [...HlmButtonImports, TranslatePipe],
   template: `
     <span class="inline-flex items-center rounded-pill" [class]="containerClasses()">
       <button
@@ -30,7 +31,9 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
           size="icon-xs"
           class="me-1 rounded-full"
           (click)="onRemove($event)"
-          aria-label="Remove chip"
+          [attr.aria-label]="
+            label() ? ('common.removeNamed' | t: { name: label() }) : ('common.remove' | t)
+          "
         >
           ✕
         </button>

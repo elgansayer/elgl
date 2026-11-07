@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { I18nService } from './i18n.service';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { firstValueFrom } from 'rxjs';
@@ -27,6 +28,7 @@ export class BlockedUsersService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
   private readonly safetyService = inject(SafetyService);
+  private readonly i18n = inject(I18nService);
   private readonly apiUrl = environment.apiUrl || '';
 
   private readonly blockedUsersSignal = signal<BlockedUserResponse[]>([]);
@@ -130,7 +132,7 @@ export class BlockedUsersService {
       this.blockedUsersSignal.set(this.parseBlockedUsers(collected));
     } catch {
       if (generation !== this.loadGeneration) return;
-      this.errorSignal.set('Failed to load blocked users');
+      this.errorSignal.set(this.i18n.translate('safety.blockManagement.loadError'));
     } finally {
       if (generation === this.loadGeneration) {
         this.loadingSignal.set(false);
@@ -160,7 +162,7 @@ export class BlockedUsersService {
       this.blockedUsersSignal.update((previous) => previous.filter((user) => user.id !== userId));
       this.safetyService.setBlockedUserLocal(userId, false);
     } catch {
-      this.unblockErrorSignal.set('Failed to unblock user');
+      this.unblockErrorSignal.set(this.i18n.translate('safety.blockManagement.unblockFailed'));
       throw new Error('Failed to unblock user');
     } finally {
       this.pendingUnblocksSignal.update((current) => {

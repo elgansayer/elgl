@@ -193,7 +193,7 @@
               (ngModelChange)="chatTextSize.set($event)"
               class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
               selectClass="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-              [aria-label]="'Select'"
+              [aria-label]="'settings.textSize' | t"
             >
               <option value="small">{{ 'settings.textSizeSmall' | t }}</option>
               <option value="medium">{{ 'settings.textSizeMedium' | t }}</option>
@@ -315,7 +315,7 @@
               (ngModelChange)="updateAutoDownloadMode($event)"
               class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
               selectClass="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-              [aria-label]="'Select'"
+              [aria-label]="'settings.autoDownloadMedia' | t"
             >
               <option value="off">{{ 'settings.off' | t }}</option>
               <option value="wifi">{{ 'settings.autoDownloadWifiOnly' | t }}</option>
@@ -432,7 +432,7 @@
                   type="button"
                   (click)="removeInterest(i)"
                   class="text-text-secondary hover:text-danger-ink ms-1"
-                  aria-label="Remove interest"
+                  [attr.aria-label]="'common.removeInterest' | t"
                 >
                   &times;
                 </button>

@@ -4,11 +4,12 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { SoundboardComponent } from '../soundboard/soundboard.component';
 
 @Component({
   selector: 'app-room-chat',
-  imports: [HlmInput, HlmButton, CommonModule, FormsModule, SoundboardComponent],
+  imports: [HlmInput, HlmButton, CommonModule, FormsModule, SoundboardComponent, TranslatePipe],
   template: `
     <div
       class="bg-surface-200 rounded-3xl shadow-xl border border-surface-100 flex flex-col h-96 overflow-hidden"
@@ -17,7 +18,7 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
         class="bg-surface-300 px-4 py-3 border-b border-surface-100 flex items-center justify-between"
       >
         <span class="font-black text-xs text-text-primary flex items-center gap-1.5">
-          <span>💬 Synchronised room chat and subtitles</span>
+          <span>{{ 'rooms.roomChat.title' | t }}</span>
         </span>
         <button
           hlmBtn
@@ -31,8 +32,8 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
         >
           {{
             activeTab() === 'subtitles'
-              ? '💬 Show chat'
-              : '🎙️ Show AI subtitles (' + store.captions().length + ')'
+              ? ('rooms.roomChat.showChatBtn' | t)
+              : ('rooms.roomChat.showSubtitlesBtn' | t: { count: store.captions().length })
           }}
         </button>
       </div>
@@ -49,7 +50,7 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
         @if (activeTab() === 'chat') {
           @if (store.roomMessages().length === 0) {
             <div class="text-center py-12 text-text-muted">
-              No messages in this live room yet. Say hello to the stage speakers!
+              {{ 'rooms.roomChat.emptyChat' | t }}
             </div>
           }
           @for (msg of store.roomMessages(); track msg.id) {
@@ -70,15 +71,14 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
         @if (activeTab() === 'subtitles') {
           @if (store.captions().length === 0) {
             <div class="text-center py-12 text-text-muted">
-              No live subtitles yet. When speakers talk on stage or use speech-to-text, closed
-              captions broadcast here!
+              {{ 'rooms.roomChat.emptySubtitles' | t }}
             </div>
           }
           @for (cap of store.captions(); track cap.id) {
             <div class="p-2.5 rounded-xl bg-secondary/10 border border-secondary/30">
-              <span class="font-bold text-[10px] text-secondary-ink block mb-1"
-                >🎙️ {{ cap.speaker_name }} (Live AI caption):</span
-              >
+              <span class="font-bold text-[10px] text-secondary-ink block mb-1">{{
+                'rooms.roomChat.speakerCaptionPrefix' | t: { name: cap.speaker_name }
+              }}</span>
               <p class="text-xs font-medium text-text-primary">
                 {{ cap.text_content }}
               </p>
@@ -94,7 +94,7 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
             type="text"
             [(ngModel)]="inputText"
             (keyup.enter)="send()"
-            placeholder="Send a chat message to the room..."
+            [attr.aria-label]="'rooms.roomChat.inputPlaceholder' | t"
             class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-primary"
           />
           <button
@@ -102,7 +102,7 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
             (click)="send()"
             class="px-4 py-1.5 bg-primary hover:bg-primary-dark text-on-fill rounded-xl font-bold text-xs shadow"
           >
-            Send
+            {{ 'rooms.roomChat.sendBtn' | t }}
           </button>
         </div>
       }
@@ -114,7 +114,7 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
             type="text"
             [(ngModel)]="inputCaption"
             (keyup.enter)="sendSubtitle()"
-            placeholder="Simulate speech-to-text live subtitle broadcast..."
+            [attr.aria-label]="'rooms.roomChat.subtitlePlaceholder' | t"
             class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-secondary"
           />
           <button
@@ -122,14 +122,14 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
             (click)="sendSubtitle()"
             class="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-on-fill rounded-xl font-bold text-xs shadow"
           >
-            Broadcast caption
+            {{ 'rooms.roomChat.broadcastBtn' | t }}
           </button>
           <button
             hlmBtn
             (click)="broadcastAICaption()"
             class="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-on-fill rounded-xl font-bold text-xs shadow"
           >
-            Broadcast AI Caption
+            {{ 'rooms.roomChat.broadcastAiBtn' | t }}
           </button>
         </div>
       }

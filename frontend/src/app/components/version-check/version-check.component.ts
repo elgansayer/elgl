@@ -1,4 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
+import { I18nService } from '../../services/i18n.service';
 import { firstValueFrom } from 'rxjs';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { VersionService, VersionInfo } from '../../services/version.service';
@@ -37,6 +38,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class VersionCheckComponent implements OnInit {
   private versionService = inject(VersionService);
+  private readonly i18n = inject(I18nService);
 
   readonly version = signal<VersionInfo>({ current: '', latest: '' });
   readonly versionLoaded = signal(false);
@@ -54,7 +56,7 @@ export class VersionCheckComponent implements OnInit {
       this.versionLoaded.set(true);
       this.updateAvailable.set(version.current !== version.latest);
     } catch {
-      this.versionError.set('Failed to fetch version');
+      this.versionError.set(this.i18n.translate('versionCheck.fetchFailed'));
     }
   }
 }

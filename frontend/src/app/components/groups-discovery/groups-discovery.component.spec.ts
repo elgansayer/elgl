@@ -165,6 +165,6 @@ describe('GroupsDiscoveryComponent', () => {
     fixture.detectChanges();
 
     expect((component as any).items()).toEqual([]);
-    expect((component as any).error()).toBe('Failed to load groups');
+    expect((component as any).error()).toBe('groupsDiscovery.loadFailed');
   });
 });

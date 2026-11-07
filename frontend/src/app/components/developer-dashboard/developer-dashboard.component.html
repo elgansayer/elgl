@@ -166,7 +166,7 @@
         <app-card customClass="app-padded space-y-1">
           <p class="app-muted font-bold uppercase">{{ 'developer.statLatencyLabel' | t }}</p>
           <p class="text-3xl font-black text-success">
-            {{ store.developerStats()?.avg_latency_ms || 18 }} ms
+            {{ 'developer.latencyMs' | t: { value: store.developerStats()?.avg_latency_ms || 18 } }}
           </p>
           <p class="text-[11px] text-text-secondary">{{ 'developer.statLatencySub' | t }}</p>
         </app-card>

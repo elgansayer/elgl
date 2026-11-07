@@ -6,7 +6,8 @@ export class SettingsService {
   // State
   private state = signal<UserSettings | null>(null);
   private loading = signal<boolean>(false);
-  private error = signal<string | null>(null);
+  // Holds a translation key so the UI layer, not this state service, owns the wording.
+  private errorKey = signal<string | null>(null);
 
   // Selectors (computed signals)
   readonly settings = this.state.asReadonly();
@@ -24,7 +25,7 @@ export class SettingsService {
       const data = await this.mockFetchSettings(userId);
       this.state.set(data);
     } catch {
-      this.error.set('Failed to load settings');
+      this.errorKey.set('settings.loadFailed');
     } finally {
       this.loading.set(false);
     }
@@ -48,7 +49,7 @@ export class SettingsService {
       // Success: State is already correct
     } catch {
       // 3. Rollback on failure
-      this.error.set('Failed to update privacy settings. Reverting.');
+      this.errorKey.set('settings.privacyUpdateFailed');
       this.state.set(currentState);
     }
   }
@@ -65,7 +66,7 @@ export class SettingsService {
     try {
       await this.mockPatchProfileSettings(_newSettings);
     } catch {
-      this.error.set('Failed to update profile settings. Reverting.');
+      this.errorKey.set('settings.profileUpdateFailed');
       this.state.set(currentState);
     }
   }
@@ -82,7 +83,7 @@ export class SettingsService {
     try {
       await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
     } catch {
-      this.error.set('Failed to update account settings. Reverting.');
+      this.errorKey.set('settings.accountUpdateFailed');
       this.state.set(currentState);
     }
   }

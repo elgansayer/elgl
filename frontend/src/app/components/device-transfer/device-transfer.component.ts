@@ -5,22 +5,24 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
+import { I18nService } from '../../services/i18n.service';
 import { SupabaseService } from '../../services/supabase.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { environment } from '../../../environments/environment';
 
 @Component({
-  imports: [HlmButton],
+  imports: [HlmButton, TranslatePipe],
   selector: 'app-device-transfer',
   template: `
     <div
       class="flex flex-col items-center justify-center min-h-screen p-8 bg-surface text-on-surface"
     >
-      <h1 class="text-2xl font-bold mb-4">Device Transfer</h1>
+      <h1 class="text-2xl font-bold mb-4">{{ 'deviceTransfer.title' | t }}</h1>
 
       @if (status() === 'generating') {
-        <p>Generating device link…</p>
+        <p>{{ 'deviceTransfer.generating' | t }}</p>
       } @else if (status() === 'ready') {
-        <p class="mb-2">Open this link on the other device:</p>
+        <p class="mb-2">{{ 'deviceTransfer.openLink' | t }}</p>
         <div class="bg-card p-4 rounded-lg break-all">
           <code>{{ deviceLink() }}</code>
         </div>
@@ -29,13 +31,13 @@ import { environment } from '../../../environments/environment';
           class="mt-4 px-6 py-2 bg-accent text-on-fill rounded-full"
           (click)="copyLink()"
         >
-          Copy Link
+          {{ 'deviceTransfer.copyLink' | t }}
         </button>
-        <p class="mt-2 text-sm opacity-70">Link expires in 5 minutes.</p>
+        <p class="mt-2 text-sm opacity-70">{{ 'deviceTransfer.expires' | t }}</p>
       } @else if (status() === 'consuming') {
-        <p>Transferring session…</p>
+        <p>{{ 'deviceTransfer.transferring' | t }}</p>
       } @else if (status() === 'done') {
-        <p class="text-success">Account transferred successfully!</p>
+        <p class="text-success">{{ 'deviceTransfer.done' | t }}</p>
       } @else if (status() === 'error') {
         <p class="text-danger-ink">{{ errorMessage() }}</p>
       }
@@ -50,6 +52,7 @@ export class DeviceTransferComponent {
   private authService = inject(AuthService);
   private supabaseService = inject(SupabaseService);
   private platformId = inject(PLATFORM_ID);
+  private i18n = inject(I18nService);
 
   readonly deviceLink = signal<string>('');
   readonly status = signal<'generating' | 'ready' | 'consuming' | 'done' | 'error'>('generating');
@@ -73,7 +76,9 @@ export class DeviceTransferComponent {
       this.status.set('ready');
     } catch (e: unknown) {
       this.status.set('error');
-      this.errorMessage.set(e instanceof Error ? e.message : 'Failed to generate device link');
+      this.errorMessage.set(
+        e instanceof Error ? e.message : this.i18n.translate('deviceTransfer.generateFailed'),
+      );
     }
   }
 
@@ -106,11 +111,13 @@ export class DeviceTransferComponent {
         this.status.set('done');
         setTimeout(() => this.router.navigate(['/']), 1500);
       } else {
-        throw new Error('Failed to establish session');
+        throw new Error(this.i18n.translate('deviceTransfer.sessionFailed'));
       }
     } catch (e: unknown) {
       this.status.set('error');
-      this.errorMessage.set(e instanceof Error ? e.message : 'Transfer failed');
+      this.errorMessage.set(
+        e instanceof Error ? e.message : this.i18n.translate('deviceTransfer.transferFailed'),
+      );
     }
   }
 

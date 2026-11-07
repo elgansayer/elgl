@@ -4,6 +4,7 @@ import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { Component, ChangeDetectionStrategy, computed, output, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 const EMOJI_CATEGORIES = [
   {
@@ -1408,7 +1409,7 @@ const EMOJI_CATEGORIES = [
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-emoji-picker',
-  imports: [HlmInput, HlmButton, FormsModule, ...HlmRadioGroupImports],
+  imports: [HlmInput, HlmButton, FormsModule, TranslatePipe, ...HlmRadioGroupImports],
   template: `
     <div
       class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-72 max-h-80 overflow-hidden"
@@ -1419,7 +1420,7 @@ const EMOJI_CATEGORIES = [
           hlmInput
           type="text"
           [(ngModel)]="searchQuery"
-          placeholder="Search emoji..."
+          [attr.aria-label]="'emojiPicker.searchLabel' | t"
           class="w-full bg-surface-100 text-text-primary text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary placeholder-text-muted"
         />
       </div>
@@ -1430,7 +1431,7 @@ const EMOJI_CATEGORIES = [
         name="emojiCategory"
         [value]="selectedCategory()"
         (valueChange)="selectCategory($event)"
-        aria-label="Emoji category"
+        [attr.aria-label]="'emojiPicker.categoryAria' | t"
       >
         @for (cat of categories; track cat.name) {
           <label

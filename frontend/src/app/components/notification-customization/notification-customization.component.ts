@@ -1,6 +1,7 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
+import { I18nService } from '../../services/i18n.service';
 import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -11,6 +12,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class NotificationCustomizationComponent {
   private readonly prefsService = inject(NotificationPreferencesService);
+  private readonly i18n = inject(I18nService);
 
   readonly customToneUrl = signal('');
   readonly vibrationPattern = signal('');
@@ -29,7 +31,7 @@ export class NotificationCustomizationComponent {
       this.customToneUrl.set(prefs.customToneUrl ?? '');
       this.vibrationPattern.set((prefs.vibrationPattern ?? []).join(','));
     } catch {
-      this.error.set('Failed to load notification customisation');
+      this.error.set(this.i18n.translate('notificationCustomization.loadFailed'));
     } finally {
       this.loading.set(false);
     }
@@ -70,7 +72,7 @@ export class NotificationCustomizationComponent {
       );
       this.saved.set(true);
     } catch {
-      this.error.set('Failed to save notification customisation');
+      this.error.set(this.i18n.translate('notificationCustomization.saveFailed'));
     } finally {
       this.saving.set(false);
     }

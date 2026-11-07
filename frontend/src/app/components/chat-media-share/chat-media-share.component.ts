@@ -1,5 +1,7 @@
 import { Component, inject, input, signal } from '@angular/core';
 import { UploadedChatMedia } from '../../services/chat-media.service';
+import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatMediaMessageService } from '../../services/chat-media-message.service';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
@@ -13,24 +15,25 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
     AppButtonSecondaryComponent,
     ChatMediaPickerComponent,
     InstantVideoRecorderComponent,
+    TranslatePipe,
   ],
   template: `
     <app-button-secondary
       type="button"
       (clicked)="open.set(true)"
       customClass="bg-secondary/20 text-secondary-ink ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      ariaLabel="Share a photo or video"
+      [ariaLabel]="'chatMedia.shareAria' | t"
     >
-      📷 Media
+      {{ 'chatMedia.mediaButton' | t }}
     </app-button-secondary>
 
     <app-button-secondary
       type="button"
       (clicked)="videoNoteOpen.set(true)"
       customClass="bg-accent/20 text-accent ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      ariaLabel="Record an instant video note"
+      [ariaLabel]="'chatMedia.recordVideoNoteAria' | t"
     >
-      🎥 Video note
+      {{ 'chatMedia.videoNoteButton' | t }}
     </app-button-secondary>
 
     @if (open()) {
@@ -38,7 +41,7 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4"
         role="dialog"
         aria-modal="true"
-        aria-label="Share a photo or video"
+        [attr.aria-label]="'chatMedia.shareAria' | t"
       >
         <app-chat-media-picker
           (uploaded)="onUploaded($event)"
@@ -52,7 +55,7 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4"
         role="dialog"
         aria-modal="true"
-        aria-label="Record an instant video note"
+        [attr.aria-label]="'chatMedia.recordVideoNoteAria' | t"
       >
         <app-instant-video-recorder
           (uploaded)="onUploaded($event)"
@@ -74,18 +77,18 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
             (clicked)="retryPending()"
             [disabled]="isSending()"
             customClass="min-h-11 px-3 text-xs"
-            ariaLabel="Retry sending uploaded media"
+            [ariaLabel]="'chatMedia.retrySendAria' | t"
           >
-            {{ isSending() ? 'Sending…' : 'Retry send' }}
+            {{ isSending() ? ('chatMedia.sending' | t) : ('chatMedia.retrySend' | t) }}
           </app-button-primary>
           <app-button-secondary
             type="button"
             (clicked)="discardPending()"
             [disabled]="isSending()"
             customClass="min-h-11 px-3 text-xs"
-            ariaLabel="Dismiss unsent uploaded media"
+            [ariaLabel]="'chatMedia.dismissUnsentAria' | t"
           >
-            Dismiss
+            {{ 'common.dismiss' | t }}
           </app-button-secondary>
         </div>
       </div>
@@ -94,6 +97,7 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
 })
 export class ChatMediaShareComponent {
   private readonly messages = inject(ChatMediaMessageService);
+  private readonly i18n = inject(I18nService);
 
   readonly roomId = input.required<string>();
   readonly open = signal(false);
@@ -131,7 +135,7 @@ export class ChatMediaShareComponent {
     } catch {
       // The backend send endpoint is idempotent for this uploaded object, so a
       // retry can safely reuse it without uploading the bytes a second time.
-      this.sendError.set('Upload completed, but the message could not be sent.');
+      this.sendError.set(this.i18n.translate('chatMedia.sendFailed'));
     } finally {
       this.isSending.set(false);
     }

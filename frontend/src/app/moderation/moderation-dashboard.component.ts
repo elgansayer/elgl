@@ -1,6 +1,7 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { I18nService } from '../services/i18n.service';
 import { TranslatePipe } from '../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
 import { ModerationItem, ModerationService } from '../services/moderation.service';
@@ -23,6 +24,7 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
 })
 export class ModerationDashboardComponent {
   private moderationService = inject(ModerationService);
+  private readonly i18n = inject(I18nService);
 
   readonly type = signal<'moment' | 'profile'>('profile');
 
@@ -48,7 +50,7 @@ export class ModerationDashboardComponent {
         this.actionError.set(result.error ?? 'Failed to approve item');
       }
     } catch {
-      this.actionError.set('Service temporarily unavailable');
+      this.actionError.set(this.i18n.translate('moderation.serviceUnavailable'));
     } finally {
       this.actionInProgress.set(null);
     }
@@ -65,7 +67,7 @@ export class ModerationDashboardComponent {
         this.actionError.set(result.error ?? 'Failed to reject item');
       }
     } catch {
-      this.actionError.set('Service temporarily unavailable');
+      this.actionError.set(this.i18n.translate('moderation.serviceUnavailable'));
     } finally {
       this.actionInProgress.set(null);
     }
@@ -84,7 +86,7 @@ export class ModerationDashboardComponent {
         userId,
       });
     } catch {
-      this.actionError.set('Failed to analyse user');
+      this.actionError.set(this.i18n.translate('moderation.analyseFailed'));
     } finally {
       this.actionInProgress.set(null);
     }

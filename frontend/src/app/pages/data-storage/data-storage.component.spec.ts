@@ -117,7 +117,7 @@ describe('DataStorageComponent', () => {
 
     await component.clearCache();
 
-    expect(component.errorMessage()).toContain('Failed to clear');
+    expect(component.errorMessage()).toBe('dataStorage.clearAllFailed');
     expect(component.confirmClearCache()).toBe(true);
     expect(component.isClearingCache()).toBe(false);
     expect(dataStorageServiceMock.estimateCacheSize).toHaveBeenCalledTimes(2);
@@ -139,7 +139,7 @@ describe('DataStorageComponent', () => {
 
     await component.deleteOldMedia();
 
-    expect(component.errorMessage()).toContain('Failed to delete old media');
+    expect(component.errorMessage()).toBe('dataStorage.deleteOldMediaFailed');
     expect(component.isDeletingOldMedia()).toBe(false);
   });
 

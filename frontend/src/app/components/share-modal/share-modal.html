@@ -28,7 +28,7 @@
           <img
             [src]="entity().thumbnailUrl"
             class="w-12 h-12 rounded object-cover"
-            alt="Preview"
+            [alt]="'shareModal.previewAlt' | t"
           />
         } @else {
           <div

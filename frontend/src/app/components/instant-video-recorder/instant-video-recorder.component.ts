@@ -1,5 +1,7 @@
 import { Component, ElementRef, OnDestroy, ViewChild, inject, output, signal } from '@angular/core';
 import { ChatMediaService, UploadedChatMedia } from '../../services/chat-media.service';
+import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
@@ -10,7 +12,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
 
 @Component({
   selector: 'app-instant-video-recorder',
-  imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent],
+  imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent, TranslatePipe],
   template: `
     <section
       class="w-full max-w-md rounded-sheet border border-surface-100 bg-surface-0 p-4 shadow-lift"
@@ -19,14 +21,16 @@ const AUDIO_BITS_PER_SECOND = 64_000;
     >
       <div class="mb-3 flex items-start justify-between gap-3">
         <div>
-          <h2 id="instant-video-title" class="text-base font-bold text-text-primary">Video note</h2>
+          <h2 id="instant-video-title" class="text-base font-bold text-text-primary">
+            {{ 'videoNote.title' | t }}
+          </h2>
           <p id="instant-video-description" class="mt-1 text-sm text-text-secondary">
-            Record a short circular video message. Camera and microphone stop as soon as recording ends.
+            {{ 'videoNote.description' | t }}
           </p>
         </div>
         <span
           class="shrink-0 rounded-full bg-surface-100 px-2 py-1 text-xs font-semibold text-text-secondary"
-          aria-label="Maximum recording duration 30 seconds"
+          [attr.aria-label]="'videoNote.maxDuration' | t: { seconds: maxDurationSeconds }"
         >
           {{ formatDuration(durationSeconds()) }} / 00:30
         </span>
@@ -40,7 +44,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             playsinline
             preload="metadata"
             class="h-full w-full object-cover"
-            aria-label="Recorded video note preview"
+            [attr.aria-label]="'videoNote.recordedPreview' | t"
           ></video>
         } @else {
           <video
@@ -49,14 +53,14 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             muted
             playsinline
             class="h-full w-full object-cover"
-            aria-label="Camera preview"
+            [attr.aria-label]="'videoNote.cameraPreview' | t"
           ></video>
         }
       </div>
 
       @if (isRecording()) {
         <p class="mt-3 text-center text-sm font-semibold text-danger-ink" role="status" aria-live="polite">
-          Recording {{ formatDuration(durationSeconds()) }}
+          {{ 'videoNote.recording' | t: { time: formatDuration(durationSeconds()) } }}
         </p>
       }
 
@@ -72,9 +76,9 @@ const AUDIO_BITS_PER_SECOND = 64_000;
           (clicked)="cancel()"
           [disabled]="isUploading()"
           customClass="min-h-11 px-4"
-          ariaLabel="Cancel video note"
+          [ariaLabel]="'videoNote.cancelAria' | t"
         >
-          Cancel
+          {{ 'common.cancel' | t }}
         </app-button-secondary>
 
         @if (!isRecording() && !previewUrl()) {
@@ -83,9 +87,9 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             (clicked)="startRecording()"
             [disabled]="isRequestingPermission() || isUploading()"
             customClass="min-h-11 px-4"
-            ariaLabel="Start recording video note"
+            [ariaLabel]="'videoNote.startAria' | t"
           >
-            {{ isRequestingPermission() ? 'Opening camera…' : 'Record' }}
+            {{ isRequestingPermission() ? ('videoNote.openingCamera' | t) : ('videoNote.record' | t) }}
           </app-button-primary>
         }
 
@@ -94,9 +98,9 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             type="button"
             (clicked)="stopRecording()"
             customClass="min-h-11 px-4"
-            ariaLabel="Stop recording video note"
+            [ariaLabel]="'videoNote.stopAria' | t"
           >
-            Stop
+            {{ 'videoNote.stop' | t }}
           </app-button-primary>
         }
 
@@ -106,18 +110,18 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             (clicked)="retake()"
             [disabled]="isUploading()"
             customClass="min-h-11 px-4"
-            ariaLabel="Record video note again"
+            [ariaLabel]="'videoNote.retakeAria' | t"
           >
-            Retake
+            {{ 'videoNote.retake' | t }}
           </app-button-secondary>
           <app-button-primary
             type="button"
             (clicked)="uploadAndSend()"
             [disabled]="isUploading()"
             customClass="min-h-11 px-4"
-            ariaLabel="Upload and send video note"
+            [ariaLabel]="'videoNote.sendAria' | t"
           >
-            {{ isUploading() ? 'Uploading…' : 'Send video note' }}
+            {{ isUploading() ? ('videoNote.uploading' | t) : ('videoNote.send' | t) }}
           </app-button-primary>
         }
       </div>
@@ -138,6 +142,8 @@ export class InstantVideoRecorderComponent implements OnDestroy {
   readonly errorMessage = signal<string | null>(null);
 
   private readonly mediaService = inject(ChatMediaService);
+  private readonly i18n = inject(I18nService);
+  protected readonly maxDurationSeconds = MAX_DURATION_SECONDS;
   private mediaRecorder: MediaRecorder | null = null;
   private stream: MediaStream | null = null;
   private chunks: Blob[] = [];
@@ -153,7 +159,7 @@ export class InstantVideoRecorderComponent implements OnDestroy {
     this.durationSeconds.set(0);
 
     if (!globalThis.navigator?.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      this.errorMessage.set('Video recording is not supported by this browser.');
+      this.errorMessage.set(this.i18n.translate('videoNote.errorUnsupported'));
       return;
     }
 
@@ -185,7 +191,7 @@ export class InstantVideoRecorderComponent implements OnDestroy {
         if (event.data.size > 0) this.chunks.push(event.data);
       };
       recorder.onerror = () => {
-        this.errorMessage.set('Recording failed. You can retry without losing the chat.');
+        this.errorMessage.set(this.i18n.translate('videoNote.errorRecordingFailed'));
         this.stopRecording();
       };
       recorder.onstop = () => this.finaliseRecording(recorder.mimeType);
@@ -199,7 +205,7 @@ export class InstantVideoRecorderComponent implements OnDestroy {
       }, 1000);
     } catch {
       this.stopStream();
-      this.errorMessage.set('Camera and microphone permission are required to record a video note.');
+      this.errorMessage.set(this.i18n.translate('videoNote.errorPermission'));
     } finally {
       this.isRequestingPermission.set(false);
     }
@@ -224,7 +230,7 @@ export class InstantVideoRecorderComponent implements OnDestroy {
     if (!blob || this.isUploading()) return;
 
     if (blob.size <= 0 || blob.size > MAX_RECORDED_BYTES) {
-      this.errorMessage.set('This video note is too large. Please record a shorter note.');
+      this.errorMessage.set(this.i18n.translate('videoNote.errorTooLarge'));
       return;
     }
 
@@ -238,7 +244,7 @@ export class InstantVideoRecorderComponent implements OnDestroy {
       if (uploaded.kind !== 'video') throw new Error('Unexpected media kind');
       this.uploaded.emit({ ...uploaded, presentation: 'instant_video' });
     } catch {
-      this.errorMessage.set('The video note could not be uploaded. Your recording is still here to retry.');
+      this.errorMessage.set(this.i18n.translate('videoNote.errorUploadFailed'));
     } finally {
       this.isUploading.set(false);
     }
@@ -295,12 +301,12 @@ export class InstantVideoRecorderComponent implements OnDestroy {
     this.chunks = [];
     if (blob.size <= 0) {
       this.recordedBlob = null;
-      this.errorMessage.set('No video was recorded. Please try again.');
+      this.errorMessage.set(this.i18n.translate('videoNote.errorNoVideo'));
       return;
     }
     if (blob.size > MAX_RECORDED_BYTES) {
       this.recordedBlob = null;
-      this.errorMessage.set('This video note is too large. Please record a shorter note.');
+      this.errorMessage.set(this.i18n.translate('videoNote.errorTooLarge'));
       return;
     }
 

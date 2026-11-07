@@ -20,6 +20,13 @@ describe('EmojiPickerComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('gives the search field an accessible name instead of relying on hint text', () => {
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+
+    expect(input.getAttribute('aria-label')).toBe('Search emoji...');
+    expect(input.hasAttribute('placeholder')).toBe(false);
+  });
+
   it('should delegate mutually exclusive category selection to the Spartan radio group', () => {
     const group = fixture.nativeElement.querySelector('hlm-radio-group');
     const radios = fixture.nativeElement.querySelectorAll('hlm-radio');

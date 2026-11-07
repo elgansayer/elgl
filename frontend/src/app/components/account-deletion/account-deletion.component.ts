@@ -1,5 +1,6 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
+import { I18nService } from '../../services/i18n.service';
 import { UserService } from '../../services/user.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -11,15 +12,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class AccountDeletionComponent {
   private userService = inject(UserService);
+  private i18n = inject(I18nService);
   readonly isLoading = signal(false);
   readonly message = signal('');
   readonly isError = signal(false);
   readonly deletionScheduled = signal<string | null>(null);
 
   async requestDeletion(): Promise<void> {
-    const confirm = window.confirm(
-      'Are you sure you want to delete your account? This action can be undone within 30 days.',
-    );
+    const confirm = window.confirm(this.i18n.translate('account_deletion.confirmDelete'));
     if (!confirm) return;
 
     this.isLoading.set(true);
@@ -31,7 +31,7 @@ export class AccountDeletionComponent {
       this.deletionScheduled.set(res.scheduled_for_deletion_at);
       this.message.set(res.message);
     } catch {
-      this.message.set('Failed to request deletion.');
+      this.message.set(this.i18n.translate('account_deletion.requestFailed'));
       this.isError.set(true);
     } finally {
       this.isLoading.set(false);
@@ -48,7 +48,7 @@ export class AccountDeletionComponent {
       this.message.set(res.message);
       this.deletionScheduled.set(null);
     } catch {
-      this.message.set('Failed to restore account.');
+      this.message.set(this.i18n.translate('account_deletion.restoreFailed'));
       this.isError.set(true);
     } finally {
       this.isLoading.set(false);
@@ -62,9 +62,9 @@ export class AccountDeletionComponent {
 
     try {
       await this.userService.downloadMyData();
-      this.message.set('Data export downloaded successfully.');
+      this.message.set(this.i18n.translate('account_deletion.exportSuccess'));
     } catch {
-      this.message.set('Failed to export data.');
+      this.message.set(this.i18n.translate('account_deletion.exportFailed'));
       this.isError.set(true);
     } finally {
       this.isLoading.set(false);

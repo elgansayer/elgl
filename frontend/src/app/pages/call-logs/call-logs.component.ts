@@ -73,7 +73,7 @@ import { AppEmptyStateComponent } from '../../components/primitives/empty-state/
                   {{ 'call_logs.' + log.call_type | t }}
                   · {{ log.started_at | date: 'short' }}
                   @if (log.duration_seconds !== null) {
-                    · {{ log.duration_seconds }}s
+                    · {{ 'common.durationSeconds' | t: { count: log.duration_seconds } }}
                   }
                 </p>
               </div>

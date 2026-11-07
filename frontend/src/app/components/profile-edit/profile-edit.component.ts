@@ -31,13 +31,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
           @if (coverPhotoPreview()) {
             <img
               [src]="coverPhotoPreview()"
-              alt="Cover preview"
+              [alt]="'coverPhoto.previewAlt' | t"
               class="w-full h-full object-cover"
             />
           } @else if (profile()?.cover_photo_url) {
             <img
               [src]="profile()?.cover_photo_url"
-              alt="Cover"
+              [alt]="'profileEdit.coverPhoto' | t"
               class="w-full h-full object-cover"
             />
           } @else {

@@ -95,7 +95,10 @@ describe('ProfileComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('en, ja');
     expect(text).toContain('fr, ko');
-    expect(text).toContain('🔥 14d');
+    expect(text).toContain('🔥 profile.streakDaysShort');
+    expect(TestBed.inject(I18nService).translate).toHaveBeenCalledWith('profile.streakDaysShort', {
+      count: 14,
+    });
   });
 
   it('should load and render the saved CEFR proficiency level', async () => {

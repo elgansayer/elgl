@@ -10,11 +10,17 @@ import { LanguageChallengesComponent } from '../language-challenges/language-cha
   selector: 'app-study-streak-counter',
   imports: [TranslatePipe, LanguageChallengesComponent],
   template: `
-    <section class="mx-auto w-full max-w-5xl px-4 pt-4 sm:px-6" aria-label="Current study streak">
+    <section
+      class="mx-auto w-full max-w-5xl px-4 pt-4 sm:px-6"
+      [attr.aria-label]="'studyStreak.ariaLabel' | t"
+    >
       @if (streakValue() !== undefined) {
         <div class="flex items-center gap-2 rounded-lg bg-surface-300/80 px-3 py-2">
           <span class="text-sm font-medium text-text-primary">
-            Current study streak: {{ streakValue() }} day{{ streakValue() === 1 ? '' : 's' }}
+            {{
+              (streakValue() === 1 ? 'studyStreak.dayOne' : 'studyStreak.dayOther')
+                | t: { count: streakValue() }
+            }}
           </span>
         </div>
       } @else {

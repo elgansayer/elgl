@@ -261,7 +261,7 @@ describe('AppearanceSettingsComponent', () => {
 
     expect(fontScaleServiceMock.setChatTextSize).toHaveBeenLastCalledWith('medium');
     expect(component.currentChatTextSize()).toBe('medium');
-    expect(component.errorMessage()).toBe('Failed to save settings');
+    expect(component.errorMessage()).toBe('settings.saveFailed');
     expect(component.successMessage()).toBe('');
   });
 

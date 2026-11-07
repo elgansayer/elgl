@@ -96,7 +96,7 @@ export class AppearanceSettingsComponent {
         }
         return profile;
       } catch {
-        this.errorMessage.set('Failed to load profile');
+        this.errorMessage.set(this.i18nService.translate('profile.loadError'));
         return null;
       }
     },
@@ -157,7 +157,7 @@ export class AppearanceSettingsComponent {
       }
       this.successMessage.set('settings.saved');
     } catch {
-      this.errorMessage.set('Failed to save settings');
+      this.errorMessage.set(this.i18nService.translate('settings.saveFailed'));
     } finally {
       this.isSaving.set(false);
     }

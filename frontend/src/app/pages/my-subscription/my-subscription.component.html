@@ -189,7 +189,7 @@
             </div>
             <div class="text-end me-3">
               <div class="text-sm text-text-primary">
-                {{ plan.price_ukp }} UKP / \${{ plan.price_usd }} USD
+                {{ 'subscription.priceDual' | t: { ukp: plan.price_ukp, usd: plan.price_usd } }}
               </div>
               @if (plan.interval === 'year') {
                 <span class="text-xs text-success">{{ 'subscription.perYear' | t }}</span>

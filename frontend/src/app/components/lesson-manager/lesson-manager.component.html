@@ -55,7 +55,7 @@
       <h3>{{ (isNew() ? 'admin.lessons.create_lesson' : 'admin.lessons.edit_lesson') | t }}</h3>
       <div class="mb-2">
         <label>{{ 'admin.lessons.title' | t }}</label>
-        <input hlmInput [(ngModel)]="form.title" class="input" [attr.aria-label]="'text input'" />
+        <input hlmInput [(ngModel)]="form.title" class="input" [attr.aria-label]="'admin.lessons.title' | t" />
       </div>
       <div class="mb-2">
         <label>{{ 'admin.lessons.description' | t }}</label>
@@ -67,7 +67,7 @@
           hlmInput
           [(ngModel)]="form.language_code"
           class="input"
-          [attr.aria-label]="'text input'"
+          [attr.aria-label]="'admin.lessons.language' | t"
         />
       </div>
       <div class="mb-2">

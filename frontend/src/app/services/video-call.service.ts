@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, DestroyRef } from '@angular/core';
+import { I18nService } from './i18n.service';
 import {
   Room,
   RoomEvent,
@@ -31,6 +32,7 @@ export class VideoCallService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(I18nService);
   private room: Room | null = null;
 private durationSubscription: Subscription | null = null;
   private e2eeWorker: Worker | null = null;
@@ -110,7 +112,7 @@ private durationSubscription: Subscription | null = null;
     } catch (error: unknown) {
       this.disposeE2eeWorker();
       this.isEncrypted.set(false);
-      this.connectionError.set('Failed to start video call');
+      this.connectionError.set(this.i18n.translate('videoCall.startFailed'));
       throw error;
     }
   }
@@ -182,7 +184,7 @@ private durationSubscription: Subscription | null = null;
     } catch (error: unknown) {
       this.disposeE2eeWorker();
       this.isEncrypted.set(false);
-      this.connectionError.set('Failed to accept video call');
+      this.connectionError.set(this.i18n.translate('videoCall.acceptFailed'));
       throw error;
     }
   }

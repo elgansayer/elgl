@@ -5,6 +5,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
+import { I18nService } from '../../services/i18n.service';
 import { LessonsService } from '../../services/lessons.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { TokenisedTextComponent } from '../../components/tokenised-text/tokenised-text.component';
@@ -37,17 +38,17 @@ import {
             class="mb-5 inline-flex min-h-11 items-center rounded-app px-3 text-sm font-semibold text-primary-ink hover:bg-surface-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             routerLink="/lessons"
           >
-            Back to lessons
+            {{ 'lessons.backToLessons' | t }}
           </a>
 
           @if (selectedLessonResource.isLoading()) {
             <p role="status" aria-live="polite">{{ 'common.loading' | t }}</p>
           } @else if (selectedLessonResource.error()) {
             <section class="rounded-card border-2 border-surface-100 bg-surface-200 p-4">
-              <h1 id="lessons-title" class="text-xl font-bold">Lesson unavailable</h1>
+              <h1 id="lessons-title" class="text-xl font-bold">{{ 'lessons.unavailableTitle' | t }}</h1>
               <p class="mt-2 text-secondary-ink">{{ 'common.error_generic' | t }}</p>
               <button hlmBtn size="touch" type="button" class="mt-4" (click)="retrySelectedLesson()">
-                Retry
+                {{ 'common.retry' | t }}
               </button>
             </section>
           } @else if (selectedLesson(); as lesson) {
@@ -58,7 +59,7 @@ import {
                     <span>{{ level }}</span>
                   }
                   @if (durationMinutes(lesson); as duration) {
-                    <span class="ms-2">{{ duration }} min</span>
+                    <span class="ms-2">{{ 'common.durationMinutes' | t: { count: duration } }}</span>
                   }
                 </p>
                 <h1 id="lessons-title" class="mt-1 break-words text-3xl font-bold">{{ lesson.title }}</h1>
@@ -71,7 +72,7 @@ import {
                 <div
                   class="mb-5 flex gap-1"
                   role="progressbar"
-                  aria-label="Lesson progress"
+                  [attr.aria-label]="'lessons.progressAria' | t"
                   aria-valuemin="0"
                   aria-valuemax="100"
                   [attr.aria-valuenow]="progressPercent()"
@@ -107,17 +108,17 @@ import {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        Open lesson stream
+                        {{ 'lessons.openStream' | t }}
                       </a>
                     }
                   </section>
                 } @else {
-                  <p class="text-secondary-ink">This lesson does not have readable content yet.</p>
+                  <p class="text-secondary-ink">{{ 'lessons.noContent' | t }}</p>
                 }
 
                 @if (safeUrl(lesson.audio_url); as audioUrl) {
                   <audio class="mt-5 w-full" controls preload="none" [src]="audioUrl">
-                    Your browser does not support lesson audio.
+                    {{ 'lessons.audioUnsupported' | t }}
                   </audio>
                 }
 
@@ -139,7 +140,7 @@ import {
                     [disabled]="segmentIndex() === 0 || segments().length === 0 || isSavingProgress()"
                     (click)="previousSegment()"
                   >
-                    Previous
+                    {{ 'common.previous' | t }}
                   </button>
                   <button
                     hlmBtn
@@ -148,7 +149,7 @@ import {
                     [disabled]="segmentIndex() >= segments().length - 1 || segments().length === 0 || isSavingProgress()"
                     (click)="nextSegment()"
                   >
-                    Next
+                    {{ 'common.next' | t }}
                   </button>
                 </div>
               </section>
@@ -156,26 +157,30 @@ import {
           }
         } @else {
           <header class="mb-8">
-            <h1 id="lessons-title" class="text-3xl font-bold">Lessons</h1>
-            <p class="mt-2 max-w-2xl text-secondary-ink">Curated lessons for focused language practice.</p>
+            <h1 id="lessons-title" class="text-3xl font-bold">{{ 'lessons.title' | t }}</h1>
+            <p class="mt-2 max-w-2xl text-secondary-ink">{{ 'lessons.subtitle' | t }}</p>
           </header>
 
           @if (lessonsResource.isLoading()) {
             <p role="status" aria-live="polite">{{ 'common.loading' | t }}</p>
           } @else if (lessonsResource.error()) {
             <section class="rounded-card border-2 border-surface-100 bg-surface-200 p-4">
-              <h2 class="text-xl font-bold">Unable to load lessons</h2>
+              <h2 class="text-xl font-bold">{{ 'lessons.loadErrorTitle' | t }}</h2>
               <p class="mt-2 text-secondary-ink">{{ 'common.error_generic' | t }}</p>
-              <button hlmBtn size="touch" type="button" class="mt-4" (click)="retryLessons()">Retry</button>
+              <button hlmBtn size="touch" type="button" class="mt-4" (click)="retryLessons()">
+                {{ 'common.retry' | t }}
+              </button>
             </section>
           } @else if (lessons().length === 0) {
             <section class="rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card">
-              <h2 class="text-xl font-bold">No lessons available</h2>
-              <p class="mt-2 text-secondary-ink">New lessons will appear here when they are published.</p>
+              <h2 class="text-xl font-bold">{{ 'lessons.emptyTitle' | t }}</h2>
+              <p class="mt-2 text-secondary-ink">{{ 'lessons.emptyDescription' | t }}</p>
             </section>
           } @else {
             <section aria-labelledby="featured-lessons-title">
-              <h2 id="featured-lessons-title" class="mb-4 text-xl font-bold">Featured</h2>
+              <h2 id="featured-lessons-title" class="mb-4 text-xl font-bold">
+                {{ 'lessons.featured' | t }}
+              </h2>
               <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 @for (lesson of featuredLessons(); track lesson.id) {
                   <ng-container *ngTemplateOutlet="lessonCard; context: { $implicit: lesson }" />
@@ -185,7 +190,9 @@ import {
 
             @if (levelLessons().length > 0) {
               <section class="mt-10" aria-labelledby="level-lessons-title">
-                <h2 id="level-lessons-title" class="mb-4 text-xl font-bold">For your level</h2>
+                <h2 id="level-lessons-title" class="mb-4 text-xl font-bold">
+                  {{ 'lessons.forYourLevel' | t }}
+                </h2>
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   @for (lesson of levelLessons(); track lesson.id) {
                     <ng-container *ngTemplateOutlet="lessonCard; context: { $implicit: lesson }" />
@@ -210,7 +217,7 @@ import {
         class="block rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         routerLink="/lessons"
         [queryParams]="{ lesson: lesson.id }"
-        [attr.aria-label]="'Open lesson: ' + lesson.title"
+        [attr.aria-label]="'lessons.openLesson' | t: { title: lesson.title }"
       >
         <div class="h-full overflow-hidden rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card transition-shadow hover:shadow-lift">
           @if (safeUrl(lesson.cover_image_url); as coverUrl) {
@@ -226,7 +233,7 @@ import {
               <span class="rounded-pill bg-surface-100 px-2 py-1">{{ level }}</span>
             }
             @if (durationMinutes(lesson); as duration) {
-              <span>{{ duration }} min</span>
+              <span>{{ 'common.durationMinutes' | t: { count: duration } }}</span>
             }
           </div>
           <h3 class="mt-3 break-words text-lg font-bold">{{ lesson.title }}</h3>
@@ -249,6 +256,7 @@ export class LessonsComponent {
 
   private readonly lessonsService = inject(LessonsService);
   private readonly authService = inject(AuthService);
+  private readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
 
   private readonly queryParamMap = toSignal(this.route.queryParamMap, {
@@ -322,8 +330,11 @@ export class LessonsComponent {
   });
   readonly progressLabel = computed(() => {
     const count = this.segments().length;
-    if (count === 0) return 'No lesson segments';
-    return `Segment ${Math.min(this.segmentIndex(), count - 1) + 1} of ${count}`;
+    if (count === 0) return this.i18n.translate('lessons.noSegments');
+    return this.i18n.translate('lessons.segmentProgress', {
+      current: Math.min(this.segmentIndex(), count - 1) + 1,
+      total: count,
+    });
   });
   readonly progressLoadFailed = computed(
     () => Boolean(this.selectedProgressResource.error()) || Boolean(this.singleSegmentCompletionResource.error()),

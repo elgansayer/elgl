@@ -8,6 +8,7 @@ import { BrnDialogRef, injectBrnDialogContext } from '@spartan-ng/brain/dialog';
 import { HlmButton } from '@spartan-ng/helm/button';
 
 import { classes } from '@spartan-ng/helm/utils';
+import { TranslatePipe } from '../../../../../services/translate.pipe';
 import { HlmDialogClose } from './hlm-dialog-close';
 
 type HlmDialogContentContext = {
@@ -18,7 +19,7 @@ type HlmDialogContentContext = {
 
 @Component({
   selector: 'hlm-dialog-content',
-  imports: [NgComponentOutlet, HlmButton, HlmDialogClose, NgIcon],
+  imports: [NgComponentOutlet, HlmButton, HlmDialogClose, NgIcon, TranslatePipe],
   providers: [provideIcons({ lucideX })],
   host: {
     'data-slot': 'dialog-content',
@@ -33,7 +34,7 @@ type HlmDialogContentContext = {
 
     @if (showCloseButton()) {
       <button hlmBtn variant="ghost" size="icon-sm" class="absolute end-2 top-2" hlmDialogClose>
-        <span class="sr-only">close</span>
+        <span class="sr-only">{{ 'common.close' | t }}</span>
         <ng-icon name="lucideX" />
       </button>
     }

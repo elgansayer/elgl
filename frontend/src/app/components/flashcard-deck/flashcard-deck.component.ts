@@ -448,7 +448,9 @@ const DECK_ICONS = [
                               fc.word_token
                             }}</span>
                             <span class="ms-2 text-xs text-success">{{ fc.translation }}</span>
-                            <app-chip customClass="ms-2">L{{ fc.srs_level }}</app-chip>
+                            <app-chip customClass="ms-2">{{
+                              'deck.srsLevelShort' | t: { level: fc.srs_level }
+                            }}</app-chip>
                           </div>
                           <button
                             hlmBtn

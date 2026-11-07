@@ -46,7 +46,7 @@
             @if (profile()?.avatar_url) {
               <img
                 [src]="profile()?.avatar_url"
-                alt="avatar"
+                [alt]="'profile.avatarAlt' | t"
                 class="h-16 w-16 object-cover"
                 loading="lazy"
               />
@@ -147,7 +147,7 @@
                   @if (visit.visitor?.avatar_url && visit.visitor?.id !== 'hidden-vip-only') {
                     <img
                       [src]="visit.visitor?.avatar_url"
-                      alt="avatar"
+                      [alt]="'profile.visitorAvatarAlt' | t"
                       class="h-6 w-6 rounded-full object-cover"
                     />
                   } @else {
@@ -191,13 +191,13 @@
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
             {{ 'profile.statStreak' | t }}
           </p>
-          <p class="text-sm font-bold text-neon-orange">🔥 {{ profile()?.study_streak_days }}d</p>
+          <p class="text-sm font-bold text-neon-orange">🔥 {{ 'profile.streakDaysShort' | t: { count: profile()?.study_streak_days } }}</p>
         </div>
         <div>
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
             {{ 'profile.statCorrections' | t }}
           </p>
-          <p class="text-sm font-bold text-success">{{ profile()?.correction_ratio }}x</p>
+          <p class="text-sm font-bold text-success">{{ profile()?.correction_ratio }}&times;</p>
         </div>
         <div>
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
@@ -352,7 +352,7 @@
             aria-labelledby="learning-goals-heading"
           >
             <h3 id="learning-goals-heading" class="text-xs font-semibold uppercase text-text-secondary">
-              Learning goals
+              {{ 'profile.learningGoalsLabel' | t }}
             </h3>
             <p class="mt-2 whitespace-pre-wrap break-words text-sm text-text-primary">
               {{ profile()?.learning_goals }}
@@ -663,7 +663,7 @@
               name="privacyLastSeen"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'privacy.lastSeen' | t"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
@@ -679,7 +679,7 @@
               name="privacyProfilePhoto"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'privacy.profilePhoto' | t"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
@@ -695,7 +695,7 @@
               name="privacyAboutInfo"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'privacy.aboutInfo' | t"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
@@ -711,7 +711,7 @@
               name="privacyStatus"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'privacy.status' | t"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
@@ -763,7 +763,7 @@
               [placeholder]="'profile.statusPlaceholder' | t"
               maxlength="200"
               class="app-input"
-              [attr.aria-label]="'text input'"
+              [attr.aria-label]="'profile.statusLabel' | t"
             />
           </div>
           <app-textarea
@@ -778,17 +778,16 @@
               for="profile-learning-goals"
               class="block text-xs font-semibold uppercase text-text-secondary mb-2"
             >
-              Learning goals
+              {{ 'profile.learningGoalsLabel' | t }}
             </label>
             <app-textarea
               textareaId="profile-learning-goals"
               [value]="learningGoals()"
               (valueChange)="learningGoals.set($event.slice(0, 1000))"
               [rows]="4"
-              placeholder="Describe why you are learning and what you want to achieve"
             />
             <div class="mt-1 flex flex-wrap justify-between gap-2 text-xs text-text-secondary">
-              <span>Share your motivations so compatible language partners can understand your goals.</span>
+              <span>{{ 'profile.learningGoalsHelp' | t }}</span>
               <span aria-live="polite">{{ learningGoals().length }} / 1000</span>
             </div>
           </div>
@@ -861,14 +860,14 @@
                     name="catalog-currency-{{ idx }}"
                     class="app-input"
                     selectClass="app-input"
-                    [aria-label]="'Select'"
+                    [aria-label]="'profile.catalogCurrencyLabel' | t"
                   >
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="JPY">JPY</option>
-                    <option value="AUD">AUD</option>
-                    <option value="CAD">CAD</option>
+                    <option value="USD">USD</option> <!-- translation-static-ok: ISO 4217 code -->
+                    <option value="EUR">EUR</option> <!-- translation-static-ok: ISO 4217 code -->
+                    <option value="GBP">GBP</option> <!-- translation-static-ok: ISO 4217 code -->
+                    <option value="JPY">JPY</option> <!-- translation-static-ok: ISO 4217 code -->
+                    <option value="AUD">AUD</option> <!-- translation-static-ok: ISO 4217 code -->
+                    <option value="CAD">CAD</option> <!-- translation-static-ok: ISO 4217 code -->
                   </hlm-native-select>
                   <app-input
                     type="url"

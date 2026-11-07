@@ -78,13 +78,20 @@ describe('AppChipComponent', () => {
   });
 
   it('should show remove button when removable and emit removed without emitting clicked', () => {
-    const removeBtn = chipElement.querySelector('button[aria-label="Remove chip"]') as HTMLButtonElement | null;
+    const removeBtn = chipElement.querySelector('button[aria-label="Remove Tag 1"]') as HTMLButtonElement | null;
     expect(removeBtn).toBeTruthy();
-    expect(removeBtn?.getAttribute('aria-label')).toBe('Remove chip');
+    expect(removeBtn?.getAttribute('aria-label')).toBe('Remove Tag 1');
 
     removeBtn?.click();
     expect(host.removeCount).toBe(1);
     expect(host.clickCount).toBe(0);
+  });
+
+  it('should fall back to a generic translated remove label when the chip has no label', () => {
+    host.label.set('');
+    fixture.detectChanges();
+
+    expect(chipElement.querySelector('button[aria-label="Remove"]')).toBeTruthy();
   });
 
   it('should update classes when selected and variant change', () => {

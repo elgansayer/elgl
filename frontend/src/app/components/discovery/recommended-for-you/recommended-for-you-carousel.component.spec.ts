@@ -70,6 +70,8 @@ describe('RecommendedForYouCarouselComponent', () => {
                 'discovery.recommendation.availabilityMatch': 'Matching availability',
                 'discovery.recommendation.helpfulCorrector': 'Helpful corrector',
                 'discovery.recommendation.learningGoalMatch': 'Shared learning goal',
+                'recommendedForYou.emptyTitle': 'No recommendations yet',
+                'recommendedForYou.unavailable': 'Recommendations are unavailable right now.',
               };
               return (labels[key] ?? key).replace('{{count}}', String(params?.['count'] ?? ''));
             },

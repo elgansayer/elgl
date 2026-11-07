@@ -1,6 +1,7 @@
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, signal } from '@angular/core';
+import { I18nService } from '../../services/i18n.service';
 import { Location } from '@angular/common';
 import { DataStorageService } from '../../services/data-storage.service';
 import { CacheService } from '../../services/cache.service';
@@ -13,6 +14,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class DataStorageComponent {
   private dataStorageService = inject(DataStorageService);
+  private readonly i18n = inject(I18nService);
   private cacheService = inject(CacheService);
   private location = inject(Location);
 
@@ -73,7 +75,7 @@ export class DataStorageComponent {
       this.confirmClearCache.set(false);
       this.successMessage.set('dataStorage.cacheCleared');
     } catch {
-      this.errorMessage.set('Failed to clear all cached data. Please try again.');
+      this.errorMessage.set(this.i18n.translate('dataStorage.clearAllFailed'));
     } finally {
       this.isClearingCache.set(false);
       await this.computeCacheSize();
@@ -90,7 +92,7 @@ export class DataStorageComponent {
       await this.cacheService.deleteOldMedia();
       this.successMessage.set('dataStorage.oldMediaDeleted');
     } catch {
-      this.errorMessage.set('Failed to delete old media. Please try again.');
+      this.errorMessage.set(this.i18n.translate('dataStorage.deleteOldMediaFailed'));
     } finally {
       this.isDeletingOldMedia.set(false);
       await this.computeCacheSize();

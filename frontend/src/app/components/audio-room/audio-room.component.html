@@ -406,7 +406,7 @@
             hlmBtn
             (click)="showPollResultsModal.set(false)"
             class="absolute top-2 end-2 text-surface-400 hover:text-text-primary"
-            aria-label="Close"
+            [attr.aria-label]="'common.close' | t"
           >
             &times;
           </button>

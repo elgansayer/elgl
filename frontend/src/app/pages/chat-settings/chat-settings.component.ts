@@ -42,16 +42,15 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
         >
           <div class="space-y-1">
             <h3 id="disappearing-messages-title" class="text-text-primary text-base font-medium">
-              Disappearing messages
+              {{ 'chat_settings.disappearing_title' | t }}
             </h3>
             <p id="disappearing-messages-description" class="text-text-secondary text-sm">
-              Choose how long newly sent messages remain available. Existing messages keep their
-              current lifetime.
+              {{ 'chat_settings.disappearing_desc' | t }}
             </p>
           </div>
 
           <label class="block text-sm text-text-primary" for="disappearing-messages-ttl">
-            Message lifetime
+            {{ 'chat_settings.message_lifetime' | t }}
           </label>
           <hlm-native-select
             selectId="disappearing-messages-ttl"
@@ -62,10 +61,10 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
             aria-describedby="disappearing-messages-description disappearing-messages-status"
             (change)="changeDisappearingMessagesTtl($event)"
           >
-            <option value="off">Off</option>
-            <option value="24h">24 hours</option>
-            <option value="7d">7 days</option>
-            <option value="90d">90 days</option>
+            <option value="off">{{ 'settings.off' | t }}</option>
+            <option value="24h">{{ 'chat_settings.ttl_24h' | t }}</option>
+            <option value="7d">{{ 'chat_settings.ttl_7d' | t }}</option>
+            <option value="90d">{{ 'chat_settings.ttl_90d' | t }}</option>
           </hlm-native-select>
 
           <p id="disappearing-messages-status" class="min-h-5 text-sm" aria-live="polite">
@@ -73,11 +72,11 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
               <span class="text-text-secondary">{{ 'common.saving' | t }}</span>
             } @else if (disappearingMessagesError()) {
               <span class="text-danger-ink" role="alert">
-                Could not save the message lifetime. Your previous setting is still active.
+                {{ 'chat_settings.disappearing_save_failed' | t }}
               </span>
             } @else if (!settingsLoadError() && disappearingMessagesTtl() !== 'off') {
               <span class="text-text-secondary">
-                New messages you send will be permanently removed after this time.
+                {{ 'chat_settings.disappearing_notice' | t }}
               </span>
             }
           </p>

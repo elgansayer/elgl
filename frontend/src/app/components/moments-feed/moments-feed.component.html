@@ -89,7 +89,7 @@
               }
               <button
                 hlmBtn
-                aria-label="Remove media"
+                [attr.aria-label]="'common.removeMedia' | t"
                 (click)="removeMedia(i)"
                 class="absolute -top-2 -end-2 h-5 w-5 bg-danger rounded-full flex items-center justify-center text-[10px] text-on-fill"
               >
@@ -114,7 +114,7 @@
         <div class="flex items-center gap-2">
           <button
             hlmBtn
-            aria-label="Record voice"
+            [attr.aria-label]="'common.recordVoice' | t"
             (click)="showVoiceRecorder.set(true)"
             class="p-2 rounded-full bg-surface-300 text-primary-ink hover:text-primary-ink/80"
           >
@@ -129,7 +129,7 @@
               [(ngModel)]="tempImageUrlInput"
               [placeholder]="'moments.imageUrlPlaceholder' | t"
               class="bg-transparent border-none text-xs w-24 text-text-primary outline-none px-2"
-              [attr.aria-label]="'text input'"
+              [attr.aria-label]="'moments.imageUrlPlaceholder' | t"
             />
             <button
               hlmBtn
@@ -534,7 +534,7 @@
                   </div>
                   <button
                     hlmBtn
-                    aria-label="Submit comment"
+                    [attr.aria-label]="'common.submitComment' | t"
                     (click)="submitComment(moment)"
                     class="bg-primary text-on-fill rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0"
                   >

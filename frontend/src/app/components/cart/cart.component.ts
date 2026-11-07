@@ -34,7 +34,7 @@ interface CartItem {
             >
               <div>
                 <span class="font-medium">{{ item.name }}</span>
-                <span class="ms-2 text-xs opacity-50">x{{ item.quantity }}</span>
+                <span class="ms-2 text-xs opacity-50">&times;{{ item.quantity }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-sm font-semibold"

@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { environment } from '../../../environments/environment';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 interface RoomPreview {
   room_name: string;
@@ -15,7 +16,7 @@ const ROOM_PREVIEW_KEY_PREFIX = 'voiceroom-preview-';
 
 @Component({
   selector: 'app-voiceroom-preview',
-  imports: [RouterModule],
+  imports: [RouterModule, TranslatePipe],
   template: `
     @if (roomResource.value(); as room) {
       <div
@@ -40,14 +41,14 @@ const ROOM_PREVIEW_KEY_PREFIX = 'voiceroom-preview-';
             >
           </div>
           <p class="text-text-secondary mb-8">
-            Join this live audio room to practice your speaking skills!
+            {{ 'voiceroomPreview.joinPrompt' | t }}
           </p>
           <a
             [routerLink]="['/audio-rooms']"
             [queryParams]="{ join: id() }"
             class="block w-full py-3 px-4 bg-primary hover:bg-primary/90 text-on-fill font-bold rounded-xl transition-colors"
           >
-            Join Room
+            {{ 'voiceroomPreview.joinRoom' | t }}
           </a>
         </div>
       </div>
@@ -63,13 +64,15 @@ const ROOM_PREVIEW_KEY_PREFIX = 'voiceroom-preview-';
           >
             <span class="text-3xl">🎙️</span>
           </div>
-          <h1 class="text-2xl font-bold mb-2 text-muted">Room unavailable</h1>
-          <p class="text-muted mb-8">This room may no longer be active.</p>
+          <h1 class="text-2xl font-bold mb-2 text-muted">
+            {{ 'voiceroomPreview.unavailableTitle' | t }}
+          </h1>
+          <p class="text-muted mb-8">{{ 'voiceroomPreview.unavailableDescription' | t }}</p>
           <a
             [routerLink]="['/audio-rooms']"
             class="block w-full py-3 px-4 bg-primary hover:bg-primary/90 text-on-fill font-bold rounded-xl transition-colors"
           >
-            Browse Rooms
+            {{ 'voiceroomPreview.browseRooms' | t }}
           </a>
         </div>
       </div>
@@ -85,7 +88,9 @@ const ROOM_PREVIEW_KEY_PREFIX = 'voiceroom-preview-';
           >
             <span class="text-3xl">🎙️</span>
           </div>
-          <h1 class="text-2xl font-bold mb-2 text-text-secondary">Loading Room...</h1>
+          <h1 class="text-2xl font-bold mb-2 text-text-secondary">
+            {{ 'voiceroomPreview.loading' | t }}
+          </h1>
           <p class="text-text-secondary mb-8">&nbsp;</p>
         </div>
       </div>

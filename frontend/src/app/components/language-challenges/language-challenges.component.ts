@@ -4,22 +4,23 @@ import { FormsModule } from '@angular/forms';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { I18nService } from '../../services/i18n.service';
 import {
   CreateLanguageChallengeRequest,
   LanguageChallenge,
   LanguageChallengesClient,
 } from '../../services/language-challenges.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-language-challenges',
-  imports: [CommonModule, FormsModule, HlmButton, HlmInput, HlmTextarea],
+  imports: [CommonModule, FormsModule, HlmButton, HlmInput, HlmTextarea, TranslatePipe],
   template: `
     <main class="mx-auto w-full max-w-5xl p-4 text-start text-foreground sm:p-6">
       <header class="mb-6">
-        <h1 class="text-2xl font-bold">Language challenges</h1>
+        <h1 class="text-2xl font-bold">{{ 'languageChallenges.title' | t }}</h1>
         <p class="mt-1 text-sm text-muted-foreground">
-          Build a study streak, pay an entry fee from your coin balance, and share the prize pool
-          with everyone who finishes.
+          {{ 'languageChallenges.intro' | t }}
         </p>
       </header>
 
@@ -27,14 +28,16 @@ import {
         class="mb-8 rounded-sheet border border-border bg-card p-4 sm:p-5"
         aria-labelledby="create-challenge-heading"
       >
-        <h2 id="create-challenge-heading" class="text-lg font-semibold">Create a challenge</h2>
+        <h2 id="create-challenge-heading" class="text-lg font-semibold">
+          {{ 'languageChallenges.createHeading' | t }}
+        </h2>
         <p class="mt-1 text-sm text-muted-foreground">
-          Challenges run on UTC days. Entry fees are charged only when a learner joins.
+          {{ 'languageChallenges.createHint' | t }}
         </p>
 
         <form class="mt-4 grid gap-4" (ngSubmit)="createChallenge()">
           <label class="grid gap-1 text-sm font-medium">
-            Title
+            {{ 'languageChallenges.fieldTitle' | t }}
             <input
               hlmInput
               name="title"
@@ -45,7 +48,7 @@ import {
             />
           </label>
           <label class="grid gap-1 text-sm font-medium">
-            Description
+            {{ 'languageChallenges.fieldDescription' | t }}
             <textarea
               hlmTextarea
               name="description"
@@ -57,7 +60,7 @@ import {
           </label>
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="grid gap-1 text-sm font-medium">
-              Duration in days
+              {{ 'languageChallenges.fieldDuration' | t }}
               <input
                 hlmInput
                 name="durationDays"
@@ -69,7 +72,7 @@ import {
               />
             </label>
             <label class="grid gap-1 text-sm font-medium">
-              Entry fee in coins
+              {{ 'languageChallenges.fieldEntryFee' | t }}
               <input
                 hlmInput
                 name="entryFeeCoins"
@@ -83,7 +86,7 @@ import {
           </div>
           <div>
             <button hlmBtn type="submit" [disabled]="creating()">
-              {{ creating() ? 'Creating…' : 'Create challenge' }}
+              {{ creating() ? ('languageChallenges.creating' | t) : ('languageChallenges.createSubmit' | t) }}
             </button>
           </div>
         </form>
@@ -92,7 +95,7 @@ import {
       <section aria-labelledby="available-challenges-heading">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 id="available-challenges-heading" class="text-xl font-semibold">
-            Available challenges
+            {{ 'languageChallenges.available' | t }}
           </h2>
           <button
             hlmBtn
@@ -101,7 +104,7 @@ import {
             (click)="refresh()"
             [disabled]="loading()"
           >
-            Refresh
+            {{ 'languageChallenges.refresh' | t }}
           </button>
         </div>
 
@@ -119,15 +122,15 @@ import {
             class="mb-3 rounded-md border border-destructive/40 bg-destructive/10 p-3"
             role="alert"
           >
-            <p>Challenges could not be loaded. Your existing progress has been kept.</p>
+            <p>{{ 'languageChallenges.loadError' | t }}</p>
             <button hlmBtn variant="outline" type="button" class="mt-2" (click)="refresh()">
-              Retry
+              {{ 'common.retry' | t }}
             </button>
           </div>
         }
 
         @if (loading() && challenges().length === 0) {
-          <p role="status" aria-live="polite">Loading challenges…</p>
+          <p role="status" aria-live="polite">{{ 'languageChallenges.loading' | t }}</p>
         } @else {
           <ul class="grid gap-4" role="list">
             @for (challenge of challenges(); track challenge.id) {
@@ -152,19 +155,25 @@ import {
 
                   <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-4">
                     <div>
-                      <dt class="text-muted-foreground">Entry fee</dt>
-                      <dd class="font-semibold">{{ challenge.entry_fee_coins }} coins</dd>
+                      <dt class="text-muted-foreground">{{ 'languageChallenges.entryFee' | t }}</dt>
+                      <dd class="font-semibold">
+                        {{ 'languageChallenges.coinsAmount' | t: { count: challenge.entry_fee_coins } }}
+                      </dd>
                     </div>
                     <div>
-                      <dt class="text-muted-foreground">Prize pool</dt>
-                      <dd class="font-semibold">{{ challenge.prize_pool_coins }} coins</dd>
+                      <dt class="text-muted-foreground">{{ 'languageChallenges.prizePool' | t }}</dt>
+                      <dd class="font-semibold">
+                        {{ 'languageChallenges.coinsAmount' | t: { count: challenge.prize_pool_coins } }}
+                      </dd>
                     </div>
                     <div>
-                      <dt class="text-muted-foreground">Duration</dt>
-                      <dd class="font-semibold">{{ challenge.duration_days }} days</dd>
+                      <dt class="text-muted-foreground">{{ 'languageChallenges.duration' | t }}</dt>
+                      <dd class="font-semibold">
+                        {{ 'languageChallenges.daysAmount' | t: { count: challenge.duration_days } }}
+                      </dd>
                     </div>
                     <div>
-                      <dt class="text-muted-foreground">Ends</dt>
+                      <dt class="text-muted-foreground">{{ 'languageChallenges.ends' | t }}</dt>
                       <dd class="font-semibold">{{ challenge.ends_at | date: 'medium' }}</dd>
                     </div>
                   </dl>
@@ -172,8 +181,13 @@ import {
                   @if (challenge.joined) {
                     <div class="mt-4">
                       <div class="mb-1 flex justify-between gap-2 text-sm">
-                        <span>Progress</span>
-                        <span>{{ challenge.progress_days }} / {{ challenge.duration_days }} days</span>
+                        <span>{{ 'languageChallenges.progress' | t }}</span>
+                        <span>
+                          {{
+                            'languageChallenges.progressDays'
+                              | t: { current: challenge.progress_days, total: challenge.duration_days }
+                          }}
+                        </span>
                       </div>
                       <div
                         class="h-2 overflow-hidden rounded-full bg-muted"
@@ -182,10 +196,8 @@ import {
                         aria-valuemin="0"
                         [attr.aria-valuemax]="challenge.duration_days"
                         [attr.aria-label]="
-                          challenge.progress_days +
-                          ' of ' +
-                          challenge.duration_days +
-                          ' challenge days complete'
+                          'languageChallenges.progressAria'
+                            | t: { current: challenge.progress_days, total: challenge.duration_days }
                         "
                       >
                         <div
@@ -200,8 +212,10 @@ import {
                     @if (!challenge.joined && !challenge.ended && challenge.status === 'open') {
                       @if (pendingJoinId() === challenge.id) {
                         <p class="basis-full text-sm font-medium">
-                          Confirm spending {{ challenge.entry_fee_coins }} coins to join. This cannot
-                          be undone.
+                          {{
+                            'languageChallenges.confirmSpend'
+                              | t: { count: challenge.entry_fee_coins }
+                          }}
                         </p>
                         <button
                           hlmBtn
@@ -209,7 +223,7 @@ import {
                           (click)="confirmJoin(challenge)"
                           [disabled]="busyId() === challenge.id"
                         >
-                          Confirm join
+                          {{ 'languageChallenges.confirmJoin' | t }}
                         </button>
                         <button
                           hlmBtn
@@ -218,7 +232,7 @@ import {
                           (click)="pendingJoinId.set(null)"
                           [disabled]="busyId() === challenge.id"
                         >
-                          Cancel
+                          {{ 'common.cancel' | t }}
                         </button>
                       } @else {
                         <button
@@ -226,7 +240,7 @@ import {
                           type="button"
                           (click)="pendingJoinId.set(challenge.id)"
                         >
-                          Join for {{ challenge.entry_fee_coins }} coins
+                          {{ 'languageChallenges.joinFor' | t: { count: challenge.entry_fee_coins } }}
                         </button>
                       }
                     }
@@ -241,7 +255,7 @@ import {
                         (click)="checkIn(challenge)"
                         [disabled]="busyId() === challenge.id"
                       >
-                        Check in today
+                        {{ 'languageChallenges.checkIn' | t }}
                       </button>
                     }
                     @if (challenge.joined && challenge.ended && challenge.status === 'open') {
@@ -251,16 +265,16 @@ import {
                         (click)="claim(challenge)"
                         [disabled]="busyId() === challenge.id"
                       >
-                        Claim prize
+                        {{ 'languageChallenges.claim' | t }}
                       </button>
                     }
                     @if (challenge.participant_status === 'completed') {
                       <span class="self-center text-sm font-semibold">
-                        Completed · {{ challenge.prize_coins }} coins awarded
+                        {{ 'languageChallenges.completed' | t: { count: challenge.prize_coins } }}
                       </span>
                     } @else if (challenge.participant_status === 'failed') {
                       <span class="self-center text-sm font-semibold">
-                        Challenge ended before you completed the streak.
+                        {{ 'languageChallenges.failed' | t }}
                       </span>
                     }
                   </div>
@@ -272,7 +286,7 @@ import {
                   class="rounded-sheet border border-border bg-card p-5 text-sm text-muted-foreground"
                   role="status"
                 >
-                  No challenges are available yet. Create the first one.
+                  {{ 'languageChallenges.empty' | t }}
                 </li>
               }
             }
@@ -284,6 +298,7 @@ import {
 })
 export class LanguageChallengesComponent {
   private readonly client = inject(LanguageChallengesClient);
+  private readonly i18n = inject(I18nService);
   readonly challenges = signal<LanguageChallenge[]>([]);
   readonly loading = signal(false);
   readonly creating = signal(false);
@@ -293,8 +308,8 @@ export class LanguageChallengesComponent {
   readonly pendingJoinId = signal<string | null>(null);
 
   readonly draft: CreateLanguageChallengeRequest = {
-    title: '7-day writing streak',
-    description: 'Practise your target language every day for seven UTC days.',
+    title: this.i18n.translate('languageChallenges.defaultTitle'),
+    description: this.i18n.translate('languageChallenges.defaultDescription'),
     durationDays: 7,
     entryFeeCoins: 25,
     challengeType: 'streak',
@@ -336,12 +351,10 @@ export class LanguageChallengesComponent {
         entryFeeCoins,
         challengeType: 'streak',
       });
-      this.message.set(
-        'Challenge created. Join it to contribute your entry fee to the prize pool.',
-      );
+      this.message.set(this.i18n.translate('languageChallenges.created'));
       await this.refresh();
     } catch {
-      this.message.set('The challenge could not be created. Please try again.');
+      this.message.set(this.i18n.translate('languageChallenges.createFailed'));
     } finally {
       this.creating.set(false);
     }
@@ -355,13 +368,13 @@ export class LanguageChallengesComponent {
       const result = await this.client.join(challenge.id);
       this.message.set(
         result.alreadyJoined
-          ? 'You already joined this challenge.'
-          : `Joined successfully. ${result.coinsRemaining} coins remain in your balance.`,
+          ? this.i18n.translate('languageChallenges.alreadyJoined')
+          : this.i18n.translate('languageChallenges.joined', { coins: result.coinsRemaining }),
       );
       this.pendingJoinId.set(null);
       await this.refresh();
     } catch {
-      this.message.set('The challenge could not be joined. Check your coin balance and try again.');
+      this.message.set(this.i18n.translate('languageChallenges.joinFailed'));
     } finally {
       this.busyId.set(null);
     }
@@ -375,12 +388,15 @@ export class LanguageChallengesComponent {
       const result = await this.client.checkIn(challenge.id);
       this.message.set(
         result.alreadyCheckedIn
-          ? 'Today is already counted for this challenge.'
-          : `Check-in recorded: ${result.progressDays} of ${result.targetDays} days complete.`,
+          ? this.i18n.translate('languageChallenges.alreadyCheckedIn')
+          : this.i18n.translate('languageChallenges.checkedIn', {
+              progress: result.progressDays,
+              target: result.targetDays,
+            }),
       );
       await this.refresh();
     } catch {
-      this.message.set('Today’s check-in could not be recorded. Please try again.');
+      this.message.set(this.i18n.translate('languageChallenges.checkInFailed'));
     } finally {
       this.busyId.set(null);
     }
@@ -392,10 +408,10 @@ export class LanguageChallengesComponent {
     this.message.set('');
     try {
       const result = await this.client.claim(challenge.id);
-      this.message.set(`Challenge settled. You received ${result.prizeCoins} coins.`);
+      this.message.set(this.i18n.translate('languageChallenges.settled', { coins: result.prizeCoins }));
       await this.refresh();
     } catch {
-      this.message.set('The prize cannot be claimed yet. Make sure every required day is complete.');
+      this.message.set(this.i18n.translate('languageChallenges.claimFailed'));
     } finally {
       this.busyId.set(null);
     }
@@ -410,8 +426,8 @@ export class LanguageChallengesComponent {
   }
 
   statusLabel(challenge: LanguageChallenge): string {
-    if (challenge.status === 'completed') return 'Completed';
-    if (challenge.ended) return 'Ended';
-    return 'Open';
+    if (challenge.status === 'completed') return this.i18n.translate('languageChallenges.statusCompleted');
+    if (challenge.ended) return this.i18n.translate('languageChallenges.statusEnded');
+    return this.i18n.translate('languageChallenges.statusOpen');
   }
 }

@@ -238,7 +238,7 @@ export class GroupsDiscoveryComponent {
           this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/groups/discoverable`),
         );
       } catch {
-        this.error.set('Failed to load groups');
+        this.error.set(this.i18n.translate('groupsDiscovery.loadFailed'));
         return [];
       }
     },

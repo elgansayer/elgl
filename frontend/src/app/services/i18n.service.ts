@@ -2633,6 +2633,339 @@ export class I18nService {
     'stats.dayAbbr.thu': 'Thu',
     'stats.dayAbbr.fri': 'Fri',
     'stats.dayAbbr.sat': 'Sat',
+
+    // Video classrooms marketplace
+    'classroomsMarketplace.languageFilters': 'Language filters',
+
+    // Profile
+    'profile.avatarAlt': 'Your profile photo',
+    'profile.visitorAvatarAlt': 'Visitor avatar',
+    'profile.catalogCurrencyLabel': 'Currency',
+    'profile.learningGoalsLabel': 'Learning goals',
+    'profile.learningGoalsHelp':
+      'Share your motivations so compatible language partners can understand your goals.',
+    'profile.streakDaysShort': '{{count}}d',
+
+    // Share modal
+    'shareModal.previewAlt': 'Preview',
+
+    // User detail
+    'userDetail.userId': 'ID: {{id}}',
+
+    // Chat media
+    'chatMedia.openSharedPhoto': 'Open shared photo',
+    'chatMedia.sharedPhotoAlt': 'Shared photo',
+    'chatMedia.instantVideoNote': 'Instant video note',
+    'chatMedia.playInstantVideoNote': 'Play instant video note',
+    'chatMedia.sharedVideo': 'Shared video',
+    'chatMedia.pickerTitle': 'Photo / video',
+    'chatMedia.pickerHint':
+      'Standard uses less data. HD keeps more image detail and allows larger videos.',
+    'chatMedia.closePicker': 'Close media picker',
+    'chatMedia.choosePhotoOrVideo': 'Choose a photo or video',
+    'chatMedia.acceptedFormats': 'JPEG, PNG, WebP, MP4, WebM or MOV',
+    'chatMedia.selectedPhotoPreview': 'Selected photo preview',
+    'chatMedia.selectedVideoPreview': 'Selected video preview',
+    'chatMedia.hdQuality': 'HD quality',
+    'chatMedia.hdQualityHint': 'Higher quality, larger upload',
+    'chatMedia.sendInHd': 'Send in HD quality',
+    'chatMedia.unsupportedFile': 'Choose a supported photo or video file.',
+    'chatMedia.shareAria': 'Share a photo or video',
+    'chatMedia.mediaButton': '📷 Media',
+    'chatMedia.recordVideoNoteAria': 'Record an instant video note',
+    'chatMedia.videoNoteButton': '🎥 Video note',
+    'chatMedia.retrySendAria': 'Retry sending uploaded media',
+    'chatMedia.sending': 'Sending…',
+    'chatMedia.retrySend': 'Retry send',
+    'chatMedia.dismissUnsentAria': 'Dismiss unsent uploaded media',
+    'chatMedia.sendFailed': 'Upload completed, but the message could not be sent.',
+    'common.dismiss': 'Dismiss',
+
+    // Instant video notes
+    'videoNote.title': 'Video note',
+    'videoNote.description':
+      'Record a short circular video message. Camera and microphone stop as soon as recording ends.',
+    'videoNote.maxDuration': 'Maximum recording duration {{seconds}} seconds',
+    'videoNote.recordedPreview': 'Recorded video note preview',
+    'videoNote.cameraPreview': 'Camera preview',
+    'videoNote.recording': 'Recording {{time}}',
+    'videoNote.cancelAria': 'Cancel video note',
+    'videoNote.startAria': 'Start recording video note',
+    'videoNote.openingCamera': 'Opening camera…',
+    'videoNote.record': 'Record',
+    'videoNote.stopAria': 'Stop recording video note',
+    'videoNote.stop': 'Stop',
+    'videoNote.retakeAria': 'Record video note again',
+    'videoNote.retake': 'Retake',
+    'videoNote.sendAria': 'Upload and send video note',
+    'videoNote.uploading': 'Uploading…',
+    'videoNote.send': 'Send video note',
+    'videoNote.errorUnsupported': 'Video recording is not supported by this browser.',
+    'videoNote.errorRecordingFailed': 'Recording failed. You can retry without losing the chat.',
+    'videoNote.errorPermission':
+      'Camera and microphone permission are required to record a video note.',
+    'videoNote.errorTooLarge': 'This video note is too large. Please record a shorter note.',
+    'videoNote.errorUploadFailed':
+      'The video note could not be uploaded. Your recording is still here to retry.',
+    'videoNote.errorNoVideo': 'No video was recorded. Please try again.',
+
+    // Study streak
+    'studyStreak.ariaLabel': 'Current study streak',
+    'studyStreak.dayOne': 'Current study streak: {{count}} day',
+    'studyStreak.dayOther': 'Current study streak: {{count}} days',
+
+    // Device transfer
+    'deviceTransfer.title': 'Device Transfer',
+    'deviceTransfer.generating': 'Generating device link…',
+    'deviceTransfer.openLink': 'Open this link on the other device:',
+    'deviceTransfer.copyLink': 'Copy Link',
+    'deviceTransfer.expires': 'Link expires in 5 minutes.',
+    'deviceTransfer.transferring': 'Transferring session…',
+    'deviceTransfer.done': 'Account transferred successfully!',
+    'deviceTransfer.generateFailed': 'Failed to generate device link',
+    'deviceTransfer.sessionFailed': 'Failed to establish session',
+    'deviceTransfer.transferFailed': 'Transfer failed',
+
+    // Voice room preview
+    'voiceroomPreview.joinPrompt': 'Join this live audio room to practice your speaking skills!',
+    'voiceroomPreview.joinRoom': 'Join Room',
+    'voiceroomPreview.unavailableTitle': 'Room unavailable',
+    'voiceroomPreview.unavailableDescription': 'This room may no longer be active.',
+    'voiceroomPreview.browseRooms': 'Browse Rooms',
+    'voiceroomPreview.loading': 'Loading Room...',
+
+    // Chat settings
+    'chat_settings.auto_translate': 'Auto Translate',
+    'chat_settings.auto_translate_desc': 'Automatically translate messages to your language',
+    'chat_settings.enter_to_send': 'Enter To Send',
+    'chat_settings.enter_to_send_desc':
+      'Press Enter to send messages instead of clicking the send button',
+    'chat_settings.read_receipts': 'Read Receipts',
+    'chat_settings.read_receipts_desc': 'Let others know when you have read their messages',
+    'chat_settings.reset_defaults': 'Reset to defaults',
+    'chat_settings.title': 'Chat Settings',
+    'chat_settings.load_unavailable': 'Chat settings are temporarily unavailable.',
+    'chat_settings.load_unavailable_desc':
+      'Your saved settings remain active. Retention controls are disabled until they can be loaded.',
+    'chat_settings.save_failed':
+      'That change could not be saved. Your previous setting has been restored.',
+    'chat_settings.disappearing_title': 'Disappearing messages',
+    'chat_settings.disappearing_desc':
+      'Choose how long newly sent messages remain available. Existing messages keep their current lifetime.',
+    'chat_settings.message_lifetime': 'Message lifetime',
+    'chat_settings.ttl_24h': '24 hours',
+    'chat_settings.ttl_7d': '7 days',
+    'chat_settings.ttl_90d': '90 days',
+    'chat_settings.disappearing_save_failed':
+      'Could not save the message lifetime. Your previous setting is still active.',
+    'chat_settings.disappearing_notice':
+      'New messages you send will be permanently removed after this time.',
+
+    // Account deletion
+    'account_deletion.title': 'Delete your account',
+    'account_deletion.description':
+      'Deleting your account schedules it for removal. You can restore it within 30 days.',
+    'account_deletion.scheduled': 'Your account is scheduled for deletion on {{date}}.',
+    'account_deletion.delete_button': 'Delete my account',
+    'account_deletion.restore_button': 'Restore my account',
+    'account_deletion.export_title': 'Export your data',
+    'account_deletion.export_description':
+      'Download a copy of the personal data held on your account.',
+    'account_deletion.export_button': 'Download my data',
+    'account_deletion.confirmDelete':
+      'Are you sure you want to delete your account? This action can be undone within 30 days.',
+    'account_deletion.requestFailed': 'Failed to request deletion.',
+    'account_deletion.restoreFailed': 'Failed to restore account.',
+    'account_deletion.exportSuccess': 'Data export downloaded successfully.',
+    'account_deletion.exportFailed': 'Failed to export data.',
+
+    // Chat view
+    'chatView.messageLabel': 'Type a message...',
+
+    // Emoji picker
+    'emojiPicker.searchLabel': 'Search emoji...',
+    'emojiPicker.categoryAria': 'Emoji category',
+
+    // Common
+    'common.remove': 'Remove',
+    'common.removeNamed': 'Remove {{name}}',
+    'common.durationMinutes': '{{count}} min',
+    'common.previous': 'Previous',
+    'common.next': 'Next',
+    'common.durationSeconds': '{{count}}s',
+    'common.tryAgain': 'Try again',
+
+    // Lessons
+    'lessons.backToLessons': 'Back to lessons',
+    'lessons.unavailableTitle': 'Lesson unavailable',
+    'lessons.progressAria': 'Lesson progress',
+    'lessons.openStream': 'Open lesson stream',
+    'lessons.noContent': 'This lesson does not have readable content yet.',
+    'lessons.audioUnsupported': 'Your browser does not support lesson audio.',
+    'lessons.title': 'Lessons',
+    'lessons.subtitle': 'Curated lessons for focused language practice.',
+    'lessons.loadErrorTitle': 'Unable to load lessons',
+    'lessons.emptyTitle': 'No lessons available',
+    'lessons.emptyDescription': 'New lessons will appear here when they are published.',
+    'lessons.featured': 'Featured',
+    'lessons.forYourLevel': 'For your level',
+    'lessons.openLesson': 'Open lesson: {{title}}',
+    'lessons.noSegments': 'No lesson segments',
+    'lessons.segmentProgress': 'Segment {{current}} of {{total}}',
+
+    // Audio recorder
+    'audioRecorder.elapsed': '{{current}} s / {{max}} s',
+
+    // Developer dashboard
+    'developer.latencyMs': '{{value}} ms',
+
+    // Flashcard decks
+    'deck.srsLevelShort': 'L{{level}}',
+
+    // Subscriptions
+    'subscription.priceDual': '{{ukp}} UKP / ${{usd}} USD',
+    'subscription.monthlyEquivalent': '{{ukp}} UKP / ${{usd}} USD per month if paid monthly',
+
+    // Chat
+    'chat.viewOnceNotice': 'View-once media will be shown here for one time.',
+
+    // Settings feedback
+    'settings.loadProfileFailed': 'Failed to load profile or linked accounts',
+    'settings.saveSuccess': 'Settings saved successfully',
+    'settings.saveFailed': 'Failed to save settings',
+    'settings.clearCacheSuccess': 'Cache cleared successfully',
+    'settings.clearCacheFailed': 'Failed to clear cache',
+    'settings.deleteOldMediaSuccess': 'Old media deleted successfully',
+    'settings.deleteOldMediaFailed': 'Failed to delete old media',
+    'settings.exportSuccess': 'Data export downloaded successfully',
+    'settings.exportFailed': 'Failed to download data export',
+
+    // Groups discovery
+    'groupsDiscovery.loadFailed': 'Failed to load groups',
+
+    // Notification customisation
+    'notificationCustomization.loadFailed': 'Failed to load notification customisation',
+    'notificationCustomization.saveFailed': 'Failed to save notification customisation',
+
+    // Version check
+    'versionCheck.fetchFailed': 'Failed to fetch version',
+
+    // Data and storage
+    'dataStorage.clearAllFailed': 'Failed to clear all cached data. Please try again.',
+    'dataStorage.deleteOldMediaFailed': 'Failed to delete old media. Please try again.',
+
+    // Moderation
+    'moderation.serviceUnavailable': 'Service temporarily unavailable',
+    'moderation.analyseFailed': 'Failed to analyse user',
+
+    // Block management
+    'safety.blockManagement.unblockFailed': 'Failed to unblock user',
+
+    // Video call
+    'videoCall.startFailed': 'Failed to start video call',
+    'videoCall.acceptFailed': 'Failed to accept video call',
+
+    // Recommended for you
+    'recommendedForYou.title': 'Recommended for You',
+    'recommendedForYou.subtitle':
+      'Language partners matched to your interests and learning activity.',
+    'recommendedForYou.previous': 'Previous recommendations',
+    'recommendedForYou.next': 'Next recommendations',
+    'recommendedForYou.loading': 'Loading recommendations',
+    'recommendedForYou.unavailable': 'Recommendations are unavailable right now.',
+    'recommendedForYou.emptyTitle': 'No recommendations yet',
+    'recommendedForYou.emptyDescription':
+      'Add interests and learning languages to improve your matches.',
+    'recommendedForYou.updateProfile': 'Update Profile',
+    'recommendedForYou.seeAll': 'See all partners',
+
+    // Language challenges
+    'languageChallenges.title': 'Language challenges',
+    'languageChallenges.intro':
+      'Build a study streak, pay an entry fee from your coin balance, and share the prize pool with everyone who finishes.',
+    'languageChallenges.createHeading': 'Create a challenge',
+    'languageChallenges.createHint':
+      'Challenges run on UTC days. Entry fees are charged only when a learner joins.',
+    'languageChallenges.fieldTitle': 'Title',
+    'languageChallenges.fieldDescription': 'Description',
+    'languageChallenges.fieldDuration': 'Duration in days',
+    'languageChallenges.fieldEntryFee': 'Entry fee in coins',
+    'languageChallenges.creating': 'Creating…',
+    'languageChallenges.createSubmit': 'Create challenge',
+    'languageChallenges.available': 'Available challenges',
+    'languageChallenges.refresh': 'Refresh',
+    'languageChallenges.loadError':
+      'Challenges could not be loaded. Your existing progress has been kept.',
+    'languageChallenges.loading': 'Loading challenges…',
+    'languageChallenges.entryFee': 'Entry fee',
+    'languageChallenges.prizePool': 'Prize pool',
+    'languageChallenges.duration': 'Duration',
+    'languageChallenges.ends': 'Ends',
+    'languageChallenges.coinsAmount': '{{count}} coins',
+    'languageChallenges.daysAmount': '{{count}} days',
+    'languageChallenges.progress': 'Progress',
+    'languageChallenges.progressDays': '{{current}} / {{total}} days',
+    'languageChallenges.progressAria': '{{current}} of {{total}} challenge days complete',
+    'languageChallenges.confirmSpend':
+      'Confirm spending {{count}} coins to join. This cannot be undone.',
+    'languageChallenges.confirmJoin': 'Confirm join',
+    'languageChallenges.joinFor': 'Join for {{count}} coins',
+    'languageChallenges.checkIn': 'Check in today',
+    'languageChallenges.claim': 'Claim prize',
+    'languageChallenges.completed': 'Completed · {{count}} coins awarded',
+    'languageChallenges.failed': 'Challenge ended before you completed the streak.',
+    'languageChallenges.empty': 'No challenges are available yet. Create the first one.',
+    'languageChallenges.statusCompleted': 'Completed',
+    'languageChallenges.statusEnded': 'Ended',
+    'languageChallenges.statusOpen': 'Open',
+    'languageChallenges.defaultTitle': '7-day writing streak',
+    'languageChallenges.defaultDescription':
+      'Practise your target language every day for seven UTC days.',
+    'languageChallenges.created':
+      'Challenge created. Join it to contribute your entry fee to the prize pool.',
+    'languageChallenges.createFailed': 'The challenge could not be created. Please try again.',
+    'languageChallenges.alreadyJoined': 'You already joined this challenge.',
+    'languageChallenges.joined': 'Joined successfully. {{coins}} coins remain in your balance.',
+    'languageChallenges.joinFailed':
+      'The challenge could not be joined. Check your coin balance and try again.',
+    'languageChallenges.alreadyCheckedIn': 'Today is already counted for this challenge.',
+    'languageChallenges.checkedIn': 'Check-in recorded: {{progress}} of {{target}} days complete.',
+    'languageChallenges.checkInFailed': 'Today’s check-in could not be recorded. Please try again.',
+    'languageChallenges.settled': 'Challenge settled. You received {{coins}} coins.',
+    'languageChallenges.claimFailed':
+      'The prize cannot be claimed yet. Make sure every required day is complete.',
+
+    // Language pair labels
+    'audioRoom.languagePair.ar-en': 'Arabic ↔ English',
+    'audioRoom.languagePair.ar-fr': 'Arabic ↔ French',
+    'audioRoom.languagePair.de-en': 'German ↔ English',
+    'audioRoom.languagePair.en-ar': 'English ↔ Arabic',
+    'audioRoom.languagePair.en-de': 'English ↔ German',
+    'audioRoom.languagePair.en-es': 'English ↔ Spanish',
+    'audioRoom.languagePair.en-fr': 'English ↔ French',
+    'audioRoom.languagePair.en-hi': 'English ↔ Hindi',
+    'audioRoom.languagePair.en-it': 'English ↔ Italian',
+    'audioRoom.languagePair.en-ja': 'English ↔ Japanese',
+    'audioRoom.languagePair.en-ko': 'English ↔ Korean',
+    'audioRoom.languagePair.en-pt': 'English ↔ Portuguese',
+    'audioRoom.languagePair.en-ru': 'English ↔ Russian',
+    'audioRoom.languagePair.en-tr': 'English ↔ Turkish',
+    'audioRoom.languagePair.en-zh': 'English ↔ Chinese',
+    'audioRoom.languagePair.es-en': 'Spanish ↔ English',
+    'audioRoom.languagePair.fr-ar': 'French ↔ Arabic',
+    'audioRoom.languagePair.fr-en': 'French ↔ English',
+    'audioRoom.languagePair.it-en': 'Italian ↔ English',
+    'audioRoom.languagePair.ja-en': 'Japanese ↔ English',
+    'audioRoom.languagePair.ko-en': 'Korean ↔ English',
+    'audioRoom.languagePair.pt-en': 'Portuguese ↔ English',
+    'audioRoom.languagePair.ru-en': 'Russian ↔ English',
+    'audioRoom.languagePair.zh-en': 'Chinese ↔ English',
+
+    // Settings state errors
+    'settings.loadFailed': 'Failed to load settings',
+    'settings.privacyUpdateFailed': 'Failed to update privacy settings. Reverting.',
+    'settings.profileUpdateFailed': 'Failed to update profile settings. Reverting.',
+    'settings.accountUpdateFailed': 'Failed to update account settings. Reverting.',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

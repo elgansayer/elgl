@@ -6,6 +6,7 @@ import {
   ChatMediaService,
   UploadedChatMedia,
 } from '../../services/chat-media.service';
+import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
@@ -29,16 +30,18 @@ const ACCEPTED_MEDIA =
     >
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h2 id="chat-media-title" class="text-base font-black text-text-primary">Photo / video</h2>
+          <h2 id="chat-media-title" class="text-base font-black text-text-primary">
+            {{ 'chatMedia.pickerTitle' | t }}
+          </h2>
           <p class="mt-1 text-xs text-text-secondary">
-            Standard uses less data. HD keeps more image detail and allows larger videos.
+            {{ 'chatMedia.pickerHint' | t }}
           </p>
         </div>
         <app-button-secondary
           type="button"
           (clicked)="cancel()"
           customClass="min-h-11 min-w-11 px-3 text-sm"
-          ariaLabel="Close media picker"
+          [ariaLabel]="'chatMedia.closePicker' | t"
         >
           ✕
         </app-button-secondary>
@@ -48,29 +51,33 @@ const ACCEPTED_MEDIA =
         class="mt-4 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-card border border-dashed border-surface-100 bg-surface-300 p-4 text-center focus-within:ring-2 focus-within:ring-primary"
       >
         <span class="text-sm font-bold text-text-primary">
-          {{ selectedFile() ? selectedFile()!.name : 'Choose a photo or video' }}
+          {{ selectedFile() ? selectedFile()!.name : ('chatMedia.choosePhotoOrVideo' | t) }}
         </span>
-        <span class="mt-1 text-xs text-text-secondary">JPEG, PNG, WebP, MP4, WebM or MOV</span>
+        <span class="mt-1 text-xs text-text-secondary">{{ 'chatMedia.acceptedFormats' | t }}</span>
         <input
           type="file"
           class="sr-only"
           [accept]="acceptedMedia"
           (change)="onFileSelected($event)"
-          aria-label="Choose a photo or video"
+          [attr.aria-label]="'chatMedia.choosePhotoOrVideo' | t"
         />
       </label>
 
       @if (previewUrl(); as preview) {
         <div class="mt-4 overflow-hidden rounded-card border border-surface-100 bg-black/5">
           @if (selectedKind() === 'image') {
-            <img [src]="preview" alt="Selected photo preview" class="max-h-72 w-full object-contain" />
+            <img
+              [src]="preview"
+              [alt]="'chatMedia.selectedPhotoPreview' | t"
+              class="max-h-72 w-full object-contain"
+            />
           } @else {
             <video
               [src]="preview"
               controls
               preload="metadata"
               class="max-h-72 w-full object-contain"
-              aria-label="Selected video preview"
+              [attr.aria-label]="'chatMedia.selectedVideoPreview' | t"
             ></video>
           }
         </div>
@@ -78,14 +85,14 @@ const ACCEPTED_MEDIA =
 
       <label class="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-card bg-surface-300 px-3 py-2">
         <span>
-          <span class="block text-sm font-bold text-text-primary">HD quality</span>
-          <span class="block text-xs text-text-secondary">Higher quality, larger upload</span>
+          <span class="block text-sm font-bold text-text-primary">{{ 'chatMedia.hdQuality' | t }}</span>
+          <span class="block text-xs text-text-secondary">{{ 'chatMedia.hdQualityHint' | t }}</span>
         </span>
         <hlm-checkbox
           class="h-5 w-5"
           [checked]="quality() === 'hd'"
           (checkedChange)="onQualityCheckedChange($event)"
-          aria-label="Send in HD quality"
+          [aria-label]="'chatMedia.sendInHd' | t"
         />
       </label>
 
@@ -120,6 +127,7 @@ const ACCEPTED_MEDIA =
 })
 export class ChatMediaPickerComponent implements OnDestroy {
   private readonly chatMedia = inject(ChatMediaService);
+  private readonly i18n = inject(I18nService);
 
   readonly uploaded = output<UploadedChatMedia>();
   readonly cancelled = output<void>();
@@ -144,7 +152,7 @@ export class ChatMediaPickerComponent implements OnDestroy {
     const isImage = type.startsWith('image/');
     const isVideo = type.startsWith('video/');
     if (!isImage && !isVideo) {
-      this.error.set('Choose a supported photo or video file.');
+      this.error.set(this.i18n.translate('chatMedia.unsupportedFile'));
       input.value = '';
       return;
     }

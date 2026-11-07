@@ -263,7 +263,7 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
                   @if (party.duration_minutes) {
                     <span class="flex items-center gap-1">
                       <span aria-hidden="true">⏱️</span>
-                      <span>{{ party.duration_minutes }}min</span>
+                      <span>{{ 'common.durationMinutes' | t: { count: party.duration_minutes } }}</span>
                     </span>
                   }
                 </div>

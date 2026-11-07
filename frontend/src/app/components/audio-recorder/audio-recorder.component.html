@@ -14,7 +14,9 @@
     <div>
       <div class="flex items-center gap-3 mb-3">
         <span class="inline-block w-3 h-3 rounded-full bg-danger animate-pulse"></span>
-        <span class="text-text-secondary text-sm">{{ duration }} s / 30 s</span>
+        <span class="text-text-secondary text-sm">{{
+          'audioRecorder.elapsed' | t: { current: duration, max: 30 }
+        }}</span>
         @if (duration < 30) {
           <button
             hlmBtn

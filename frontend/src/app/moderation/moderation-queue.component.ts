@@ -1,5 +1,6 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource, ErrorHandler } from '@angular/core';
+import { I18nService } from '../services/i18n.service';
 import { DatePipe } from '@angular/common';
 import {
   ModerationService,
@@ -32,6 +33,7 @@ import { CrashReportService } from '../services/crash-report.service';
 })
 export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
+  private readonly i18n = inject(I18nService);
   private offlineStorage = inject(OfflineAdminStorageService);
   private crashReportService = inject(CrashReportService);
   private errorHandler = inject(ErrorHandler);
@@ -84,7 +86,7 @@ export class ModerationQueueComponent {
         this.actionError.set(result.error ?? 'Failed to approve item');
       }
     } catch (err: unknown) {
-      this.actionError.set('Service temporarily unavailable');
+      this.actionError.set(this.i18n.translate('moderation.serviceUnavailable'));
       this.reportCrash(err, 'approve');
     } finally {
       this.actionInProgress.set(null);
@@ -105,7 +107,7 @@ export class ModerationQueueComponent {
         this.actionError.set(result.error ?? 'Failed to reject item');
       }
     } catch (err: unknown) {
-      this.actionError.set('Service temporarily unavailable');
+      this.actionError.set(this.i18n.translate('moderation.serviceUnavailable'));
       this.reportCrash(err, 'reject');
     } finally {
       this.actionInProgress.set(null);
@@ -123,7 +125,7 @@ export class ModerationQueueComponent {
       const result = await this.moderationService.getUserRiskAnalysis(userId);
       this.analysisResult.set(result);
     } catch (err: unknown) {
-      this.actionError.set('Failed to analyse user');
+      this.actionError.set(this.i18n.translate('moderation.analyseFailed'));
       this.reportCrash(err, 'analyse');
     } finally {
       this.analysisLoading.set(false);

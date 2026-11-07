@@ -19,4 +19,10 @@ describe('AudioStage', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('renders no copy of its own until issue #5955 builds the standalone stage', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect((fixture.nativeElement as HTMLElement).textContent?.trim()).toBe('');
+  });
 });

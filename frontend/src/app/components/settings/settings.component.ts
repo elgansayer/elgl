@@ -93,7 +93,7 @@ export class SettingsComponent implements OnInit {
       this.availableInterests.set(available);
     } catch {
       this.autoDownloadPreference.set('wifi');
-      this.errorMessage.set('Failed to load profile or linked accounts');
+      this.errorMessage.set(this.i18nService.translate('settings.loadProfileFailed'));
     } finally {
       this.isLoading.set(false);
     }
@@ -197,9 +197,9 @@ export class SettingsComponent implements OnInit {
           this.filterAllowedLanguages().length > 0 ? this.filterAllowedLanguages() : undefined,
       });
 
-      this.successMessage.set('Settings saved successfully');
+      this.successMessage.set(this.i18nService.translate('settings.saveSuccess'));
     } catch {
-      this.errorMessage.set('Failed to save settings');
+      this.errorMessage.set(this.i18nService.translate('settings.saveFailed'));
     } finally {
       this.isLoading.set(false);
     }
@@ -211,9 +211,9 @@ export class SettingsComponent implements OnInit {
     this.isClearingCache.set(true);
     try {
       await this.cacheService.clearCache();
-      this.successMessage.set('Cache cleared successfully');
+      this.successMessage.set(this.i18nService.translate('settings.clearCacheSuccess'));
     } catch {
-      this.errorMessage.set('Failed to clear cache');
+      this.errorMessage.set(this.i18nService.translate('settings.clearCacheFailed'));
     } finally {
       this.isClearingCache.set(false);
     }
@@ -225,9 +225,9 @@ export class SettingsComponent implements OnInit {
     this.isDeletingOldMedia.set(true);
     try {
       await this.cacheService.deleteOldMedia();
-      this.successMessage.set('Old media deleted successfully');
+      this.successMessage.set(this.i18nService.translate('settings.deleteOldMediaSuccess'));
     } catch {
-      this.errorMessage.set('Failed to delete old media');
+      this.errorMessage.set(this.i18nService.translate('settings.deleteOldMediaFailed'));
     } finally {
       this.isDeletingOldMedia.set(false);
     }
@@ -240,9 +240,9 @@ export class SettingsComponent implements OnInit {
 
     try {
       await this.userService.downloadMyData();
-      this.successMessage.set('Data export downloaded successfully');
+      this.successMessage.set(this.i18nService.translate('settings.exportSuccess'));
     } catch {
-      this.errorMessage.set('Failed to download data export');
+      this.errorMessage.set(this.i18nService.translate('settings.exportFailed'));
     } finally {
       this.isDownloading.set(false);
     }

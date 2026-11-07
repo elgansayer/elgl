@@ -1,4 +1,5 @@
 import { Component, input } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 interface MediaMessageLike {
   message_type: string;
@@ -7,6 +8,7 @@ interface MediaMessageLike {
 
 @Component({
   selector: 'app-chat-media-message',
+  imports: [TranslatePipe],
   template: `
     @if (isImage() && safeUrl()) {
       <a
@@ -14,25 +16,25 @@ interface MediaMessageLike {
         target="_blank"
         rel="noopener noreferrer"
         class="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        aria-label="Open shared photo"
+        [attr.aria-label]="'chatMedia.openSharedPhoto' | t"
       >
         <img
           [src]="safeUrl()"
           loading="lazy"
           decoding="async"
-          alt="Shared photo"
+          [alt]="'chatMedia.sharedPhotoAlt' | t"
           class="max-h-96 max-w-full rounded-xl object-contain"
         />
       </a>
     } @else if (isInstantVideo() && safeUrl()) {
-      <div class="max-w-full" aria-label="Instant video note">
+      <div class="max-w-full" [attr.aria-label]="'chatMedia.instantVideoNote' | t">
         <video
           [src]="safeUrl()"
           controls
           preload="metadata"
           playsinline
           class="aspect-square h-56 w-56 max-h-[70vw] max-w-[70vw] rounded-full bg-black object-cover shadow-lift"
-          aria-label="Play instant video note"
+          [attr.aria-label]="'chatMedia.playInstantVideoNote' | t"
         ></video>
       </div>
     } @else if (isVideo() && safeUrl()) {
@@ -42,7 +44,7 @@ interface MediaMessageLike {
         preload="metadata"
         playsinline
         class="max-h-96 min-w-52 max-w-full rounded-xl bg-black"
-        aria-label="Shared video"
+        [attr.aria-label]="'chatMedia.sharedVideo' | t"
       ></video>
     }
   `,

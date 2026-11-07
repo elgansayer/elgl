@@ -40,7 +40,7 @@
     <!-- Language Filter Pills -->
     @if (languagePairOptions().length > 1) {
       <nav
-        aria-label="Language filters"
+        [attr.aria-label]="'classroomsMarketplace.languageFilters' | t"
         class="flex flex-wrap gap-2"
         joyrideStep="videoClassroomStepFilters"
         [title]="'videoClassroomTour.stepFiltersTitle' | t"

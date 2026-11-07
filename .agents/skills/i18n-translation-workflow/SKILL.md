@@ -79,6 +79,16 @@ correctly mirrored.
 ## Auditing for Violations
 
 `npm run check:rtl-logical` (frontend) fails the build on any physical-direction utility - run it, alongside the
-frontend completion gate, before marking i18n/RTL-touching work complete. There is no automated "no raw text in
-templates" check yet, so manually scan new/changed `*.html`/`*.ts` files for literal user-facing strings that
-aren't inside a translation key, an `aria-label` bound to a translated value, a log message, or a code comment.
+frontend completion gate, before marking i18n/RTL-touching work complete.
+
+`npm run check:hardcoded-ui-strings` fails the build on any literal user-facing text in a frontend template (HTML
+files and inline `template:` literals), literal assistive attributes (`aria-label`, `title`, `alt`, input hint
+attributes and component copy inputs), `alert`/`confirm`/`prompt` literals and sentence-like literals assigned to
+error or message state. It also runs inside `cd frontend && npm run lint:check`. Carry an input's wording in a
+`<label for>` or a translated `aria-label` - `docs/interactive-accessible-name-contract.md` forbids hint text as
+the only accessible name. Mark intentionally untranslated copy (an
+ISO currency code, a CSS unit) with `translation-static-ok` and a reason. `npm run audit:hardcoded-ui-strings`
+prints a report that also lists translation keys used in code but missing from `baseDictionary`; those render
+as the raw key. Writing a key only into `frontend/src/assets/i18n/*.json` has no runtime effect. See
+`docs/hardcoded-ui-string-audit.md`. The scanner cannot see English held in TypeScript data (option arrays,
+config objects) or concatenated strings, so still review new `*.ts` files for those by hand.

@@ -5,7 +5,7 @@
     <div class="flex items-center gap-4">
       <button
         hlmBtn
-        aria-label="Go back"
+        [attr.aria-label]="'common.goBack' | t"
         (click)="goBack()"
         class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors"
       >
@@ -37,7 +37,7 @@
           class="relative h-24 w-24 rounded-full border-4 border-surface-500 bg-surface-300 flex items-center justify-center overflow-hidden"
         >
           @if (profile()?.avatar_url) {
-            <img [src]="profile()?.avatar_url" alt="avatar" class="h-full w-full object-cover" />
+            <img [src]="profile()?.avatar_url" [alt]="'discovery.partnerAvatar' | t: { name: profile()?.display_name }" class="h-full w-full object-cover" />
           } @else {
             <span class="text-3xl font-bold text-text-secondary">{{
               profile()?.display_name?.charAt(0) || '?'
@@ -93,7 +93,7 @@
 
       <div class="mb-6">
         <h2 class="text-2xl font-black">{{ profile()?.display_name }}</h2>
-        <p class="text-text-secondary text-sm">ID: {{ profile()?.id }}</p>
+        <p class="text-text-secondary text-sm">{{ 'userDetail.userId' | t: { id: profile()?.id } }}</p>
 
         <div class="flex gap-4 mt-2 text-sm">
           <a [routerLink]="['/profile', profile()?.id, 'followers']" class="hover:underline">

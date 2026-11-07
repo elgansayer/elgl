@@ -374,7 +374,7 @@
                   <img
                     loading="lazy"
                     [src]="msg.media_url ?? ''"
-                    alt="doodle"
+                    [alt]="'chatRoom.doodleBtn' | t"
                     class="max-h-52 rounded-xl border border-surface-100"
                   />
                 }
@@ -382,7 +382,7 @@
                   <img
                     loading="lazy"
                     [src]="msg.media_url ?? ''"
-                    alt="sticker"
+                    [alt]="'chatRoom.stickerBtn' | t"
                     class="max-h-32 w-auto object-contain drop-shadow-md"
                   />
                 }
