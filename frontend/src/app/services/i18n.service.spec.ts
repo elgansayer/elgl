@@ -387,6 +387,14 @@ describe('I18nService', () => {
       return Object.entries(service.translations()).filter(([key]) => key.startsWith(prefix));
     }
 
+    it('provides localised hobby failure and interaction labels', () => {
+      expect(service.translate('hobby.loadError')).not.toBe('hobby.loadError');
+      expect(service.translate('hobby.actionError')).not.toBe('hobby.actionError');
+      expect(service.translate('hobby.editProficiencyLabel', { name: 'Cooking' })).toContain(
+        'Cooking',
+      );
+    });
+
     it('stores the classrooms title as an emoji character rather than HTML entities', () => {
       const title = service.translate('classroomsMarketplace.title');
 
