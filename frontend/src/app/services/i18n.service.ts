@@ -2332,6 +2332,15 @@ export class I18nService {
     'subscription.page.subscribeYearly': 'Subscribe yearly',
     'subscription.page.currentFreePlan': 'Current plan',
     'subscription.page.checkoutError': 'We could not start checkout. Please try again.',
+    'subscription.plans.restorePrompt': 'Already subscribed? Restore your purchase.',
+    'restore_purchases': 'Restore Purchases',
+    'restoring': 'Restoring...',
+    'restore_purchases_description':
+      'Already purchased? Restore your in-app purchases to regain access.',
+    'restorePurchases.success': 'Your purchases have been restored.',
+    'restorePurchases.noSubscriptionFound':
+      'No previous purchases were found for this account.',
+    'restorePurchases.failed': 'We could not restore your purchases. Please try again.',
 
     // Report confirm
     'report.confirmMessage': 'Are you sure you want to report this message?',
