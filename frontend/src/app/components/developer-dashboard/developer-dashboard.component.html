@@ -137,14 +137,17 @@
               <app-chip customClass="bg-success/20 text-success">{{
                 'developer.activeRpm' | t
               }}</app-chip>
-              <app-button-secondary
-                (clicked)="revokeKey()"
+              <button
+                hlmBtn
+                type="button"
+                variant="secondary"
+                size="touch"
                 [disabled]="isRevokingApiKey()"
-                customClass="ps-3 pe-3 pt-2 pb-2 text-xs"
-                [ariaLabel]="'developer.revokeBtn' | t"
+                [attr.aria-label]="'developer.revokeBtn' | t"
+                (click)="revokeKey()"
               >
                 {{ 'developer.revokeBtn' | t }}
-              </app-button-secondary>
+              </button>
             </div>
           </div>
         } @else {
