@@ -8,6 +8,7 @@ function createService(from: ReturnType<typeof vi.fn>): UsersService {
     {} as never,
     {} as never,
     {} as never,
+    {} as never,
   );
 }
 

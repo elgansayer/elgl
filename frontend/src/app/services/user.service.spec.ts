@@ -575,14 +575,14 @@ describe('UserService', () => {
       await expect(resultPromise).resolves.toBeFalsy();
     });
 
-    it('should silently ignore errors', async () => {
+    it('should surface errors so the caller can show retry feedback', async () => {
       const correctorUrl = `${environment.apiUrl}/corrector-score/rate`;
       const resultPromise = service.rateCorrector('user-1', 3);
 
       const req = httpMock.expectOne(correctorUrl);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      await expect(resultPromise).resolves.toBeFalsy();
+      await expect(resultPromise).rejects.toBeTruthy();
     });
   });
 

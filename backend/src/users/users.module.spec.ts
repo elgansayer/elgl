@@ -10,6 +10,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { MediaModule } from '../media/media.module';
 import { XpModule } from '../xp/xp.module';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
+import { CorrectorScoreModule } from '../corrector-score/corrector-score.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 
 type ProviderToken = unknown;
@@ -41,6 +42,7 @@ describe('UsersModule', () => {
     expect(importsMetadata).toContain(MediaModule);
     expect(importsMetadata).toContain(XpModule);
     expect(importsMetadata).toContain(TwoFactorModule);
+    expect(importsMetadata).toContain(CorrectorScoreModule);
   });
 
   it('should register UsersController and DeviceLinkController in its controllers metadata', () => {

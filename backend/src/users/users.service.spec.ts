@@ -10,13 +10,19 @@ import { UsersService } from './users.service';
 import { DataExportWorker } from './data-export.worker';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
+import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 
 describe('UsersService', () => {
   let service: UsersService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockGetCorrectorScore: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    mockGetCorrectorScore = vi.fn().mockResolvedValue({
+      averageScore: null,
+      totalRatings: 0,
+    });
     mockQueryBuilder = {
       select: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
@@ -76,6 +82,10 @@ describe('UsersService', () => {
         {
           provide: EventEmitter2,
           useValue: { emit: vi.fn() },
+        },
+        {
+          provide: CorrectorScoreService,
+          useValue: { getCorrectorScore: mockGetCorrectorScore },
         },
       ],
     }).compile();
@@ -189,7 +199,46 @@ describe('UsersService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('*');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
-      expect(result).toMatchObject(mockProfile);
+      expect(result).toMatchObject({
+        ...mockProfile,
+        corrector_score: null,
+        corrector_rating_count: 0,
+        corrector_score_unavailable: false,
+      });
+      expect(mockGetCorrectorScore).toHaveBeenCalledWith('user-1');
+    });
+
+    it('composes the aggregate corrector score into the profile', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', display_name: 'HelloUser' },
+        error: null,
+      });
+      mockGetCorrectorScore.mockResolvedValue({
+        averageScore: 4.7,
+        totalRatings: 3,
+      });
+
+      await expect(service.getProfile('user-1')).resolves.toMatchObject({
+        corrector_score: 4.7,
+        corrector_rating_count: 3,
+        corrector_score_unavailable: false,
+      });
+    });
+
+    it('keeps the profile available when score aggregation is unavailable', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', display_name: 'HelloUser' },
+        error: null,
+      });
+      mockGetCorrectorScore.mockRejectedValue(
+        new Error('database unavailable'),
+      );
+
+      await expect(service.getProfile('user-1')).resolves.toMatchObject({
+        corrector_score: null,
+        corrector_rating_count: 0,
+        corrector_score_unavailable: true,
+      });
     });
 
     it('should throw NotFoundException instead of returning a mock profile when absent', async () => {
