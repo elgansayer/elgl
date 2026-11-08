@@ -10,7 +10,7 @@ Issue #1444 defines the user-facing **Settings → Appearance** surface. The exi
 - **UI language** is exposed here as a link to `/settings/language`. That dedicated page applies changes through `UiLanguagePreferenceService`, backed by `I18nService`, and must not mutate the learner's `native_languages`, `target_languages`, discovery matching, or study-plan data.
 - **Primary accent** is profile-backed and available only to profiles with the existing VIP entitlement. Hiding or disabling the browser control is not an authorization boundary; backend profile validation remains authoritative.
 
-Invalid or corrupt locally stored values are ignored. Browser storage failures do not prevent the in-memory preference from applying. A failed server save restores the previous server-backed chat text size and leaves the page in a retryable error state rather than claiming success.
+Invalid or corrupt locally stored values are ignored. Legacy fractional and percentage values that fall inside the 80-150% range are clamped and snapped to the documented 5% step before use, so the slider, label, and applied root rem size always agree. Browser storage failures do not prevent the in-memory preference from applying. A failed server save restores the previous server-backed chat text size and leaves the page in a retryable error state rather than claiming success.
 
 ## Routing and ownership
 

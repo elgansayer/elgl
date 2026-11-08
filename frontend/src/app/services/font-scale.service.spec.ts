@@ -45,6 +45,22 @@ describe('FontScaleService', () => {
     expect(freshService.scaleFactor()).toBe(1.35);
   });
 
+  it('should snap legacy fractional storage values to the configured step', () => {
+    localStorage.setItem('app_font_scale', '1.33');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    const freshService = TestBed.inject(FontScaleService);
+    expect(freshService.scaleFactor()).toBe(1.35);
+  });
+
+  it('should snap legacy percentage storage values to the configured step', () => {
+    localStorage.setItem('app_font_scale', '133');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    const freshService = TestBed.inject(FontScaleService);
+    expect(freshService.scaleFactor()).toBe(1.35);
+  });
+
   it('should ignore an out-of-range saved value and fall back to the default', () => {
     localStorage.setItem('app_font_scale', '151');
     TestBed.resetTestingModule();

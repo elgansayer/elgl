@@ -26,6 +26,12 @@ function isScale(value: unknown): value is FontScale {
   return typeof value === 'number' && value >= MIN_SCALE && value <= MAX_SCALE;
 }
 
+function normaliseScale(value: number): FontScale {
+  const stepCount = Math.round((value - MIN_SCALE) / STEP);
+  const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, MIN_SCALE + stepCount * STEP));
+  return Math.round(clamped * 100) / 100;
+}
+
 function isChatTextSize(value: unknown): value is ChatTextSizePreference {
   return value === 'small' || value === 'medium' || value === 'large';
 }
@@ -65,10 +71,7 @@ export class FontScaleService {
   setScale(next: number): void {
     if (!Number.isFinite(next)) return;
 
-    const stepCount = Math.round((next - MIN_SCALE) / STEP);
-    const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, MIN_SCALE + stepCount * STEP));
-    const rounded = Math.round(clamped * 100) / 100;
-    this.scaleFactor.set(rounded);
+    this.scaleFactor.set(normaliseScale(next));
   }
 
   setTextSizePreference(size: TextSizePreference): void {
@@ -90,9 +93,9 @@ export class FontScaleService {
 
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw !== null ? Number.parseFloat(raw) : Number.NaN;
-      if (isScale(parsed)) return parsed;
+      if (isScale(parsed)) return normaliseScale(parsed);
       if (!Number.isNaN(parsed) && parsed >= MIN_SCALE * 100 && parsed <= MAX_SCALE * 100) {
-        return parsed / 100;
+        return normaliseScale(parsed / 100);
       }
       return DEFAULT_SCALE;
     } catch {
