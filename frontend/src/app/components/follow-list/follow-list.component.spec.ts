@@ -48,6 +48,7 @@ describe('FollowListComponent', () => {
   }
 
   beforeEach(async () => {
+    TestBed.resetTestingModule();
     mockUserService = {
       getFollowers: vi.fn().mockResolvedValue({ data: [], total: 0 }),
       getFollowing: vi.fn().mockResolvedValue({ data: [], total: 0 }),

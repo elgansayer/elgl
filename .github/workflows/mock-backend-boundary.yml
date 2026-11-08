@@ -2,16 +2,10 @@ name: Mock Backend Production Boundary
 
 on:
   pull_request:
-    # Start from every path, exclude Factory-only surfaces the verifier does not
-    # inspect, then re-include every production-artifact marker it recognizes.
+    # Start from every path, exclude documentation the verifier does not inspect, then re-include every production-artifact marker it recognizes.
     # Ordering matters: later positive patterns re-include matches after `!`.
     paths:
       - '**'
-      - '!automation/**/*.py'
-      - '!automation/prompts/**'
-      - '!factory-dashboard/**'
-      - '!config/factory/**'
-      - '!config/systemd/**'
       - '!docs/**'
       - '**/*[Dd][Oo][Cc][Kk][Ee][Rr][Ff][Ii][Ll][Ee]*'
       - '**/*[Dd][Oo][Cc][Kk][Ee][Rr][Ff][Ii][Ll][Ee]*/**'
