@@ -397,6 +397,61 @@ describe('MonetisationService', () => {
     });
   });
 
+  describe('revokeApiKey', () => {
+    it('should throw NotFoundException when user not found', async () => {
+      mockQueryBuilder.single.mockResolvedValue({ data: null, error: null });
+
+      await expect(service.revokeApiKey('unknown-id')).rejects.toThrow(
+        new NotFoundException('User not found'),
+      );
+    });
+
+    it('should throw ForbiddenException for a non-developer user', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-vip', is_vip: true, vip_tier: 'consumer' },
+        error: null,
+      });
+
+      await expect(service.revokeApiKey('user-vip')).rejects.toThrow(
+        new ForbiddenException(
+          'Developer API Access is reserved for active subscribers.',
+        ),
+      );
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+
+    it('should clear the stored credential for an active developer', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-dev', is_vip: true, vip_tier: 'developer' },
+        error: null,
+      });
+
+      const result = await service.revokeApiKey('user-dev');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        developer_api_key: null,
+      });
+      expect(result).toEqual({ revoked: true, api_key: null });
+    });
+
+    it('should fail closed when revocation cannot be persisted', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-dev', is_vip: true, vip_tier: 'developer' },
+        error: null,
+      });
+      mockQueryBuilder.eq
+        .mockReturnValueOnce(mockQueryBuilder)
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'database write failed' },
+        });
+
+      await expect(service.revokeApiKey('user-dev')).rejects.toThrow(
+        new InternalServerErrorException('Failed to revoke API key'),
+      );
+    });
+  });
+
   describe('getDeveloperAnalytics', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockQueryBuilder.single.mockResolvedValue({
@@ -425,6 +480,7 @@ describe('MonetisationService', () => {
             user_id: 'user-dev',
             total_api_calls_today: 1420,
             avg_latency_ms: 18,
+            updated_at: new Date().toISOString(),
           },
           error: null,
         });

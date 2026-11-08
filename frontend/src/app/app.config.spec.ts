@@ -1,8 +1,11 @@
+import { ErrorHandler } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  appConfig,
   initialiseDeepLinks,
   initialiseRuntimeConfiguration,
 } from './app.config';
+import { GlobalErrorHandler } from './services/error-handler.service';
 
 describe('Angular application initializers', () => {
   describe('initialiseRuntimeConfiguration', () => {
@@ -120,6 +123,23 @@ describe('Angular application initializers', () => {
       initialiseDeepLinks({ handleDeepLink }, document);
 
       expect(handleDeepLink).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('appConfig providers', () => {
+    it('registers the custom global error handler for client crash reporting', () => {
+      const provider = appConfig.providers.find(
+        (entry) =>
+          typeof entry === 'object' &&
+          entry !== null &&
+          'provide' in entry &&
+          entry.provide === ErrorHandler,
+      );
+
+      expect(provider).toMatchObject({
+        provide: ErrorHandler,
+        useClass: GlobalErrorHandler,
+      });
     });
   });
 });

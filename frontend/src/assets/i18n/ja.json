@@ -147,6 +147,7 @@
   "moments.copyErrorAlert": "今すぐテキストをコピーできません。",
   "moments.transError": "今すぐ翻訳を取得できません。",
   "audioRoom.liveSfuBadge": "🔴 ライブSFUルーム",
+  "audioRoom.speaking": "発言中",
   "audioRoom.hostLabel": "ホスト",
   "audioRoom.hostFallback": "ルームホスト",
   "audioRoom.listenersCount": "{{count}} 人が視聴中",

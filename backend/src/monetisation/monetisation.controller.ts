@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Post,
   UseGuards,
+  UseInterceptors,
   Headers,
   Req,
   BadRequestException,
@@ -23,6 +25,8 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RequireVip } from './decorators/require-vip.decorator';
 import { VipGuard } from './guards/vip.guard';
+import { DeveloperApiKeyGuard } from './guards/developer-api-key.guard';
+import { DeveloperApiUsageInterceptor } from './interceptors/developer-api-usage.interceptor';
 import {
   CreateDiagnosticLogDto,
   AppleReceiptValidationDto,
@@ -107,9 +111,40 @@ export class MonetisationController {
     return await this.monetisationService.generateApiKey(user.id);
   }
 
-  @Get('analytics')
+  @Delete('api-key')
   @UseGuards(SupabaseAuthGuard, VipGuard)
   @RequireVip('developer')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Revoke the current developer API key',
+    description:
+      'Immediately invalidates the active Developer Tier API key. The operation is idempotent: revoking when no key is active succeeds without changing state. Requires an authenticated Developer-tier session, not an API key.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'API key revoked',
+    schema: {
+      type: 'object',
+      properties: {
+        revoked: { type: 'boolean', example: true },
+        api_key: { type: 'string', nullable: true, example: null },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorised' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Developer-tier VIP required',
+  })
+  async revokeApiKey(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.revokeApiKey(user.id);
+  }
+
+  @Get('analytics')
+  @UseGuards(DeveloperApiKeyGuard, SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
+  @UseInterceptors(DeveloperApiUsageInterceptor)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get developer analytics dashboard data',
@@ -140,8 +175,9 @@ export class MonetisationController {
   }
 
   @Get('diagnostics/logs')
-  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @UseGuards(DeveloperApiKeyGuard, SupabaseAuthGuard, VipGuard)
   @RequireVip('developer')
+  @UseInterceptors(DeveloperApiUsageInterceptor)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get diagnostic logs',
@@ -176,8 +212,9 @@ export class MonetisationController {
   }
 
   @Post('diagnostics/logs')
-  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @UseGuards(DeveloperApiKeyGuard, SupabaseAuthGuard, VipGuard)
   @RequireVip('developer')
+  @UseInterceptors(DeveloperApiUsageInterceptor)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Create a diagnostic log entry',
