@@ -36,7 +36,6 @@
       "name": "media",
       "installMode": "lazy",
       "updateMode": "lazy",
-      "cacheQueryParams": false,
       "resources": {
         "urls": [
           "https://**.cloudflare.com/**",
@@ -147,13 +146,16 @@
   ],
   "navigationUrls": [
     "/",
+    "/home",
     "/discovery",
     "/moments",
     "/chat/**",
     "/profile/**",
     "/settings/**",
     "/admin/**",
-    "/escrow"
+    "/escrow",
+    "/learn/**",
+    "/auth/**"
   ],
   "navigationRequestStrategy": "performance"
 }

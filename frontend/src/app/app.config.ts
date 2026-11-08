@@ -22,6 +22,7 @@ import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
 import { retryInterceptor } from './interceptors/retry.interceptor';
 import { initialiseOfflineDiscoveryCache } from './services/offline-discovery-cache.service';
+import { SwUpdateService } from './services/sw-update.service';
 
 export async function initialiseRuntimeConfiguration(
   configService: Pick<ConfigurationService, 'loadConfiguration'>,
@@ -59,6 +60,17 @@ export function initialiseDeepLinks(
   }
 }
 
+export function initialiseServiceWorkerUpdates(
+  swUpdateService: Pick<SwUpdateService, 'initialise'>,
+  platformId: Parameters<typeof isPlatformServer>[0],
+): void {
+  if (isPlatformServer(platformId)) {
+    return;
+  }
+
+  swUpdateService.initialise();
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes, withComponentInputBinding()),
@@ -82,5 +94,11 @@ export const appConfig: ApplicationConfig = {
       initialiseDeepLinks(inject(DeepLinkService), inject(DOCUMENT)),
     ),
     provideAppInitializer(() => initialiseOfflineDiscoveryCache()()),
+    provideAppInitializer(() =>
+      initialiseServiceWorkerUpdates(
+        inject(SwUpdateService),
+        inject(PLATFORM_ID),
+      ),
+    ),
   ],
 };

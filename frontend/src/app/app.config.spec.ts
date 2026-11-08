@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   initialiseDeepLinks,
   initialiseRuntimeConfiguration,
+  initialiseServiceWorkerUpdates,
 } from './app.config';
 
 describe('Angular application initializers', () => {
@@ -120,6 +121,24 @@ describe('Angular application initializers', () => {
       initialiseDeepLinks({ handleDeepLink }, document);
 
       expect(handleDeepLink).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('initialiseServiceWorkerUpdates', () => {
+    it('initialises service worker update handling in the browser', () => {
+      const initialise = vi.fn();
+
+      initialiseServiceWorkerUpdates({ initialise }, 'browser');
+
+      expect(initialise).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not initialise service worker update handling during SSR', () => {
+      const initialise = vi.fn();
+
+      initialiseServiceWorkerUpdates({ initialise }, 'server');
+
+      expect(initialise).not.toHaveBeenCalled();
     });
   });
 });
