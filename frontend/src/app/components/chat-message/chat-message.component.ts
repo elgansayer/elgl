@@ -28,6 +28,7 @@ import { environment } from '../../../environments/environment';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
+import { ReadReceiptComponent } from '../read-receipt/read-receipt.component';
 
 type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
@@ -44,6 +45,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
     VisualDiffComponent,
     ChatSystemBubbleComponent,
     GiftAnimationComponent,
+    ReadReceiptComponent,
   ],
   template: `
     @if (message().message_type === 'system') {
@@ -203,85 +205,12 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
               }
               {{ message().created_at | date: 'shortTime' }}
               @if (isOwnMessage() && (message().delivery_status || message().is_read)) {
-                <span class="inline-flex items-center">
-                  @if (
-                    message().delivery_status === 'sent' ||
-                    (!message().delivery_status && message().is_read)
-                  ) {
-                    <!-- Single check: sent -->
-                    <svg
-                      class="w-3.5 h-3.5 text-text-muted"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  }
-                  @if (message().delivery_status === 'delivered') {
-                    <!-- Double check: delivered (gray) -->
-                    <svg
-                      class="w-3.5 h-3.5 text-text-muted"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <svg
-                      class="w-3.5 h-3.5 -ms-2 text-text-muted"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  }
-                  @if (message().delivery_status === 'read') {
-                    <!-- Double check: read (blue) -->
-                    <svg
-                      class="w-3.5 h-3.5 text-secondary-ink"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <svg
-                      class="w-3.5 h-3.5 -ms-2 text-secondary-ink"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  }
-                </span>
+                <app-read-receipt
+                  [messageId]="message().id"
+                  [deliveryStatus]="
+                    message().delivery_status ?? (message().is_read ? 'read' : 'sent')
+                  "
+                />
               }
             </p>
           </div>

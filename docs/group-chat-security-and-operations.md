@@ -26,17 +26,17 @@ The RLS migration replaces the legacy broad `chat_rooms` read policy and sender-
 
 All routes require the normal Supabase auth guard.
 
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `POST` | `/chat/groups` | Create a group with 1-18 invited members |
-| `GET` | `/chat/groups/:roomId` | Read group metadata as a member |
-| `GET` | `/chat/groups/:roomId/members` | List members as a member |
-| `PATCH` | `/chat/groups/:roomId` | Update name/topic/avatar as admin |
-| `PATCH` | `/chat/groups/:roomId/rename` | Compatibility route for the existing Angular client |
-| `POST` | `/chat/groups/:roomId/members` | Add members as admin |
-| `DELETE` | `/chat/groups/:roomId/members/:memberId` | Remove a non-admin member |
-| `POST` | `/chat/groups/:roomId/admin` | Transfer ownership to an existing member |
-| `POST` | `/chat/groups/:roomId/leave` | Leave; final member soft-deletes the group |
+| Method   | Route                                    | Purpose                                             |
+| -------- | ---------------------------------------- | --------------------------------------------------- |
+| `POST`   | `/chat/groups`                           | Create a group with 1-18 invited members            |
+| `GET`    | `/chat/groups/:roomId`                   | Read group metadata as a member                     |
+| `GET`    | `/chat/groups/:roomId/members`           | List members as a member                            |
+| `PATCH`  | `/chat/groups/:roomId`                   | Update name/topic/avatar as admin                   |
+| `PATCH`  | `/chat/groups/:roomId/rename`            | Compatibility route for the existing Angular client |
+| `POST`   | `/chat/groups/:roomId/members`           | Add members as admin                                |
+| `DELETE` | `/chat/groups/:roomId/members/:memberId` | Remove a non-admin member                           |
+| `POST`   | `/chat/groups/:roomId/admin`             | Transfer ownership to an existing member            |
+| `POST`   | `/chat/groups/:roomId/leave`             | Leave; final member soft-deletes the group          |
 
 Successful membership and metadata operations emit the existing realtime system-message events so an open room can refresh without polling.
 
@@ -45,6 +45,14 @@ Successful membership and metadata operations emit the existing realtime system-
 `SecureChatService` keeps the established `ChatService` contract while adding membership authorization to room lists, room reads, and message sends. Direct chats retain their existing first-message privacy filters and away replies. Group chats intentionally skip those one-to-one rules and instead fan message notifications/read-delivery work out to all current members. This prevents a group's first arbitrary member from accidentally becoming the privacy-policy decision maker for the whole room.
 
 The database sender-membership trigger remains the final write boundary even for service-role application writes. The RLS policies provide a separate defence-in-depth boundary for future or accidentally exposed authenticated Supabase clients.
+
+## Read receipts
+
+Read receipts use two complementary records. `chat_messages.delivery_status` stores the aggregate checkmark state (`sent`, `delivered`, or `read`) that the sender sees. `message_receipts` stores one row per recipient, which lets group chats report exactly who has read a message. A recipient update writes the per-user receipt first and then recomputes the aggregate: a group message only becomes `read` when every current recipient has read it, otherwise it advances to `delivered`.
+
+`GET /chat/messages/:messageId/receipts` returns the aggregate status, the reader list (display name, avatar, read time), and the recipient count. The route only answers the current message sender while they remain a room member. `message_receipts` has membership-scoped read access for authenticated clients, while all writes remain restricted to the Nest API's `service_role` client.
+
+Aggregate status changes are published on both `chat:<roomId>` (for the existing message checkmarks) and `chat:<roomId>:receipts` (for per-recipient detail). The Angular `ReadReceiptComponent` renders the sent, delivered, and read icons and fetches the reader detail only when the receipt is focused or hovered.
 
 ## Frontend behavior
 

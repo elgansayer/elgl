@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   BadRequestException,
   NotFoundException,
+  Inject,
   Optional,
   Logger,
   ServiceUnavailableException,
@@ -105,6 +106,7 @@ export class ChatService {
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
     @Optional()
+    @Inject(ReadReceiptsService)
     private readonly readReceiptsService: ReadReceiptsService | undefined,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
@@ -627,8 +629,8 @@ export class ChatService {
       await this.sendAwayReplyIfNeeded(senderId, dto.room_id, receiverId);
     }
 
-    // Set initial delivery status to 'sent' and mark as delivered for receiver
-    void this.readReceiptsService?.setInitialSent(savedMessage.id);
+    // The insert above already persisted the initial 'sent' status; marking the
+    // known receiver as delivered must not race with a redundant rewrite.
     if (receiverId) {
       void this.readReceiptsService?.markAsDelivered(
         savedMessage.id,
@@ -1830,14 +1832,7 @@ export class ChatService {
       throw new NotFoundException('Message not found');
     }
 
-    // Only allow upgrading status (sent -> delivered -> read)
-    const order: Record<string, number> = { sent: 0, delivered: 1, read: 2 };
-    const current = message.delivery_status ?? 'sent';
-    if (order[status] <= order[current]) {
-      return;
-    }
-
-    // Verify user is a member of the room
+    // Verify user is a member of the room before recording any receipt
     const { data: membership } = await supabase
       .from('chat_room_members')
       .select('user_id')
@@ -1849,9 +1844,34 @@ export class ChatService {
       throw new ForbiddenException('Not a member of this room');
     }
 
+    // Persist the per-recipient receipt even when the aggregate status already
+    // advanced: in a group chat the first reader must not hide later readers.
+    let aggregateStatus: 'delivered' | 'read' = status;
+    if (this.readReceiptsService) {
+      await this.readReceiptsService.recordReceipt(messageId, userId, status);
+      try {
+        const receiptStatus =
+          await this.readReceiptsService.getReceiptStatus(messageId);
+        if (receiptStatus) {
+          aggregateStatus =
+            receiptStatus.deliveryStatus === 'read' ? 'read' : 'delivered';
+        }
+      } catch {
+        // Fall back to the directly requested status when receipt aggregation
+        // cannot be computed; the per-recipient row is still persisted above.
+      }
+    }
+
+    // Only allow upgrading the aggregate status (sent -> delivered -> read)
+    const order: Record<string, number> = { sent: 0, delivered: 1, read: 2 };
+    const current = message.delivery_status ?? 'sent';
+    if (order[aggregateStatus] <= order[current]) {
+      return;
+    }
+
     const { error: updateError } = await supabase
       .from('chat_messages')
-      .update({ delivery_status: status })
+      .update({ delivery_status: aggregateStatus })
       .eq('id', messageId);
 
     if (updateError) {
@@ -1864,7 +1884,7 @@ export class ChatService {
     await this.centrifugoService.publish(`chat:${message.room_id}`, {
       status_update: {
         message_id: messageId,
-        delivery_status: status,
+        delivery_status: aggregateStatus,
       },
     });
   }

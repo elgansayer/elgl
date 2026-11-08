@@ -13,6 +13,7 @@ import { AiConversationService, Scenario } from '../../services/ai-conversation.
 import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
 import { VisualDiffComponent } from '../../components/visual-diff/visual-diff.component';
 import { CorrectionModalComponent } from '../../components/correction-modal/correction-modal.component';
+import { ReadReceiptComponent } from '../../components/read-receipt/read-receipt.component';
 
 interface AiChatMessage {
   id: string;
@@ -32,6 +33,7 @@ interface AiChatMessage {
     A11yClickableDirective,
     VisualDiffComponent,
     CorrectionModalComponent,
+    ReadReceiptComponent,
   ],
   template: `
     <div class="flex h-full">
@@ -376,78 +378,16 @@ interface AiChatMessage {
                         class="text-[10px] text-text-muted mt-1 text-end flex items-center justify-end gap-0.5"
                       >
                         {{ msg.created_at | date: 'shortTime' }}
-                        @if (msg.sender_id === currentUserId()) {
-                          <span class="inline-flex items-center">
-                            @if (msg.delivery_status === 'read') {
-                              <svg
-                                class="w-3 h-3 text-primary-ink"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2.5"
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              <svg
-                                class="w-3 h-3 -ms-2 text-primary-ink"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2.5"
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                            } @else if (msg.delivery_status === 'delivered') {
-                              <svg
-                                class="w-3 h-3 text-text-muted"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2.5"
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              <svg
-                                class="w-3 h-3 -ms-2 text-text-muted"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2.5"
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                            } @else if (msg.delivery_status === 'sent') {
-                              <svg
-                                class="w-3 h-3 text-text-secondary"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2.5"
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                            }
-                          </span>
+                        @if (
+                          msg.sender_id === currentUserId() &&
+                          (msg.delivery_status || msg.is_read)
+                        ) {
+                          <app-read-receipt
+                            [messageId]="msg.id"
+                            [deliveryStatus]="
+                              msg.delivery_status ?? (msg.is_read ? 'read' : 'sent')
+                            "
+                          />
                         }
                       </p>
                     </div>

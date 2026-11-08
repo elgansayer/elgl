@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Inject,
   Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -42,6 +43,7 @@ export class SecureChatService extends ChatService {
     private readonly secureSupabase: SupabaseService,
     private readonly secureCentrifugo: CentrifugoService,
     @Optional()
+    @Inject(ReadReceiptsService)
     private readonly secureReadReceipts: ReadReceiptsService | undefined,
     private readonly secureEvents: EventEmitter2,
     private readonly secureSafety: SafetyService,

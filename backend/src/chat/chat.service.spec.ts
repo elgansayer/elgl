@@ -23,6 +23,7 @@ import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
@@ -41,6 +42,7 @@ vi.mock('./centrifugo.service', () => ({
 describe('ChatService', () => {
   let service: ChatService;
   let centrifugoService: any;
+  let readReceiptsService: any;
   let chatLlmService: any;
   let eventEmitter: any;
   let mockSupabaseClient: any;
@@ -88,6 +90,16 @@ describe('ChatService', () => {
           useValue: {
             signJwt: vi.fn().mockResolvedValue('mock-token'),
             publish: vi.fn().mockResolvedValue(true),
+          },
+        },
+        {
+          provide: ReadReceiptsService,
+          useValue: {
+            setInitialSent: vi.fn().mockResolvedValue(undefined),
+            markAsDelivered: vi.fn().mockResolvedValue(undefined),
+            markAsRead: vi.fn().mockResolvedValue(undefined),
+            recordReceipt: vi.fn().mockResolvedValue(undefined),
+            getReceiptStatus: vi.fn(),
           },
         },
         {
@@ -153,6 +165,8 @@ describe('ChatService', () => {
 
     service = module.get<ChatService>(ChatService);
     centrifugoService = module.get<CentrifugoService>(CentrifugoService) as any;
+    readReceiptsService = module.get<ReadReceiptsService>(ReadReceiptsService);
+    readReceiptsService.getReceiptStatus.mockReset();
     chatLlmService = module.get<ChatLlmService>(ChatLlmService) as any;
     eventEmitter = module.get<EventEmitter2>(EventEmitter2) as any;
   });
@@ -1448,6 +1462,72 @@ describe('ChatService', () => {
       // The method should return early without calling update
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
       expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('should keep a group message delivered until every recipient has read it', async () => {
+      const message = {
+        id: 'msg-8',
+        room_id: 'room-8',
+        delivery_status: 'sent',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
+      readReceiptsService.getReceiptStatus.mockResolvedValue({
+        messageId: 'msg-8',
+        deliveryStatus: 'delivered',
+        readBy: [],
+        totalMembers: 2,
+      });
+
+      await service.updateMessageStatus('user-1', 'msg-8', 'read');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        delivery_status: 'delivered',
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'chat:room-8',
+        expect.objectContaining({
+          status_update: expect.objectContaining({
+            message_id: 'msg-8',
+            delivery_status: 'delivered',
+          }),
+        }),
+      );
+    });
+
+    it('should record a per-recipient receipt even when the aggregate status is already read', async () => {
+      const message = {
+        id: 'msg-7',
+        room_id: 'room-7',
+        delivery_status: 'read',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        );
+
+      expect(
+        (service as unknown as { readReceiptsService?: unknown })
+          .readReceiptsService,
+      ).toBe(readReceiptsService);
+
+      await service.updateMessageStatus('user-1', 'msg-7', 'read');
+
+      expect(readReceiptsService.recordReceipt).toHaveBeenCalledWith(
+        'msg-7',
+        'user-1',
+        'read',
+      );
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when message does not exist', async () => {

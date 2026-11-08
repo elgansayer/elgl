@@ -55,6 +55,7 @@ import { applyChatRoomRealtimeEvent, isChatMessage, isRecord } from './chat-room
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
 import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
+import { ReadReceiptComponent } from '../read-receipt/read-receipt.component';
 
 function isGroupMember(value: unknown): value is GroupMember {
   return typeof value === 'object' && value !== null && 'user_id' in value;
@@ -90,6 +91,7 @@ function isGroupMember(value: unknown): value is GroupMember {
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
     GiftAnimationComponent,
+    ReadReceiptComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -179,6 +181,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly autoPlayVoiceNotes = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
+  readonly isGroupChat = computed(() => this.participants().length > 2);
   readonly groupParticipants = computed<GroupParticipant[]>(() =>
     this.participants().map((m) => ({
       id: m.user_id,

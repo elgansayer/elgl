@@ -5,6 +5,7 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -45,6 +46,10 @@ import {
 import { ChatService } from './chat.service';
 import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
+import {
+  MessageReceiptStatus,
+  ReadReceiptsService,
+} from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import type { Request, Response } from 'express';
@@ -70,6 +75,7 @@ function isFavouriteRecord(
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
+    private readonly readReceiptsService: ReadReceiptsService,
     private readonly favouritesService: FavouritesService,
     private readonly centrifugoService: CentrifugoService,
     private readonly conversationStarterService: ConversationStarterService,
@@ -188,6 +194,28 @@ export class ChatController {
       return await this.chatService.getMessages(roomId, search);
     }
     return await this.chatService.getMessages(roomId, search, user.id);
+  }
+
+  @Get('messages/:messageId/receipts')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  async getMessageReceipts(
+    @CurrentUser() user: User | null,
+    @Param('messageId', new ParseUUIDPipe()) messageId: string,
+  ): Promise<MessageReceiptStatus> {
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    const status = await this.readReceiptsService.getReceiptStatus(
+      messageId,
+      user.id,
+    );
+
+    if (!status) {
+      throw new NotFoundException('Message not found');
+    }
+
+    return status;
   }
 
   // Compatibility routes for clients that predate the dedicated /favourites

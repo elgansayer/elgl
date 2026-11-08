@@ -1,6 +1,6 @@
-import { Component, input, inject, signal, effect } from '@angular/core';
+import { Component, input, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ChatService, ReadReceiptUser, MessageReceiptStatus } from '../../services/chat.service';
+import { ChatService, MessageReceiptStatus } from '../../services/chat.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -11,12 +11,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
     <div
       class="inline-flex items-center relative"
       role="status"
+      tabindex="0"
       [attr.aria-label]="ariaLabel()"
+      [attr.aria-expanded]="showDetail()"
       (mouseenter)="showDetail.set(true)"
       (mouseleave)="showDetail.set(false)"
       (click)="toggleDetail()"
       (keydown.enter)="toggleDetail()"
       (keydown.space)="toggleDetail()"
+      (keydown.escape)="showDetail.set(false)"
     >
       <!-- Sending: muted clock icon -->
       @if (displayStatus() === 'sending') {
@@ -123,7 +126,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class ReadReceiptComponent {
   messageId = input.required<string>();
-  deliveryStatus = input<'sent' | 'delivered' | 'read'>();
+  deliveryStatus = input<'sending' | 'sent' | 'delivered' | 'read'>();
   isGroup = input(false);
 
   private chatService = inject(ChatService);
@@ -132,18 +135,13 @@ export class ReadReceiptComponent {
   showDetail = signal(false);
   receiptData = signal<MessageReceiptStatus | null>(null);
 
-  displayStatus = signal<'sending' | 'sent' | 'delivered' | 'read' | null>(null);
-  displayedReaders = signal<ReadReceiptUser[]>([]);
-  remainingCount = signal(0);
+  readonly displayStatus = computed(() => this.deliveryStatus() ?? null);
+  readonly displayedReaders = computed(() => this.receiptData()?.readBy.slice(0, 5) ?? []);
+  readonly remainingCount = computed(() =>
+    Math.max(0, (this.receiptData()?.readBy.length ?? 0) - 5),
+  );
 
   constructor() {
-    effect(() => {
-      const status = this.deliveryStatus();
-      if (status) {
-        this.displayStatus.set(status);
-      }
-    });
-
     effect(() => {
       if (this.showDetail()) {
         void this.loadReceipts();
@@ -153,7 +151,7 @@ export class ReadReceiptComponent {
 
   hasGroupInfo(): boolean {
     const data = this.receiptData();
-    return data !== null && data.totalMembers > 2 && data.readBy.length > 0;
+    return this.isGroup() && data !== null && data.totalMembers > 0 && data.readBy.length > 0;
   }
 
   ariaLabel(): string {
@@ -201,9 +199,6 @@ export class ReadReceiptComponent {
     try {
       const data = await this.chatService.getMessageReceipts(this.messageId());
       this.receiptData.set(data);
-      this.displayedReaders.set(data.readBy.slice(0, 5));
-      const remaining = data.readBy.length - 5;
-      this.remainingCount.set(remaining > 0 ? remaining : 0);
     } catch {
       this.receiptData.set(null);
     }

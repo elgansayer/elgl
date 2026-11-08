@@ -25,6 +25,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { FavouritesService } from '../favourites/favourites.service';
 import { ConversationStarterService } from './conversation-starter.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import type { User } from '@supabase/supabase-js';
@@ -41,6 +42,7 @@ import type { FavouriteRecord } from './interfaces/chat-message.interface';
 describe('ChatController', () => {
   let controller: ChatController;
   let chatService: ChatService;
+  let readReceiptsService: ReadReceiptsService;
   let favouritesService: FavouritesService;
   let centrifugoService: CentrifugoService;
   let conversationStarterService: ConversationStarterService;
@@ -77,6 +79,12 @@ describe('ChatController', () => {
             getRoomsByLabel: vi.fn(),
             exportChatHistory: vi.fn(),
             getRoomGreeting: vi.fn(),
+          },
+        },
+        {
+          provide: ReadReceiptsService,
+          useValue: {
+            getReceiptStatus: vi.fn(),
           },
         },
         {
@@ -124,6 +132,7 @@ describe('ChatController', () => {
 
     controller = module.get<ChatController>(ChatController);
     chatService = module.get<ChatService>(ChatService);
+    readReceiptsService = module.get<ReadReceiptsService>(ReadReceiptsService);
     favouritesService = module.get<FavouritesService>(FavouritesService);
     centrifugoService = module.get<CentrifugoService>(CentrifugoService);
     conversationStarterService = module.get<ConversationStarterService>(
@@ -312,6 +321,48 @@ describe('ChatController', () => {
         'user-1',
       );
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('getMessageReceipts', () => {
+    it('should reject unauthenticated callers', async () => {
+      await expect(
+        controller.getMessageReceipts(null, 'msg-1'),
+      ).rejects.toThrow('Unauthorized');
+      expect(readReceiptsService.getReceiptStatus).not.toHaveBeenCalled();
+    });
+
+    it('should return the receipt status scoped to the current user', async () => {
+      const status = {
+        messageId: 'msg-1',
+        deliveryStatus: 'read' as const,
+        readBy: [
+          {
+            userId: 'user-2',
+            displayName: 'Amara',
+            avatarUrl: null,
+            readAt: '2026-11-08T10:00:00.000Z',
+          },
+        ],
+        totalMembers: 1,
+      };
+      (readReceiptsService.getReceiptStatus as Mock).mockResolvedValue(status);
+
+      const result = await controller.getMessageReceipts(mockUser(), 'msg-1');
+
+      expect(readReceiptsService.getReceiptStatus).toHaveBeenCalledWith(
+        'msg-1',
+        'user-1',
+      );
+      expect(result).toEqual(status);
+    });
+
+    it('should return not found when the message does not exist', async () => {
+      (readReceiptsService.getReceiptStatus as Mock).mockResolvedValue(null);
+
+      await expect(
+        controller.getMessageReceipts(mockUser(), 'missing'),
+      ).rejects.toThrow('Message not found');
     });
   });
 
