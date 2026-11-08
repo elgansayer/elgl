@@ -35,7 +35,7 @@ try {
   }
   const lines = (output) => output.split('\n').map((path) => path.trim()).filter(Boolean);
   changed = lines(git('diff', '--name-only', `${base}...${diffHead}`));
-  // Local Factory verification runs before the repair is committed, so edits
+  // Local verification runs before the repair is committed, so edits
   // that only exist in the working tree (including a fixed preview) were
   // invisible and the gate could never pass locally (issues 1436 and 1716,
   // 2026-10-29). GitHub Actions checkouts are clean and keep the commit diff.

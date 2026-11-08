@@ -880,6 +880,21 @@ describe('UsersService', () => {
   });
 
   describe('updatePrivacySettings', () => {
+    it('should surface persistence failures instead of returning mock success', async () => {
+      mockQueryBuilder.eq.mockResolvedValueOnce({
+        error: { code: 'PGRST500', message: 'database unavailable' },
+      });
+
+      await expect(
+        service.updatePrivacySettings(
+          'user-1',
+          { privacy_hide_vip_status: true },
+          false,
+        ),
+      ).rejects.toThrow(InternalServerErrorException);
+      expect(mockQueryBuilder.single).not.toHaveBeenCalled();
+    });
+
     it('should throw BadRequestException when a non-VIP user enables incognito_visits', async () => {
       await expect(
         service.updatePrivacySettings(
@@ -931,6 +946,30 @@ describe('UsersService', () => {
 
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         incognito_visits: false,
+      });
+      expect(result).toMatchObject(updatedProfile);
+    });
+
+    it('should persist VIP-status privacy independently of entitlement', async () => {
+      const updatedProfile = {
+        id: 'user-1',
+        is_vip: true,
+        privacy_hide_vip_status: true,
+      };
+      mockQueryBuilder.eq.mockResolvedValueOnce({ error: null });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: updatedProfile,
+        error: null,
+      });
+
+      const result = await service.updatePrivacySettings(
+        'user-1',
+        { privacy_hide_vip_status: true },
+        false,
+      );
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        privacy_hide_vip_status: true,
       });
       expect(result).toMatchObject(updatedProfile);
     });

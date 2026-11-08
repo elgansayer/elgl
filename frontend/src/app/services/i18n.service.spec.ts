@@ -117,6 +117,11 @@ describe('I18nService', () => {
       expect(translation).toBe('100 Coins');
     });
 
+    it('should localise the amount in an audio-room tip animation', () => {
+      const translation = service.translate('audioRoom.tipName', { amount: 50 });
+      expect(translation).toBe('50 Coins');
+    });
+
     it('should return the key itself if no translation is found', () => {
       const translation = service.translate('non.existent.key');
       expect(translation).toBe('non.existent.key');
@@ -203,9 +208,9 @@ describe('I18nService', () => {
         target: 'English',
       }),
     ).toBe('Japanese → English');
-    expect(
-      service.translate('discovery.audioIntroFeed.resultCount', { count: 2 }),
-    ).toBe('Audio introduction results: 2');
+    expect(service.translate('discovery.audioIntroFeed.resultCount', { count: 2 })).toBe(
+      'Audio introduction results: 2',
+    );
     expect(service.translate('discovery.audioIntroFeed.noAudioIntros')).toBe(
       'No audio introductions available.',
     );
@@ -440,6 +445,31 @@ describe('I18nService', () => {
       for (const [key, value] of copy) {
         expect(value, key).not.toMatch(INFRASTRUCTURE);
       }
+    });
+  });
+
+  describe('doodle chat copy', () => {
+    it.each([
+      ['chatRoom.doodleBtn', 'Doodle'],
+      ['chatRoom.doodleCaption', 'Doodle'],
+      ['chatRoom.doodleImageAlt', 'Doodle drawing'],
+      ['chatRoom.doodleSendFailed', 'Your doodle could not be sent. Please try again.'],
+    ])('resolves %s from the base dictionary instead of echoing the key', (key, expected) => {
+      expect(service.translate(key)).toBe(expected);
+    });
+
+    it.each([
+      'doodle.title',
+      'doodle.colorLabel',
+      'doodle.brushLabel',
+      'doodle.clearBtn',
+      'doodle.cancelBtn',
+      'doodle.sendBtn',
+    ])('keeps the doodle pad key %s resolvable', (key) => {
+      const text = service.translate(key);
+
+      expect(text).not.toBe(key);
+      expect(text.trim().length).toBeGreaterThan(0);
     });
   });
 });

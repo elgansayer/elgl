@@ -10,25 +10,9 @@ This document defines which repository artifacts are authoritative, generated, t
 | Product capability specification | `FEATURES_SPEC.md` | Product capability inventory. Implementation status still comes from code and tests. |
 | System architecture | `SPEC.md` and `DESIGN.md` | `SPEC.md` owns platform/data contracts; `DESIGN.md` owns design-system/product design decisions. Material changes must keep both consistent where their domains overlap. |
 | UI architecture | `ui_architecture.md` | Angular, Spartan, accessibility, responsive and design-token architecture. |
-| Factory operations | `docs/factory/README.md` | Operator-facing deployment, recovery and provider behavior for the active VPS Factory. |
-| Factory executable behavior | `automation/openhands_factory/` | Code is authoritative when prose and runtime behavior disagree. Documentation drift is a bug. |
 | Critical cross-app API contracts | `config/critical-product-contracts.json` | Machine-checked contract anchors for the standalone admin portal and critical product journeys. |
 
 `README.md` is an index and onboarding document, not a second copy of the feature specification.
-
-## Active development automation architecture
-
-The active autonomous coding control plane is the bounded OpenHands Factory in `automation/openhands_factory/`, deployed on the VPS.
-
-The default production execution path is:
-
-1. OpenHands owns the bounded coding conversation and isolated worktree.
-2. Inside OpenHands, OpenAI Codex subscription OAuth is the primary LLM provider.
-3. OpenCode Go is an optional fallback when both its API key and model are configured.
-4. Gemini fields remain migration/diagnostic compatibility only and cannot be enabled as a production Factory LLM tier.
-5. The optional outer `AgentRouter` may route explicit phase-specific CLI providers only when `routing_enabled` is deliberately configured. It is not the retired swarm and is disabled by default.
-
-The retired swarm/aider/guardian/resolver/reviewer control plane must not be recreated or share the Factory state directory.
 
 ## Tool-specific adapter directories
 
@@ -66,7 +50,6 @@ These must not be committed:
 - `admin-portal/test-results/`
 - Cypress/Playwright screenshots, videos and reports unless deliberately promoted to a reviewed fixture
 - coverage output
-- Factory state, provider-health state, worktrees, recovery bundles and logs
 - local `.env` files and credentials
 
 CI uploads diagnostic output as GitHub Actions artifacts instead of committing it.
@@ -81,4 +64,4 @@ When changing architecture or provider behavior:
 4. Regenerate derived documentation if applicable.
 5. Run `npm run check:docs-source` and the root `npm run verify` gate.
 
-A provider-specific instruction, generated wiki page, issue body or historical prompt must never override `AGENTS.md` or the active Factory implementation.
+A provider-specific instruction, generated wiki page, issue body or historical prompt must never override `AGENTS.md`.

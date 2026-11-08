@@ -14,6 +14,7 @@ type QueryBuilderMock = {
   overlaps: Mock;
   ilike: Mock;
   lte: Mock;
+  in: Mock;
   limit: Mock;
 };
 
@@ -49,6 +50,7 @@ const createQueryBuilder = (): QueryBuilderMock => {
     'overlaps',
     'ilike',
     'lte',
+    'in',
   ] as const;
 
   for (const method of chainMethods) {

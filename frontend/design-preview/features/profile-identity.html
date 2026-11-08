@@ -867,8 +867,36 @@
               Something went wrong. Please try again.
             </p>
           </div>
+          <div class="card stack">
+            <span class="state-label">Persisted introduction</span>
+            <div class="audio-bar" aria-label="Audio introduction">
+              ▶ <span class="wave"></span> 0:24
+            </div>
+            <div class="row">
+              <button type="button" class="btn secondary-btn" style="border-radius: 999px">
+                Re-record
+              </button>
+            </div>
+          </div>
+          <div class="card stack">
+            <span class="state-label">Playback unavailable</span>
+            <div class="audio-bar" aria-label="Audio introduction">
+              ▶ <span class="wave"></span> 0:00
+            </div>
+            <p class="muted" style="margin: 0; color: rgb(var(--danger-text))" role="alert">
+              Unable to play this audio
+            </p>
+            <div class="row">
+              <button type="button" class="btn secondary-btn" style="border-radius: 999px">
+                Re-record
+              </button>
+            </div>
+          </div>
         </div>
-        <footer>States shown: idle · recording (live timer) · preview + save · error</footer>
+        <footer>
+          States shown: idle · recording (live timer) · preview + save · persisted playback ·
+          playback unavailable · upload error
+        </footer>
       </section>
 
       <!-- 7 -->
@@ -1250,6 +1278,9 @@
             ><span class="chip">✏️ Corrections</span><span class="chip">🎤 Audio</span
             ><span class="chip">📰 Moments</span>
           </nav>
+          <p class="muted" role="status" style="margin: 0">
+            Showing only your most recent favourites.
+          </p>
           <div class="card stack">
             <div class="row">
               <div class="avatar sm">陈</div>
@@ -1257,24 +1288,43 @@
                 <div class="title" lang="zh">陈伟</div>
                 <div class="muted">10/18/26, 9:14 PM</div>
               </div>
-              <button type="button" class="icon-btn" aria-label="Delete favourite">🗑</button>
+              <button type="button" class="icon-btn" aria-label="Remove favourite from 陈伟">
+                🗑
+              </button>
             </div>
             <span class="chip" style="align-self: flex-start">✏️ Corrections</span>
             <p class="diff" style="margin: 0">
               I <del>goed</del> <ins>went</ins> to the market yesterday.
             </p>
+            <div class="alert error" role="alert">
+              Could not remove this favourite. Please try again.
+            </div>
           </div>
           <div class="card stack">
             <div class="row">
-              <div class="avatar sm ember">Y</div>
-              <div class="grow title">Yuki</div>
+              <div class="avatar sm ember" aria-hidden="true">👤</div>
+              <div class="grow title">Language partner</div>
               <span class="chip">🎤 Voice note</span>
             </div>
             <div class="audio-bar">▶ <span class="wave"></span> 0:09</div>
+            <div class="alert error" role="alert">This audio clip could not be played.</div>
+          </div>
+          <div class="dialog stack" role="dialog" aria-modal="true" aria-labelledby="remove-favourite-title">
+            <div class="title" id="remove-favourite-title">Remove from favourites?</div>
+            <p class="secondary" style="margin: 0">
+              Remove this item from your favourites? Any note you saved with it will also be
+              deleted.
+            </p>
+            <div class="row" style="justify-content: flex-end">
+              <button class="btn secondary-btn" type="button">Cancel</button>
+              <button class="btn danger" type="button">Remove</button>
+            </div>
           </div>
         </div>
         <footer>
-          States shown: tabbed filter · correction diff · voice note · loading/empty/error + retry
+          States shown: outlined tab filter · bounded-list notice · avatar fallback · correction
+          diff · row-level delete/audio failures · destructive confirmation · loading/empty/error
+          + retry
         </footer>
       </section>
 
@@ -1433,9 +1483,7 @@ Relaxed Japanese practice with a native tutor.</textarea>
           </div>
           <div class="alert error" role="alert">Something went wrong.</div>
         </div>
-        <footer>
-          States: hidden for own profile · idle · pending · error
-        </footer>
+        <footer>States: hidden for own profile · idle · pending · error</footer>
       </section>
     </main>
 

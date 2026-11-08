@@ -19,6 +19,7 @@ type QueryBuilderMock = {
   overlaps: Mock;
   ilike: Mock;
   lte: Mock;
+  in: Mock;
   limit: Mock;
 };
 
@@ -36,6 +37,7 @@ const createQueryBuilder = (): QueryBuilderMock => {
     'overlaps',
     'ilike',
     'lte',
+    'in',
   ] as const;
 
   for (const method of chainMethods) {
@@ -145,6 +147,8 @@ describe('DiscoveryService PostGIS partner queries', () => {
         distance_metres: 3210,
       }),
     ]);
+    expect(queryBuilder.in).toHaveBeenCalledWith('id', ['partner-1']);
+    expect(queryBuilder.limit).toHaveBeenCalledWith(100);
   });
 
   it('uses the bounded default radius and neutral optional filters', async () => {

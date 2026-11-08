@@ -49,7 +49,6 @@ describe('ChatRoomComponent sequential voice-note autoplay', () => {
       getGroupMembers: vi.fn().mockResolvedValue([]),
       getMessages: vi.fn().mockResolvedValue([]),
       sendMessage: vi.fn(),
-      addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),

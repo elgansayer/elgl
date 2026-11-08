@@ -166,6 +166,9 @@ type AudioRoomTipRow = {
   sender_user_id: string;
   receiver_user_id: string;
   amount_coins: number;
+  idempotency_key?: string | null;
+  sender_balance_after?: number | null;
+  receiver_balance_after?: number | null;
   created_at?: string;
 };
 
@@ -2283,6 +2286,25 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      transfer_audio_room_tip: {
+        Args: {
+          p_room_id: string;
+          p_sender_id: string;
+          p_amount: number;
+          p_idempotency_key: string;
+        };
+        Returns: {
+          tip_id: string;
+          amount_coins: number;
+          receiver_id: string;
+          sender_new_balance: number;
+          // Internal RPC field. Never expose another user's wallet balance.
+          receiver_new_balance: number;
+          sender_name: string;
+          receiver_name: string;
+          created: boolean;
+        }[];
+      };
       get_host_dashboard_earnings: {
         Args: {
           p_room_id: string;
@@ -2292,7 +2314,7 @@ export interface Database {
           earned_coins: number;
         }[];
       };
-      claim_daily_checkin_reward: {
+      claim_daily_checkin: {
         Args: {
           p_user_id: string;
           p_reward: number;

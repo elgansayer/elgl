@@ -86,6 +86,32 @@ export class UsersController {
     return visibleProfile;
   }
 
+  private async assertProfileVisible(
+    profile: Partial<UserProfile>,
+    isSelf: boolean,
+    currentUser: User | null,
+  ): Promise<void> {
+    if (isSelf) return;
+
+    const visibility = profile.profile_visibility ?? 'everyone';
+    if (visibility === 'hidden') {
+      throw new UnauthorizedException('This profile is not visible');
+    }
+    if (visibility === 'vips_only') {
+      const isRequestingVip = Boolean(
+        currentUser
+          ? ((await this.usersService.getProfile(currentUser.id))?.is_vip ??
+              false)
+          : false,
+      );
+      if (!isRequestingVip) {
+        throw new UnauthorizedException(
+          'This profile is visible to VIP members only',
+        );
+      }
+    }
+  }
+
   @UseGuards(TwoFactorGuard)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Delete('me')
@@ -336,31 +362,9 @@ export class UsersController {
     @CurrentUser() currentUser: User | null,
   ): Promise<UserProfile> {
     const profile = await this.usersService.getProfile(id);
-
-    // Enforce profile visibility
-    if (id !== (currentUser?.id ?? '')) {
-      const profileRecord = profile as unknown as Record<string, unknown>;
-      const visibility =
-        (profileRecord.profile_visibility as string) ?? 'everyone';
-      if (visibility === 'hidden') {
-        throw new UnauthorizedException('This profile is not visible');
-      }
-      if (visibility === 'vips_only') {
-        const isRequestingVip = Boolean(
-          currentUser
-            ? ((await this.usersService.getProfile(currentUser.id))?.is_vip ??
-                false)
-            : false,
-        );
-        if (!isRequestingVip) {
-          throw new UnauthorizedException(
-            'This profile is visible to VIP members only',
-          );
-        }
-      }
-    }
-
-    return this.applyMemberVisibility(profile, id === (currentUser?.id ?? ''));
+    const isSelf = id === (currentUser?.id ?? '');
+    await this.assertProfileVisible(profile, isSelf, currentUser);
+    return this.applyMemberVisibility(profile, isSelf);
   }
 
   @Get(':id/stats')
@@ -369,7 +373,9 @@ export class UsersController {
     @CurrentUser() currentUser: User | null,
   ): Promise<Partial<UserProfile>> {
     const stats = await this.usersService.getUserStats(id);
-    return this.applyMemberVisibility(stats, id === (currentUser?.id ?? ''));
+    const isSelf = id === (currentUser?.id ?? '');
+    await this.assertProfileVisible(stats, isSelf, currentUser);
+    return this.applyMemberVisibility(stats, isSelf);
   }
 
   @Get(':id/followers')

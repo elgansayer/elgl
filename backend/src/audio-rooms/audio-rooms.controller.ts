@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -6,12 +7,14 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -121,7 +124,15 @@ export class AudioRoomsController {
       },
     },
   })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid, inactive or unaffordable tip.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Idempotency key subject conflict.',
+  })
   async createRoom(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: CreateAudioRoomDto,
@@ -1051,7 +1062,7 @@ export class AudioRoomsController {
   @ApiParam({
     name: 'roomId',
     description: 'Audio room ID',
-    example: 'room_a1b2c3d4',
+    example: '63eedbd6-03f9-433f-a481-98227dfd62af',
   })
   @ApiResponse({
     status: 201,
@@ -1065,25 +1076,36 @@ export class AudioRoomsController {
           type: 'string',
           example: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
         },
-        receiver_new_balance: { type: 'number', example: 260 },
+        sender_new_balance: { type: 'number', example: 90 },
       },
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Room participation required.' })
+  @ApiResponse({ status: 429, description: 'Too many tip attempts.' })
+  @ApiResponse({
+    status: 503,
+    description: 'Tip delivery is temporarily unavailable.',
+  })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async tipHost(
     @CurrentUser() user: AuthUser | null,
-    @Param('roomId') roomId: string,
+    @Param('roomId', new ParseUUIDPipe({ version: '4' })) roomId: string,
     @Body() dto: TipHostDto,
   ): Promise<{
     tip_id: string;
     amount_coins: number;
     receiver_id: string;
-    receiver_new_balance: number;
+    sender_new_balance: number;
   } | null> {
     if (!user) return null;
+    if (dto.room_id !== roomId) {
+      throw new BadRequestException('audioRoom.tipValidationError');
+    }
     return await this.audioRoomsService.tipHost(user.id, {
       room_id: roomId,
       amount_coins: dto.amount_coins,
+      idempotency_key: dto.idempotency_key,
     });
   }
 }

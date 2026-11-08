@@ -57,7 +57,6 @@ export class SettingsComponent implements OnInit {
   readonly autoDownloadMedia = signal(false);
   readonly autoDownloadPreference = signal<'wifi' | 'cellular'>('wifi');
   protected chatEnterToSend = signal(false);
-  protected chatTextSize = signal<'small' | 'medium' | 'large'>('medium');
 
   /** Message filter fields */
   readonly filterAgeMin = signal<number | undefined>(undefined);
@@ -101,7 +100,6 @@ export class SettingsComponent implements OnInit {
     try {
       await this.chatSettingsService.loadSettings();
       this.chatEnterToSend.set(this.chatSettingsService.enterToSend());
-      this.chatTextSize.set(this.chatSettingsService.textSize());
     } catch {
       // keep service defaults
     }
@@ -185,8 +183,9 @@ export class SettingsComponent implements OnInit {
       });
       this.hapticFeedbackService.setEnabled(this.vibrationEnabled);
 
+      // Chat text size is owned by Settings > Appearance; saving it from here as
+      // well would let a stale value overwrite the one chosen there.
       await this.chatSettingsService.updateSetting('enterToSend', this.chatEnterToSend());
-      await this.chatSettingsService.updateSetting('textSize', this.chatTextSize());
 
       await this.userService.setMessageFilters({
         age_min: this.filterAgeMin(),
