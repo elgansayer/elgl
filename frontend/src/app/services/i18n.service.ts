@@ -1516,6 +1516,7 @@ export class I18nService {
     'profile.followersLabel': 'Followers',
     'profile.followingLabel': 'Following',
     'profile.favLink': '⭐ Favourites',
+    'profile.statsLink': '📊 My Stats',
     'profile.vocabLink': '📚 Vocabulary',
     'profile.liveRoomsLink': '🎙️ Live rooms',
     'profile.devLink': '⚡ Developer',
