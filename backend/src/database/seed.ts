@@ -139,6 +139,15 @@ async function seedUsersAndProfiles(supabase: any) {
             }),
           })
           .eq('id', userId);
+
+        if (userId && u.vip_tier === 'developer') {
+          await supabase.from('developer_metrics').upsert({
+            user_id: userId,
+            total_api_calls_today: 1420,
+            avg_latency_ms: 18,
+            updated_at: new Date().toISOString(),
+          });
+        }
       }
     }),
   );

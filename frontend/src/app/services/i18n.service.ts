@@ -1383,11 +1383,17 @@ export class I18nService {
     'developer.tabCentrifugo': '⚡ Centrifugo & Redis Fan-Out',
     'developer.tabLivekit': '🎙️ LiveKit SFU Stage Simulator',
     'developer.apiKeyTitle': '🔐 API key management',
-    'developer.apiKeySubtitle': 'Send key in Authorization header.',
+    'developer.apiKeySubtitle':
+      'Send this key as a Bearer token to authenticate developer API requests.',
     'developer.generateBtn': '+ Generate key',
     'developer.activeKeyLabel': 'Active production key',
     'developer.activeRpm': 'Active (600 RPM)',
     'developer.noKey': 'No API key yet. Activate developer tier and generate one.',
+    'developer.revokeBtn': 'Revoke key',
+    'developer.revokeConfirm':
+      'Revoke this API key? Any applications using it will stop working immediately.',
+    'developer.revokeSuccess': 'Developer API key revoked.',
+    'developer.revokeError': 'Failed to revoke the API key. Please try again.',
     'developer.statCallsLabel': 'Total API calls today',
     'developer.statCallsSub': 'Across NLP, moments, and live rooms.',
     'developer.statRateLabel': 'Rate limit',

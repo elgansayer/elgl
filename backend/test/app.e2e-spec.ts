@@ -662,6 +662,63 @@ describe('HelloTalk API E2E Integration Suite', () => {
           expect(res.body.pricing_info).toContain('8 UKP / $10 USD per month');
         });
     });
+
+    it('/monetisation/analytics (GET) - should accept a Developer API key', () => {
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({
+          data: { id: 'e2e-user-1', is_vip: true, vip_tier: 'developer' },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { study_streak_days: 10, correction_ratio: 0.9 },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'e2e-user-1',
+            is_vip: true,
+            vip_tier: 'developer',
+            developer_api_key: 'ht_dev_0123...cdef',
+          },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            user_id: 'e2e-user-1',
+            total_api_calls_today: 42,
+            avg_latency_ms: 18,
+            updated_at: new Date().toISOString(),
+          },
+          error: null,
+        });
+
+      return request(app.getHttpServer())
+        .get('/monetisation/analytics')
+        .set('X-API-Key', 'ht_dev_0123456789abcdef0123456789abcdef')
+        .expect(200)
+        .expect((res) => {
+          expect(mockRedisClient.incr).toHaveBeenCalled();
+          expect(res.body.tier).toBe('developer');
+          expect(res.body.total_api_calls_today).toBe(42);
+        });
+    });
+
+    it('/monetisation/api-key (DELETE) - should revoke the active API key', () => {
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({
+          data: { study_streak_days: 10, correction_ratio: 0.9 },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { id: 'e2e-user-1', is_vip: true, vip_tier: 'developer' },
+          error: null,
+        });
+
+      return request(app.getHttpServer())
+        .delete('/monetisation/api-key')
+        .expect(200)
+        .expect({ revoked: true, api_key: null });
+    });
   });
 
   describe('Moments For You feed (#1668)', () => {
