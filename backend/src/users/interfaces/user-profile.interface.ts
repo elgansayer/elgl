@@ -47,6 +47,7 @@ export interface UserProfile {
   location_privacy?: 'exact' | 'region';
   privacy_hide_online_status: boolean;
   privacy_hide_vip_status: boolean;
+  profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   privacy_last_seen?: 'everyone' | 'vips_only' | 'hidden';
   privacy_profile_photo?: 'everyone' | 'vips_only' | 'hidden';
   privacy_about_info?: 'everyone' | 'vips_only' | 'hidden';

@@ -61,9 +61,23 @@ describe('PresencePrivacyService', () => {
     });
   });
 
-  it('persists only the requested privacy flag', async () => {
-    const resultPromise = service.updatePresencePrivacy({ privacy_hide_vip_status: true });
+  it('persists online-status privacy through the profile endpoint', async () => {
+    const resultPromise = service.updatePresencePrivacy({
+      privacy_hide_online_status: true,
+    });
     const request = httpMock.expectOne(`${baseUrl}/me`);
+
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ privacy_hide_online_status: true });
+    expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
+    request.flush({});
+
+    await expect(resultPromise).resolves.toBeUndefined();
+  });
+
+  it('persists VIP-status privacy through the privacy endpoint', async () => {
+    const resultPromise = service.updatePresencePrivacy({ privacy_hide_vip_status: true });
+    const request = httpMock.expectOne(`${baseUrl}/me/privacy`);
 
     expect(request.request.method).toBe('PATCH');
     expect(request.request.body).toEqual({ privacy_hide_vip_status: true });
@@ -71,6 +85,21 @@ describe('PresencePrivacyService', () => {
     request.flush({});
 
     await expect(resultPromise).resolves.toBeUndefined();
+  });
+
+  it('rejects empty or multi-setting updates before issuing a request', async () => {
+    await expect(service.updatePresencePrivacy({})).rejects.toThrow(
+      'Exactly one presence privacy setting is required',
+    );
+    await expect(
+      service.updatePresencePrivacy({
+        privacy_hide_online_status: true,
+        privacy_hide_vip_status: true,
+      }),
+    ).rejects.toThrow('Exactly one presence privacy setting is required');
+
+    httpMock.expectNone(`${baseUrl}/me`);
+    httpMock.expectNone(`${baseUrl}/me/privacy`);
   });
 
   it('propagates persistence failures instead of reporting fake success', async () => {

@@ -119,7 +119,7 @@ describe('DiscoveryService PostGIS search contract', () => {
       filter_age_max: 40,
       filter_audio_intro: true,
     });
-    expect(queryBuilder['limit']).not.toHaveBeenCalled();
+    expect(queryBuilder['limit']).toHaveBeenCalledWith(100);
   });
 
   it('uses the 50 km service default and normalises the legacy distance field', async () => {

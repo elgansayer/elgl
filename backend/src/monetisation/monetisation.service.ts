@@ -327,6 +327,40 @@ export class MonetisationService {
     };
   }
 
+  async revokeApiKey(
+    userId: string,
+  ): Promise<{ revoked: boolean; api_key: null }> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('users')
+      .select('id, is_vip, vip_tier')
+      .eq('id', userId)
+      .single();
+
+    if (!response.data) throw new NotFoundException('User not found');
+
+    const isDeveloperTier =
+      response.data.is_vip === true &&
+      (response.data.vip_tier ?? '').startsWith('developer');
+    if (!isDeveloperTier) {
+      throw new ForbiddenException(
+        'Developer API Access is reserved for active subscribers.',
+      );
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ developer_api_key: null })
+      .eq('id', userId);
+
+    if (error) {
+      this.logger.error('Failed to revoke Developer API key');
+      throw new InternalServerErrorException('Failed to revoke API key');
+    }
+
+    return { revoked: true, api_key: null };
+  }
+
   async getDeveloperAnalytics(userId: string): Promise<{
     api_key: string | null;
     tier: string;
@@ -352,15 +386,22 @@ export class MonetisationService {
     if (isDeveloperTier) {
       const metricResponse = await supabase
         .from('developer_metrics')
-        .select('user_id, total_api_calls_today, avg_latency_ms')
+        .select('user_id, total_api_calls_today, avg_latency_ms, updated_at')
         .eq('user_id', userId)
         .single();
       const metric = metricResponse.data as unknown as {
         total_api_calls_today?: number;
         avg_latency_ms?: number;
+        updated_at?: string | null;
       } | null;
-      total_api_calls_today = metric?.total_api_calls_today ?? 0;
-      avg_latency_ms = metric?.avg_latency_ms ?? 0;
+      const isCurrentDay =
+        !!metric?.updated_at &&
+        new Date(metric.updated_at).toDateString() ===
+          new Date().toDateString();
+      total_api_calls_today = isCurrentDay
+        ? (metric?.total_api_calls_today ?? 0)
+        : 0;
+      avg_latency_ms = isCurrentDay ? (metric?.avg_latency_ms ?? 0) : 0;
     }
 
     return {

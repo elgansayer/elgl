@@ -8,6 +8,7 @@ import { FavouriteService } from '../../services/favourite.service';
 import { I18nService } from '../../services/i18n.service';
 import { NlpService } from '../../services/nlp.service';
 import { SafetyService } from '../../services/safety.service';
+import { toastsSignal } from '../../services/toast.service';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
@@ -17,8 +18,11 @@ import { GiftAnimationComponent } from '../gift-animation/gift-animation.compone
 describe('ChatMessageComponent', () => {
   let fixture: ComponentFixture<ChatMessageComponent>;
   let currentUser: ReturnType<typeof vi.fn>;
+  let addFavourite: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    addFavourite = vi.fn().mockResolvedValue({ success: true });
+    toastsSignal.set([]);
     const blockedUserIds = signal<ReadonlySet<string>>(new Set());
     currentUser = vi.fn().mockReturnValue({ id: 'viewer-id' });
 
@@ -34,7 +38,7 @@ describe('ChatMessageComponent', () => {
         },
         {
           provide: FavouriteService,
-          useValue: { addFavourite: vi.fn().mockResolvedValue(undefined) },
+          useValue: { addFavourite },
         },
         {
           provide: SafetyService,
@@ -78,6 +82,39 @@ describe('ChatMessageComponent', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    toastsSignal.set([]);
+  });
+
+  describe('favouriting a message', () => {
+    const event = { messageId: 'message-id', content: 'A complex sentence', messageType: 'text' };
+
+    it('saves the message by id only and confirms with a translated success toast', async () => {
+      await fixture.componentInstance.onFavourite(event);
+
+      expect(addFavourite).toHaveBeenCalledWith({ message_id: 'message-id' });
+      expect(toastsSignal()).toEqual([
+        expect.objectContaining({ type: 'success', message: 'chatRoom.bookmarkSuccess' }),
+      ]);
+    });
+
+    it('tells the user when the message could not be saved instead of failing silently', async () => {
+      addFavourite.mockRejectedValueOnce(new Error('offline'));
+
+      await expect(fixture.componentInstance.onFavourite(event)).resolves.toBeUndefined();
+
+      expect(toastsSignal()).toEqual([
+        expect.objectContaining({ type: 'error', message: 'chatRoom.bookmarkError' }),
+      ]);
+    });
+
+    it('is wired to the context menu favourite action', async () => {
+      const menu = fixture.debugElement.query(By.directive(LongPressContextMenuComponent));
+
+      menu.componentInstance.favourite.emit(event);
+      await fixture.whenStable();
+
+      expect(addFavourite).toHaveBeenCalledWith({ message_id: 'message-id' });
+    });
   });
 
   it('delegates simplification to the shared context menu without an inline action', () => {
@@ -278,5 +315,28 @@ describe('ChatMessageComponent', () => {
     expect(speedButton).toBeTruthy();
     expect(speedButton?.nativeElement.getAttribute('type')).toBe('button');
     expect(speedButton?.nativeElement.getAttribute('aria-label')).toContain('1×');
+  });
+
+  it('gives doodle images a translated alternative text instead of hard-coded English', () => {
+    const dataUrl = 'data:image/png;base64,ZG9vZGxl';
+    fixture.componentRef.setInput('message', {
+      id: 'doodle-message-id',
+      room_id: 'room-id',
+      sender_id: 'sender-id',
+      message_type: 'doodle',
+      media_url: dataUrl,
+      text_content: 'Doodle',
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    fixture.detectChanges();
+
+    const image = fixture.nativeElement.querySelector(
+      `img[src="${dataUrl}"]`,
+    ) as HTMLImageElement | null;
+
+    expect(image).not.toBeNull();
+    expect(image?.getAttribute('alt')).toBe('chatRoom.doodleImageAlt');
+    expect(image?.getAttribute('alt')).not.toBe('Doodle');
   });
 });

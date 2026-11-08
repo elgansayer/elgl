@@ -650,19 +650,6 @@ export class ChatService {
     );
   }
 
-  async addFavourite(messageId: string, noteText?: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/favourites`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getHeaders(),
-      },
-      body: JSON.stringify({ message_id: messageId, note_text: noteText }),
-    });
-    if (!response.ok) throw new Error('Failed to add favourite');
-    void this.chatCache.invalidateFavourites();
-  }
-
   async reportMessage(messageId: string, reason: string): Promise<void> {
     const response = await fetch('/safety/report', {
       method: 'POST',
@@ -724,37 +711,6 @@ export class ChatService {
           (message.text_content?.toLocaleLowerCase().includes(literalTerm) ?? false),
       )
       .slice(0, limit);
-  }
-
-  async getFavourites(): Promise<FavouriteRecord[]> {
-    if (!this.authService.getAccessToken()) {
-      return [];
-    }
-
-    // Try cache first
-    const cached = await this.chatCache.getCachedFavourites();
-    if (cached) {
-      return cached;
-    }
-
-    const favourites = await firstValueFrom(
-      this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, {
-        headers: this.getHeaders(),
-      }),
-    );
-
-    // Cache the result
-    void this.chatCache.cacheFavourites(favourites);
-    return favourites;
-  }
-
-  async removeFavourite(favouriteId: string): Promise<void> {
-    await firstValueFrom(
-      this.http.delete(`${this.baseUrl}/favourites/${favouriteId}`, {
-        headers: this.getHeaders(),
-      }),
-    );
-    void this.chatCache.invalidateFavourites();
   }
 
   async loadBlockedUsers(): Promise<void> {

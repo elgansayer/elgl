@@ -12,7 +12,7 @@ function resolveBase() {
   const suppliedBase = process.env.MIGRATION_BASE_SHA?.trim();
   if (suppliedBase && !/^0+$/.test(suppliedBase)) return suppliedBase;
 
-  // Local/Factory verification should compare the whole feature branch, not
+  // Local verification should compare the whole feature branch, not
   // merely HEAD^. Worktrees keep the repository's main ref available, so use
   // the merge-base when possible. HEAD^ remains a defensive fallback for
   // detached/minimal repositories without a main ref.

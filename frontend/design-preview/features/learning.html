@@ -1757,7 +1757,7 @@
           <code>components/word-of-the-day</code>
         </header>
         <div class="body">
-          <section class="card stack" aria-label="Word of the day">
+          <section class="card stack" aria-label="Word of the day" aria-busy="false">
             <div class="state-label">Word of the day</div>
             <div class="row wrap">
               <span class="wotd" lang="ja">学ぶ</span><span class="secondary">to learn</span
@@ -1765,15 +1765,24 @@
             </div>
             <p class="muted"><i lang="ja">毎日、新しいことを学びます。</i></p>
           </section>
-          <section class="card stack" dir="rtl" lang="ar">
+          <section class="card stack" dir="rtl" lang="ar" aria-busy="false">
             <div class="state-label">كلمة اليوم</div>
             <div class="row wrap">
               <span class="wotd">صَدِيق</span><span class="secondary">friend</span
               ><span class="muted push">Arabic</span>
             </div>
+            <p class="muted"><i>هذا صديقي.</i></p>
+          </section>
+          <section class="card stack" aria-label="Word of the day" aria-busy="true">
+            <div class="state-label">Word of the day</div>
+            <p class="muted" role="status">Loading...</p>
+          </section>
+          <section class="card stack" aria-label="Word of the day" aria-busy="false">
+            <div class="state-label">Word of the day</div>
+            <p class="muted" role="alert">Something went wrong. Please try again.</p>
           </section>
         </div>
-        <footer>States: LTR · RTL · without example</footer>
+        <footer>States: loaded LTR · loaded RTL · loading · unavailable</footer>
       </section>
 
       <section class="specimen" data-component="components/streak-counter">
