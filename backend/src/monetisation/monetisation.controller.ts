@@ -294,9 +294,17 @@ export class MonetisationController {
     schema: {
       type: 'object',
       properties: {
-        restored: { type: 'boolean', example: true },
-        tier: { type: 'string', example: 'consumer_8_ukp_10_usd' },
-        expires_at: { type: 'string', example: '2026-09-07T12:00:00Z' },
+        received: { type: 'boolean', example: true },
+        status: {
+          type: 'string',
+          enum: ['restored', 'no_valid_subscription'],
+          example: 'restored',
+        },
+        tier: {
+          type: 'string',
+          nullable: true,
+          example: 'consumer_8_ukp_10_usd',
+        },
       },
     },
   })

@@ -19,6 +19,9 @@ const mockSubscriptionsList = vi.fn();
 const mockSubscriptionsUpdate = vi.fn();
 const mockInvoicesList = vi.fn();
 const mockBillingPortalSessionsCreate = vi.fn();
+const mockValidateReceipt = vi.fn();
+const mockGetSubscriptionPurchaseDetails = vi.fn();
+const mockClaimPurchaseToken = vi.fn();
 
 vi.mock('stripe', () => {
   return {
@@ -109,6 +112,10 @@ describe('MonetisationService', () => {
           provide: GooglePlayNotificationService,
           useValue: {
             handleNotification: vi.fn(),
+            getSubscriptionPurchaseDetails: (...args: any[]) =>
+              mockGetSubscriptionPurchaseDetails(...args),
+            claimPurchaseToken: (...args: any[]) =>
+              mockClaimPurchaseToken(...args),
           },
         },
         {
@@ -126,7 +133,7 @@ describe('MonetisationService', () => {
         {
           provide: AppleReceiptValidatorService,
           useValue: {
-            validateReceipt: vi.fn(),
+            validateReceipt: (...args: any[]) => mockValidateReceipt(...args),
           },
         },
       ],
@@ -1021,6 +1028,143 @@ describe('MonetisationService', () => {
       await expect(
         service.createBillingPortalSession('user-1'),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('restorePurchases', () => {
+    let updateVipSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      updateVipSpy = vi
+        .spyOn(service, 'updateVipStatusFromWebhook')
+        .mockResolvedValue(undefined);
+    });
+
+    it('restores the Stripe tier from verified subscription metadata', async () => {
+      mockSubscriptionsList.mockResolvedValue({
+        data: [
+          {
+            status: 'active',
+            metadata: { userId: 'user-1', tier: 'pro' },
+            items: { data: [{ price: { id: 'price_pro' } }] },
+          },
+        ],
+      });
+
+      const result = await service.restorePurchases('user-1', 'stripe');
+
+      expect(result).toEqual({
+        received: true,
+        status: 'restored',
+        tier: 'pro',
+      });
+      expect(updateVipSpy).toHaveBeenCalledWith('user-1', true, 'pro');
+    });
+
+    it('returns no_valid_subscription when no active Stripe subscription exists', async () => {
+      mockSubscriptionsList.mockResolvedValue({ data: [] });
+
+      const result = await service.restorePurchases('user-1', 'stripe');
+
+      expect(result).toEqual({
+        received: true,
+        status: 'no_valid_subscription',
+      });
+      expect(updateVipSpy).not.toHaveBeenCalled();
+    });
+
+    it('requires a receipt for iOS restores', async () => {
+      await expect(service.restorePurchases('user-1', 'ios')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockValidateReceipt).not.toHaveBeenCalled();
+    });
+
+    it('restores the iOS tier from a validated receipt', async () => {
+      mockValidateReceipt.mockResolvedValue({
+        valid: true,
+        product_id: 'consumer_monthly',
+      });
+
+      const result = await service.restorePurchases(
+        'user-1',
+        'ios',
+        'signed-receipt',
+      );
+
+      expect(mockValidateReceipt).toHaveBeenCalledWith(
+        'user-1',
+        'signed-receipt',
+        false,
+      );
+      expect(result).toEqual({
+        received: true,
+        status: 'restored',
+        tier: 'consumer',
+      });
+      expect(updateVipSpy).toHaveBeenCalledWith('user-1', true, 'consumer');
+    });
+
+    it('does not restore an expired Android purchase', async () => {
+      mockGetSubscriptionPurchaseDetails.mockResolvedValue({
+        expiryTimeMillis: String(Date.now() - 1000),
+      });
+
+      const result = await service.restorePurchases(
+        'user-1',
+        'android',
+        JSON.stringify({ purchaseToken: 'token-1', productId: 'pro_monthly' }),
+      );
+
+      expect(result).toEqual({
+        received: true,
+        status: 'no_valid_subscription',
+      });
+      expect(mockClaimPurchaseToken).not.toHaveBeenCalled();
+      expect(updateVipSpy).not.toHaveBeenCalled();
+    });
+
+    it('restores a currently entitled Android purchase owned by the account', async () => {
+      mockGetSubscriptionPurchaseDetails.mockResolvedValue({
+        expiryTimeMillis: String(Date.now() + 86_400_000),
+      });
+      mockClaimPurchaseToken.mockResolvedValue(true);
+
+      const result = await service.restorePurchases(
+        'user-1',
+        'android',
+        JSON.stringify({ purchaseToken: 'token-1', productId: 'pro_monthly' }),
+      );
+
+      expect(mockClaimPurchaseToken).toHaveBeenCalledWith(
+        'user-1',
+        'token-1',
+        'pro_monthly',
+      );
+      expect(result).toEqual({
+        received: true,
+        status: 'restored',
+        tier: 'pro',
+      });
+    });
+
+    it('rejects an Android purchase already linked to another account', async () => {
+      mockGetSubscriptionPurchaseDetails.mockResolvedValue({
+        expiryTimeMillis: String(Date.now() + 86_400_000),
+      });
+      mockClaimPurchaseToken.mockResolvedValue(false);
+
+      await expect(
+        service.restorePurchases(
+          'user-1',
+          'android',
+          JSON.stringify({
+            purchaseToken: 'token-1',
+            productId: 'pro_monthly',
+          }),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+      expect(updateVipSpy).not.toHaveBeenCalled();
     });
   });
 });
