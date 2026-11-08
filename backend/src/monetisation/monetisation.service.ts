@@ -494,7 +494,7 @@ export class MonetisationService {
     userId: string,
     platform: 'ios' | 'android' | 'stripe',
     receiptData?: string,
-  ): Promise<{ received: boolean; status: string }> {
+  ): Promise<{ received: boolean; status: string; tier?: string | null }> {
     if (platform === 'stripe') {
       const subscription = await this.findActiveStripeSubscription(userId);
       if (subscription) {
@@ -503,7 +503,7 @@ export class MonetisationService {
           this.inferTierFromPriceId(subscription.items?.data?.[0]?.price?.id);
         if (tier) {
           await this.updateVipStatusFromWebhook(userId, true, tier);
-          return { received: true, status: 'restored' };
+          return { received: true, status: 'restored', tier };
         }
       }
       return { received: true, status: 'no_valid_subscription' };
@@ -523,7 +523,7 @@ export class MonetisationService {
         );
         if (tier) {
           await this.updateVipStatusFromWebhook(userId, true, tier);
-          return { received: true, status: 'restored' };
+          return { received: true, status: 'restored', tier };
         }
       }
       return { received: true, status: 'no_valid_subscription' };
@@ -599,7 +599,7 @@ export class MonetisationService {
       const tier = this.subscriptionPlansService.getTierByProductId(productId);
       if (tier) {
         await this.updateVipStatusFromWebhook(userId, true, tier);
-        return { received: true, status: 'restored' };
+        return { received: true, status: 'restored', tier };
       }
 
       return { received: true, status: 'no_valid_subscription' };
