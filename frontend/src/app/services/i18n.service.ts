@@ -1506,6 +1506,7 @@ export class I18nService {
     'profile.correctionValue': '{{ratio}}x',
     'profile.correctorScore': 'Corrector score',
     'profile.noRatings': 'No ratings yet',
+    'profile.correctorScoreUnavailable': 'Score unavailable',
     'profile.followersLabel': 'Followers',
     'profile.followingLabel': 'Following',
     'profile.favLink': '⭐ Favourites',

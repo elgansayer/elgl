@@ -1,8 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+
+export interface CorrectorScoreResult {
+  averageScore: number | null;
+  totalRatings: number;
+}
 
 @Injectable()
 export class CorrectorScoreService {
+  private readonly logger = new Logger(CorrectorScoreService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async submitRating(
@@ -17,24 +28,37 @@ export class CorrectorScoreService {
         { rater_id: raterId, rated_user_id: ratedUserId, score },
         { onConflict: 'rater_id,rated_user_id' },
       );
-    if (error) throw error;
+    if (error) {
+      this.logger.error('Corrector rating persistence failed');
+      throw new InternalServerErrorException();
+    }
   }
 
-  async getCorrectorScore(
-    userId: string,
-  ): Promise<{ averageScore: number | null; totalRatings: number }> {
+  async getCorrectorScore(userId: string): Promise<CorrectorScoreResult> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('corrector_ratings')
-      .select('score')
-      .eq('rated_user_id', userId);
-    if (error) throw error;
-    const scores = (data ?? []).map((r: any) => r.score);
-    const total = scores.length;
-    const averageScore =
-      total > 0
-        ? Math.round((scores.reduce((a, b) => a + b, 0) / total) * 10) / 10
-        : null;
-    return { averageScore, totalRatings: total };
+    const { data, error } = await supabase.rpc('get_corrector_score', {
+      p_user_id: userId,
+    });
+    const row = data?.[0];
+
+    if (
+      error ||
+      data?.length !== 1 ||
+      !row ||
+      !Number.isSafeInteger(row.total_ratings) ||
+      row.total_ratings < 0 ||
+      (row.average_score !== null &&
+        (!Number.isFinite(row.average_score) ||
+          row.average_score < 1 ||
+          row.average_score > 5))
+    ) {
+      this.logger.error('Corrector score aggregation failed');
+      throw new InternalServerErrorException();
+    }
+
+    return {
+      averageScore: row.average_score,
+      totalRatings: row.total_ratings,
+    };
   }
 }

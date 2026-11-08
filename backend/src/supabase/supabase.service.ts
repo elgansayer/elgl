@@ -2282,6 +2282,13 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_corrector_score: {
+        Args: { p_user_id: string };
+        Returns: {
+          average_score: number | null;
+          total_ratings: number;
+        }[];
+      };
       transfer_audio_room_tip: {
         Args: {
           p_room_id: string;
