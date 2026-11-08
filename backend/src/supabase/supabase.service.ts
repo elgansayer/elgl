@@ -695,6 +695,21 @@ export type ChatMessageRow = {
   deleted_for_user_ids?: string[] | null;
   is_encrypted?: boolean;
   encrypted_payload?: string | null;
+  voice_transcript?: string | null;
+  voice_transcription_status?:
+    | 'not_requested'
+    | 'pending'
+    | 'processing'
+    | 'ready'
+    | 'empty'
+    | 'failed'
+    | 'unavailable';
+  voice_transcription_attempts?: number;
+  voice_transcription_requested_at?: string | null;
+  voice_transcription_last_attempt_at?: string | null;
+  voice_transcription_next_retry_at?: string | null;
+  voice_transcribed_at?: string | null;
+  voice_transcription_error_code?: string | null;
 };
 
 type BlockRow = {

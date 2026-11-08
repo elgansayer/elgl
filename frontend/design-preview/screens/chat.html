@@ -297,6 +297,51 @@
         font-weight: 700;
         cursor: pointer;
       }
+      .voice-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .voice-play {
+        min-width: 44px;
+        min-height: 44px;
+        border: 0;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        color: rgb(var(--text-primary));
+        cursor: pointer;
+      }
+      .voice-transcript {
+        margin-top: 7px;
+        border-inline-start: 2px solid rgb(var(--secondary));
+        border-radius: 8px;
+        padding: 7px 8px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+      }
+      .voice-transcript strong,
+      .voice-state {
+        display: block;
+        color: rgb(var(--text-secondary));
+        font-size: 11px;
+      }
+      .voice-state {
+        margin-top: 7px;
+      }
+      .voice-state.error {
+        color: rgb(var(--danger));
+      }
+      .message.mine .voice-state {
+        color: inherit;
+        opacity: 0.85;
+      }
+      .voice-controls .message-action {
+        border-radius: 999px;
+        padding-inline: 10px;
+        background: rgb(var(--surface-100));
+        color: rgb(var(--text-primary));
+      }
       .starter-wrap {
         flex: 1;
         display: flex;
@@ -509,12 +554,35 @@
               Yes! I want to practise ordering food at a restaurant.
             </div>
             <div class="message">
-              <div class="meta">Chén Wěi · 2:03 PM</div>
-              Great idea! Try: “Could I get the check, please?”
+              <div class="meta">Chén Wěi · voice message</div>
+              <div class="voice-controls">
+                <button class="voice-play" type="button" aria-label="Play voice message">▶</button>
+                <span>0:24</span>
+              </div>
+              <div class="voice-transcript" role="status" aria-label="Transcript">
+                <strong>Transcript</strong>
+                Great idea. Try: “Could I get the check, please?”
+              </div>
             </div>
             <div class="message mine">
-              <div class="meta">You · correction</div>
-              Could I get the check, please?
+              <div class="meta">You · voice message</div>
+              <div class="voice-controls">
+                <button class="voice-play" type="button" aria-label="Play voice message">▶</button>
+                <span>0:09</span>
+                <button class="message-action" type="button" disabled>Transcribing…</button>
+              </div>
+              <span class="voice-state" role="status" aria-live="polite">Transcribing…</span>
+            </div>
+            <div class="message">
+              <div class="meta">Chén Wěi · voice message</div>
+              <div class="voice-controls">
+                <button class="voice-play" type="button" aria-label="Play voice message">▶</button>
+                <span>0:16</span>
+                <button class="message-action" type="button">Retry transcription</button>
+              </div>
+              <span class="voice-state error" role="alert">
+                Transcription could not be completed. Try again.
+              </span>
             </div>
           </div>
           <div class="toolbar">
@@ -590,7 +658,10 @@
       action now opens the shared <code>app-correction-modal</code> with that message as its
       read-only source, preserving its ghost-text edit, live diff, optional explanation,
       cancellation and structured correction payload. Text messages expose a translated state
-      beneath the source text with an RTL-safe logical border and an explicit hide action.
+      beneath the source text with an RTL-safe logical border and an explicit hide action. Voice
+      messages preserve playback while showing code-first persisted transcription states: completed
+      text, an accessible live pending state, and a labelled retryable failure. The same semantic
+      roles and logical border remain legible in light, dark, 390px, RTL and high-zoom layouts.
     </p>
 
     <script>

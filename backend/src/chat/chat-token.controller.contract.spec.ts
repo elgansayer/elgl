@@ -23,7 +23,9 @@ import type { Request, Response } from 'express';
 import { ChatController } from './chat.controller';
 import type { ChatService } from './chat.service';
 import type { CentrifugoService } from './centrifugo.service';
+import type { ChatVoiceTranscriptionService } from './chat-voice-transcription.service';
 import type { ConversationStarterService } from './conversation-starter.service';
+import type { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import type { TranslationService } from './translation.service';
 
 describe('POST /chat/token contract', () => {
@@ -52,6 +54,8 @@ describe('POST /chat/token contract', () => {
       centrifugoService as unknown as CentrifugoService,
       {} as ConversationStarterService,
       {} as TranslationService,
+      {} as PersonalChatEncryptionService,
+      {} as ChatVoiceTranscriptionService,
     );
   });
 

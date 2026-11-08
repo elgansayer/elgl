@@ -18,6 +18,15 @@ export interface MessageReaction {
   emoji: string;
 }
 
+export type VoiceTranscriptionStatus =
+  | 'not_requested'
+  | 'pending'
+  | 'processing'
+  | 'ready'
+  | 'empty'
+  | 'failed'
+  | 'unavailable';
+
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -87,6 +96,19 @@ export interface ChatMessage {
 
   /** Armoured ciphertext and IV envelope for end-to-end encrypted message */
   encrypted_payload?: string | null;
+  is_deleted_for_everyone?: boolean;
+
+  /** Persisted speech-to-text content for voice messages. */
+  voice_transcript?: string | null;
+
+  /** Durable state shared by the API worker and realtime clients. */
+  voice_transcription_status?: VoiceTranscriptionStatus;
+  voice_transcription_attempts?: number;
+  voice_transcription_requested_at?: string | null;
+  voice_transcription_last_attempt_at?: string | null;
+  voice_transcription_next_retry_at?: string | null;
+  voice_transcribed_at?: string | null;
+  voice_transcription_error_code?: string | null;
 }
 
 export interface DeletedAwareMessage extends ChatMessage {

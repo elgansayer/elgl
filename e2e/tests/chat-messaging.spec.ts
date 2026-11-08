@@ -159,4 +159,54 @@ test.describe('HelloTalk Chat Messaging E2E', () => {
     await expect(page.locator('[data-testid="chat-message"]').filter({ hasText: text })).toBeVisible();
     await expect(messageInput).toHaveValue('');
   });
+
+  test('requests voice transcription and displays the returned transcript', async ({ page }) => {
+    const voiceMessageId = 'voice_message_001';
+    await page.route(`**/api/chat/messages/${roomId}**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: voiceMessageId,
+            room_id: roomId,
+            sender_id: 'partner-2',
+            message_type: 'voice',
+            media_url: 'https://media.example.test/voice.webm',
+            voice_transcription_status: 'not_requested',
+            is_read: true,
+            delivery_status: 'read',
+            created_at: createdAt,
+          },
+        ]),
+      });
+    });
+
+    await page.route(`**/api/chat/messages/${voiceMessageId}/transcription`, async (route) => {
+      await route.fulfill({
+        status: 202,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: voiceMessageId,
+          room_id: roomId,
+          sender_id: 'partner-2',
+          message_type: 'voice',
+          media_url: 'https://media.example.test/voice.webm',
+          voice_transcription_status: 'ready',
+          voice_transcript: 'こんにちは、練習しましょう！',
+          is_read: true,
+          delivery_status: 'read',
+          created_at: createdAt,
+        }),
+      });
+    });
+
+    await page.goto(`/chat/${roomId}`);
+    const transcribeButton = page.getByRole('button', { name: 'Transcribe' });
+    await expect(transcribeButton).toBeVisible();
+    await transcribeButton.click();
+
+    await expect(page.getByText('こんにちは、練習しましょう！')).toBeVisible();
+    await expect(transcribeButton).not.toBeVisible();
+  });
 });

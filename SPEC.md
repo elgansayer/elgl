@@ -84,6 +84,11 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `sender_id` (UUID, Foreign Key referencing `users.id`)
 - `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`, `'system'`)
 - `content_json` (JSONB, structure varies depending on `payload_type`)
+- `voice_transcript` (Text, nullable; speech-to-text result for voice messages)
+- `voice_transcription_status` (String: `'not_requested'`, `'pending'`, `'processing'`, `'ready'`, `'empty'`, `'failed'`, `'unavailable'`)
+- `voice_transcription_attempts` (Integer, non-negative, default `0`)
+- `voice_transcription_requested_at`, `voice_transcription_last_attempt_at`, `voice_transcription_next_retry_at`, `voice_transcribed_at` (Timestamps with time zone, nullable)
+- `voice_transcription_error_code` (String, nullable, sanitised machine-readable failure category)
 - `is_read` (Boolean, default `false`)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
 

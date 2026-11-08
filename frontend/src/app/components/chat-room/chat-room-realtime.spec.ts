@@ -133,6 +133,34 @@ describe('applyChatRoomRealtimeEvent', () => {
     expect(result.messages[0]?.text_content).toBe('edited');
   });
 
+  it('merges persisted voice transcription updates into the existing bubble', () => {
+    const voice: ChatMessage = {
+      ...baseMessage,
+      id: 'voice-1',
+      message_type: 'voice',
+      media_url: 'https://media.example/voice.webm',
+      voice_transcription_status: 'processing',
+    };
+    const result = applyChatRoomRealtimeEvent(
+      [voice],
+      {
+        message: {
+          ...voice,
+          voice_transcription_status: 'ready',
+          voice_transcript: 'Realtime transcript',
+        },
+      },
+      'room-1',
+      'current-user',
+    );
+
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]).toMatchObject({
+      voice_transcription_status: 'ready',
+      voice_transcript: 'Realtime transcript',
+    });
+  });
+
   describe('link previews on edited messages', () => {
     const oldPreview = {
       url: 'https://example.com/old',
@@ -298,9 +326,7 @@ describe('applyChatRoomRealtimeEvent', () => {
   it('ignores malformed realtime payloads without mutating state', () => {
     const messages = [baseMessage];
 
-    expect(applyChatRoomRealtimeEvent(messages, null, 'room-1', 'user-1').messages).toBe(
-      messages,
-    );
+    expect(applyChatRoomRealtimeEvent(messages, null, 'room-1', 'user-1').messages).toBe(messages);
     expect(
       applyChatRoomRealtimeEvent(messages, { message: { id: 'partial' } }, 'room-1', 'user-1')
         .messages,
