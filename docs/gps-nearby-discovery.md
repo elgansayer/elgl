@@ -4,7 +4,7 @@ Issue #821 makes the existing PostGIS proximity search reachable from the Angula
 
 ## User flow
 
-Nearby is opt-in. Loading Discovery, ordinary filtering, and application startup do not call the browser geolocation API. Selecting the **Nearby** pill is the explicit user gesture that requests a current position. A successful request keeps the latitude/longitude pair in component memory only, switches the search radius to 10 km, selects `nearest`, and sends the pair to the existing authenticated `GET /discovery/partners` endpoint.
+Nearby is opt-in. Loading Discovery, ordinary filtering, and application startup do not call the browser geolocation API. Selecting the **Nearby** pill is the explicit user gesture that requests a current position. A successful request keeps the latitude/longitude pair in component memory only, switches the search radius to 10 km, selects `nearest`, and sends the pair to the existing authenticated `GET /discovery/partners` endpoint. VIP members can adjust the PostGIS distance slider to search within an expanded or narrowed radius; for non-VIP users, the slider remains disabled with an upsell note.
 
 Coordinates expire after five minutes. A stale location is discarded and the UI requires an explicit retry before another browser location request. Leaving Nearby, resetting filters, or destroying the component also discards the in-memory coordinates.
 

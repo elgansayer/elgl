@@ -137,6 +137,15 @@ test('rejects Playwright launched from the frontend working directory', () => {
   assert.match(violations[0], /qa-loop\.sh:1 invokes Playwright without the e2e working directory/);
 });
 
+test('rejects the historical root qa-loop.sh running Playwright from frontend', () => {
+  const violations = analyse({
+    'qa-loop.sh': 'cd frontend && npx playwright test',
+  });
+
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /qa-loop\.sh:1 invokes Playwright without the e2e working directory/);
+});
+
 test('rejects root Playwright discovery without an explicit e2e config', () => {
   for (const command of [
     'npx playwright test',
