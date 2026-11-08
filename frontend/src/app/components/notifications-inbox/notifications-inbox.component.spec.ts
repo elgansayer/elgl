@@ -185,6 +185,51 @@ describe('NotificationsInboxComponent', () => {
     expect(component.getNotificationMessageKey('system')).toBe('notifications.systemAlert');
   });
 
+  describe('activity presentation', () => {
+    const rowContaining = (text: string): HTMLElement | undefined =>
+      Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('li')).find((item) =>
+        item.textContent?.includes(text),
+      );
+
+    it('presents a system alert as a platform message without any actor identity', () => {
+      component.additionalNotifications.set([
+        makeNotif({
+          id: '5c0b9a7e-2f3e-4a0e-9a63-0c6f6a8c1c11',
+          type: 'system',
+          actor_id: 'me',
+          message: 'Your plan was updated',
+          created_at: '2026-08-25T07:00:00.000Z',
+        }),
+      ]);
+      fixture.detectChanges();
+
+      const row = rowContaining('Your plan was updated');
+      expect(row).toBeDefined();
+      expect(row?.textContent).toContain('notifications.systemAlert');
+      expect(row?.textContent).toContain('🔔');
+      expect(row?.textContent).not.toContain('common.unknownUser');
+      expect(row?.textContent).not.toContain('?');
+      expect(row?.querySelector('img')).toBeNull();
+    });
+
+    it('keeps the actor name and activity text for social notifications', () => {
+      component.additionalNotifications.set([
+        makeNotif({
+          id: '8e1c6d52-6c0a-4a26-8f55-6f8d51a3c9a0',
+          type: 'follow',
+          actor: { id: 'u1', display_name: 'Sam' },
+          created_at: '2026-08-25T07:00:00.000Z',
+        }),
+      ]);
+      fixture.detectChanges();
+
+      const row = rowContaining('Sam');
+      expect(row).toBeDefined();
+      expect(row?.textContent).toContain('notifications.followedYou');
+      expect(row?.textContent).not.toContain('notifications.systemAlert');
+    });
+  });
+
   it('navigates back', () => {
     const location = TestBed.inject(Location);
     const backSpy = vi.spyOn(location, 'back');

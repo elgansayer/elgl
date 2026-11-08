@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { I18nService } from '../../services/i18n.service';
+import { ConfirmService } from '../../services/confirm.service';
 
 describe('DeveloperDashboardComponent', () => {
   const developerStats = signal(null);
@@ -22,10 +23,12 @@ describe('DeveloperDashboardComponent', () => {
     loadDiagnosticLogs: vi.fn().mockResolvedValue(undefined),
     upgradeVip: vi.fn().mockResolvedValue(undefined),
     generateApiKey: vi.fn().mockResolvedValue(undefined),
+    revokeApiKey: vi.fn().mockResolvedValue(true),
     createDiagnosticLog: vi.fn().mockResolvedValue(undefined),
   };
 
   const authService = { currentUser };
+  const confirmService = { confirm: vi.fn().mockResolvedValue(true) };
   const discoveryService = { findPartners: vi.fn().mockResolvedValue([]) };
   const centrifugeService = {
     isConnected,
@@ -49,6 +52,7 @@ describe('DeveloperDashboardComponent', () => {
         { provide: AuthService, useValue: authService },
         { provide: DiscoveryService, useValue: discoveryService },
         { provide: CentrifugeService, useValue: centrifugeService },
+        { provide: ConfirmService, useValue: confirmService },
         {
           provide: I18nService,
           useValue: { translate: (key: string) => key },
@@ -101,5 +105,28 @@ describe('DeveloperDashboardComponent', () => {
 
     expect(document.activeElement).toBe(postgis);
     expect(fixture.componentInstance.activeTab()).toBe('postgis');
+  });
+
+  it('confirms before revoking a developer API key', async () => {
+    const fixture = TestBed.createComponent(DeveloperDashboardComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await fixture.componentInstance.revokeKey();
+
+    expect(confirmService.confirm).toHaveBeenCalledWith('developer.revokeConfirm');
+    expect(store.revokeApiKey).toHaveBeenCalledOnce();
+    expect(fixture.componentInstance.isRevokingApiKey()).toBe(false);
+  });
+
+  it('does not revoke when the confirmation is dismissed', async () => {
+    confirmService.confirm.mockResolvedValueOnce(false);
+    const fixture = TestBed.createComponent(DeveloperDashboardComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await fixture.componentInstance.revokeKey();
+
+    expect(store.revokeApiKey).not.toHaveBeenCalled();
   });
 });

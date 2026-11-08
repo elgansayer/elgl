@@ -4,7 +4,7 @@ Issue #1271 is implemented by the existing Discovery `Nearby` mode and browser g
 
 ## Product behavior
 
-Nearby is opt-in. Ordinary Discovery startup and ordinary filters must not request browser location permission. Selecting **Nearby** requests a browser position and, only after a valid position is returned, queries Discovery with latitude, longitude, a bounded 10 km radius, and `sort=nearest`.
+Nearby is opt-in. Ordinary Discovery startup and ordinary filters must not request browser location permission. Selecting **Nearby** requests a browser position and, only after a valid position is returned, queries Discovery with latitude, longitude, a bounded 10 km radius, and `sort=nearest`. VIP members can adjust the PostGIS distance slider (1 to 200 km) to customize their proximity radius; non-VIP users receive the standard 10 km search radius with an upsell link and disabled distance slider.
 
 Nearby results must contain a finite server-computed `distance_metres` value. A location request must never silently degrade into an unrelated global result set if the spatial backend cannot provide distance data.
 

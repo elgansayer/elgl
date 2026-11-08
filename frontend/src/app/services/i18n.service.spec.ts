@@ -472,4 +472,30 @@ describe('I18nService', () => {
       expect(text.trim().length).toBeGreaterThan(0);
     });
   });
+
+  describe('restore purchases copy', () => {
+    it.each([
+      ['restore_purchases', 'Restore Purchases'],
+      ['restoring', 'Restoring...'],
+      ['subscription.plans.restorePrompt', 'Already subscribed? Restore your purchase.'],
+      ['restorePurchases.success', 'Your purchases have been restored.'],
+      [
+        'restorePurchases.noSubscriptionFound',
+        'No previous purchases were found for this account.',
+      ],
+      [
+        'restorePurchases.failed',
+        'We could not restore your purchases. Please try again.',
+      ],
+    ])('resolves %s instead of echoing the key', (key, expected) => {
+      expect(service.translate(key)).toBe(expected);
+    });
+
+    it('resolves the restore description instead of echoing the key', () => {
+      const text = service.translate('restore_purchases_description');
+
+      expect(text).not.toBe('restore_purchases_description');
+      expect(text.length).toBeGreaterThan(0);
+    });
+  });
 });

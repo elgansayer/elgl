@@ -83,6 +83,16 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - `following_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, part of the Primary Key, indexed together with `follower_id` for timeline fan-out)
 - `created_at` (Timestamp with time zone, default `now()`)
 
+### Table: `corrector_ratings`
+
+- `id` (UUID, Primary Key, default `gen_random_uuid()`)
+- `rater_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, indexed)
+- `rated_user_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, indexed)
+- `score` (Small Integer from `1` to `5`)
+- `created_at` (Timestamp with time zone, default `now()`)
+- Unique constraint on (`rater_id`, `rated_user_id`): retries replace the same learner's rating instead of creating duplicates.
+- Check constraint prevents self-rating. Browser roles cannot read or mutate individual ratings; the service-role API exposes only the rounded aggregate from `get_corrector_score`.
+
 ### Table: `moment_comment_votes`
 
 - `id` (UUID, Primary Key, default `uuid_generate_v4()`)
