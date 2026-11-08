@@ -26,16 +26,15 @@ import { SafetyService } from '../../services/safety.service';
 import { showToast } from '../../services/toast.service';
 import { AchievementsComponent } from '../../achievements/achievements.component';
 import { AudioIntroRecorderComponent } from '../audio-intro-recorder/audio-intro-recorder.component';
+import { ProfileLanguageBadgesComponent } from './profile-language-badges/profile-language-badges.component';
+import { ProfileStudyStreakComponent } from './profile-study-streak/profile-study-streak.component';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
 import { AppInputComponent } from '../primitives/input/input.component';
 import { AppTextareaComponent } from '../primitives/textarea/textarea.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
-import {
-  isProficiencyLevel,
-  type ProficiencyLevel,
-} from '../../services/proficiency.service';
+import { isProficiencyLevel, type ProficiencyLevel } from '../../services/proficiency.service';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
@@ -61,6 +60,8 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
     CelebrationOverlayComponent,
     AchievementsComponent,
     AudioIntroRecorderComponent,
+    ProfileLanguageBadgesComponent,
+    ProfileStudyStreakComponent,
     AppCardComponent,
     AppChipComponent,
     AppInputComponent,
@@ -130,14 +131,21 @@ export class ProfileComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadProfile();
-    this.loadVisitors();
+    if (this.profile()) {
+      void this.loadVisitors();
+    }
   }
 
   async loadProfile(): Promise<void> {
     this.isLoading.set(true);
+    this.errorMessage.set('');
     try {
       const data = await this.userService.getMyProfile();
-      if (data) {
+      if (!data) {
+        // UserService resolves null when the request fails or the session has no token. Never
+        // manufacture a profile: surface the failure so the learner can retry.
+        this.errorMessage.set(this.i18n.translate('profile.loadError'));
+      } else {
         this.profile.set(data);
         this.displayName = data.display_name || '';
         this.nativeLanguages = data.native_languages;
@@ -153,8 +161,7 @@ export class ProfileComponent implements OnInit {
         this.privacyAboutInfo = this.sanitizePrivacyVisibility(data.privacy_about_info);
         this.privacyStatus = this.sanitizePrivacyVisibility(data.privacy_status);
         this.proficiencyLevel.set(
-          typeof data.proficiency_level === 'string' &&
-            isProficiencyLevel(data.proficiency_level)
+          typeof data.proficiency_level === 'string' && isProficiencyLevel(data.proficiency_level)
             ? data.proficiency_level
             : '',
         );
@@ -170,9 +177,9 @@ export class ProfileComponent implements OnInit {
         this.gender = data.gender || '';
         this.checkMilestone();
       }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      this.errorMessage.set(message || this.i18n.translate('profile.loadError'));
+    } catch {
+      // Do not surface provider or transport details in the learner-facing error state.
+      this.errorMessage.set(this.i18n.translate('profile.loadError'));
     } finally {
       this.isLoading.set(false);
     }
@@ -185,11 +192,18 @@ export class ProfileComponent implements OnInit {
       const visits = await this.userService.getMyVisitors();
       // Limit to 5 for display
       this.visitors.set(visits.slice(0, 5));
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      this.visitorsError.set(message);
+    } catch {
+      this.visitorsError.set(this.i18n.translate('profile.visitorsError'));
     } finally {
       this.visitorsLoading.set(false);
+    }
+  }
+
+  async retryLoad(): Promise<void> {
+    if (this.isLoading()) return;
+    await this.loadProfile();
+    if (this.profile()) {
+      void this.loadVisitors();
     }
   }
 
@@ -434,9 +448,7 @@ export class ProfileComponent implements OnInit {
     if (this.targetLanguages.length < 3) {
       this.targetLanguages.push(code);
     } else {
-      this.errorMessage.set(
-        this.i18n.translate('profile.maxLanguagesError') || 'Max 3 languages allowed',
-      );
+      this.errorMessage.set(this.i18n.translate('profile.maxLanguagesError'));
     }
   }
 

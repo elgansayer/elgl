@@ -1,6 +1,6 @@
 # HelloTalk AI Clone
 
-This project is a premium HelloTalk-inspired social language exchange platform integrating LiveKit audio and video rooms, real-time messaging, LingQ-style interactive reading, and native-speaker corrections. Development automation is supervised by a bounded OpenHands factory.
+This project is a premium HelloTalk-inspired social language exchange platform integrating LiveKit audio and video rooms, real-time messaging, LingQ-style interactive reading, and native-speaker corrections.
 
 ## Table of Contents
 
@@ -8,7 +8,6 @@ This project is a premium HelloTalk-inspired social language exchange platform i
 - [Wiki & Documentation](#wiki--documentation)
 - [Tech Stack](#tech-stack)
 - [Running with Docker Compose](#running-with-docker-compose)
-- [Advanced AI Factory Tooling](#advanced-ai-factory-tooling)
 
 ## Overview
 
@@ -23,7 +22,7 @@ Please refer to the following Wiki pages for exhaustive details:
 - **[Home (`wiki/Home.md`)](wiki/Home.md)**: Main landing page for the project Wiki.
 - **[Features List (`wiki/Features.md`)](wiki/Features.md)**: An exhaustive list of all implemented and planned features, sourced from our specification files.
 - **[Codebase Reference (`wiki/Codebase_Reference.md`)](wiki/Codebase_Reference.md)**: A complete architectural dump listing every file and method in the backend and frontend codebases.
-- **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues assigned to the OpenHands Factory queue.
+- **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues.
 
 Additional specifications:
 
@@ -185,17 +184,4 @@ docker compose -f docker-compose.dev.yml up
 The NestJS API applies a global `/api` prefix, so the compose health checks poll
 `http://localhost:3000/api/health`.
 
-## Advanced AI Factory Tooling
-
-The repository contains a bounded OpenHands Factory under `automation/`. A typed, phase-specific router uses
-subscription-authenticated Claude Code, Codex subscription OAuth, configurable Google and OpenCode Go agents, with OpenHands API as
-an optional emergency fallback. Every task uses bounded execution and an isolated rootless Podman worktree. Agent
-providers cannot push to `main` or merge their own pull requests.
-
-This project is governed by the architecture definitions in `REPOSITORY_SOURCES_OF_TRUTH.md`. Read the documentation in `docs/architecture` and `docs/factory`.
-
-Production deployment, authentication, recovery, costs, security boundaries and operator commands are
-documented in [the factory runbook](docs/factory/README.md). The watchdog maintains a sanitised
-[GitHub status and control issue](https://github.com/elgansayer/elgl/issues?q=is%3Aissue+is%3Aopen+label%3Afactory-status)
-with fixed, allowlisted pause, resume, status and restart comments. See the
-[control-panel security model](docs/factory/CONTROL-PANEL.md).
+This project is governed by the architecture definitions in `REPOSITORY_SOURCES_OF_TRUTH.md`. Read the documentation in `docs/architecture`.

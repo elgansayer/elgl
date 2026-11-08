@@ -1185,11 +1185,12 @@ export class UsersService {
       .update(updatePayload as never)
       .eq('id', userId);
     if (privacyUpdateError) {
-      Logger.warn(
-        `Supabase update for privacy settings failed, falling back to mock: ${privacyUpdateError.message}`,
+      Logger.error('Failed to update privacy settings', {
+        code: privacyUpdateError.code,
+      });
+      throw new InternalServerErrorException(
+        'Unable to update privacy settings',
       );
-      const mock = this.getMockProfile(userId);
-      return { ...mock, ...updatePayload };
     }
     return this.getProfile(userId);
   }

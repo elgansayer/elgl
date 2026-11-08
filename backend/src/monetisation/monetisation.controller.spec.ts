@@ -6,6 +6,8 @@ import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { VipGuard } from './guards/vip.guard';
+import { DeveloperApiKeyGuard } from './guards/developer-api-key.guard';
+import { DeveloperApiUsageInterceptor } from './interceptors/developer-api-usage.interceptor';
 import { BadRequestException } from '@nestjs/common';
 
 describe('MonetisationController', () => {
@@ -22,6 +24,7 @@ describe('MonetisationController', () => {
           useValue: {
             handleStripeWebhook: vi.fn(),
             generateApiKey: vi.fn(),
+            revokeApiKey: vi.fn(),
             getDeveloperAnalytics: vi.fn(),
             getDiagnosticLogs: vi.fn(),
             createDiagnosticLog: vi.fn(),
@@ -46,6 +49,13 @@ describe('MonetisationController', () => {
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(VipGuard)
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(DeveloperApiKeyGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideInterceptor(DeveloperApiUsageInterceptor)
+      .useValue({
+        intercept: (_context: unknown, next: { handle: () => unknown }) =>
+          next.handle(),
+      })
       .compile();
 
     controller = module.get<MonetisationController>(MonetisationController);
@@ -105,6 +115,24 @@ describe('MonetisationController', () => {
 
       const result = await controller.generateApiKey({ id: 'user-1' } as any);
       expect(monetisationService.generateApiKey).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('revokeApiKey', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.revokeApiKey(null);
+      expect(result).toBeNull();
+      expect(monetisationService.revokeApiKey).not.toHaveBeenCalled();
+    });
+
+    it('should call service revokeApiKey when user is provided', async () => {
+      const response = { revoked: true, api_key: null };
+      (monetisationService.revokeApiKey as Mock).mockResolvedValue(response);
+
+      const result = await controller.revokeApiKey({ id: 'user-1' } as any);
+
+      expect(monetisationService.revokeApiKey).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(response);
     });
   });

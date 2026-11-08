@@ -1,5 +1,6 @@
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { showToast, showErrorToast } from '../../services/toast.service';
 import {
   Component,
@@ -64,6 +65,7 @@ function isGroupMember(value: unknown): value is GroupMember {
   imports: [
     HlmButton,
     ...HlmAutocompleteImports,
+    ...HlmDialogImports,
     CommonModule,
     TranslatePipe,
     TypingIndicatorComponent,
@@ -685,6 +687,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send doodle:', e);
+      showErrorToast(this.i18n.translate('chatRoom.doodleSendFailed'));
     }
   }
 
