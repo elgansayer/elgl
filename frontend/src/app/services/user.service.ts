@@ -69,7 +69,9 @@ export interface UserProfile {
   is_liked_by_me?: boolean;
   followers_count?: number;
   following_count?: number;
-  corrector_score?: number;
+  corrector_score?: number | null;
+  corrector_rating_count?: number;
+  corrector_score_unavailable?: boolean;
   custom_avatar_url?: string; // Custom profile picture URL
   about_status?: string; // Custom About status
   privacy_last_seen?: string;
@@ -410,13 +412,11 @@ export class UserService {
 
   async rateCorrector(ratedUserId: string, score: number): Promise<void> {
     return firstValueFrom(
-      this.http
-        .post<void>(
-          `${environment.apiUrl}/corrector-score/rate`,
-          { rated_user_id: ratedUserId, score },
-          { headers: this.getHeaders() },
-        )
-        .pipe(catchError(() => of(undefined))),
+      this.http.post<void>(
+        `${environment.apiUrl}/corrector-score/rate`,
+        { rated_user_id: ratedUserId, score },
+        { headers: this.getHeaders() },
+      ),
     );
   }
 

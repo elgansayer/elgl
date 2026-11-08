@@ -227,7 +227,11 @@
             {{ 'profile.correctorScore' | t }}
           </p>
           <p class="text-sm font-bold text-primary-ink">
-            @if (profile()?.corrector_score != null) {
+            @if (profile()?.corrector_score_unavailable) {
+              {{ 'profile.correctorScoreUnavailable' | t }}
+            } @else if (
+              profile()?.corrector_score !== null && profile()?.corrector_score !== undefined
+            ) {
               {{ profile()?.corrector_score }} / 5
             } @else {
               {{ 'profile.noRatings' | t }}

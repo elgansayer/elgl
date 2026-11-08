@@ -243,6 +243,22 @@ describe('ProfileComponent', () => {
       expect(text).toContain('1.8x');
       expect(text).toContain('4.6 / 5');
     });
+
+    it('should distinguish an unavailable score from a profile with no ratings', async () => {
+      mockUserService.getMyProfile.mockResolvedValue(makeProfile({ corrector_score: null }));
+      await renderProfile();
+      expect(normalisedText(fixture.nativeElement)).toContain('profile.noRatings');
+
+      mockUserService.getMyProfile.mockResolvedValue(
+        makeProfile({
+          corrector_score: null,
+          corrector_score_unavailable: true,
+        }),
+      );
+      await fixture.componentInstance.loadProfile();
+      fixture.detectChanges();
+      expect(normalisedText(fixture.nativeElement)).toContain('profile.correctorScoreUnavailable');
+    });
   });
 
   describe('when the profile cannot be loaded', () => {
