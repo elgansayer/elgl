@@ -50,4 +50,39 @@ describe('AudioEqualizerComponent', () => {
   it('should default customClass to empty string', () => {
     expect(component.customClass()).toBe('');
   });
+
+  it('should expose accessible image role and label when inactive', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.getAttribute('role')).toBe('img');
+    expect(host.getAttribute('aria-label')).toBe('Audio inactive');
+    const srOnly = host.querySelector('.sr-only');
+    expect(srOnly?.textContent?.trim()).toBe('Audio inactive');
+  });
+
+  it('should update accessible label and animate bars when isActive is true', () => {
+    fixture.componentRef.setInput('isActive', true);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.getAttribute('aria-label')).toBe('Audio active');
+    const animatedBars = host.querySelectorAll('.animate-eq');
+    expect(animatedBars.length).toBe(4);
+    const srOnly = host.querySelector('.sr-only');
+    expect(srOnly?.textContent?.trim()).toBe('Audio active');
+  });
+
+  it('should support a custom accessible label override', () => {
+    fixture.componentRef.setInput('ariaLabel', 'Speaking now');
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.getAttribute('aria-label')).toBe('Speaking now');
+    const srOnly = host.querySelector('.sr-only');
+    expect(srOnly?.textContent?.trim()).toBe('Speaking now');
+  });
+
+  it('should hide visual equalizer bars from screen readers via aria-hidden', () => {
+    const visualContainer = fixture.nativeElement.querySelector('.flex');
+    expect(visualContainer?.getAttribute('aria-hidden')).toBe('true');
+  });
 });
