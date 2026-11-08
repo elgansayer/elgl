@@ -21,9 +21,11 @@ The endpoint persists the message through `ChatService` to `chat_messages` and t
 | `correction_payload` | Required for `correction`. `original` and `corrected` must be non-blank strings of at most 10,000 characters; optional `explanation` is capped at 20,000 characters. |
 | `correction_request_payload` | Required for `correction_request`. `original_text` must be non-blank and at most 10,000 characters; optional `target_language` is capped at 64 characters. |
 | `status_reply_payload` | Required for `status_reply`. `status_update_id` is capped at 128 characters and `status_text` must be non-blank and at most 1,000 characters. |
-| `reply_to_id` | Optional non-empty string, at most 128 characters. |
+| `reply_to_id` | Non-empty string of at most 128 characters. Required for `correction_request`; optional otherwise. |
 
 Nested payloads use `class-transformer` plus `@ValidateNested`, so malformed nested objects are rejected by the same global validation boundary rather than reaching `ChatService` as unchecked records.
+
+For `correction_request`, the backend verifies that the authenticated sender is a room member and that `reply_to_id` identifies a text message in the same room. It replaces the caller-supplied `original_text` with the persisted source text before insertion, preventing cross-room references and forged source snapshots.
 
 ## Persistence and realtime behavior
 

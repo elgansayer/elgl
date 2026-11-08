@@ -434,6 +434,53 @@ export class ChatService {
     dto: SendMessageDto,
   ): Promise<ChatMessage> {
     const supabase = this.supabaseService.getClient();
+    let correctionRequestPayload = dto.correction_request_payload ?? null;
+
+    if (dto.message_type === 'correction_request') {
+      if (!dto.reply_to_id || !dto.correction_request_payload) {
+        throw new BadRequestException();
+      }
+
+      const membershipResponse = await supabase
+        .from('chat_room_members')
+        .select('user_id')
+        .eq('room_id', dto.room_id)
+        .eq('user_id', senderId)
+        .maybeSingle();
+
+      if (membershipResponse.error) {
+        this.logger.error('chat.correction_request_membership_lookup_failed');
+        throw new ServiceUnavailableException();
+      }
+      if (!membershipResponse.data) {
+        throw new ForbiddenException();
+      }
+
+      const sourceResponse = await supabase
+        .from('chat_messages')
+        .select('room_id, message_type, text_content')
+        .eq('id', dto.reply_to_id)
+        .maybeSingle();
+
+      if (sourceResponse.error) {
+        this.logger.error('chat.correction_request_source_lookup_failed');
+        throw new ServiceUnavailableException();
+      }
+      const sourceMessage = sourceResponse.data;
+      if (
+        !sourceMessage ||
+        sourceMessage.room_id !== dto.room_id ||
+        sourceMessage.message_type !== 'text' ||
+        !sourceMessage.text_content
+      ) {
+        throw new BadRequestException();
+      }
+
+      correctionRequestPayload = {
+        ...dto.correction_request_payload,
+        original_text: sourceMessage.text_content,
+      };
+    }
 
     // Get room members to check if any are blocked
     const { data: roomMembers } = await supabase
@@ -490,7 +537,7 @@ export class ChatService {
         media_url: dto.media_url ?? null,
         correction_payload: dto.correction_payload ?? null,
         reply_to_id: dto.reply_to_id ?? null,
-        correction_request_payload: dto.correction_request_payload ?? null,
+        correction_request_payload: correctionRequestPayload,
         status_reply_payload: dto.status_reply_payload ?? null,
         is_view_once: dto.message_type === 'view_once_media' ? true : false,
         delivery_status: 'sent',

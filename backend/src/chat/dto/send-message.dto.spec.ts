@@ -155,6 +155,16 @@ describe('SendMessageDto', () => {
     expect(hasError(errors, 'correction_request_payload')).toBe(true);
   });
 
+  it('requires a source message for correction requests', async () => {
+    const errors = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'correction_request',
+      correction_request_payload: { original_text: 'Please check this' },
+    });
+
+    expect(hasError(errors, 'reply_to_id')).toBe(true);
+  });
+
   it('requires a status-reply payload for status replies', async () => {
     const errors = await validateMessage({
       room_id: 'room-1',

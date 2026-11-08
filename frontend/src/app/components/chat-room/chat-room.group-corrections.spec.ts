@@ -9,6 +9,7 @@ import { I18nService } from '../../services/i18n.service';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { SafetyService } from '../../services/safety.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
+import { toastsSignal } from '../../services/toast.service';
 import { TypingService } from '../../services/typing.service';
 import { UserService } from '../../services/user.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -37,6 +38,7 @@ describe('ChatRoomComponent group corrections', () => {
 
   beforeEach(async () => {
     sendMessage = vi.fn();
+    toastsSignal.set([]);
 
     const chatService = {
       getRooms: vi.fn().mockResolvedValue([
@@ -197,6 +199,50 @@ describe('ChatRoomComponent group corrections', () => {
     expect(component.originalText).toBe('Je suis aller au magasin');
     expect(component.correctedText).toBe('Je suis allé au magasin');
     expect(component.explanationText).toBe('Past participle agreement.');
+  });
+
+  it('requests a correction from the group and confirms persisted delivery', async () => {
+    const source = makeMessage({ sender_id: 'user-1' });
+    const saved = makeMessage({
+      id: 'request-1',
+      sender_id: 'user-1',
+      message_type: 'correction_request',
+      text_content: undefined,
+      correction_request_payload: { original_text: source.text_content! },
+      reply_to_id: source.id,
+    });
+    sendMessage.mockResolvedValue(saved);
+
+    await component.requestCorrection(source);
+
+    expect(sendMessage).toHaveBeenCalledWith({
+      room_id: 'group-room',
+      message_type: 'correction_request',
+      correction_request_payload: { original_text: 'Je suis aller au magasin' },
+      reply_to_id: 'message-1',
+    });
+    expect(component.messages()).toContainEqual(saved);
+    expect(toastsSignal().at(-1)).toEqual(
+      expect.objectContaining({
+        type: 'success',
+        message: TestBed.inject(I18nService).translate('chatRoom.correctionRequestSent'),
+      }),
+    );
+  });
+
+  it('reports a failed group correction request without adding a message', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    sendMessage.mockRejectedValue(new Error('temporary backend failure'));
+
+    await component.requestCorrection(makeMessage({ sender_id: 'user-1' }));
+
+    expect(component.messages()).toEqual([]);
+    expect(toastsSignal().at(-1)).toEqual(
+      expect.objectContaining({
+        type: 'error',
+        message: TestBed.inject(I18nService).translate('chatRoom.correctionRequestFailed'),
+      }),
+    );
   });
 });
 

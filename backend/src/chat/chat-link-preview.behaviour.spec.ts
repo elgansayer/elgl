@@ -191,7 +191,7 @@ describe('ChatService link previews', () => {
 
       await service.sendMessage('sender-1', {
         room_id: 'room-1',
-        message_type: 'correction_request',
+        message_type: 'voice',
         text_content: 'https://example.com/post',
       });
 

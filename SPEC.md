@@ -118,10 +118,14 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 ### Table: `chat_messages`
 
 - `id` (UUID, Primary Key)
-- `channel_id` (Text, indexed, e.g., `'chat_userA_userB'` or `'group_123'`)
+- `room_id` (Text, indexed together with `created_at ASC`)
 - `sender_id` (UUID, Foreign Key referencing `users.id`)
-- `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`, `'system'`)
-- `content_json` (JSONB, structure varies depending on `payload_type`)
+- `message_type` (String: `'text'`, `'voice'`, `'correction'`, `'doodle'`, `'sticker'`, `'correction_request'`, `'status_reply'`, or `'view_once_media'` for client-authored messages)
+- `text_content` (Nullable Text)
+- `media_url` (Nullable Text)
+- `correction_payload` (Nullable JSONB with original, corrected, and optional explanation text)
+- `correction_request_payload` (Nullable JSONB with the immutable source-text snapshot and optional target language)
+- `reply_to_id` (Nullable UUID, Foreign Key referencing `chat_messages.id`, `ON DELETE SET NULL`)
 - `is_read` (Boolean, default `false`)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
 

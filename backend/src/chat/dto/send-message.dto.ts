@@ -145,7 +145,11 @@ export class SendMessageDto {
   @Type(() => CorrectionPayloadDto)
   correction_payload?: CorrectionPayloadDto;
 
-  @IsOptional()
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.message_type === 'correction_request' ||
+      dto.reply_to_id !== undefined,
+  )
   @IsString()
   @IsNotEmpty()
   @MaxLength(128)

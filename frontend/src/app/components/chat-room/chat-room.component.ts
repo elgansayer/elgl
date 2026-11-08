@@ -670,8 +670,10 @@ export class ChatRoomComponent implements OnDestroy {
         reply_to_id: msg.id,
       });
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
+      showToast(this.i18n.translate('chatRoom.correctionRequestSent'), 'success');
     } catch (e) {
       console.error('Failed to request correction:', e);
+      showErrorToast(this.i18n.translate('chatRoom.correctionRequestFailed'));
     }
   }
 

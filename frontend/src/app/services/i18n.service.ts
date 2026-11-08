@@ -936,6 +936,9 @@ export class I18nService {
     'chatRoom.sendCorrectionBtn': 'Send suggestion',
     'chatRoom.correctBtn': 'Correct',
     'chatRoom.correctionRequested': 'Correction requested',
+    'chatRoom.correctionRequestSent': 'Correction request sent.',
+    'chatRoom.correctionRequestFailed':
+      'Your correction request could not be sent. Please try again.',
     'chatRoom.doodleBtn': 'Doodle',
     'chatRoom.doodleCaption': 'Doodle',
     'chatRoom.doodleImageAlt': 'Doodle drawing',
