@@ -16,7 +16,7 @@ Issue #1171 adds short camera-recorded video notes to the existing authenticated
 - The uploader still applies its existing content-type allowlist and size enforcement. Recorded clips are normalized to WebM or MP4 before upload.
 - `/media/chat/presigned-url` and `/media/chat/send` remain authenticated and throttled. No new anonymous upload surface is introduced.
 - `presentation = instant_video` is accepted only with `mediaKind = video`; the backend rejects image/presentation mismatches before persistence.
-- The existing send idempotency boundary remains authoritative: retries reuse the same uploaded object, and an object already used with a different room or presentation fails with a conflict instead of producing a second message.
+- The existing send idempotency boundary remains authoritative: retries reuse the same uploaded object, and an object already used with a different room or presentation fails with a conflict instead of producing a second message. A dedicated partial unique index on `(sender_id, media_url)` provides the database backstop for concurrent video-note retries.
 - Media URLs are rendered only after the existing HTTP(S) URL check. Recording blobs, camera frames, message media URLs, and private content are not written to application logs or analytics by this feature.
 
 ## Failure behavior

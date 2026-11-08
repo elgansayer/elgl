@@ -14,8 +14,10 @@ import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { ChatMediaSendController } from './chat-media-send.controller';
 import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
+import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -49,6 +51,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
   ],
   controllers: [
     ChatController,
+    ChatMediaSendController,
     ChatSearchController,
     DirectConversationController,
     ChatSettingsController,
@@ -62,6 +65,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatMediaMessageService,
     ConversationStarterService,
     DirectConversationService,
     SystemMessageService,
