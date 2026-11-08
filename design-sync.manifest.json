@@ -216,7 +216,7 @@
       "claudeDesignPath": "screens/profile.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1842-profile-learning-summary-2026-11-03",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1842-profile-learning-summary-2026-11-03; issue-1889-my-stats-navigation-2026-11-08",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {

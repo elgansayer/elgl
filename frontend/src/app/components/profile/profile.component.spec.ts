@@ -133,6 +133,17 @@ describe('ProfileComponent', () => {
     fixture = TestBed.createComponent(ProfileComponent);
   });
 
+  it('should link to the My Stats dashboard', async () => {
+    await renderProfile();
+
+    const statsLinks: HTMLAnchorElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('a[href="/stats"]'),
+    );
+
+    expect(statsLinks).toHaveLength(1);
+    expect(statsLinks[0].textContent).toContain('profile.statsLink');
+  });
+
   it('should render followers and following counts linking to the follow lists', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
