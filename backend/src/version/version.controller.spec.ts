@@ -1,5 +1,10 @@
 import { RequestMethod } from '@nestjs/common';
-import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import {
+  GUARDS_METADATA,
+  HEADERS_METADATA,
+  METHOD_METADATA,
+  PATH_METADATA,
+} from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { VersionController } from './version.controller';
 import { VersionService } from './version.service';
@@ -44,6 +49,20 @@ describe('VersionController', () => {
     expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
       RequestMethod.GET,
     );
+  });
+
+  it('keeps GET /version/minimum public and non-cacheable', () => {
+    const handler = VersionController.prototype.getMinimumSupportedVersion;
+
+    // Clients must read the floor before they hold a session, so no guard may
+    // be attached at class or handler level.
+    expect(
+      Reflect.getMetadata(GUARDS_METADATA, VersionController),
+    ).toBeUndefined();
+    expect(Reflect.getMetadata(GUARDS_METADATA, handler)).toBeUndefined();
+    expect(Reflect.getMetadata(HEADERS_METADATA, handler)).toEqual([
+      { name: 'Cache-Control', value: 'no-store' },
+    ]);
   });
 
   describe('getVersion', () => {

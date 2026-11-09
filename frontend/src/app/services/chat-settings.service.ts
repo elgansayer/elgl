@@ -121,19 +121,22 @@ export class ChatSettingsService {
     }
   }
 
+  /**
+   * Restores the message-behaviour defaults. Chat text size is owned by
+   * Settings > Appearance, so it is neither sent nor changed here; resetting
+   * only the local signal would make it disagree with the stored value.
+   */
   async resetToDefaults(): Promise<boolean> {
     const previous = {
       autoTranslate: this.autoTranslate(),
       readReceipts: this.readReceipts(),
       enterToSend: this.enterToSend(),
-      textSize: this.textSize(),
       disappearingMessagesTtl: this.disappearingMessagesTtl(),
     };
 
     this.autoTranslate.set(false);
     this.readReceipts.set(false);
     this.enterToSend.set(false);
-    this.textSize.set('medium');
     this.disappearingMessagesTtl.set('off');
     this.disappearingMessagesError.set(false);
 
@@ -156,7 +159,6 @@ export class ChatSettingsService {
       this.autoTranslate.set(previous.autoTranslate);
       this.readReceipts.set(previous.readReceipts);
       this.enterToSend.set(previous.enterToSend);
-      this.textSize.set(previous.textSize);
       this.disappearingMessagesTtl.set(previous.disappearingMessagesTtl);
       this.disappearingMessagesError.set(true);
       return false;

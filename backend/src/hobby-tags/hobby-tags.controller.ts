@@ -10,6 +10,7 @@ import {
   UseGuards,
   UseInterceptors,
   Req,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { HobbyTagsService, VocabularyResultItem } from './hobby-tags.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -19,7 +20,17 @@ import {
   CACHE_PRIVATE_MEDIUM,
   CACHE_PRIVATE_NO_STORE,
 } from '../common/cache.interceptor';
-import type { Request } from 'express';
+import {
+  AddUserHobbyTagDto,
+  CreateHobbyTagDto,
+  HobbyVocabularyQueryDto,
+  ListHobbyTagsQueryDto,
+  UpdateHobbyProficiencyDto,
+} from './dto/hobby-tags.dto';
+
+interface AuthenticatedRequest {
+  user: { id: string };
+}
 
 @Controller('hobby-tags')
 export class HobbyTagsController {
@@ -30,8 +41,8 @@ export class HobbyTagsController {
    */
   @Get()
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
-  async getAllTags() {
-    return this.hobbyTagsService.getAllTags();
+  async getAllTags(@Query() query: ListHobbyTagsQueryDto): Promise<unknown[]> {
+    return this.hobbyTagsService.getAllTags(query.category, query.limit);
   }
 
   /**
@@ -40,9 +51,7 @@ export class HobbyTagsController {
   @Post()
   @UseGuards(SupabaseAuthGuard)
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
-  async createGlobalTag(
-    @Body() body: { name: string; category: string; icon?: string },
-  ): Promise<any> {
+  async createGlobalTag(@Body() body: CreateHobbyTagDto): Promise<unknown> {
     return this.hobbyTagsService.createTag(body.name, body.category, body.icon);
   }
 
@@ -52,9 +61,8 @@ export class HobbyTagsController {
   @Get('my')
   @UseGuards(SupabaseAuthGuard)
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
-  async getMyTags(@Req() req: { user?: { id: string } }): Promise<unknown> {
-    const userId = req.user?.id;
-    return this.hobbyTagsService.getUserTags(userId as string);
+  async getMyTags(@Req() req: AuthenticatedRequest): Promise<unknown> {
+    return this.hobbyTagsService.getUserTags(req.user.id);
   }
 
   /**
@@ -64,12 +72,11 @@ export class HobbyTagsController {
   @UseGuards(SupabaseAuthGuard)
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async addTag(
-    @Req() req: { user?: { id: string } },
-    @Body() body: { hobby_tag_id: string; proficiency_level?: number },
+    @Req() req: AuthenticatedRequest,
+    @Body() body: AddUserHobbyTagDto,
   ): Promise<unknown> {
-    const userId = req.user?.id;
     return this.hobbyTagsService.addUserTag(
-      userId as string,
+      req.user.id,
       body.hobby_tag_id,
       body.proficiency_level,
     );
@@ -82,12 +89,12 @@ export class HobbyTagsController {
   @UseGuards(SupabaseAuthGuard)
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async removeTag(
-    @Req() req: { user?: { id: string } },
-    @Param('hobbyTagId') hobbyTagId: string,
-  ): Promise<{ message: string }> {
-    const userId = req.user?.id;
-    await this.hobbyTagsService.removeUserTag(userId as string, hobbyTagId);
-    return { message: 'Hobby tag removed successfully' };
+    @Req() req: AuthenticatedRequest,
+    @Param('hobbyTagId', new ParseUUIDPipe({ version: '4' }))
+    hobbyTagId: string,
+  ): Promise<{ success: true }> {
+    await this.hobbyTagsService.removeUserTag(req.user.id, hobbyTagId);
+    return { success: true };
   }
 
   /**
@@ -97,13 +104,13 @@ export class HobbyTagsController {
   @UseGuards(SupabaseAuthGuard)
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async updateProficiency(
-    @Req() req: { user?: { id: string } },
-    @Param('hobbyTagId') hobbyTagId: string,
-    @Body() body: { proficiency_level: number },
+    @Req() req: AuthenticatedRequest,
+    @Param('hobbyTagId', new ParseUUIDPipe({ version: '4' }))
+    hobbyTagId: string,
+    @Body() body: UpdateHobbyProficiencyDto,
   ): Promise<unknown> {
-    const userId = req.user?.id;
     return this.hobbyTagsService.updateProficiency(
-      userId as string,
+      req.user.id,
       hobbyTagId,
       body.proficiency_level,
     );
@@ -117,13 +124,12 @@ export class HobbyTagsController {
   @UseGuards(SupabaseAuthGuard)
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   async getVocabulary(
-    @Req() req: { user?: { id: string } },
-    @Query('language') language: string,
+    @Req() req: AuthenticatedRequest,
+    @Query() query: HobbyVocabularyQueryDto,
   ): Promise<VocabularyResultItem[]> {
-    const userId = req.user?.id;
     return this.hobbyTagsService.getVocabularyForUser(
-      userId as string,
-      language,
+      req.user.id,
+      query.language,
     );
   }
 }
