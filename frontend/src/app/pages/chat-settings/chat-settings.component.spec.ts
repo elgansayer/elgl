@@ -149,6 +149,36 @@ describe('ChatSettingsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('chat_settings.enter_to_send_desc');
   });
 
+  it('should translate the disappearing messages section instead of hard-coding text', () => {
+    mockService.loaded.set(true);
+    fixture.detectChanges();
+    const textContent = fixture.nativeElement.textContent;
+    expect(textContent).toContain('chat_settings.disappearing_messages_title');
+    expect(textContent).toContain('chat_settings.disappearing_messages_desc');
+    expect(textContent).toContain('chat_settings.message_lifetime');
+    expect(textContent).toContain('chat_settings.ttl_off');
+    expect(textContent).toContain('chat_settings.ttl_24h');
+    expect(textContent).toContain('chat_settings.ttl_7d');
+    expect(textContent).toContain('chat_settings.ttl_90d');
+    expect(textContent).not.toContain('Disappearing messages');
+  });
+
+  it('should translate the disappearance save failure and retention notice', () => {
+    mockService.loaded.set(true);
+    mockService.disappearingMessagesError.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(
+      'chat_settings.disappearing_messages_save_failed',
+    );
+
+    mockService.disappearingMessagesError.set(false);
+    mockService.disappearingMessagesTtl.set('24h');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(
+      'chat_settings.disappearing_messages_notice',
+    );
+  });
+
   function findResetButton(): HTMLButtonElement | undefined {
     const buttons = Array.from(
       fixture.nativeElement.querySelectorAll('button'),

@@ -2535,6 +2535,41 @@ export class I18nService {
     'settings.linked': 'Linked',
     'settings.subscriptionSection': 'Subscription',
     'settings.mySubscription': 'My Subscription',
+    'settings.chatSection': 'Chat',
+    'settings.enterToSend': 'Press Enter to send messages',
+    'settings.textSize': 'Chat text size',
+    'settings.textSizeSmall': 'Small',
+    'settings.textSizeMedium': 'Medium',
+    'settings.textSizeLarge': 'Large',
+
+    // Chat Settings page
+    'chat_settings.title': 'Chat Settings',
+    'chat_settings.auto_translate': 'Auto Translate',
+    'chat_settings.auto_translate_desc':
+      'Automatically translate incoming messages into your language.',
+    'chat_settings.read_receipts': 'Read Receipts',
+    'chat_settings.read_receipts_desc': 'Let others know when you have read their messages.',
+    'chat_settings.enter_to_send': 'Enter To Send',
+    'chat_settings.enter_to_send_desc':
+      'Press Enter to send messages instead of using the send button.',
+    'chat_settings.reset_defaults': 'Reset to defaults',
+    'chat_settings.load_unavailable': 'Chat settings are temporarily unavailable.',
+    'chat_settings.load_unavailable_desc':
+      'Your saved settings are still active. Changing the message lifetime is disabled until they load.',
+    'chat_settings.save_failed':
+      'Your change could not be saved, so the previous setting was restored.',
+    'chat_settings.disappearing_messages_title': 'Disappearing messages',
+    'chat_settings.disappearing_messages_desc':
+      'Choose how long newly sent messages remain available. Existing messages keep their current lifetime.',
+    'chat_settings.message_lifetime': 'Message lifetime',
+    'chat_settings.ttl_off': 'Off',
+    'chat_settings.ttl_24h': '24 hours',
+    'chat_settings.ttl_7d': '7 days',
+    'chat_settings.ttl_90d': '90 days',
+    'chat_settings.disappearing_messages_save_failed':
+      'Could not save the message lifetime. Your previous setting is still active.',
+    'chat_settings.disappearing_messages_notice':
+      'New messages you send will be permanently removed after this time.',
     'settings.privacySection': 'Privacy',
     'settings.hideLocation': 'Hide my location in discovery',
     'settings.hideExactLocation': 'Hide exact location',

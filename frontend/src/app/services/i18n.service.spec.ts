@@ -448,6 +448,41 @@ describe('I18nService', () => {
     });
   });
 
+  describe('chat settings copy', () => {
+    it.each([
+      ['chat_settings.title', 'Chat Settings'],
+      ['chat_settings.auto_translate', 'Auto Translate'],
+      ['chat_settings.read_receipts', 'Read Receipts'],
+      ['chat_settings.enter_to_send', 'Enter To Send'],
+      ['chat_settings.reset_defaults', 'Reset to defaults'],
+      ['chat_settings.disappearing_messages_title', 'Disappearing messages'],
+      ['chat_settings.message_lifetime', 'Message lifetime'],
+    ])('resolves %s from the base dictionary instead of echoing the key', (key, expected) => {
+      expect(service.translate(key)).toBe(expected);
+    });
+
+    it.each([
+      'chat_settings.auto_translate_desc',
+      'chat_settings.read_receipts_desc',
+      'chat_settings.enter_to_send_desc',
+      'chat_settings.load_unavailable',
+      'chat_settings.load_unavailable_desc',
+      'chat_settings.save_failed',
+      'chat_settings.disappearing_messages_desc',
+      'chat_settings.ttl_off',
+      'chat_settings.ttl_24h',
+      'chat_settings.ttl_7d',
+      'chat_settings.ttl_90d',
+      'chat_settings.disappearing_messages_save_failed',
+      'chat_settings.disappearing_messages_notice',
+    ])('keeps the chat settings key %s resolvable', (key) => {
+      const text = service.translate(key);
+
+      expect(text).not.toBe(key);
+      expect(text.trim().length).toBeGreaterThan(0);
+    });
+  });
+
   describe('doodle chat copy', () => {
     it.each([
       ['chatRoom.doodleBtn', 'Doodle'],
