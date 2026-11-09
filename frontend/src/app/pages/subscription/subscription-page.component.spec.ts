@@ -109,4 +109,26 @@ describe('SubscriptionPageComponent', () => {
     expect(component.subscribingPlanId()).toBeNull();
     expect(component.errorMessage()).toBe('checkout unavailable');
   });
+
+  it('always renders the Restore Purchases control for app store compliance', () => {
+    expect(
+      fixture.nativeElement.querySelector('app-restore-purchases-button'),
+    ).toBeTruthy();
+  });
+
+  it('keeps Restore Purchases available when plans fail to load', async () => {
+    const plansService = TestBed.inject(SubscriptionPlansService) as unknown as {
+      getAllPlans: ReturnType<typeof vi.fn>;
+    };
+    plansService.getAllPlans.mockRejectedValueOnce(new Error('offline'));
+
+    component.loadPlans();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.errorMessage()).toBe('offline');
+    expect(
+      fixture.nativeElement.querySelector('app-restore-purchases-button'),
+    ).toBeTruthy();
+  });
 });

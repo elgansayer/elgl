@@ -545,6 +545,7 @@ export class EconomyService {
     claimed: boolean;
     coins_rewarded: number;
     new_balance: number;
+    unavailable?: boolean;
   }> {
     const startTime = Date.now();
     const redis = this.supabaseService.getRedisClient();
