@@ -58,7 +58,7 @@ describe('ReadReceiptComponent', () => {
     expect(component.displayStatus()).toBe('sent');
     expect(fixture.nativeElement.querySelectorAll('svg')).toHaveLength(1);
     expect(
-      fixture.nativeElement.querySelector('[role="button"]').getAttribute('aria-label'),
+      fixture.nativeElement.querySelector('button').getAttribute('aria-label'),
     ).toContain('readReceipts.sent');
   });
 
@@ -81,17 +81,24 @@ describe('ReadReceiptComponent', () => {
     ).toContain('text-secondary-ink');
   });
 
-  it('is keyboard focusable and toggles the detail panel with Enter', () => {
+  it('uses a native button so keyboard activation toggles the detail panel', () => {
     fixture.componentRef.setInput('deliveryStatus', 'read');
     fixture.detectChanges();
 
-    const trigger = fixture.nativeElement.querySelector('[role="button"]');
-    expect(trigger.getAttribute('tabindex')).toBe('0');
+    const trigger: HTMLButtonElement =
+      fixture.nativeElement.querySelector('button');
+    expect(trigger.type).toBe('button');
+    expect(trigger.getAttribute('tabindex')).toBeNull();
 
-    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    trigger.click();
     fixture.detectChanges();
 
     expect(component.showDetail()).toBe(true);
+
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(component.showDetail()).toBe(false);
   });
 
   it('loads and renders read-by details when the panel opens', async () => {
@@ -99,7 +106,7 @@ describe('ReadReceiptComponent', () => {
     fixture.componentRef.setInput('isGroup', true);
     fixture.detectChanges();
 
-    const trigger = fixture.nativeElement.querySelector('[role="button"]');
+    const trigger = fixture.nativeElement.querySelector('button');
     trigger.dispatchEvent(new MouseEvent('mouseenter'));
     fixture.detectChanges();
     await fixture.whenStable();
@@ -116,7 +123,7 @@ describe('ReadReceiptComponent', () => {
     fixture.componentRef.setInput('deliveryStatus', 'read');
     fixture.detectChanges();
 
-    const trigger = fixture.nativeElement.querySelector('[role="button"]');
+    const trigger = fixture.nativeElement.querySelector('button');
     trigger.dispatchEvent(new MouseEvent('mouseenter'));
     fixture.detectChanges();
     await fixture.whenStable();

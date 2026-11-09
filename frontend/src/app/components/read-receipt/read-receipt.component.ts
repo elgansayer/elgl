@@ -1,25 +1,26 @@
 import { Component, input, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { ChatService, ReadReceiptUser, MessageReceiptStatus } from '../../services/chat.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-read-receipt',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, HlmButton, TranslatePipe],
   template: `
-    <div
-      class="inline-flex items-center relative"
-      role="button"
-      tabindex="0"
+    <button
+      hlmBtn
+      variant="ghost"
+      size="icon-xs"
+      type="button"
+      class="inline-flex items-center relative bg-transparent border-0 p-0 text-inherit hover:bg-transparent"
       [attr.aria-label]="ariaLabel()"
       [attr.aria-expanded]="showDetail()"
       aria-haspopup="true"
       (mouseenter)="showDetail.set(true)"
       (mouseleave)="showDetail.set(false)"
       (click)="toggleDetail()"
-      (keydown.enter)="toggleDetail()"
-      (keydown.space)="toggleDetail()"
     >
       <!-- Sending: muted clock icon -->
       @if (displayStatus() === 'sending') {
@@ -113,7 +114,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           }
         </div>
       }
-    </div>
+    </button>
   `,
   styles: [
     `
