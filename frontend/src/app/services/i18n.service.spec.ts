@@ -200,6 +200,14 @@ describe('I18nService', () => {
     expect(service.translate('profile.proficiencyUnset')).toBe('Not set');
   });
 
+  it('should expose the dynamic font size labels', () => {
+    expect(service.translate('settings.fontSize')).toBe('Font size');
+    expect(service.translate('settings.textSize')).toBe('Text size');
+    expect(service.translate('settings.textSizeSmall')).toBe('Small');
+    expect(service.translate('settings.textSizeMedium')).toBe('Medium');
+    expect(service.translate('settings.textSizeLarge')).toBe('Large');
+  });
+
   it('should translate the audio intro feed empty state from the base dictionary', () => {
     expect(service.translate('discovery.audioIntroFeed.title')).toBe('Audio introductions');
     expect(
