@@ -621,6 +621,60 @@ describe('HelloTalk API E2E Integration Suite', () => {
         });
     });
 
+    it('/flashcards/:id/srs (PATCH) - should apply an SRS review and return the updated schedule', () => {
+      const id = '8db1df5a-8ef1-4ff6-a430-9ed8adf1515d';
+      // First .single() call is consumed by the global LastActiveInterceptor.
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { last_active_at: null },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { easiness_factor: 2.5, repetitions: 0, interval_days: 0 },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: {
+          id,
+          user_id: 'e2e-user-1',
+          word_token: 'hola',
+          translation: 'hello',
+          srs_level: 1,
+          easiness_factor: 2.6,
+          repetitions: 1,
+          interval_days: 1,
+          next_review_at: '2026-07-23T12:00:00.000Z',
+        },
+        error: null,
+      });
+
+      return request(app.getHttpServer())
+        .patch(`/flashcards/${id}/srs`)
+        .send({ quality: 5 })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.srs_level).toBe(1);
+          expect(res.body.repetitions).toBe(1);
+          expect(res.body.next_review_at).toBe('2026-07-23T12:00:00.000Z');
+        });
+    });
+
+    it('/flashcards/:id/srs (PATCH) - should return 404 when the card does not exist', () => {
+      const id = '8db1df5a-8ef1-4ff6-a430-9ed8adf1515d';
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { last_active_at: null },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Card not found', code: 'PGRST116' },
+      });
+
+      return request(app.getHttpServer())
+        .patch(`/flashcards/${id}/srs`)
+        .send({ quality: 4 })
+        .expect(404);
+    });
+
     it('/economy/catalog (GET) - should return virtual gifts catalog', () => {
       mockQueryBuilder.order.mockResolvedValueOnce({
         data: [
