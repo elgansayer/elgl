@@ -133,6 +133,17 @@ describe('ProfileComponent', () => {
     fixture = TestBed.createComponent(ProfileComponent);
   });
 
+  it('should link to the My Stats dashboard', async () => {
+    await renderProfile();
+
+    const statsLinks: HTMLAnchorElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('a[href="/stats"]'),
+    );
+
+    expect(statsLinks).toHaveLength(1);
+    expect(statsLinks[0].textContent).toContain('profile.statsLink');
+  });
+
   it('should render followers and following counts linking to the follow lists', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
@@ -242,6 +253,22 @@ describe('ProfileComponent', () => {
       expect(text).toContain('profile.correctionsLabel');
       expect(text).toContain('1.8x');
       expect(text).toContain('4.6 / 5');
+    });
+
+    it('should distinguish an unavailable score from a profile with no ratings', async () => {
+      mockUserService.getMyProfile.mockResolvedValue(makeProfile({ corrector_score: null }));
+      await renderProfile();
+      expect(normalisedText(fixture.nativeElement)).toContain('profile.noRatings');
+
+      mockUserService.getMyProfile.mockResolvedValue(
+        makeProfile({
+          corrector_score: null,
+          corrector_score_unavailable: true,
+        }),
+      );
+      await fixture.componentInstance.loadProfile();
+      fixture.detectChanges();
+      expect(normalisedText(fixture.nativeElement)).toContain('profile.correctorScoreUnavailable');
     });
   });
 

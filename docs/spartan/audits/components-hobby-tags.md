@@ -203,7 +203,9 @@ Verify field labels and error relationships, native button/link semantics, focus
 
 Test names below are an inventory of assertions in source, not a statement that all accessibility or behaviour requirements are covered.
 
-No adjacent unit spec was found. Add behavioural coverage before changing this surface.
+`frontend/src/app/components/hobby-tags/hobby-tags.component.spec.ts` covers initial API loading,
+target-language vocabulary rendering, retryable load failure, server-confirmed selection, mutation failure,
+single-flight mutation behaviour and the accessible proficiency control.
 
 ## Follow-up implementation and verification
 

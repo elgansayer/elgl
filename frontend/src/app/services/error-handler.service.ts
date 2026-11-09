@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ErrorHandler, Injectable, inject } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { ApiService } from './api.service';
 
 interface ClientErrorStackFrame {
@@ -241,7 +242,7 @@ export class GlobalErrorHandler implements ErrorHandler {
     if (!this.canReport(payload)) return;
 
     this.apiService
-      .post('/api/analytics/client-error', payload, { requireAuth: false })
+      .post(`${environment.apiUrl}/analytics/client-error`, payload, { requireAuth: false })
       .catch(() => {
         // Reporting is deliberately best-effort to prevent recursive failures.
       });

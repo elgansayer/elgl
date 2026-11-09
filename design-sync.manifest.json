@@ -78,7 +78,7 @@
       "claudeDesignPath": "components/primitives/feedback-states.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1715-language-picker-dialog (Spartan dialog behaviour changes focus management only; the existing visual contract is unchanged)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1715-language-picker-dialog (Spartan dialog behaviour changes focus management only; the existing visual contract is unchanged); issue-1876-audio-equalizer-accessible-label (audio-equalizer adds role=img, a translated accessible-label input, a visually hidden sr-only caption and a reduced-motion static fallback; the visible active/inactive bars, colours and layout of this preview are unchanged); issue-1886-audio-equalizer-a11y (the staged accessibility label and reduced-motion fallback preserve the visible equalizer bars, colours and layout)",
       "requiredStates": ["light", "dark", "error", "loading", "empty", "rtl"]
     },
     {
@@ -216,7 +216,7 @@
       "claudeDesignPath": "screens/profile.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1842-profile-learning-summary-2026-11-03",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1842-profile-learning-summary-2026-11-03; issue-1889-my-stats-navigation-2026-11-08",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -563,7 +563,7 @@
       "claudeDesignPath": "features/discovery-community.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged); issue-1663-notification-inbox-tab-reconciliation (per-tab notification unread reconciliation and decrement logic only; discovery and community visual contract is unchanged); issue-1789-liked-by-runtime-hardening (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual states; the visual contract is unchanged); issue-1788-liked-by-audit (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual presentation; visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged); issue-1663-notification-inbox-tab-reconciliation (per-tab notification unread reconciliation and decrement logic only; discovery and community visual contract is unchanged); issue-1789-liked-by-runtime-hardening (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual states; the visual contract is unchanged); issue-1788-liked-by-audit (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual presentation; visual contract is unchanged); issue-1860-system-alert-presentation (system alerts render the localised system-alert title and bell glyph inside the existing notification row instead of unknown-user text; row layout, tokens, spacing and states are unchanged, so the discovery and community visual contract is unchanged); issue-1886-system-alert-semantics (the staged system notification uses the existing row, typography, spacing and semantic tokens, so the discovery and community visual contract is unchanged)",
       "requiredStates": [
         "light",
         "dark",

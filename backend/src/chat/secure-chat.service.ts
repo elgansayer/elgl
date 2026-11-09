@@ -206,6 +206,21 @@ export class SecureChatService extends ChatService {
       message = { ...message, link_preview: linkPreview };
     }
 
+    // A correction submitted without a teaching note is enriched server-side,
+    // exactly as in a direct conversation, before the message is published.
+    const enrichedCorrectionPayload =
+      await this.generateCorrectionPayloadIfNeeded(message.correction_payload);
+    if (enrichedCorrectionPayload) {
+      const { error: updateError } = await this.secureSupabase
+        .getClient()
+        .from('chat_messages')
+        .update({ correction_payload: enrichedCorrectionPayload })
+        .eq('id', message.id);
+      if (!updateError) {
+        message = { ...message, correction_payload: enrichedCorrectionPayload };
+      }
+    }
+
     void this.secureXp.awardXpForActivity(senderId, 'send_message');
     await this.secureCentrifugo.publish(`chat:${dto.room_id}`, { message });
 

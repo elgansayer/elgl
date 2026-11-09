@@ -1396,15 +1396,23 @@
             <span class="muted">Send key in Authorization header.</span
             ><span class="muted">Active production key</span
             ><code class="key">ht_live_9f2c…a71e</code
-            ><span
-              class="chip"
-              style="
-                align-self: start;
-                color: rgb(var(--success));
-                border-color: rgb(var(--success));
-              "
-              >Active (600 RPM)</span
-            >
+            ><div class="row" style="flex-wrap: wrap; gap: 8px">
+              <span
+                class="chip"
+                style="
+                  align-self: start;
+                  color: rgb(var(--success));
+                  border-color: rgb(var(--success));
+                "
+                >Active (600 RPM)</span
+              ><button
+                class="btn secondary-btn"
+                style="min-height: 32px; padding: 4px 12px; font-size: 12px"
+                aria-label="Revoke key"
+              >
+                Revoke key
+              </button>
+            </div>
           </div>
           <div class="tile-grid three">
             <div class="tile stat">

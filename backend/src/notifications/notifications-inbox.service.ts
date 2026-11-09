@@ -97,7 +97,13 @@ export class NotificationsInboxService {
       );
     }
 
-    return (data ?? []) as NotificationDto[];
+    // System alerts have no human actor. Never expose a profile (the recipient's
+    // own row or any producer-supplied user) as if it authored the alert.
+    return ((data ?? []) as NotificationDto[]).map((row) =>
+      row.type === 'system'
+        ? { ...row, actor_id: row.recipient_id, actor: undefined }
+        : row,
+    );
   }
 
   async getUnreadCount(recipientId: string): Promise<NotificationUnreadCounts> {

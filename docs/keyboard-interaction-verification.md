@@ -48,6 +48,21 @@ Keyboard interaction contract verification failed:
 
 The fix is normally to use native HTML, an approved Relay wrapper, or the matching Spartan Helm/Brain primitive. Do not silence the gate by adding another synthetic keyboard state machine.
 
+## Desktop tab-navigation contract
+
+`e2e/tests/keyboard-tab-navigation.spec.ts` exercises real browser Tab and Enter presses at desktop viewport widths. It asserts that:
+
+- the skip-to-content link is the first sequential focus stop while the app is unlocked;
+- activating the skip link moves focus onto the `main` landmark;
+- desktop sidebar links are reachable by Tab; and
+- the mobile bottom tab bar stays out of the desktop tab order.
+
+`frontend/src/app/app-shell-keyboard-navigation.contract.spec.ts` guards the template invariants that make the browser behaviour possible: skip-link DOM order, `tabindex="-1"` on `#main-content`, and the `hidden lg:flex` / `lg:hidden` split between the desktop sidebar and mobile tab bar.
+
+The skip link is not rendered while the app-lock dialog is active, so it cannot move keyboard focus into page content behind the lock screen.
+
+The browser spec runs under the desktop Playwright projects and skips narrower mobile projects. It uses `/forgot-password` so the shell can be verified without an authenticated session or product data.
+
 ## Accessibility states
 
 The migration gate is structural rather than screenshot-based. Relevant accessibility states are covered as follows:

@@ -6,6 +6,7 @@ import {
 import { ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { GlobalErrorHandler } from './error-handler.service';
 
@@ -54,7 +55,7 @@ describe('GlobalErrorHandler', () => {
 
     expect(() => handler.handleError(error)).not.toThrow();
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(
       expect.objectContaining({
@@ -79,7 +80,7 @@ describe('GlobalErrorHandler', () => {
 
     handler.handleError(error);
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     const body = req.request.body as {
       message: string;
       stack: string;
@@ -95,7 +96,7 @@ describe('GlobalErrorHandler', () => {
   it('unwraps promise-style rejection errors without serialising wrapper objects', () => {
     handler.handleError({ rejection: new RangeError('wrapped failure') });
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     expect(req.request.body).toEqual(
       expect.objectContaining({
         message: 'wrapped failure',
@@ -114,7 +115,7 @@ describe('GlobalErrorHandler', () => {
 
     expect(() => handler.handleError(error)).not.toThrow();
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     expect(req.request.body).toEqual(
       expect.objectContaining({
         name: 'HttpError',
@@ -135,7 +136,7 @@ describe('GlobalErrorHandler', () => {
 
     expect(() => handler.handleError(value)).not.toThrow();
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     expect(req.request.body).toEqual(
       expect.objectContaining({
         message: 'Unknown client throwable',
@@ -150,7 +151,7 @@ describe('GlobalErrorHandler', () => {
     handler.handleError(new Error('same failure'));
     handler.handleError(new Error('same failure'));
 
-    const requests = httpTesting.match('/api/analytics/client-error');
+    const requests = httpTesting.match(`${environment.apiUrl}/analytics/client-error`);
     expect(requests).toHaveLength(1);
     requests[0]?.flush({ status: 'logged' });
   });
@@ -160,7 +161,7 @@ describe('GlobalErrorHandler', () => {
       handler.handleError(new Error(`failure-${index}`));
     }
 
-    const requests = httpTesting.match('/api/analytics/client-error');
+    const requests = httpTesting.match(`${environment.apiUrl}/analytics/client-error`);
     expect(requests).toHaveLength(10);
     for (const request of requests) request.flush({ status: 'logged' });
   });
@@ -168,7 +169,7 @@ describe('GlobalErrorHandler', () => {
   it('swallows reporting failures so telemetry cannot recurse into another crash', () => {
     expect(() => handler.handleError(new Error('network failure'))).not.toThrow();
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     req.flush('Server error', {
       status: 500,
       statusText: 'Internal Server Error',
