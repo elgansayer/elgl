@@ -2080,6 +2080,7 @@ export class I18nService {
     // Sticker Store
     'sticker.purchaseSuccess': 'Successfully purchased {{name}}!',
     'sticker.notEnoughCoins': 'Not enough coins!',
+    'sticker.filterLabel': 'Filter sticker packs by price',
     'sticker.filterAll': 'All',
     'sticker.filterValue': 'Value',
     'sticker.filterPopular': 'Popular',
@@ -2088,6 +2089,11 @@ export class I18nService {
     'stickerStore.subtitle': 'Unlock expressive sticker packs for your chats',
     'stickerStore.emptyTitle': 'No sticker packs found',
     'stickerStore.emptyDescription': 'Check back later for new sticker packs.',
+    'stickerStore.loadErrorTitle': 'Sticker packs unavailable',
+    'stickerStore.loadErrorDescription':
+      'We could not load the sticker store. Check your connection and try again.',
+    'stickerStore.insufficientCoins': 'You need more coins for this pack.',
+    'stickerStore.purchaseAria': 'Unlock {{name}} for {{cost}} coins',
     'stickerStore.ownedBadge': 'OWNED',
     'stickerStore.unlocked': 'Unlocked',
     'stickerStore.animatedBadge': 'ANIMATED',
