@@ -41,6 +41,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
         @for (pill of categoryPills(); track pill.id) {
           <button
             hlmBtn
+            size="touch"
             type="button"
             class="rounded-full px-4 py-2 text-sm font-medium transition-all duration-200"
             [class.bg-primary]="selectedCategory() === pill.id"
@@ -85,6 +86,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
         </p>
         <button
           hlmBtn
+          size="touch"
           type="button"
           class="mt-4 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill"
           (click)="retryLoad()"
@@ -159,6 +161,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
               } @else {
                 <button
                   hlmBtn
+                  size="touch"
                   type="button"
                   class="flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-vip to-accent py-2 text-sm font-semibold text-on-fill transition-all disabled:opacity-50"
                   [disabled]="
@@ -180,7 +183,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
                   }
                 </button>
                 @if (userCoins() < pack.cost_coins) {
-                  <p class="mt-1 text-center text-xs text-danger">
+                  <p class="mt-1 text-center text-xs text-danger-ink">
                     {{ 'stickerStore.insufficientCoins' | t }}
                   </p>
                 }

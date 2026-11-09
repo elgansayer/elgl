@@ -258,6 +258,7 @@ describe('StickerStoreComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('stickerStore.insufficientCoins');
+    expect(fixture.nativeElement.querySelector('.text-danger-ink')).not.toBeNull();
     const purchaseButtons: HTMLButtonElement[] = Array.from(
       fixture.nativeElement.querySelectorAll('button[aria-label]'),
     );
@@ -274,6 +275,7 @@ describe('StickerStoreComponent', () => {
 
     expect(component.loadFailed()).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('stickerStore.loadErrorTitle');
+    expect(fixture.nativeElement.querySelector('button[size="touch"]')).not.toBeNull();
 
     stickerPacks.set(mockPacks);
     economyStoreMock.loadStickerPacks.mockResolvedValue(true);
