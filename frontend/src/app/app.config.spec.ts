@@ -52,8 +52,13 @@ describe('Angular application initializers', () => {
   });
 
   describe('initialiseDeepLinks', () => {
-    it('handles the initial URL and registers the web protocol handler', () => {
-      const handleDeepLink = vi.fn();
+    const createService = () => ({
+      processInitialDeepLink: vi.fn(),
+      registerRuntimeListener: vi.fn(),
+    });
+
+    it('processes the initial URL, registers runtime listeners and the web protocol handler', () => {
+      const service = createService();
       const registerProtocolHandler = vi.fn();
       const document = {
         defaultView: {
@@ -65,12 +70,10 @@ describe('Angular application initializers', () => {
         },
       } as unknown as Document;
 
-      initialiseDeepLinks({ handleDeepLink }, document);
+      initialiseDeepLinks(service, document);
 
-      expect(handleDeepLink).toHaveBeenCalledOnce();
-      expect(handleDeepLink).toHaveBeenCalledWith(
-        'https://app.example.test/moments',
-      );
+      expect(service.processInitialDeepLink).toHaveBeenCalledOnce();
+      expect(service.registerRuntimeListener).toHaveBeenCalledOnce();
       expect(registerProtocolHandler).toHaveBeenCalledWith(
         'web+hellotalk',
         'https://app.example.test/%s',
@@ -78,7 +81,7 @@ describe('Angular application initializers', () => {
     });
 
     it('continues when protocol-handler registration is unavailable', () => {
-      const handleDeepLink = vi.fn();
+      const service = createService();
       const document = {
         defaultView: {
           location: {
@@ -89,12 +92,13 @@ describe('Angular application initializers', () => {
         },
       } as unknown as Document;
 
-      expect(() => initialiseDeepLinks({ handleDeepLink }, document)).not.toThrow();
-      expect(handleDeepLink).toHaveBeenCalledWith('hellotalk://profile/user-1');
+      expect(() => initialiseDeepLinks(service, document)).not.toThrow();
+      expect(service.processInitialDeepLink).toHaveBeenCalledOnce();
+      expect(service.registerRuntimeListener).toHaveBeenCalledOnce();
     });
 
     it('treats browser protocol-handler rejection as best effort', () => {
-      const handleDeepLink = vi.fn();
+      const service = createService();
       const document = {
         defaultView: {
           location: {
@@ -109,17 +113,19 @@ describe('Angular application initializers', () => {
         },
       } as unknown as Document;
 
-      expect(() => initialiseDeepLinks({ handleDeepLink }, document)).not.toThrow();
-      expect(handleDeepLink).toHaveBeenCalledOnce();
+      expect(() => initialiseDeepLinks(service, document)).not.toThrow();
+      expect(service.processInitialDeepLink).toHaveBeenCalledOnce();
+      expect(service.registerRuntimeListener).toHaveBeenCalledOnce();
     });
 
     it('does nothing when no browser view exists', () => {
-      const handleDeepLink = vi.fn();
+      const service = createService();
       const document = { defaultView: null } as unknown as Document;
 
-      initialiseDeepLinks({ handleDeepLink }, document);
+      initialiseDeepLinks(service, document);
 
-      expect(handleDeepLink).not.toHaveBeenCalled();
+      expect(service.processInitialDeepLink).not.toHaveBeenCalled();
+      expect(service.registerRuntimeListener).not.toHaveBeenCalled();
     });
   });
 });
