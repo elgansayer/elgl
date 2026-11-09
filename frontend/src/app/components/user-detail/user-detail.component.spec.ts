@@ -12,6 +12,7 @@ import { I18nService } from '../../services/i18n.service';
 import { ProfileVisitsService } from '../../services/profile-visits.service';
 import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { SafetyService } from '../../services/safety.service';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
 
@@ -223,6 +224,20 @@ describe('UserDetailComponent bio translation', () => {
     expect(component.showTranslated()).toBe(false);
     expect(component.displayBio).toBe('Original profile bio');
     expect(translateBio).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses a cached bio translation without another provider request', async () => {
+    TestBed.inject(TranslationCacheService).set(
+      'Original profile bio',
+      'en-GB',
+      'Biografía en caché',
+    );
+
+    await component.toggleTranslation();
+
+    expect(translateBio).not.toHaveBeenCalled();
+    expect(component.showTranslated()).toBe(true);
+    expect(component.displayBio).toBe('Biografía en caché');
   });
 
   it('links the translation action to a live mixed-direction bio region', async () => {

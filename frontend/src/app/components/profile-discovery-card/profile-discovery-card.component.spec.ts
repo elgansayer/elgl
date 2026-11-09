@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { UserProfile } from '../../services/user.service';
 import { ProfileDiscoveryCardComponent } from './profile-discovery-card.component';
 
@@ -83,6 +84,20 @@ describe('ProfileDiscoveryCardComponent bio translation', () => {
     expect(component.showTranslated()).toBe(false);
     expect(component.displayBio()).toBe('Hello from my profile');
     expect(translateBio).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses a cached bio translation when the card is recreated', async () => {
+    TestBed.inject(TranslationCacheService).set(
+      'Hello from my profile',
+      'en-GB',
+      'Hola desde la caché',
+    );
+
+    await component.toggleTranslation(new Event('click'));
+
+    expect(translateBio).not.toHaveBeenCalled();
+    expect(component.showTranslated()).toBe(true);
+    expect(component.displayBio()).toBe('Hola desde la caché');
   });
 
   it('exposes translation state, target and mixed-direction text accessibly', async () => {

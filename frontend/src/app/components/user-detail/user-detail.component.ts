@@ -12,6 +12,7 @@ import { DirectConversationService } from '../../services/direct-conversation.se
 import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { ReportButtonComponent } from '../report-user-modal/report-button.component';
 import { AchievementsComponent } from '../../achievements/achievements.component';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 
 @Component({
   selector: 'app-user-detail',
@@ -36,6 +37,7 @@ export class UserDetailComponent {
   private directConversationService = inject(DirectConversationService);
   private relationshipService = inject(ProfileRelationshipService);
   private readonly i18n = inject(I18nService);
+  private readonly translationCache = inject(TranslationCacheService);
   private translationContextKey = '';
   private readonly visitAttempts = new Set<string>();
 
@@ -167,6 +169,14 @@ export class UserDetailComponent {
 
     const context = this.getTranslationContext();
     const targetLang = this.i18n.currentLang() || 'en-GB';
+    const bioText = (p.bio_text ?? '').trim();
+
+    const cached = this.translationCache.get(bioText, targetLang);
+    if (cached) {
+      this.translatedBioText.set(cached);
+      this.showTranslated.set(true);
+      return;
+    }
 
     this.translationErrorKey.set('');
     this.isTranslating.set(true);
@@ -175,6 +185,7 @@ export class UserDetailComponent {
       if (context !== this.getTranslationContext()) return;
 
       if (translated) {
+        this.translationCache.set(bioText, targetLang, translated);
         this.translatedBioText.set(translated);
         this.showTranslated.set(true);
       } else {

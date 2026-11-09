@@ -5,6 +5,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { UserProfile } from '../../services/user.service';
 import { DiscoveryService } from '../../services/discovery.service';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 
 @Component({
   selector: 'app-profile-discovery-card',
@@ -79,6 +80,7 @@ export class ProfileDiscoveryCardComponent {
 
   private readonly discoveryService = inject(DiscoveryService);
   private readonly i18n = inject(I18nService);
+  private readonly translationCache = inject(TranslationCacheService);
   private translationContextKey = '';
 
   readonly translatedBioText = signal<string>('');
@@ -152,6 +154,14 @@ export class ProfileDiscoveryCardComponent {
     const context = this.translationContext();
     const targetLang = this.i18n.currentLang() || 'en-GB';
     const profileId = this.profile().id;
+    const bioText = (this.profile().bio_text ?? '').trim();
+
+    const cached = this.translationCache.get(bioText, targetLang);
+    if (cached) {
+      this.translatedBioText.set(cached);
+      this.showTranslated.set(true);
+      return;
+    }
 
     this.translationErrorKey.set('');
     this.isTranslating.set(true);
@@ -160,6 +170,7 @@ export class ProfileDiscoveryCardComponent {
       if (context !== this.translationContext()) return;
 
       if (translated) {
+        this.translationCache.set(bioText, targetLang, translated);
         this.translatedBioText.set(translated);
         this.showTranslated.set(true);
       } else {
