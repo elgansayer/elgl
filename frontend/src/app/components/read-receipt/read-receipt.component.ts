@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     <button
       hlmBtn
       variant="ghost"
-      size="icon-xs"
+      size="icon-touch"
       type="button"
       class="inline-flex items-center relative bg-transparent border-0 p-0 text-inherit hover:bg-transparent"
       [attr.aria-label]="ariaLabel()"

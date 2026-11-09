@@ -81,6 +81,15 @@ describe('ReadReceiptComponent', () => {
     ).toContain('text-secondary-ink');
   });
 
+  it('gives the receipt trigger the shared 44 CSS pixel touch target', () => {
+    fixture.componentRef.setInput('deliveryStatus', 'read');
+    fixture.detectChanges();
+
+    const trigger: HTMLButtonElement =
+      fixture.nativeElement.querySelector('button');
+    expect(trigger.classList).toContain('size-11');
+  });
+
   it('uses a native button so keyboard activation toggles the detail panel', () => {
     fixture.componentRef.setInput('deliveryStatus', 'read');
     fixture.detectChanges();
