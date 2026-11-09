@@ -189,11 +189,11 @@ export class DeepLinkService {
       case 'settings':
         return `/settings${querySuffix}`;
       case 'groups':
-        return id ? `/groups/${id}${querySuffix}` : `/groups${querySuffix}`;
+        return id ? `/chat/${id}${querySuffix}` : `/chat/groups${querySuffix}`;
       case 'events':
         return id ? `/events/${id}${querySuffix}` : `/events${querySuffix}`;
       case 'audio-rooms':
-        return id ? `/audio-rooms/${id}${querySuffix}` : `/audio-rooms${querySuffix}`;
+        return id ? `/preview/room/${id}${querySuffix}` : `/live/audio${querySuffix}`;
       case 'vip':
         return `/subscription${querySuffix}`;
       case 'milestones':

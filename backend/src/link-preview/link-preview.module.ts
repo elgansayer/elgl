@@ -4,9 +4,10 @@ import { LinkPreviewService } from './link-preview.service';
 import { LinkPreviewController } from './link-preview.controller';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { SharingModule } from '../sharing/sharing.module';
 
 @Module({
-  imports: [HttpModule, SupabaseModule],
+  imports: [HttpModule, SupabaseModule, SharingModule],
   controllers: [LinkPreviewController],
   providers: [
     LinkPreviewService,

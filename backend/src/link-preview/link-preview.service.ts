@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, timeout } from 'rxjs';
@@ -14,6 +15,7 @@ import * as http from 'http';
 import * as https from 'https';
 import { createHash } from 'crypto';
 import { MetricsService } from '../metrics/metrics.service';
+import { SharingService } from '../sharing/sharing.service';
 import { LinkPreview } from './interfaces/link-preview.interface';
 import {
   classifyLinkPreviewFailure,
@@ -100,6 +102,7 @@ export class LinkPreviewService {
     httpService: HttpService,
     @Inject('REDIS_CLIENT') redis: Redis,
     metrics: MetricsService,
+    @Optional() private readonly sharingService?: SharingService,
   ) {
     this.httpService = httpService;
     this.redis = redis;
@@ -115,6 +118,12 @@ export class LinkPreviewService {
   }
 
   async getPreview(url: string): Promise<LinkPreview | null> {
+    const internalSharePreview = await this.resolveInternalSharePreview(url);
+    if (internalSharePreview) {
+      this.metrics.recordLinkPreview('fetched');
+      return internalSharePreview;
+    }
+
     let parsed: URL;
     try {
       parsed = this.validateUrl(url);
@@ -182,6 +191,19 @@ export class LinkPreviewService {
       }
     }
     return preview;
+  }
+
+  private async resolveInternalSharePreview(
+    url: string,
+  ): Promise<LinkPreview | null> {
+    if (!this.sharingService) {
+      return null;
+    }
+    try {
+      return await this.sharingService.getLinkPreviewForShareUrl(url);
+    } catch {
+      return null;
+    }
   }
 
   private validateUrl(raw: string): URL {

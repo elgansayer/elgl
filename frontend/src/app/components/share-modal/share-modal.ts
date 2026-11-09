@@ -1,9 +1,10 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
-import { Component, inject, input, output, signal, computed } from '@angular/core';
+import { Component, inject, input, output, signal, computed, resource } from '@angular/core';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SharingService, type ShareEntityType } from '../../services/sharing';
 
 export interface ShareEntity {
   id: string;
@@ -22,6 +23,7 @@ export interface ShareEntity {
 })
 export class ShareModalComponent {
   readonly i18n = inject(I18nService);
+  private readonly sharingService = inject(SharingService);
 
   // Inputs
   readonly entity = input.required<ShareEntity>();
@@ -33,7 +35,29 @@ export class ShareModalComponent {
 
   // State
   readonly isCopying = signal(false);
-  readonly shareUrl = computed(() => `${this.entity().externalLink}?ref=user_token_123`);
+
+  private readonly backendEntityType = computed<ShareEntityType | null>(() => {
+    const type = this.entity().type;
+    if (type === 'profile') return 'tutor';
+    if (type === 'deck') return null;
+    return type;
+  });
+
+  private readonly shareLinkResource = resource({
+    params: () => {
+      const entityType = this.backendEntityType();
+      if (!this.isOpen() || !entityType) return undefined;
+      return { entityType, entityId: this.entity().id };
+    },
+    loader: ({ params }) =>
+      params
+        ? this.sharingService.createShareLink(params.entityType, params.entityId)
+        : Promise.resolve(null),
+  });
+
+  readonly shareUrl = computed(
+    () => this.shareLinkResource.value()?.shareUrl ?? this.entity().externalLink,
+  );
   readonly dialogState = computed<HlmDialogState>(() => (this.isOpen() ? 'open' : 'closed'));
 
   onDialogStateChanged(state: HlmDialogState): void {

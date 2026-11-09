@@ -2,11 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ShareEntity, ShareModalComponent } from './share-modal';
 import { I18nService } from '../../services/i18n.service';
+import { SharingService } from '../../services/sharing';
 import { signal } from '@angular/core';
 
 describe('ShareModalComponent', () => {
   let component: ShareModalComponent;
   let fixture: ComponentFixture<ShareModalComponent>;
+
+  const shareUrl = 'https://hellotalk.app/api/sharing/og/event/e-1';
 
   const sampleEntity: ShareEntity = {
     id: 'e-1',
@@ -21,12 +24,27 @@ describe('ShareModalComponent', () => {
     direction: signal('ltr'),
   };
 
+  const sharingMock = {
+    createShareLink: vi.fn().mockResolvedValue({
+      entityType: 'event',
+      entityId: 'e-1',
+      shareUrl,
+      webUrl: '/events/e-1',
+      deepLink: 'hellotalk://events/e-1',
+    }),
+    getPreview: vi.fn(),
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ShareModalComponent],
-      providers: [{ provide: I18nService, useValue: i18nMock }],
+      providers: [
+        { provide: I18nService, useValue: i18nMock },
+        { provide: SharingService, useValue: sharingMock },
+      ],
     }).compileComponents();
 
+    sharingMock.createShareLink.mockClear();
     fixture = TestBed.createComponent(ShareModalComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('entity', sampleEntity);
@@ -64,7 +82,9 @@ describe('ShareModalComponent', () => {
     const closedSpy = vi.fn();
     component.closed.subscribe(closedSpy);
 
-    const closeBtn = document.querySelector('button[aria-label="common.close"]') as HTMLButtonElement | null;
+    const closeBtn = document.querySelector(
+      'button[aria-label="common.close"]',
+    ) as HTMLButtonElement | null;
     if (closeBtn) {
       closeBtn.click();
       expect(closedSpy).toHaveBeenCalled();
@@ -97,7 +117,7 @@ describe('ShareModalComponent', () => {
 
     await component.copyLink();
 
-    expect(writeTextSpy).toHaveBeenCalledWith('https://hellotalk.app/events/7f2c?ref=user_token_123');
+    expect(writeTextSpy).toHaveBeenCalledWith(shareUrl);
     expect(component.isCopying()).toBe(true);
   });
 

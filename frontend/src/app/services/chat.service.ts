@@ -21,12 +21,29 @@ export interface CorrectionPayload {
   explanation?: string;
 }
 
+export type ShareEntityType = 'tutor' | 'group' | 'room' | 'moment' | 'event';
+
+export interface SharePricing {
+  ukp: number;
+  usd: number;
+  display: string;
+}
+
+export interface LinkPreviewShare {
+  entityType: ShareEntityType;
+  entityId: string;
+  webUrl: string;
+  deepLink: string;
+  pricing: SharePricing | null;
+}
+
 export interface LinkPreview {
   url: string;
   title: string;
   description: string;
   image: string;
   siteName: string;
+  share?: LinkPreviewShare | null;
 }
 
 export interface GiftPayload {

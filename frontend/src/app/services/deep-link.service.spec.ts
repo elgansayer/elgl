@@ -106,16 +106,16 @@ describe('DeepLinkService', () => {
 
     it('handles groups with and without id', () => {
       expect(service.handleDeepLink('hellotalk://groups/grp-001')).toBe(true);
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/groups/grp-001');
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/chat/grp-001');
       expect(service.handleDeepLink('hellotalk://groups')).toBe(true);
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/groups');
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/chat/groups');
     });
 
     it('handles audio-rooms with and without id', () => {
       expect(service.handleDeepLink('hellotalk://audio-rooms/room-1')).toBe(true);
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/audio-rooms/room-1');
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/preview/room/room-1');
       expect(service.handleDeepLink('hellotalk://audio-rooms')).toBe(true);
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/audio-rooms');
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/live/audio');
     });
 
     it('handles URIs with query parameters', () => {

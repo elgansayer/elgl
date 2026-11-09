@@ -24,6 +24,7 @@ import { showErrorToast, showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
+import { ShareCardComponent } from '../share-card/share-card.component';
 import { environment } from '../../../environments/environment';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
@@ -41,6 +42,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
     TranslatePipe,
     CulturalTipComponent,
     LinkPreviewCardComponent,
+    ShareCardComponent,
     VisualDiffComponent,
     ChatSystemBubbleComponent,
     GiftAnimationComponent,
@@ -104,20 +106,31 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
               <p class="text-sm">
                 @for (segment of textSegments(); track $index) {
                   @if (segment.isMention) {
-                    <span class="font-bold text-secondary-ink cursor-pointer">{{ segment.value }}</span>
+                    <span class="font-bold text-secondary-ink cursor-pointer">{{
+                      segment.value
+                    }}</span>
                   } @else {
                     {{ segment.value }}
                   }
                 }
               </p>
               @if (message().link_preview; as lp) {
-                <app-link-preview-card
-                  [url]="lp.url"
-                  [title]="lp.title"
-                  [description]="lp.description"
-                  [image]="lp.image"
-                  [siteName]="lp.siteName"
-                ></app-link-preview-card>
+                @if (lp.share) {
+                  <app-share-card
+                    [share]="lp.share"
+                    [title]="lp.title"
+                    [description]="lp.description"
+                    [image]="lp.image"
+                  ></app-share-card>
+                } @else {
+                  <app-link-preview-card
+                    [url]="lp.url"
+                    [title]="lp.title"
+                    [description]="lp.description"
+                    [image]="lp.image"
+                    [siteName]="lp.siteName"
+                  ></app-link-preview-card>
+                }
               }
             }
 

@@ -64,6 +64,7 @@ import { StatsModule } from './stats/stats.module';
 import { EventsModule } from './events/events.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { LinkPreviewModule } from './link-preview/link-preview.module';
+import { SharingModule } from './sharing/sharing.module';
 import { ResourceLibraryModule } from './resource-library/resource-library.module';
 import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
 import { SpamDetectionModule } from './spam-detection/spam-detection.module';
@@ -162,6 +163,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     EventsModule,
     LessonsModule,
     LinkPreviewModule,
+    SharingModule,
     ResourceLibraryModule,
     ModerationModule,
     WordOfTheDayModule,

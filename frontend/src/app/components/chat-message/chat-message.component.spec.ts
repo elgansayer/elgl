@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { afterEach, vi } from 'vitest';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmService } from '../../services/confirm.service';
@@ -10,6 +11,7 @@ import { NlpService } from '../../services/nlp.service';
 import { SafetyService } from '../../services/safety.service';
 import { toastsSignal } from '../../services/toast.service';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
+import { ShareCardComponent } from '../share-card/share-card.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { ChatMessageComponent } from './chat-message.component';
@@ -29,6 +31,7 @@ describe('ChatMessageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ChatMessageComponent],
       providers: [
+        provideRouter([]),
         {
           provide: AuthService,
           useValue: {
@@ -158,6 +161,37 @@ describe('ChatMessageComponent', () => {
   });
 
   it('does not render a rich link preview when the message has no preview payload', () => {
+    expect(fixture.debugElement.query(By.directive(LinkPreviewCardComponent))).toBeNull();
+  });
+
+  it('renders internal share cards instead of external link cards', () => {
+    fixture.componentRef.setInput('message', {
+      id: 'share-message-id',
+      room_id: 'room-id',
+      sender_id: 'sender-id',
+      message_type: 'text',
+      text_content: 'https://hellotalk.app/api/sharing/og/event/event-1',
+      link_preview: {
+        url: 'https://hellotalk.app/api/sharing/og/event/event-1',
+        title: 'Tokyo Language Café',
+        description: 'Meet other learners',
+        image: '',
+        siteName: 'HelloTalk',
+        share: {
+          entityType: 'event',
+          entityId: 'event-1',
+          webUrl: '/events/event-1',
+          deepLink: 'hellotalk://events/event-1',
+          pricing: null,
+        },
+      },
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    fixture.detectChanges();
+
+    const shareCard = fixture.debugElement.query(By.directive(ShareCardComponent));
+    expect(shareCard).toBeTruthy();
     expect(fixture.debugElement.query(By.directive(LinkPreviewCardComponent))).toBeNull();
   });
 

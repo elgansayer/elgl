@@ -1,5 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { LinkPreview } from '../interfaces/link-preview.interface';
+import type { ShareLinkPreview } from '../../sharing/sharing.types';
 
 /**
  * OpenGraph link preview response DTO.
@@ -37,4 +38,10 @@ export class LinkPreviewResponseDto implements LinkPreview {
     example: 'Example',
   })
   siteName!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Internal share target metadata when the URL belongs to the HelloTalk sharing engine.',
+  })
+  share?: ShareLinkPreview;
 }

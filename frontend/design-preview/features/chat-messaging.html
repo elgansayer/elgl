@@ -931,6 +931,63 @@
         clip-path: inset(50%);
         white-space: nowrap;
       }
+      .share-card {
+        display: block;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-100));
+        color: rgb(var(--text-primary));
+        text-decoration: none;
+        max-inline-size: 20rem;
+      }
+      .share-card .media {
+        display: grid;
+        place-items: center;
+        block-size: 144px;
+        font-size: 36px;
+        background: rgb(var(--surface-300));
+      }
+      .share-card .txt {
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        font-size: 13px;
+      }
+      .share-card .eyebrow {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: rgb(var(--primary-text) / 0.7);
+      }
+      .share-card .title {
+        font-weight: 700;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .share-card .desc {
+        font-size: 11px;
+        color: rgb(var(--text-secondary));
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .share-card .price {
+        align-self: flex-start;
+        margin-block-start: 2px;
+        border-radius: 999px;
+        background: rgb(var(--secondary) / 0.2);
+        padding: 2px 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: rgb(var(--secondary-text));
+      }
       .tokens {
         font-size: 18px;
         line-height: 1.9;
@@ -1967,6 +2024,58 @@
         <footer>
           States: with image · image error fallback · unsafe URL → hidden · no-referrer · screen
           readers hear "Opens in a new tab" inside the link name
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/share-card">
+        <header>
+          <h2>Share preview card</h2>
+          <code>components/share-card</code>
+        </header>
+        <div class="body">
+          <div class="bubble me" style="max-width: 100%">
+            Join this tutor 👇
+            <a
+              class="share-card"
+              href="#"
+              aria-label="Open Akari in HelloTalk"
+              style="margin-block-start: 8px"
+            >
+              <span class="media" aria-hidden="true">🧑‍🏫</span>
+              <span class="txt">
+                <span class="eyebrow">Shared from HelloTalk · Tutor</span>
+                <strong class="title" dir="auto"
+                  >Akari - Weekend Japanese practice</strong
+                >
+                <span class="desc" dir="auto"
+                  >Native speaker · 4.9 rating · hiragana, kanji and free
+                  conversation.</span
+                ><span class="price" dir="ltr">10 UKP / 12.50 USD</span>
+              </span>
+            </a>
+          </div>
+          <div class="state-label">No image, no pricing (event share)</div>
+          <a
+            class="share-card"
+            href="#"
+            aria-label="Open Language Exchange Meetup in HelloTalk"
+          >
+            <span class="txt">
+              <span class="eyebrow">Shared from HelloTalk · Event</span>
+              <strong class="title" dir="auto">Language Exchange Meetup</strong>
+              <span class="desc" dir="auto"
+                >Saturday café table for Spanish and English partners.</span
+              >
+            </span>
+          </a>
+        </div>
+        <footer>
+          Rendered instead of the link preview when a chat message carries a
+          share payload · whole card is one deep-link to the shared tutor,
+          group, live room, moment or event · entity-type eyebrow ·
+          dual-currency pricing pill kept LTR inside RTL bubbles · optional
+          media and description · focus-visible ring opens the destination in
+          the app
         </footer>
       </section>
 

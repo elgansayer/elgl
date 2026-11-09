@@ -2662,6 +2662,15 @@ export class I18nService {
     // Link Preview
     'linkPreview.opensInNewTab': 'Opens in a new tab',
 
+    // Shared entity cards
+    'shareCard.badge': 'Shared from HelloTalk',
+    'shareCard.openAria': 'Open {{title}} in HelloTalk',
+    'shareCard.type.tutor': 'Tutor',
+    'shareCard.type.group': 'Group',
+    'shareCard.type.room': 'Live room',
+    'shareCard.type.moment': 'Moment',
+    'shareCard.type.event': 'Event',
+
     // Diagnostic Quiz
     'diagnosticQuiz.title': 'Language Level Diagnostic',
     'diagnosticQuiz.loading': 'Loading your diagnostic quiz...',
