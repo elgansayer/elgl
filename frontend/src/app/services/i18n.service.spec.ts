@@ -448,6 +448,37 @@ describe('I18nService', () => {
     });
   });
 
+  describe('sticker store copy', () => {
+    it.each([
+      'sticker.filterLabel',
+      'stickerStore.title',
+      'stickerStore.subtitle',
+      'stickerStore.emptyTitle',
+      'stickerStore.emptyDescription',
+      'stickerStore.loadErrorTitle',
+      'stickerStore.loadErrorDescription',
+      'stickerStore.insufficientCoins',
+      'stickerStore.ownedBadge',
+      'stickerStore.unlocked',
+      'stickerStore.animatedBadge',
+      'stickerStore.animatedDescription',
+    ])('keeps the sticker store key %s resolvable', (key) => {
+      const text = service.translate(key);
+
+      expect(text).not.toBe(key);
+      expect(text.trim().length).toBeGreaterThan(0);
+    });
+
+    it('interpolates the purchase accessible name with pack name and cost', () => {
+      expect(
+        service.translate('stickerStore.purchaseAria', {
+          name: 'Happy Corgi Pack',
+          cost: 50,
+        }),
+      ).toBe('Unlock Happy Corgi Pack for 50 coins');
+    });
+  });
+
   describe('doodle chat copy', () => {
     it.each([
       ['chatRoom.doodleBtn', 'Doodle'],

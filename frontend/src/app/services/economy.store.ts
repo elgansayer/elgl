@@ -571,7 +571,7 @@ export class EconomyStore {
     }
   }
 
-  async loadStickerPacks(): Promise<void> {
+  async loadStickerPacks(): Promise<boolean> {
     try {
       const res = await firstValueFrom(
         this.http.get<{
@@ -589,14 +589,17 @@ export class EconomyStore {
       this.stickerPacks.set(processed);
       this.offlineEconomy.cacheStickerPacks(processed);
       this.offlineEconomy.cacheBalance(res.user_coins);
+      return true;
     } catch (e) {
       console.error('Load sticker packs error:', e);
       if (!this.isOnline()) {
         const cached = await this.offlineEconomy.getCachedStickerPacks();
         if (cached && cached.length > 0) {
           this.stickerPacks.set(cached);
+          return true;
         }
       }
+      return false;
     }
   }
 

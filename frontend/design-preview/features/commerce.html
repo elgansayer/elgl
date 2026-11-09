@@ -805,7 +805,7 @@
               <div class="art" aria-hidden="true">🦊</div>
               <div class="title">Fox Phrases</div>
               <button class="btn block" disabled>🪙 500</button>
-              <div class="muted">Not enough coins</div>
+              <div class="muted">You need more coins for this pack.</div>
             </div>
             <div class="tile" role="listitem">
               <div class="art" aria-hidden="true">☕</div>
@@ -815,11 +815,22 @@
               </button>
             </div>
           </div>
+          <span class="state-label">Load error</span>
+          <div class="alert error stack" role="alert" style="align-items: center; text-align: center">
+            <span class="title">Sticker packs unavailable</span>
+            <span class="secondary"
+              >We could not load the sticker store. Check your connection and try again.</span
+            >
+            <button class="btn secondary-btn" type="button">Retry</button>
+          </div>
           <div class="alert warning" role="status">
             Purchases are not available while offline. Please check your internet connection.
           </div>
         </div>
-        <footer>States shown: animated · owned · insufficient coins · purchasing · offline</footer>
+        <footer>
+          States shown: animated · owned · insufficient coins · purchasing · load error + retry ·
+          offline
+        </footer>
       </section>
       <section class="specimen" data-component="components/gift-picker">
         <header>

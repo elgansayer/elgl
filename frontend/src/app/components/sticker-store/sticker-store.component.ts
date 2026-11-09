@@ -71,8 +71,31 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
       </div>
     }
 
+    <!-- Load failure -->
+    @if (!isLoading() && loadFailed()) {
+      <div
+        class="mx-4 mb-4 rounded-sheet border border-danger/40 bg-danger/10 px-4 py-6 text-center"
+        role="alert"
+      >
+        <p class="text-sm font-semibold text-text-primary">
+          {{ 'stickerStore.loadErrorTitle' | t }}
+        </p>
+        <p class="mt-1 text-sm text-text-secondary">
+          {{ 'stickerStore.loadErrorDescription' | t }}
+        </p>
+        <button
+          hlmBtn
+          type="button"
+          class="mt-4 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill"
+          (click)="retryLoad()"
+        >
+          {{ 'common.retry' | t }}
+        </button>
+      </div>
+    }
+
     <!-- Empty state -->
-    @if (!isLoading() && filteredPacks().length === 0) {
+    @if (!isLoading() && !loadFailed() && filteredPacks().length === 0) {
       <app-empty-state
         icon="&#x1F3A8;"
         [title]="'stickerStore.emptyTitle' | t"
@@ -81,7 +104,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     }
 
     <!-- Packs grid -->
-    @if (!isLoading() && filteredPacks().length > 0) {
+    @if (!isLoading() && !loadFailed() && filteredPacks().length > 0) {
       <div class="px-4 pb-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" role="list">
         @for (pack of filteredPacks(); track pack.id) {
           <app-card
@@ -156,6 +179,11 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
                     {{ pack.cost_coins }}
                   }
                 </button>
+                @if (userCoins() < pack.cost_coins) {
+                  <p class="mt-1 text-center text-xs text-danger">
+                    {{ 'stickerStore.insufficientCoins' | t }}
+                  </p>
+                }
               }
             </div>
           </app-card>
@@ -169,20 +197,30 @@ export class StickerStoreComponent {
   private readonly i18n = inject(I18nService);
 
   readonly isLoading = signal<boolean>(true);
+  readonly loadFailed = signal<boolean>(false);
   readonly purchasingId = signal<string | null>(null);
   readonly isOnline = this.economyStore.isOnline;
 
-  private packsResource = resource<StickerPack[], void>({
+  private readonly packsResource = resource<StickerPack[], void>({
     loader: async () => {
       this.isLoading.set(true);
+      this.loadFailed.set(false);
       try {
-        await this.economyStore.loadStickerPacks();
-        return this.economyStore.stickerPacks();
+        const loaded = await this.economyStore.loadStickerPacks();
+        const packs = this.economyStore.stickerPacks();
+        if (!loaded && packs.length === 0) {
+          this.loadFailed.set(true);
+        }
+        return packs;
       } finally {
         this.isLoading.set(false);
       }
     },
   });
+
+  retryLoad(): void {
+    this.packsResource.reload();
+  }
 
   readonly packs = computed(() => {
     this.packsResource.value();

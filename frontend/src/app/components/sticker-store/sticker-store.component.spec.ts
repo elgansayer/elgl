@@ -76,7 +76,7 @@ describe('StickerStoreComponent', () => {
       stickerPacks,
       coinsBalance: vi.fn().mockReturnValue(200),
       isOnline: vi.fn().mockReturnValue(true),
-      loadStickerPacks: vi.fn().mockResolvedValue(undefined),
+      loadStickerPacks: vi.fn().mockResolvedValue(true),
       unlockStickerPack: vi.fn().mockResolvedValue(true),
     };
     authServiceMock = {
@@ -235,5 +235,53 @@ describe('StickerStoreComponent', () => {
     const filtered = component.filteredPacks();
     expect(filtered.length).toBe(1);
     expect(filtered[0].id).toBe('stk_pack_1');
+  });
+
+  it('should explain how many coins a pack costs through the purchase label', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const purchaseLabel = 'stickerStore.purchaseAria';
+    const purchaseButtons: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('button[aria-label]'),
+    );
+    expect(
+      purchaseButtons.some((button) => button.getAttribute('aria-label') === purchaseLabel),
+    ).toBe(true);
+  });
+
+  it('should show an insufficient coins hint and keep the purchase disabled', async () => {
+    economyStoreMock.coinsBalance.mockReturnValue(10);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('stickerStore.insufficientCoins');
+    const purchaseButtons: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('button[aria-label]'),
+    );
+    expect(purchaseButtons.every((button) => button.disabled)).toBe(true);
+  });
+
+  it('should show a retry action when packs fail to load and recover on retry', async () => {
+    stickerPacks.set([]);
+    economyStoreMock.loadStickerPacks.mockResolvedValueOnce(false);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.loadFailed()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('stickerStore.loadErrorTitle');
+
+    stickerPacks.set(mockPacks);
+    economyStoreMock.loadStickerPacks.mockResolvedValue(true);
+    component.retryLoad();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(economyStoreMock.loadStickerPacks).toHaveBeenCalledTimes(2);
+    expect(component.loadFailed()).toBe(false);
   });
 });
