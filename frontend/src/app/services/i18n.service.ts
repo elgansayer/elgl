@@ -1676,6 +1676,13 @@ export class I18nService {
     'wordModal.saveLearningBtn': '🟡 Save to learning',
     'wordModal.markKnownBtn': '⚪ Mark known',
     'wordModal.resetBtn': 'Reset to new (Level 0 / Blue)',
+    'wordModal.srsLabel': 'Spaced repetition status',
+    'wordModal.closeAriaLabel': 'Close word definition',
+    'wordModal.loading': 'Looking up definition...',
+    'wordModal.playAudio': 'Play pronunciation',
+    'wordModal.learningBtn': 'Learning',
+    'wordModal.knownBtn': 'Known',
+    'wordModal.reviewFlashcardsBtn': 'Review flashcards',
 
     // Voice Recorder
     'voiceRecorder.title': '🎙️ Voice Note Recorder',

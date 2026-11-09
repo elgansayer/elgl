@@ -472,4 +472,18 @@ describe('I18nService', () => {
       expect(text.trim().length).toBeGreaterThan(0);
     });
   });
+
+  describe('word definition modal copy', () => {
+    it.each([
+      ['wordModal.srsLabel', 'Spaced repetition status'],
+      ['wordModal.closeAriaLabel', 'Close word definition'],
+      ['wordModal.loading', 'Looking up definition...'],
+      ['wordModal.playAudio', 'Play pronunciation'],
+      ['wordModal.learningBtn', 'Learning'],
+      ['wordModal.knownBtn', 'Known'],
+      ['wordModal.reviewFlashcardsBtn', 'Review flashcards'],
+    ])('resolves %s from the base dictionary instead of echoing the key', (key, expected) => {
+      expect(service.translate(key)).toBe(expected);
+    });
+  });
 });
