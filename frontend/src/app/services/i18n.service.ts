@@ -2576,6 +2576,7 @@ export class I18nService {
     'settings.off': 'Off',
     'settings.fontScale': 'Text size',
     'settings.fontSize': 'Font size',
+    'settings.textSize': 'Text size',
     'settings.themeLabel': 'Theme',
     'settings.themeDescription': 'Choose between light, dark, or follow your system settings',
     'settings.compactMode': 'Compact mode',
