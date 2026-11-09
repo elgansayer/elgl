@@ -627,8 +627,9 @@ export class ChatService {
       await this.sendAwayReplyIfNeeded(senderId, dto.room_id, receiverId);
     }
 
-    // Set initial delivery status to 'sent' and mark as delivered for receiver
-    void this.readReceiptsService?.setInitialSent(savedMessage.id);
+    // The inserted row already starts as 'sent'; record the receiver's
+    // per-recipient delivery receipt without overwriting a status it may
+    // have already advanced.
     if (receiverId) {
       void this.readReceiptsService?.markAsDelivered(
         savedMessage.id,
@@ -1822,19 +1823,12 @@ export class ChatService {
 
     const { data: message, error: fetchError } = await supabase
       .from('chat_messages')
-      .select('id, room_id, delivery_status')
+      .select('id, room_id, sender_id, delivery_status')
       .eq('id', messageId)
       .single();
 
     if (fetchError || !message) {
       throw new NotFoundException('Message not found');
-    }
-
-    // Only allow upgrading status (sent -> delivered -> read)
-    const order: Record<string, number> = { sent: 0, delivered: 1, read: 2 };
-    const current = message.delivery_status ?? 'sent';
-    if (order[status] <= order[current]) {
-      return;
     }
 
     // Verify user is a member of the room
@@ -1847,6 +1841,24 @@ export class ChatService {
 
     if (!membership) {
       throw new ForbiddenException('Not a member of this room');
+    }
+
+    // Prefer per-recipient receipts so group chats can report who has read.
+    if (this.readReceiptsService) {
+      await this.readReceiptsService.updateMessageStatus(
+        messageId,
+        message.room_id,
+        userId,
+        status,
+      );
+      return;
+    }
+
+    // Only allow upgrading status (sent -> delivered -> read)
+    const order: Record<string, number> = { sent: 0, delivered: 1, read: 2 };
+    const current = message.delivery_status ?? 'sent';
+    if (order[status] <= order[current]) {
+      return;
     }
 
     const { error: updateError } = await supabase

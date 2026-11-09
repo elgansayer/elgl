@@ -10,8 +10,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
   template: `
     <div
       class="inline-flex items-center relative"
-      role="status"
+      role="button"
+      tabindex="0"
       [attr.aria-label]="ariaLabel()"
+      [attr.aria-expanded]="showDetail()"
+      aria-haspopup="true"
       (mouseenter)="showDetail.set(true)"
       (mouseleave)="showDetail.set(false)"
       (click)="toggleDetail()"
@@ -153,7 +156,7 @@ export class ReadReceiptComponent {
 
   hasGroupInfo(): boolean {
     const data = this.receiptData();
-    return data !== null && data.totalMembers > 2 && data.readBy.length > 0;
+    return data !== null && data.totalMembers > 1 && data.readBy.length > 0;
   }
 
   ariaLabel(): string {

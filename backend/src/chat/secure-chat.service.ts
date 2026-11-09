@@ -227,7 +227,6 @@ export class SecureChatService extends ChatService {
         receiverId,
       );
     }
-    void this.secureReadReceipts?.setInitialSent(message.id);
     this.secureEvents.emit('message.sent', { userId: senderId });
 
     if (dto.message_type === 'text' && dto.text_content) {
