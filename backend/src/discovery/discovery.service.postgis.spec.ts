@@ -324,6 +324,46 @@ describe('DiscoveryService PostGIS partner queries', () => {
     ]);
   });
 
+  it('executes Nearby PostGIS proximity search with custom distance slider radius for VIP users', async () => {
+    rpc.mockResolvedValue({
+      data: [makeRpcUser('vip-nearby-1', 72000)],
+      error: null,
+    } satisfies QueryResult);
+
+    const result = await service.searchPartners(
+      'vip-caller',
+      { is_vip: true } as UserProfile,
+      {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        radius_metres: 75000,
+        sort: 'nearest',
+        gender: 'female',
+      },
+    );
+
+    expect(rpc).toHaveBeenCalledWith('search_nearby_users', {
+      search_lat: 51.5074,
+      search_lon: -0.1278,
+      radius_m: 75000,
+      exclude_user_id: 'vip-caller',
+      filter_native_arr: null,
+      filter_target: null,
+      serious_only: false,
+      filter_level: null,
+      filter_gender: 'female',
+      filter_age_min: null,
+      filter_age_max: null,
+      filter_audio_intro: false,
+    });
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'vip-nearby-1',
+        distance_metres: 72000,
+      }),
+    ]);
+  });
+
   it('preserves an empty successful PostGIS result without returning users outside the radius', async () => {
     rpc.mockResolvedValue({ data: [], error: null } satisfies QueryResult);
     queryBuilder.limit.mockResolvedValue({

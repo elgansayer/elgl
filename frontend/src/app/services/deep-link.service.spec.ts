@@ -127,6 +127,24 @@ describe('DeepLinkService', () => {
       expect(service.handleDeepLink('hellotalk://chat')).toBe(false);
       expect(service.handleDeepLink('hellotalk://chat/')).toBe(false);
     });
+
+    it('returns false without throwing for malformed URI encoding', () => {
+      expect(() => service.handleDeepLink('hellotalk://profile/123?ref=%')).not.toThrow();
+      expect(service.handleDeepLink('hellotalk://profile/123?ref=%')).toBe(false);
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('rejects path traversal and multi-segment ids', () => {
+      expect(service.handleDeepLink('hellotalk://profile/../admin')).toBe(false);
+      expect(service.handleDeepLink('hellotalk://profile/user/extra')).toBe(false);
+      expect(service.handleDeepLink('hellotalk://chat/..\\admin')).toBe(false);
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('drops URL fragments before resolving the internal path', () => {
+      expect(service.handleDeepLink('hellotalk://profile/user-abc#section')).toBe(true);
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/profile/user-abc');
+    });
   });
 
   describe('toInternalPath', () => {

@@ -40,7 +40,7 @@ for (const file of workflowFiles) {
     ((commitsWithGit && pushesWithGit) || mutatesGitRefsWithGhApi)
   ) {
     violations.push(
-      `${file}: GitHub Actions must not commit/push application repository code; route code changes through the VPS OpenHands Factory and pull requests`,
+      `${file}: GitHub Actions must not commit/push application repository code; route code changes through pull requests`,
     );
   }
 

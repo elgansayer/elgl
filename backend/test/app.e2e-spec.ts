@@ -98,6 +98,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
     process.env.GOOGLE_PUBSUB_AUDIENCE = 'https://pubsub.googleapis.com/test';
     process.env.GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL = 'test@example.com';
     process.env.LLM_API_KEY = 'test-llm-key';
+    process.env.MINIMUM_SUPPORTED_APP_VERSION = '2.4.1';
     ({ AppModule } = await import('./../src/app.module'));
   });
 
@@ -289,6 +290,26 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .get('/')
         .expect(200)
         .expect('Hey there!');
+    });
+
+    it('/version/minimum (GET) - should publish the configured minimum supported app version without a session or caching', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/version/minimum')
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
+        .expect('Cache-Control', 'no-store');
+
+      expect(response.body).toEqual({ minimumSupported: '2.4.1' });
+    });
+
+    it('/version (GET) - should expose the same minimum supported app version the Angular shell enforces', async () => {
+      const [full, minimum] = await Promise.all([
+        request(app.getHttpServer()).get('/version').expect(200),
+        request(app.getHttpServer()).get('/version/minimum').expect(200),
+      ]);
+
+      expect(full.body.minimumSupported).toBe('2.4.1');
+      expect(full.body.minimumSupported).toBe(minimum.body.minimumSupported);
     });
 
     it('/nlp/detect-language (POST) - should detect language accurately', () => {
@@ -640,6 +661,63 @@ describe('HelloTalk API E2E Integration Suite', () => {
           expect(res.body.pricing_info).toContain('20 UKP / $26 USD per month');
           expect(res.body.pricing_info).toContain('8 UKP / $10 USD per month');
         });
+    });
+
+    it('/monetisation/analytics (GET) - should accept a Developer API key', () => {
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({
+          data: { id: 'e2e-user-1', is_vip: true, vip_tier: 'developer' },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { study_streak_days: 10, correction_ratio: 0.9 },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'e2e-user-1',
+            is_vip: true,
+            vip_tier: 'developer',
+            developer_api_key: 'ht_dev_0123...cdef',
+          },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            user_id: 'e2e-user-1',
+            total_api_calls_today: 42,
+            avg_latency_ms: 18,
+            updated_at: new Date().toISOString(),
+          },
+          error: null,
+        });
+
+      return request(app.getHttpServer())
+        .get('/monetisation/analytics')
+        .set('X-API-Key', 'ht_dev_0123456789abcdef0123456789abcdef')
+        .expect(200)
+        .expect((res) => {
+          expect(mockRedisClient.incr).toHaveBeenCalled();
+          expect(res.body.tier).toBe('developer');
+          expect(res.body.total_api_calls_today).toBe(42);
+        });
+    });
+
+    it('/monetisation/api-key (DELETE) - should revoke the active API key', () => {
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({
+          data: { study_streak_days: 10, correction_ratio: 0.9 },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { id: 'e2e-user-1', is_vip: true, vip_tier: 'developer' },
+          error: null,
+        });
+
+      return request(app.getHttpServer())
+        .delete('/monetisation/api-key')
+        .expect(200)
+        .expect({ revoked: true, api_key: null });
     });
   });
 

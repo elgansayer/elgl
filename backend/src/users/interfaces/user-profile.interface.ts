@@ -88,7 +88,9 @@ export interface UserProfile {
   auto_download_wifi_only?: boolean;
   auto_download_preference?: 'wifi' | 'cellular';
   silence_unknown_callers?: boolean;
-  corrector_score?: number;
+  corrector_score?: number | null;
+  corrector_rating_count?: number;
+  corrector_score_unavailable?: boolean;
   xp_total?: number;
   greeting_message?: string;
   away_message?: string;
