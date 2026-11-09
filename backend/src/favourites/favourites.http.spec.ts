@@ -16,6 +16,7 @@ import { CentrifugoService } from '../chat/centrifugo.service';
 import { ConversationStarterService } from '../chat/conversation-starter.service';
 import { TranslationService } from '../chat/translation.service';
 import { PersonalChatEncryptionService } from '../chat/personal-chat-encryption.service';
+import { ReadReceiptsService } from '../chat/read-receipts.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { FavouritesController } from './favourites.controller';
 import { FavouritesService } from './favourites.service';
@@ -75,6 +76,7 @@ describe('favourites routes over HTTP', () => {
         FavouritesService,
         { provide: SupabaseService, useValue: supabaseService },
         { provide: ChatService, useValue: {} },
+        { provide: ReadReceiptsService, useValue: {} },
         { provide: CentrifugoService, useValue: {} },
         { provide: ConversationStarterService, useValue: {} },
         { provide: TranslationService, useValue: {} },
