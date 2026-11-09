@@ -10,6 +10,7 @@ import { TranslatePipe } from '../services/translate.pipe';
 import { TokenisedTextComponent } from '../components/tokenised-text/tokenised-text.component';
 import { WordDefinitionModalComponent } from '../components/word-definition-modal/word-definition-modal.component';
 import { UserService } from '../services/user.service';
+import { I18nService } from '../services/i18n.service';
 
 const EMPTY_SCENARIO_LIST: Scenario[] = [];
 
@@ -166,6 +167,7 @@ interface ChatMessage {
 export class AiConversationComponent implements OnInit {
   private aiService = inject(AiConversationService);
   private userService = inject(UserService);
+  private i18n = inject(I18nService);
 
   readonly scenarioList = toSignal(from(this.aiService.getScenarios()), {
     initialValue: EMPTY_SCENARIO_LIST,
@@ -224,7 +226,7 @@ export class AiConversationComponent implements OnInit {
         ...msgs,
         {
           from: 'ai',
-          text: 'Sorry, I am having trouble responding. Please try again.',
+          text: this.i18n.translate('aiConversation.errorReply'),
         },
       ]);
     } finally {

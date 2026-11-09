@@ -1950,7 +1950,22 @@ export class I18nService {
     'chat.translate': 'Translate',
     'chat.hideTranslation': 'Hide translation',
     'chat.translating': 'Translating...',
+    'aiPartner.title': 'AI Conversation Partner',
+    'aiPartner.start': '🤖 AI partner',
+    'aiPartner.exit': 'Exit AI partner',
+    'aiPartner.freeConversation': 'Free conversation',
+    'aiPartner.typing': 'Writing...',
+    'aiPartner.send': 'Send',
+    'aiPartner.error': 'Sorry, I am having trouble responding. Please try again.',
     'aiPartner.messageInput': 'Message to your AI conversation partner',
+    'aiConversation.chooseScenario': 'Choose a role-play scenario',
+    'aiConversation.chooseScenarioDesc':
+      'Practise real-life conversations with an AI partner. Pick a scenario to get started.',
+    'aiConversation.typeMessage': 'Type your message...',
+    'aiConversation.send': 'Send',
+    'aiConversation.typing': 'Writing...',
+    'aiConversation.backToScenarios': 'Back to scenarios',
+    'aiConversation.errorReply': 'Sorry, I am having trouble responding. Please try again.',
 
     // Chat System Messages (real-time bubbles published over Centrifugo)
     'system.profileUpdated': '{{name}} updated their profile.',

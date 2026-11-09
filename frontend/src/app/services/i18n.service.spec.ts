@@ -112,6 +112,30 @@ describe('I18nService', () => {
       expect(translation).toBe('HelloTalk');
     });
 
+    it('should resolve every role-play scenario and AI partner key instead of leaking the raw key', () => {
+      const keys = [
+        'aiConversation.chooseScenario',
+        'aiConversation.chooseScenarioDesc',
+        'aiConversation.typeMessage',
+        'aiConversation.send',
+        'aiConversation.typing',
+        'aiConversation.backToScenarios',
+        'aiConversation.errorReply',
+        'aiPartner.title',
+        'aiPartner.start',
+        'aiPartner.exit',
+        'aiPartner.freeConversation',
+        'aiPartner.typing',
+        'aiPartner.send',
+        'aiPartner.error',
+        'aiPartner.messageInput',
+      ];
+
+      for (const key of keys) {
+        expect(service.translate(key)).not.toBe(key);
+      }
+    });
+
     it('should interpolate parameters in the translation string', () => {
       const translation = service.translate('common.coinsBalance', { coins: 100 });
       expect(translation).toBe('100 Coins');
