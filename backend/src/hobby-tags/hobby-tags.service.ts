@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -26,6 +21,10 @@ export interface VocabularyResultItem {
   difficulty: string;
   context_sentence?: string;
   hobby_tag: { icon: string; name: string };
+}
+
+interface TranslationResponse {
+  translations: Array<{ text: string }>;
 }
 
 const TAG_BASE_VOCABULARY: Record<string, BaseVocabularyItem[]> = {
@@ -104,6 +103,27 @@ function isTargetVocabularyItem(value: unknown): value is TargetVocabularyItem {
   );
 }
 
+function isTranslationResponse(value: unknown): value is TranslationResponse {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('translations' in value)
+  ) {
+    return false;
+  }
+  const translations = value.translations;
+  return (
+    Array.isArray(translations) &&
+    translations.every(
+      (translation: unknown) =>
+        typeof translation === 'object' &&
+        translation !== null &&
+        'text' in translation &&
+        typeof translation.text === 'string',
+    )
+  );
+}
+
 @Injectable()
 export class HobbyTagsService {
   private readonly logger = new Logger(HobbyTagsService.name);
@@ -117,12 +137,19 @@ export class HobbyTagsService {
     return TAG_BASE_VOCABULARY[tagName] || [];
   }
 
-  async getAllTags(): Promise<any[]> {
+  async getAllTags(category?: string, limit = 100): Promise<unknown[]> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from('hobby_tags')
       .select('*')
-      .order('name', { ascending: true });
+      .order('name', { ascending: true })
+      .limit(limit);
+
+    if (category) {
+      query = query.eq('category', category);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data || [];
@@ -132,7 +159,7 @@ export class HobbyTagsService {
     name: string,
     category: string,
     icon: string = '✨',
-  ): Promise<any> {
+  ): Promise<unknown> {
     const formattedName = name
       .trim()
       .split(/\s+/)
@@ -158,7 +185,7 @@ export class HobbyTagsService {
     return insertResponse.data;
   }
 
-  async getUserTags(userId: string): Promise<any[]> {
+  async getUserTags(userId: string): Promise<unknown[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('user_hobby_tags')
@@ -178,7 +205,7 @@ export class HobbyTagsService {
     userId: string,
     hobbyTagId: string,
     proficiencyLevel?: number,
-  ): Promise<any> {
+  ): Promise<unknown> {
     const supabase = this.supabaseService.getClient();
 
     const { data: tag, error: tagError } = await supabase
@@ -193,13 +220,18 @@ export class HobbyTagsService {
 
     const { data: existing } = await supabase
       .from('user_hobby_tags')
-      .select('id')
+      .select(
+        `
+        *,
+        hobby_tag:hobby_tags(*)
+      `,
+      )
       .eq('user_id', userId)
       .eq('hobby_tag_id', hobbyTagId)
       .single();
 
     if (existing) {
-      throw new ConflictException('Hobby tag already added');
+      return existing;
     }
 
     const insertResponse = await supabase
@@ -216,6 +248,24 @@ export class HobbyTagsService {
       `,
       )
       .single();
+
+    if (insertResponse.error?.code === '23505') {
+      const retryResponse = await supabase
+        .from('user_hobby_tags')
+        .select(
+          `
+          *,
+          hobby_tag:hobby_tags(*)
+        `,
+        )
+        .eq('user_id', userId)
+        .eq('hobby_tag_id', hobbyTagId)
+        .single();
+
+      if (!retryResponse.error && retryResponse.data) {
+        return retryResponse.data;
+      }
+    }
 
     if (insertResponse.error) throw insertResponse.error;
     return insertResponse.data;
@@ -236,7 +286,7 @@ export class HobbyTagsService {
     userId: string,
     hobbyTagId: string,
     proficiencyLevel: number,
-  ): Promise<any> {
+  ): Promise<unknown> {
     const supabase = this.supabaseService.getClient();
     const updateResponse = await supabase
       .from('user_hobby_tags')
@@ -292,15 +342,16 @@ export class HobbyTagsService {
         return translations;
       }
 
-      const json = (await res.json()) as {
-        translations: Array<{ text: string; detected_source_language: string }>;
-      };
+      const json: unknown = await res.json();
 
-      if (json.translations) {
-        json.translations.forEach((t, i) => {
-          translations.set(sourceWords[i], t.text);
-        });
+      if (!isTranslationResponse(json)) {
+        this.logger.warn('DeepL translation returned an invalid response');
+        return translations;
       }
+
+      json.translations.forEach((translation, index) => {
+        translations.set(sourceWords[index], translation.text);
+      });
     } catch (err) {
       this.logger.warn(`DeepL translation error: ${err}`);
     }
@@ -379,6 +430,10 @@ export class HobbyTagsService {
 
     if (tagsNeedingTranslation.length > 0) {
       const wordToTagMap = new Map<string, string[]>();
+      const cacheUpdates: Array<{
+        hobbyTagId: string;
+        vocabulary: TargetVocabularyItem[];
+      }> = [];
 
       for (const tnt of tagsNeedingTranslation) {
         const baseVocab = this.getBaseVocabulary(tnt.tagName);
@@ -404,12 +459,15 @@ export class HobbyTagsService {
         const newVocabItems: TargetVocabularyItem[] = [];
 
         for (const bv of baseVocab) {
-          const translation = translations.get(bv.word) || bv.word;
-          newVocabItems.push({
-            word: bv.word,
-            translation,
-            language,
-          });
+          const providerTranslation = translations.get(bv.word);
+          const translation = providerTranslation ?? bv.word;
+          if (providerTranslation) {
+            newVocabItems.push({
+              word: bv.word,
+              translation: providerTranslation,
+              language,
+            });
+          }
 
           results.push({
             id: `${tnt.userHobbyTagId}-${bv.word}`,
@@ -425,23 +483,30 @@ export class HobbyTagsService {
           });
         }
 
-        const updatedVocab = [...tnt.existingVocab, ...newVocabItems];
+        if (newVocabItems.length === 0) continue;
 
-        setImmediate(() => {
-          void (async () => {
-            try {
-              await supabase
-                .from('hobby_tags')
-                .update({ target_vocabulary: updatedVocab })
-                .eq('id', tnt.hobbyTagId);
-            } catch (err) {
-              this.logger.warn(
-                `Failed to cache vocabulary for tag ${tnt.tagName}: ${err}`,
-              );
-            }
-          })();
+        const updatedVocab = [...tnt.existingVocab, ...newVocabItems];
+        cacheUpdates.push({
+          hobbyTagId: tnt.hobbyTagId,
+          vocabulary: updatedVocab,
         });
       }
+
+      await Promise.all(
+        cacheUpdates.map(async ({ hobbyTagId, vocabulary }) => {
+          try {
+            const { error: cacheError } = await supabase
+              .from('hobby_tags')
+              .update({ target_vocabulary: vocabulary })
+              .eq('id', hobbyTagId);
+            if (cacheError) {
+              this.logger.warn('Failed to cache translated hobby vocabulary');
+            }
+          } catch {
+            this.logger.warn('Failed to cache translated hobby vocabulary');
+          }
+        }),
+      );
     }
 
     return results;
