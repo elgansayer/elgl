@@ -114,7 +114,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 hlmBtn
                 type="button"
                 variant="ghost"
-                size="sm"
+                size="touch"
                 class="rounded-full p-0"
                 [disabled]="isMutating()"
                 [attr.aria-pressed]="selectedTagForProficiency() === userTag.hobby_tag_id"
@@ -177,7 +177,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                   hlmBtn
                   type="button"
                   variant="ghost"
-                  size="sm"
+                  size="touch"
                   role="radio"
                   [disabled]="isMutating()"
                   (click)="updateProficiency(selectedTagId, level)"

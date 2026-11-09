@@ -171,4 +171,20 @@ describe('HobbyTagsComponent', () => {
 
     expect(fixture.nativeElement.querySelector('[role="radiogroup"]')).not.toBeNull();
   });
+
+  it('uses touch-sized controls for editing tags and proficiency', async () => {
+    hobbyTagsService.getMyTags.mockResolvedValue([userTag]);
+    await render();
+
+    const edit = fixture.nativeElement.querySelector(
+      '[aria-label="hobby.editProficiencyLabel:Cooking"]',
+    );
+    edit?.click();
+    fixture.detectChanges();
+
+    expect(edit?.getAttribute('size')).toBe('touch');
+    expect(fixture.nativeElement.querySelector('[role="radio"]')?.getAttribute('size')).toBe(
+      'touch',
+    );
+  });
 });
