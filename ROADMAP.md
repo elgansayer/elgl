@@ -25,15 +25,15 @@ This roadmap records the implementation state visible in the repository. It is i
 - Mobile subscription webhooks are now single-path: one verified Apple App Store handler at
   `monetisation/webhooks/apple` and one verified Google Play Pub/Sub handler at
   `monetisation/webhooks/google`, both refusing unknown product identifiers.
-- Three defect classes remain open and are tracked below: the production Angular bundle is compiled from the
-  mock environment file, live NestJS code queries tables that no replayed migration creates, and several
-  implementations exist that no module registers and no route serves.
+- Production Angular builds now use deployment-provided runtime configuration. The container validates and
+  renders the public Supabase, Centrifugo and LiveKit settings before serving the browser bundle.
+- Two defect classes remain open and are tracked below: live NestJS code queries tables that no replayed
+  migration creates, and several implementations exist that no module registers and no route serves.
 
 ## Next priorities
 
 | Priority | Work                                                             | Completion signal                                                                                                                                                       |
 | -------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P0       | Ship a real production environment to the Angular bundle        | The production configuration replaces the mock environment file, no build output contains `mock.supabase.co` or `127.0.0.1:3000`, and the container resolves the API and realtime origins at deploy time. |
 | P0       | Mount and contract-align the notification preferences API        | `NotificationPreferencesModule` is registered, `GET` and `PUT /api/notification-preferences` respond, and the Angular client and backend agree on one preference shape.                |
 | P0       | Create every table that live NestJS code queries                | A clean replay of `supabase/migrations` plus the compatibility shims yields a schema containing `user_push_tokens`, `xp_events`, `corrector_ratings`, `communities`, `groups`, `group_members`, `group_announcements`, `group_resources`, `interests`, `language_islands`, `language_island_members`, `resource_library`, `status_views`, `translations`, `user_statistics`, `escrow_crash_reports` and `reading_engine_crash_reports`. |
 | P0       | Collapse the two mounted Stripe subscription webhooks            | Exactly one Stripe webhook route is mounted, and every provider event that mutates VIP state is signature-verified and idempotent.                                         |

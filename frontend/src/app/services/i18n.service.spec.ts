@@ -200,6 +200,14 @@ describe('I18nService', () => {
     expect(service.translate('profile.proficiencyUnset')).toBe('Not set');
   });
 
+  it('should expose the dynamic font size labels', () => {
+    expect(service.translate('settings.fontSize')).toBe('Font size');
+    expect(service.translate('settings.textSize')).toBe('Text size');
+    expect(service.translate('settings.textSizeSmall')).toBe('Small');
+    expect(service.translate('settings.textSizeMedium')).toBe('Medium');
+    expect(service.translate('settings.textSizeLarge')).toBe('Large');
+  });
+
   it('should translate the audio intro feed empty state from the base dictionary', () => {
     expect(service.translate('discovery.audioIntroFeed.title')).toBe('Audio introductions');
     expect(
@@ -386,6 +394,14 @@ describe('I18nService', () => {
     function entriesUnder(prefix: string): [string, string][] {
       return Object.entries(service.translations()).filter(([key]) => key.startsWith(prefix));
     }
+
+    it('provides localised hobby failure and interaction labels', () => {
+      expect(service.translate('hobby.loadError')).not.toBe('hobby.loadError');
+      expect(service.translate('hobby.actionError')).not.toBe('hobby.actionError');
+      expect(service.translate('hobby.editProficiencyLabel', { name: 'Cooking' })).toContain(
+        'Cooking',
+      );
+    });
 
     it('stores the classrooms title as an emoji character rather than HTML entities', () => {
       const title = service.translate('classroomsMarketplace.title');
