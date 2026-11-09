@@ -98,7 +98,6 @@
     "cypress": "^16.2.1",
     "eslint": "10.14.0",
     "eslint-formatter-compact": "^9.0.1",
-    "fake-indexeddb": "^6.2.7",
     "jsdom": "^28.1.0",
     "listr2": "10.2.1",
     "postcss": "^8.5.32",

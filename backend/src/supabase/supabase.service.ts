@@ -1219,6 +1219,44 @@ export interface Database {
           },
         ];
       };
+      message_receipts: {
+        Row: {
+          id: string;
+          message_id: string;
+          user_id: string;
+          status: string;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          user_id: string;
+          status: string;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: string;
+          read_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'message_receipts_message_id_fkey';
+            columns: ['message_id'];
+            isOneToOne: false;
+            referencedRelation: 'chat_messages';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'message_receipts_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       notification_preferences: {
         Row: {
           user_id: string;
