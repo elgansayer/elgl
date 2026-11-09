@@ -17,6 +17,10 @@ const runtimeTemplate = readFileSync(
   resolve(frontendRoot, 'runtime-config.js.template'),
   'utf8',
 );
+const containerWorkflow = readFileSync(
+  resolve(frontendRoot, '../.github/workflows/frontend-container-ci.yml'),
+  'utf8',
+);
 
 describe('production runtime configuration', () => {
   it('replaces the development environment in production builds', () => {
@@ -45,6 +49,14 @@ describe('production runtime configuration', () => {
     expect(entrypoint).toContain('PUBLIC_SUPABASE_URL');
     expect(entrypoint).toContain('PUBLIC_CENTRIFUGO_URL');
     expect(entrypoint).toContain('PUBLIC_LIVEKIT_URL');
+  });
+
+  it('provides runtime configuration when CI starts the production container', () => {
+    expect(containerWorkflow).toContain('-e PUBLIC_SUPABASE_URL=');
+    expect(containerWorkflow).toContain('-e PUBLIC_SUPABASE_ANON_KEY=');
+    expect(containerWorkflow).toContain('-e PUBLIC_CENTRIFUGO_URL=');
+    expect(containerWorkflow).toContain('-e PUBLIC_LIVEKIT_URL=');
+    expect(containerWorkflow).toContain('docker run --rm --entrypoint sh');
   });
 
   it('never renders persistent TURN credentials into the browser bundle', () => {
