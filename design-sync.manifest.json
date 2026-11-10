@@ -607,13 +607,15 @@
         "frontend/src/app/components/study-streak-counter",
         "frontend/src/app/components/study-streak-widget",
         "frontend/src/app/components/celebration-overlay",
-        "frontend/src/app/components/language-challenges"
+        "frontend/src/app/components/language-challenges",
+        "frontend/src/app/components/ipa-alphabet",
+        "frontend/src/app/components/verb-conjugation-trainer"
       ],
       "previewPaths": ["frontend/design-preview/features/learning.html"],
       "claudeDesignPath": "features/learning.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1792-flashcard-review-interactions (in-flight save disabling, accessibility attributes, and audio lifecycle cleanup preserve the existing review layout; the visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1792-flashcard-review-interactions (in-flight save disabling, accessibility attributes, and audio lifecycle cleanup preserve the existing review layout; the visual contract is unchanged); issue-2035-verb-conjugation-ipa-alphabet (adds the verb conjugation trainer and IPA alphabet practice specimens)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",

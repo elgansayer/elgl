@@ -112,6 +112,22 @@ export const learningRoutes: Routes = [
       import('../ai-conversation/ai-conversation.component').then((m) => m.AiConversationComponent),
     title: 'AI Conversation - HelloTalk',
   },
+  {
+    path: 'learn/verb-conjugation',
+    loadComponent: () =>
+      import('../components/verb-conjugation-trainer/verb-conjugation-trainer.component').then(
+        (m) => m.VerbConjugationTrainerComponent,
+      ),
+    title: 'Verb Conjugation Trainer - HelloTalk',
+  },
+  {
+    path: 'learn/ipa-alphabet',
+    loadComponent: () =>
+      import('../components/ipa-alphabet/ipa-alphabet.component').then(
+        (m) => m.IpaAlphabetComponent,
+      ),
+    title: 'IPA Alphabet - HelloTalk',
+  },
 
   { path: 'vocabulary', redirectTo: 'learn/vocabulary', pathMatch: 'full' },
   { path: 'decks', redirectTo: 'learn/vocabulary/decks', pathMatch: 'full' },
@@ -128,4 +144,6 @@ export const learningRoutes: Routes = [
   { path: 'study-streak', redirectTo: 'learn/study-streak', pathMatch: 'full' },
   { path: 'study-buddy', redirectTo: 'learn/study-buddy', pathMatch: 'full' },
   { path: 'ai-conversation', redirectTo: 'learn/ai-chat', pathMatch: 'full' },
+  { path: 'verb-conjugation', redirectTo: 'learn/verb-conjugation', pathMatch: 'full' },
+  { path: 'ipa-alphabet', redirectTo: 'learn/ipa-alphabet', pathMatch: 'full' },
 ];

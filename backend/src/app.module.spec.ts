@@ -60,6 +60,7 @@ const EXPECTED_MODULE_NAMES = [
   'ResourceLibraryModule',
   'ModerationModule',
   'WordOfTheDayModule',
+  'LearningPracticeModule',
   'SpamDetectionModule',
   'UserStatisticsModule',
   'MetricsModule',
