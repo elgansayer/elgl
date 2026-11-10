@@ -1,7 +1,7 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
     <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
-      <span class="text-xl">←</span>
+      <span class="inline-block text-xl rtl:rotate-180" aria-hidden="true">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.appearanceSection' | t }}</h1>
     <div class="w-10"></div>
@@ -13,10 +13,22 @@
     } @else {
       @if (errorMessage()) {
         <div
-          class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger-ink"
+          class="flex flex-wrap items-center justify-between gap-3 rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger-ink"
           role="alert"
         >
-          {{ errorMessage() }}
+          <span class="min-w-0 flex-1 break-words">{{ errorMessage() | t }}</span>
+          @if (loadFailed()) {
+            <button
+              hlmBtn
+              variant="outline"
+              size="touch"
+              type="button"
+              id="appearance-retry"
+              (click)="retryLoad()"
+            >
+              {{ 'common.retry' | t }}
+            </button>
+          }
         </div>
       }
       @if (successMessage()) {
@@ -80,13 +92,16 @@
           id="appearance-text-size-heading"
           class="text-sm font-bold uppercase text-text-secondary tracking-wider"
         >
-          {{ 'settings.fontSize' | t }}
+          {{ 'settings.appTextSize' | t }}
         </h2>
         <div class="rounded-2xl bg-surface-100 border border-surface-200 shadow-sm p-4">
+          <p class="text-xs text-text-secondary mb-4">
+            {{ 'settings.appTextSizeDescription' | t }}
+          </p>
           <div
             class="flex flex-wrap gap-2"
             role="group"
-            [attr.aria-label]="'settings.fontSize' | t"
+            [attr.aria-label]="'settings.appTextSize' | t"
           >
             @for (opt of textSizeOptions; track opt) {
               <button
@@ -124,13 +139,16 @@
           id="appearance-chat-size-heading"
           class="text-sm font-bold uppercase text-text-secondary tracking-wider"
         >
-          {{ 'chat_settings.title' | t }} · {{ 'settings.textSize' | t }}
+          {{ 'settings.chatTextSize' | t }}
         </h2>
         <div class="rounded-2xl bg-surface-100 border border-surface-200 shadow-sm p-4">
+          <p class="text-xs text-text-secondary mb-4">
+            {{ 'settings.chatTextSizeDescription' | t }}
+          </p>
           <div
             class="flex flex-wrap gap-2"
             role="group"
-            [attr.aria-label]="('chat_settings.title' | t) + ' · ' + ('settings.textSize' | t)"
+            [attr.aria-label]="'settings.chatTextSize' | t"
           >
             @for (opt of chatTextSizeOptions; track opt) {
               <button
@@ -138,6 +156,7 @@
                 size="touch"
                 type="button"
                 (click)="setChatTextSize(opt)"
+                [disabled]="!chatSettingsAvailable()"
                 class="min-h-11 min-w-24 flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors"
                 [class.border-primary]="currentChatTextSize() === opt"
                 [class.bg-primary]="currentChatTextSize() === opt"
@@ -157,6 +176,19 @@
               </button>
             }
           </div>
+          <!-- Decorative sample: it follows the same CSS variable as the chat bubbles. -->
+          <div
+            id="appearance-chat-preview"
+            class="mt-4 rounded-xl bg-surface-200 p-3"
+            aria-hidden="true"
+          >
+            <p class="text-xs text-text-secondary">{{ 'settings.chatTextSizePreview' | t }}</p>
+            <p
+              class="mt-2 inline-block max-w-full break-words rounded-2xl bg-surface-100 px-3 py-2 text-text-primary text-[length:var(--chat-message-font-size,0.875rem)]"
+            >
+              {{ 'settings.chatTextSizePreviewMessage' | t }}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -175,34 +207,36 @@
               }}</span>
               <span class="text-xs text-text-secondary">{{ 'settings.accentColorDesc' | t }}</span>
             </div>
-            @if (!isVip()) {
+            @if (profileAvailable() && !isVip()) {
               <span class="text-xs font-bold text-vip bg-vip/10 px-2 py-1 rounded-md">{{
                 'settings.vipRequired' | t
               }}</span>
             }
           </div>
           <div class="flex gap-3 flex-wrap">
-            @for (color of availableColors; track color) {
+            @for (option of accentOptions; track option.value) {
               <button
                 hlmBtn
                 size="touch"
                 type="button"
-                (click)="setAccentColor(color)"
-                [disabled]="!isVip()"
-                [style.backgroundColor]="color"
+                (click)="setAccentColor(option.value)"
+                [disabled]="!accentEditingEnabled()"
+                [style.backgroundColor]="option.value"
                 class="w-11 h-11 rounded-full border-2 transition-transform"
-                [class.border-white]="primaryAccentColor() === color"
-                [class.border-transparent]="primaryAccentColor() !== color"
-                [class.scale-110]="primaryAccentColor() === color"
-                [class.opacity-50]="!isVip()"
-                [class.cursor-not-allowed]="!isVip()"
-                [attr.aria-pressed]="primaryAccentColor() === color"
-                [attr.aria-label]="'Select colour ' + color"
+                [class.border-text-primary]="isAccentSelected(option.value)"
+                [class.border-transparent]="!isAccentSelected(option.value)"
+                [class.scale-110]="isAccentSelected(option.value)"
+                [class.opacity-50]="!accentEditingEnabled()"
+                [class.cursor-not-allowed]="!accentEditingEnabled()"
+                [attr.aria-pressed]="isAccentSelected(option.value)"
+                [attr.aria-label]="
+                  'settings.selectAccentColour' | t: { colour: (option.nameKey | t) }
+                "
               ></button>
             }
           </div>
 
-          @if (isVip()) {
+          @if (accentEditingEnabled()) {
             <div class="pt-3 border-t border-surface-200">
               <label for="customAccentColour" class="text-xs text-text-secondary block mb-2">{{
                 'settings.customColourLabel' | t
@@ -211,22 +245,34 @@
                 <input
                   id="customAccentColour"
                   type="color"
-                  [value]="primaryAccentColor() ?? '#c65230'"
+                  [value]="accentPickerValue()"
                   (input)="onCustomColorChange($event)"
                   class="w-11 h-11 rounded-lg border-2 border-surface-300 cursor-pointer bg-transparent"
                   [attr.aria-label]="'settings.customColourLabel' | t"
                 />
                 <input
                   hlmInput
+                  id="customAccentHex"
                   type="text"
-                  [value]="primaryAccentColor() ?? '#c65230'"
+                  [value]="accentFieldValue()"
                   (input)="onCustomColorChange($event)"
                   maxlength="7"
                   placeholder="#c65230"
                   class="min-w-0 flex-1 bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30 font-mono"
                   [attr.aria-label]="'settings.customColourPlaceholder' | t"
+                  [attr.aria-invalid]="accentInvalid()"
+                  [attr.aria-describedby]="accentInvalid() ? 'appearance-accent-error' : null"
                 />
               </div>
+              @if (accentInvalid()) {
+                <p
+                  id="appearance-accent-error"
+                  class="mt-2 text-xs text-danger-ink"
+                  aria-live="polite"
+                >
+                  {{ 'settings.accentColourInvalid' | t }}
+                </p>
+              }
             </div>
           }
         </div>
@@ -265,7 +311,7 @@
       <div class="pt-4">
         <app-button-primary
           (clicked)="saveSettings()"
-          [disabled]="isSaving()"
+          [disabled]="isSaving() || !serverSettingsAvailable() || accentInvalid()"
           customClass="w-full min-h-11 py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
           [attr.aria-label]="isSaving() ? ('common.loading' | t) : ('settings.saveBtn' | t)"
         >

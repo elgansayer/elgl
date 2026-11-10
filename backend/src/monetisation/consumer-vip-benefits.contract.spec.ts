@@ -25,7 +25,8 @@ describe('consumer VIP API benefit contract (#1363)', () => {
 
   it('keeps daily AI usage capped for free users and unlimited for VIP users', () => {
     expect(nlpService).toContain('if (isVip) return;');
-    expect(nlpService).toContain('currentCount >= 10');
+    expect(nlpService).toContain('const DAILY_AI_USAGE_LIMIT = 10;');
+    expect(nlpService).toContain('if count >= limit then');
     expect(nlpService).toContain('daily_ai_usage:${userId}:${today}');
 
     expect(aiConversationService).toContain('const DAILY_AI_LIMIT_FREE = 10;');

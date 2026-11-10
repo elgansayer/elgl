@@ -175,6 +175,8 @@ export interface ReadReceiptUser {
 }
 
 export interface MessageReceiptStatus {
+  messageId: string;
+  deliveryStatus: 'sent' | 'delivered' | 'read';
   readBy: ReadReceiptUser[];
   totalMembers: number;
 }

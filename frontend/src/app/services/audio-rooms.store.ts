@@ -9,6 +9,7 @@ import {
   RemoteTrack,
   RemoteTrackPublication,
   RemoteVideoTrack,
+  Participant,
   Room,
   RoomEvent,
   Track,
@@ -270,6 +271,7 @@ export class AudioRoomsStore {
         participant: RemoteParticipant,
       ) => void)
     | null = null;
+  private onActiveSpeakersChangedBound: ((speakers: Participant[]) => void) | null = null;
   private isRoomEvent(data: unknown): data is {
     type?: string;
     user_id?: string;
@@ -286,6 +288,7 @@ export class AudioRoomsStore {
     tip?: unknown;
     gift_id?: string;
     previous_co_host_id?: string | null;
+    is_speaking?: boolean;
   } {
     return typeof data === 'object' && data !== null;
   }
@@ -430,9 +433,11 @@ export class AudioRoomsStore {
           this.livekitRoom = new Room();
           this.onTrackSubscribedBound = this.onTrackSubscribed.bind(this);
           this.onTrackUnsubscribedBound = this.onTrackUnsubscribed.bind(this);
+          this.onActiveSpeakersChangedBound = this.onActiveSpeakersChanged.bind(this);
           this.livekitRoom
             .on(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound)
-            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
+            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound)
+            .on(RoomEvent.ActiveSpeakersChanged, this.onActiveSpeakersChangedBound);
           await this.livekitRoom.connect(tokenRes.livekit_url, tokenRes.token);
           this.isConnectedToLiveKit.set(true);
 
@@ -465,6 +470,7 @@ export class AudioRoomsStore {
     // Subscribe to Centrifugo room channel for raise-hands, stage approval, subtitles, and chat
     await this.centrifugeService.connect();
     this.centrifugeService.subscribe(`room_${room.id}`, (data: unknown) => {
+      this.handleCentrifugoMessage(data);
       if (!this.isRoomEvent(data)) return;
       const p = data;
       const pollEvent = parseQuickPollRealtimeEvent(p);
@@ -741,6 +747,34 @@ export class AudioRoomsStore {
         next.delete(participant.identity);
         return next;
       });
+    }
+  }
+
+  updateSpeakerActivity(activeIdentities: string[]): void {
+    const identitiesSet = new Set(activeIdentities);
+    this.stageParticipants.update((participants) =>
+      participants.map((p) => {
+        const suffix = `_${p.user_id.slice(0, 6)}`;
+        const isSpeaking = Array.from(identitiesSet).some(
+          (identity) => identity === p.user_id || identity.endsWith(suffix),
+        );
+        return p.isSpeaking === isSpeaking ? p : { ...p, isSpeaking };
+      }),
+    );
+  }
+
+  private onActiveSpeakersChanged(speakers: Participant[]): void {
+    this.updateSpeakerActivity(speakers.map((s) => s.identity));
+  }
+
+  handleCentrifugoMessage(data: unknown): void {
+    if (!this.isRoomEvent(data)) return;
+    const p = data;
+    if (p.type === 'speaker_speaking' && p.target_user_id) {
+      const isSpeaking = p.is_speaking ?? true;
+      this.stageParticipants.update((list) =>
+        list.map((sp) => (sp.user_id === p.target_user_id ? { ...sp, isSpeaking } : sp)),
+      );
     }
   }
 
@@ -1127,6 +1161,10 @@ export class AudioRoomsStore {
       if (this.onTrackUnsubscribedBound) {
         this.livekitRoom.off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
         this.onTrackUnsubscribedBound = null;
+      }
+      if (this.onActiveSpeakersChangedBound) {
+        this.livekitRoom.off(RoomEvent.ActiveSpeakersChanged, this.onActiveSpeakersChangedBound);
+        this.onActiveSpeakersChangedBound = null;
       }
       this.livekitRoom.disconnect();
       this.livekitRoom = null;

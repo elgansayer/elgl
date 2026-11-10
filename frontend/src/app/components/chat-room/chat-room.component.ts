@@ -33,6 +33,7 @@ import { WordDefinitionModalComponent } from '../word-definition-modal/word-defi
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { StickerPickerComponent } from '../sticker-picker/sticker-picker.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
+import { ReadReceiptComponent } from '../read-receipt/read-receipt.component';
 import { SafetyService } from '../../services/safety.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
@@ -78,6 +79,7 @@ function isGroupMember(value: unknown): value is GroupMember {
     LongPressContextMenuComponent,
     StickerPickerComponent,
     ChatSystemBubbleComponent,
+    ReadReceiptComponent,
     CulturalTipComponent,
     CorrectionModalComponent,
     ReplyPreviewComponent,

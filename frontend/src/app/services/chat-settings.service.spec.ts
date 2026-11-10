@@ -188,6 +188,91 @@ describe('ChatSettingsService', () => {
     });
   });
 
+  describe('resetToDefaults', () => {
+    const settingsUrl = `${environment.apiUrl}/chat/settings`;
+
+    beforeEach(() => {
+      service.autoTranslate.set(true);
+      service.readReceipts.set(true);
+      service.enterToSend.set(true);
+      service.textSize.set('large');
+      service.disappearingMessagesTtl.set('7d');
+    });
+
+    it('sends only the message-behaviour defaults and leaves the Appearance text size out', async () => {
+      const promise = service.resetToDefaults();
+      const request = httpTesting.expectOne(settingsUrl);
+      expect(request.request.method).toBe('PUT');
+      expect(request.request.body).toEqual({
+        autoTranslate: false,
+        readReceipts: false,
+        enterToSend: false,
+        disappearingMessagesTtl: 'off',
+      });
+      expect(request.request.body).not.toHaveProperty('textSize');
+      request.flush({});
+
+      expect(await promise).toBe(true);
+    });
+
+    it('keeps the stored text size, so the local value still matches what is saved', async () => {
+      const promise = service.resetToDefaults();
+      httpTesting.expectOne(settingsUrl).flush({});
+      await promise;
+
+      expect(service.autoTranslate()).toBe(false);
+      expect(service.readReceipts()).toBe(false);
+      expect(service.enterToSend()).toBe(false);
+      expect(service.disappearingMessagesTtl()).toBe('off');
+      expect(service.textSize()).toBe('large');
+    });
+
+    it('restores every value, including the text size, when the request fails', async () => {
+      const promise = service.resetToDefaults();
+      httpTesting.expectOne(settingsUrl).error(new ProgressEvent('error'));
+
+      expect(await promise).toBe(false);
+      expect(service.autoTranslate()).toBe(true);
+      expect(service.readReceipts()).toBe(true);
+      expect(service.enterToSend()).toBe(true);
+      expect(service.disappearingMessagesTtl()).toBe('7d');
+      expect(service.textSize()).toBe('large');
+      expect(service.disappearingMessagesError()).toBe(true);
+    });
+  });
+
+  describe('text size persistence request', () => {
+    it('sends only the text size, so other stored settings are not overwritten', async () => {
+      const promise = service.updateSetting('textSize', 'large');
+      const request = httpTesting.expectOne(`${environment.apiUrl}/chat/settings`);
+      expect(request.request.method).toBe('PUT');
+      expect(request.request.body).toEqual({ textSize: 'large' });
+      expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
+      request.flush({ textSize: 'large' });
+
+      expect(await promise).toBe(true);
+    });
+
+    it.each(['small', 'medium', 'large'] as const)('accepts the %s preset', async (size) => {
+      const promise = service.updateSetting('textSize', size);
+      httpTesting.expectOne(`${environment.apiUrl}/chat/settings`).flush({ textSize: size });
+
+      expect(await promise).toBe(true);
+      expect(service.textSize()).toBe(size);
+    });
+
+    it('falls back to medium when the server returns an unsupported text size', async () => {
+      const promise = service.loadSettings();
+      httpTesting
+        .expectOne(`${environment.apiUrl}/chat/settings`)
+        .flush({ textSize: 'huge', enterToSend: true });
+
+      expect(await promise).toBe(true);
+      expect(service.textSize()).toBe('medium');
+      expect(service.enterToSend()).toBe(true);
+    });
+  });
+
   describe('loadSettings response validation', () => {
     it('treats a malformed payload as unreadable rather than authoritative', async () => {
       const promise = service.loadSettings();

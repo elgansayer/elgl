@@ -24,6 +24,7 @@ vi.mock('node-nlp', () => ({
 describe('NlpService', () => {
   let service: NlpService;
   let mockRedisClient: {
+    eval: Mock;
     get: Mock;
     incr: Mock;
     expire: Mock;
@@ -43,6 +44,7 @@ describe('NlpService', () => {
       exec: vi.fn().mockResolvedValue([]),
     };
     mockRedisClient = {
+      eval: vi.fn().mockResolvedValue(1),
       get: vi.fn().mockResolvedValue(null),
       incr: vi.fn().mockResolvedValue(1),
       expire: vi.fn().mockResolvedValue(1),
@@ -128,27 +130,23 @@ describe('NlpService', () => {
   describe('checkRateLimit', () => {
     it('should skip rate check completely for VIP users', async () => {
       await service.checkRateLimit('vip-user', true);
-      expect(mockRedisClient.get).not.toHaveBeenCalled();
+      expect(mockRedisClient.eval).not.toHaveBeenCalled();
     });
 
-    it('should allow request, increment counter, and set expire on first request of the day for free tier', async () => {
-      mockRedisClient.get.mockResolvedValue(null);
-      mockRedisClient.incr.mockResolvedValue(1);
-
+    it('should atomically admit a free-tier request with the daily key', async () => {
       await service.checkRateLimit('free-user', false);
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith(
-        expect.stringMatching(/^daily_ai_usage:free-user:\d{4}-\d{2}-\d{2}$/),
-      );
-      expect(mockRedisClient.incr).toHaveBeenCalled();
-      expect(mockRedisClient.expire).toHaveBeenCalledWith(
+      expect(mockRedisClient.eval).toHaveBeenCalledWith(
         expect.any(String),
-        86400,
+        1,
+        expect.stringMatching(/^daily_ai_usage:free-user:\d{4}-\d{2}-\d{2}$/),
+        '10',
+        '86400',
       );
     });
 
     it('should return a semantic rate-limit response when free tier usage reaches 10', async () => {
-      mockRedisClient.get.mockResolvedValue('10');
+      mockRedisClient.eval.mockResolvedValue(0);
 
       await expect(
         service.checkRateLimit('free-user', false),
@@ -159,7 +157,6 @@ describe('NlpService', () => {
           message: expect.stringContaining('8 UKP / $10 USD'),
         },
       });
-      expect(mockRedisClient.incr).not.toHaveBeenCalled();
     });
   });
 

@@ -1,37 +1,22 @@
+import { InternalServerErrorException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CorrectorScoreService } from './corrector-score.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('CorrectorScoreService', () => {
-  let service: CorrectorScoreService;
-
-  const mockRatings = [{ score: 5 }, { score: 4 }, { score: 5 }];
-
   function setupSupabase(
-    selectData: unknown,
-    selectError: unknown | null = null,
-    upsertError: unknown | null = null,
+    rpcData: unknown,
+    rpcError: unknown = null,
+    upsertError: unknown = null,
   ) {
-    const mockEq = vi
+    const mockUpsert = vi.fn().mockResolvedValue({ error: upsertError });
+    const mockFrom = vi.fn().mockReturnValue({ upsert: mockUpsert });
+    const mockRpc = vi
       .fn()
-      .mockReturnValue(
-        Promise.resolve({ data: selectData, error: selectError }),
-      );
+      .mockResolvedValue({ data: rpcData, error: rpcError });
+    const mockClient = { from: mockFrom, rpc: mockRpc };
 
-    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-
-    const mockUpsert = vi
-      .fn()
-      .mockReturnValue(Promise.resolve({ error: upsertError }));
-
-    const mockFrom = vi.fn().mockReturnValue({
-      select: mockSelect,
-      upsert: mockUpsert,
-    });
-
-    const mockClient = { from: mockFrom };
-
-    return { mockClient, mockFrom, mockSelect, mockEq, mockUpsert };
+    return { mockClient, mockFrom, mockUpsert, mockRpc };
   }
 
   async function createService(
@@ -52,18 +37,17 @@ describe('CorrectorScoreService', () => {
 
   it('should be defined', async () => {
     const { mockClient } = setupSupabase([]);
-    service = await createService(mockClient);
-    expect(service).toBeDefined();
+    await expect(createService(mockClient)).resolves.toBeDefined();
   });
 
   describe('submitRating', () => {
-    it('should upsert a rating into corrector_ratings', async () => {
+    it('upserts one idempotent rating per rater and rated user', async () => {
       const { mockClient, mockFrom, mockUpsert } = setupSupabase(
         [],
         null,
         null,
       );
-      service = await createService(mockClient);
+      const service = await createService(mockClient);
 
       await service.submitRating('rater-1', 'rated-1', 4);
 
@@ -74,69 +58,66 @@ describe('CorrectorScoreService', () => {
       );
     });
 
-    it('should throw if supabase returns an upsert error', async () => {
-      const { mockClient } = setupSupabase([], null, { message: 'DB error' });
-      service = await createService(mockClient);
+    it('fails closed without exposing a database error', async () => {
+      const { mockClient } = setupSupabase([], null, { message: 'private' });
+      const service = await createService(mockClient);
 
       await expect(
         service.submitRating('rater-1', 'rated-1', 5),
-      ).rejects.toEqual({ message: 'DB error' });
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
   });
 
   describe('getCorrectorScore', () => {
-    it('should compute average score from ratings', async () => {
-      const { mockClient, mockFrom, mockEq } = setupSupabase(mockRatings, null);
-      service = await createService(mockClient);
+    it('returns the database aggregate without loading individual ratings', async () => {
+      const { mockClient, mockFrom, mockRpc } = setupSupabase([
+        { average_score: 4.7, total_ratings: 3 },
+      ]);
+      const service = await createService(mockClient);
 
-      const result = await service.getCorrectorScore('user-1');
-
-      expect(mockFrom).toHaveBeenCalledWith('corrector_ratings');
-      expect(mockEq).toHaveBeenCalledWith('rated_user_id', 'user-1');
-      expect(result.totalRatings).toBe(3);
-      // (5+4+5)/3 = 4.666..., rounded to 1 decimal = 4.7
-      expect(result.averageScore).toBe(4.7);
+      await expect(service.getCorrectorScore('user-1')).resolves.toEqual({
+        averageScore: 4.7,
+        totalRatings: 3,
+      });
+      expect(mockRpc).toHaveBeenCalledWith('get_corrector_score', {
+        p_user_id: 'user-1',
+      });
+      expect(mockFrom).not.toHaveBeenCalled();
     });
 
-    it('should return null averageScore and zero totalRatings when no ratings exist', async () => {
-      const { mockClient } = setupSupabase([], null);
-      service = await createService(mockClient);
+    it('returns a null average and zero count when no ratings exist', async () => {
+      const { mockClient } = setupSupabase([
+        { average_score: null, total_ratings: 0 },
+      ]);
+      const service = await createService(mockClient);
 
-      const result = await service.getCorrectorScore('user-1');
-
-      expect(result.averageScore).toBeNull();
-      expect(result.totalRatings).toBe(0);
-    });
-
-    it('should handle null data gracefully', async () => {
-      const { mockClient } = setupSupabase(null, null);
-      service = await createService(mockClient);
-
-      const result = await service.getCorrectorScore('user-1');
-
-      expect(result.averageScore).toBeNull();
-      expect(result.totalRatings).toBe(0);
-    });
-
-    it('should throw if supabase returns a select error', async () => {
-      const { mockClient } = setupSupabase(null, { message: 'DB error' });
-      service = await createService(mockClient);
-
-      await expect(service.getCorrectorScore('user-1')).rejects.toEqual({
-        message: 'DB error',
+      await expect(service.getCorrectorScore('user-1')).resolves.toEqual({
+        averageScore: null,
+        totalRatings: 0,
       });
     });
 
-    it('should round average score to 1 decimal place', async () => {
-      // 4.25 should round to 4.3
-      const ratings = [{ score: 4 }, { score: 5 }, { score: 4 }, { score: 4 }];
-      const { mockClient } = setupSupabase(ratings, null);
-      service = await createService(mockClient);
+    it.each([
+      null,
+      [],
+      [{ average_score: 6, total_ratings: 1 }],
+      [{ average_score: 4.5, total_ratings: -1 }],
+    ])('rejects malformed aggregate data: %j', async (data) => {
+      const { mockClient } = setupSupabase(data);
+      const service = await createService(mockClient);
 
-      const result = await service.getCorrectorScore('user-1');
+      await expect(service.getCorrectorScore('user-1')).rejects.toBeInstanceOf(
+        InternalServerErrorException,
+      );
+    });
 
-      expect(result.totalRatings).toBe(4);
-      expect(result.averageScore).toBe(4.3);
+    it('fails closed when aggregation fails', async () => {
+      const { mockClient } = setupSupabase(null, { message: 'private' });
+      const service = await createService(mockClient);
+
+      await expect(service.getCorrectorScore('user-1')).rejects.toBeInstanceOf(
+        InternalServerErrorException,
+      );
     });
   });
 });
