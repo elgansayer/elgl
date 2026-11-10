@@ -726,6 +726,39 @@ export interface Database {
         Update: Partial<UsersRow>;
         Relationships: [];
       };
+      learning_practice_attempts: {
+        Row: {
+          id: string;
+          user_id: string;
+          module: 'verb_conjugation' | 'ipa_alphabet';
+          item_id: string;
+          language_code: string;
+          submitted_answer: string;
+          correct: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          module: 'verb_conjugation' | 'ipa_alphabet';
+          item_id: string;
+          language_code: string;
+          submitted_answer: string;
+          correct: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          user_id: string;
+          module: 'verb_conjugation' | 'ipa_alphabet';
+          item_id: string;
+          language_code: string;
+          submitted_answer: string;
+          correct: boolean;
+          created_at: string;
+        }>;
+        Relationships: [];
+      };
       reading_engine_crash_reports: {
         Row: {
           id: string;

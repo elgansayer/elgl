@@ -66,6 +66,7 @@ import { LessonsModule } from './lessons/lessons.module';
 import { LinkPreviewModule } from './link-preview/link-preview.module';
 import { ResourceLibraryModule } from './resource-library/resource-library.module';
 import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
+import { LearningPracticeModule } from './learning-practice/learning-practice.module';
 import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
 import { LanguageIslandsModule } from './language-islands/language-islands.module';
@@ -165,6 +166,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     ResourceLibraryModule,
     ModerationModule,
     WordOfTheDayModule,
+    LearningPracticeModule,
     SpamDetectionModule,
     UserStatisticsModule,
     LanguageIslandsModule,
