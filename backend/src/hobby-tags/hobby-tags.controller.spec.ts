@@ -68,8 +68,9 @@ describe('HobbyTagsController', () => {
   describe('getAllTags', () => {
     it('should return all tags', async () => {
       (service.getAllTags as Mock).mockResolvedValue([mockTag]);
-      const result = await controller.getAllTags();
+      const result = await controller.getAllTags({ limit: 100 });
       expect(result).toEqual([mockTag]);
+      expect(service.getAllTags).toHaveBeenCalledWith(undefined, 100);
     });
   });
 
@@ -106,7 +107,7 @@ describe('HobbyTagsController', () => {
       ]);
       const result = await controller.getVocabulary(
         { user: { id: 'user-1' } },
-        'es',
+        { language: 'es' },
       );
       expect(result).toEqual([mockVocabularyItem]);
       expect(service.getVocabularyForUser).toHaveBeenCalledWith('user-1', 'es');
@@ -114,7 +115,10 @@ describe('HobbyTagsController', () => {
 
     it('should pass language query param to service', async () => {
       (service.getVocabularyForUser as Mock).mockResolvedValue([]);
-      await controller.getVocabulary({ user: { id: 'user-1' } }, 'fr');
+      await controller.getVocabulary(
+        { user: { id: 'user-1' } },
+        { language: 'fr' },
+      );
       expect(service.getVocabularyForUser).toHaveBeenCalledWith('user-1', 'fr');
     });
   });
@@ -138,7 +142,7 @@ describe('HobbyTagsController', () => {
         { user: { id: 'user-1' } },
         'tag-1',
       );
-      expect(result).toEqual({ message: 'Hobby tag removed successfully' });
+      expect(result).toEqual({ success: true });
       expect(service.removeUserTag).toHaveBeenCalledWith('user-1', 'tag-1');
     });
   });

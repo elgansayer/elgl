@@ -16,7 +16,11 @@ Only text messages are eligible for the source-linked correction endpoint. Voice
 
 ## API and authorization
 
-Chat endpoints are protected by the controller-level `SupabaseAuthGuard`. The source-linked correction endpoint cannot choose a different room because the service derives the room from the persisted source message. Both the source-linked endpoint and the Angular room composer ultimately use `ChatService.sendMessage`, retaining the existing room membership, safety, spam, persistence, realtime and notification behaviour.
+Chat endpoints are protected by the controller-level `SupabaseAuthGuard`. The source-linked correction endpoint cannot choose a different room because the service derives the room from the persisted source message. Both the source-linked endpoint and the Angular room composer ultimately use `ChatService.sendMessage`, retaining the existing spam, persistence, realtime and notification behaviour.
+
+`ChatModule` binds the `ChatService` token to `SecureChatService`. This production binding is required because the secure adapter verifies that the sender is a current room member before any correction is inserted or published. `chat.module.spec.ts` protects the binding from being lost during later module reconciliation.
+
+The secure adapter keeps the group correction contract intact: a correction submitted without a teaching note is still enriched server-side before it is published, and the persisted correction stays in the source room. Direct-conversation-only behaviour, such as first-contact message filters and automatic away replies, does not apply to a group room.
 
 No new credential, token, schema or browser-to-database boundary is introduced by this feature.
 
@@ -39,6 +43,7 @@ This keeps group corrections compatible with reconnect/replay behaviour and with
 - Clients do not publish directly to Centrifugo as an authority; persisted server messages remain canonical.
 - Correction text is private conversation content and must not be copied into analytics or diagnostic logs.
 - Block, membership and room-access rules remain those of the containing conversation; there is no parallel group-correction participant model.
+- Room membership is enforced server-side before a correction is inserted or published, so a sender who is not a current member of the source room cannot post into it.
 - Realtime events are treated as untrusted and must pass the existing room/message validation before mutating local state.
 
 ## Accessibility
@@ -55,6 +60,12 @@ The correction flow reuses the existing keyboard-accessible message context menu
 - the correcting participant remains the sender of the new message;
 - an optional explanation is preserved; and
 - non-text and missing source messages fail before a correction is sent.
+
+`backend/src/chat/secure-chat.service.corrections.spec.ts` locks the authorisation and enrichment behaviour of the bound production service:
+
+- a sender who is not a current room member cannot post a correction, and neither a message nor a realtime publication is produced;
+- a member correction is stored in the source room, keeps the server-derived original text and is published on the room channel; and
+- a group correction without an explanation is enriched before it is published.
 
 `frontend/src/app/components/chat-room/chat-room.group-corrections.spec.ts` closes the frontend/realtime verification gap for #1305:
 

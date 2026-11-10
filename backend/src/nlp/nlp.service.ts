@@ -30,6 +30,24 @@ import {
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
 
+const DAILY_AI_USAGE_LIMIT = 10;
+const DAILY_AI_USAGE_TTL_SECONDS = 86_400;
+const ADMIT_DAILY_AI_USAGE_SCRIPT = `
+local count = tonumber(redis.call('get', KEYS[1]) or '0')
+local limit = tonumber(ARGV[1])
+
+if count >= limit then
+  return 0
+end
+
+count = redis.call('incr', KEYS[1])
+if count == 1 or redis.call('ttl', KEYS[1]) < 0 then
+  redis.call('expire', KEYS[1], tonumber(ARGV[2]))
+end
+
+return 1
+`;
+
 @Injectable()
 export class NlpService {
   private nlpLanguage = new Language();
@@ -190,11 +208,35 @@ export class NlpService {
     const redis = this.supabaseService.getRedisClient();
     const today = new Date().toISOString().slice(0, 10);
     const key = `daily_ai_usage:${userId}:${today}`;
+    const userReference = createHash('sha256')
+      .update(userId)
+      .digest('hex')
+      .slice(0, 12);
+    let admitted: unknown;
+    try {
+      admitted = await redis.eval(
+        ADMIT_DAILY_AI_USAGE_SCRIPT,
+        1,
+        key,
+        String(DAILY_AI_USAGE_LIMIT),
+        String(DAILY_AI_USAGE_TTL_SECONDS),
+      );
+    } catch (error) {
+      this.logger.error({
+        event: 'daily_ai_usage_store_failure',
+        userReference,
+        date: today,
+      });
+      throw error;
+    }
 
-    const currentCountStr = await redis.get(key);
-    const currentCount = currentCountStr ? parseInt(currentCountStr, 10) : 0;
-
-    if (currentCount >= 10) {
+    if (admitted === 0) {
+      this.logger.warn({
+        event: 'daily_ai_usage_limit_reached',
+        userReference,
+        date: today,
+        limit: DAILY_AI_USAGE_LIMIT,
+      });
       throw new HttpException(
         {
           statusCode: HttpStatus.TOO_MANY_REQUESTS,
@@ -205,9 +247,14 @@ export class NlpService {
       );
     }
 
-    const newCount = await redis.incr(key);
-    if (newCount === 1) {
-      await redis.expire(key, 86400);
+    if (admitted !== 1) {
+      this.logger.error({
+        event: 'daily_ai_usage_invalid_store_response',
+        userReference,
+        date: today,
+        responseType: typeof admitted,
+      });
+      throw new Error('Unexpected Redis daily AI usage response');
     }
   }
 

@@ -25,7 +25,10 @@ import {
   FOR_YOU_RECENT_SOURCE_LIMIT,
 } from './moments-for-you.constants';
 import { MOCK_USERS } from '../mock-data';
-import { MomentCommentEvent } from '../notifications/events/notification.events';
+import {
+  LikeEvent,
+  MomentCommentEvent,
+} from '../notifications/events/notification.events';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
 interface UserFollowRow {
@@ -969,7 +972,7 @@ export class MomentsService {
         .eq('id', momentId);
       return { likes_count: newCount, is_liked: false };
     } else {
-      await supabase
+      const { error: insertError } = await supabase
         .from('moment_likes')
         .insert({ moment_id: momentId, user_id: userId });
       const result = await supabase
@@ -983,6 +986,16 @@ export class MomentsService {
         .from('moments')
         .update({ likes_count: newCount })
         .eq('id', momentId);
+
+      // Tell the moment author through the unified notifications inbox. Only a
+      // persisted like on someone else's moment notifies; unlikes never do.
+      const momentAuthorId = momentData?.user_id;
+      if (!insertError && momentAuthorId && momentAuthorId !== userId) {
+        this.eventEmitter.emit(
+          'user.liked',
+          new LikeEvent(userId, momentAuthorId, 'moment', momentId),
+        );
+      }
       return { likes_count: newCount, is_liked: true };
     }
   }

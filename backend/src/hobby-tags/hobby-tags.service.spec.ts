@@ -1,6 +1,6 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HobbyTagsService } from './hobby-tags.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -12,6 +12,7 @@ function makeBuilder(response: unknown) {
     'select',
     'eq',
     'order',
+    'limit',
     'single',
     'delete',
     'update',
@@ -67,6 +68,17 @@ describe('HobbyTagsService', () => {
       const result = await service.getAllTags();
       expect(result).toEqual(tags);
       expect(builder.order).toHaveBeenCalledWith('name', { ascending: true });
+      expect(builder.limit).toHaveBeenCalledWith(100);
+    });
+
+    it('filters the bounded catalogue by category', async () => {
+      const builder = makeBuilder({ data: [], error: null });
+      mockSupabaseClient.from.mockReturnValue(builder);
+
+      await service.getAllTags('Arts', 25);
+
+      expect(builder.limit).toHaveBeenCalledWith(25);
+      expect(builder.eq).toHaveBeenCalledWith('category', 'Arts');
     });
 
     it('should return empty array when data is null', async () => {
@@ -186,19 +198,43 @@ describe('HobbyTagsService', () => {
       );
     });
 
-    it('should throw ConflictException when tag already added', async () => {
+    it('returns the existing selection when a request is retried', async () => {
       const verifyBuilder = makeBuilder({ data: { id: '1' }, error: null });
       const dupBuilder = makeBuilder({
-        data: { id: 'ut-existing' },
+        data: { id: 'ut-existing', hobby_tag_id: '1' },
         error: null,
       });
       mockSupabaseClient.from
         .mockReturnValueOnce(verifyBuilder)
         .mockReturnValueOnce(dupBuilder);
 
-      await expect(service.addUserTag('u1', '1')).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(service.addUserTag('u1', '1')).resolves.toEqual({
+        id: 'ut-existing',
+        hobby_tag_id: '1',
+      });
+    });
+
+    it('returns the winning selection after a concurrent unique-constraint race', async () => {
+      const verifyBuilder = makeBuilder({ data: { id: '1' }, error: null });
+      const duplicateCheckBuilder = makeBuilder({ data: null, error: null });
+      const insertBuilder = makeBuilder({
+        data: null,
+        error: { code: '23505', message: 'duplicate key' },
+      });
+      const retryBuilder = makeBuilder({
+        data: { id: 'ut-winning', hobby_tag_id: '1' },
+        error: null,
+      });
+      mockSupabaseClient.from
+        .mockReturnValueOnce(verifyBuilder)
+        .mockReturnValueOnce(duplicateCheckBuilder)
+        .mockReturnValueOnce(insertBuilder)
+        .mockReturnValueOnce(retryBuilder);
+
+      await expect(service.addUserTag('u1', '1')).resolves.toEqual({
+        id: 'ut-winning',
+        hobby_tag_id: '1',
+      });
     });
   });
 
@@ -399,6 +435,31 @@ describe('HobbyTagsService', () => {
       expect(result[1].word).toBe('ingredient');
       expect(result[1].translation).toBe('재료');
       expect(result[0].hobbyTagName).toBe('Cooking');
+    });
+
+    it('does not cache source words as translations when the provider is unavailable', async () => {
+      const userHobbyTags = [
+        {
+          id: 'ut-1',
+          hobby_tag: {
+            id: '1',
+            name: 'Cooking',
+            icon: '🍳',
+            target_vocabulary: [],
+          },
+        },
+      ];
+      const builder = makeBuilder({ data: userHobbyTags, error: null });
+      mockSupabaseClient.from.mockReturnValue(builder);
+
+      const result = await service.getVocabularyForUser('u1', 'fr');
+
+      expect(result).toHaveLength(5);
+      expect(result[0]).toMatchObject({
+        word: 'recipe',
+        translation: 'recipe',
+      });
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
     });
 
     it('should skip user tags with null hobby_tag', async () => {

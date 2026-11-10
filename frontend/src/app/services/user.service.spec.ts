@@ -232,16 +232,14 @@ describe('UserService', () => {
       expect(await resultPromise).toEqual(updatedProfile);
     });
 
-    it('should fall back to mock data on error', async () => {
+    it('should reject when the server does not confirm the update', async () => {
       const update = { bio_text: 'New bio' };
       const resultPromise = service.updateMyProfile(update);
 
       const req = httpMock.expectOne(`${baseUrl}/me`);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      const result = await resultPromise;
-      expect(result).toBeTruthy();
-      expect(result?.bio_text).toBe('New bio');
+      await expect(resultPromise).rejects.toMatchObject({ status: 500 });
     });
   });
 
@@ -577,14 +575,14 @@ describe('UserService', () => {
       await expect(resultPromise).resolves.toBeFalsy();
     });
 
-    it('should silently ignore errors', async () => {
+    it('should surface errors so the caller can show retry feedback', async () => {
       const correctorUrl = `${environment.apiUrl}/corrector-score/rate`;
       const resultPromise = service.rateCorrector('user-1', 3);
 
       const req = httpMock.expectOne(correctorUrl);
       req.flush('error', { status: 500, statusText: 'Error' });
 
-      await expect(resultPromise).resolves.toBeFalsy();
+      await expect(resultPromise).rejects.toBeTruthy();
     });
   });
 

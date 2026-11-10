@@ -1,8 +1,19 @@
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+const legacyIllustrationDirectory = 'frontend/src/assets/illustrations';
+
+async function pathExists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export const illustrationContracts = [
   {
@@ -69,6 +80,12 @@ export function validateIllustrationSvg(svg, name = 'illustration') {
 
 export async function verifyEmptyStateIllustrations(root = repositoryRoot) {
   const errors = [];
+
+  if (await pathExists(resolve(root, legacyIllustrationDirectory))) {
+    errors.push(
+      `${legacyIllustrationDirectory} must not exist: illustrations are served only from frontend/public/assets/illustrations`,
+    );
+  }
 
   const primitivePath = resolve(
     root,

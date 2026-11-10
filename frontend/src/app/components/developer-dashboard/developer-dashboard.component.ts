@@ -10,6 +10,8 @@ import { DiscoveryService, SearchFilterParams } from '../../services/discovery.s
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { UserProfile } from '../../services/user.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
 import { AppInputComponent } from '../primitives/input/input.component';
@@ -41,12 +43,15 @@ type DeveloperDashboardTab = 'overview' | 'postgis' | 'centrifugo' | 'livekit';
 })
 export class DeveloperDashboardComponent {
   readonly store = inject(EconomyStore);
+  readonly i18n = inject(I18nService);
+  readonly confirmService = inject(ConfirmService);
   readonly authService = inject(AuthService);
   readonly discoveryService = inject(DiscoveryService);
   readonly centrifugeService = inject(CentrifugeService);
 
   readonly activeTab = signal<DeveloperDashboardTab>('overview');
   readonly isGeneratingApiKey = signal(false);
+  readonly isRevokingApiKey = signal(false);
 
   // PostGIS Matchmaking Sandbox Signals
   readonly searchLatitude = signal<number>(51.5074); // London center
@@ -100,6 +105,20 @@ export class DeveloperDashboardComponent {
       }
     } finally {
       this.isGeneratingApiKey.set(false);
+    }
+  }
+
+  async revokeKey(): Promise<void> {
+    if (this.isRevokingApiKey()) return;
+    const confirmed = await this.confirmService.confirm(
+      this.i18n.translate('developer.revokeConfirm'),
+    );
+    if (!confirmed) return;
+    this.isRevokingApiKey.set(true);
+    try {
+      await this.store.revokeApiKey();
+    } finally {
+      this.isRevokingApiKey.set(false);
     }
   }
 

@@ -35,7 +35,10 @@ export async function initialiseRuntimeConfiguration(
 }
 
 export function initialiseDeepLinks(
-  deepLinkService: Pick<DeepLinkService, 'handleDeepLink'>,
+  deepLinkService: Pick<
+    DeepLinkService,
+    'processInitialDeepLink' | 'registerRuntimeListener'
+  >,
   document: Document,
 ): void {
   const view = document?.defaultView;
@@ -43,7 +46,8 @@ export function initialiseDeepLinks(
     return;
   }
 
-  deepLinkService.handleDeepLink(view.location.href);
+  deepLinkService.processInitialDeepLink();
+  deepLinkService.registerRuntimeListener();
 
   if (typeof view.navigator?.registerProtocolHandler !== 'function') {
     return;

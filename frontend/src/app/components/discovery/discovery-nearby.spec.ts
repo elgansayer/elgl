@@ -32,6 +32,7 @@ describe('DiscoveryComponent Nearby GPS search', () => {
     coordinates?: { latitude: number; longitude: number; capturedAt: number };
     locationError?: BrowserGeolocationError;
     results?: UserProfile[];
+    isVip?: boolean;
   }) {
     const findPartners = vi.fn().mockResolvedValue(options?.results ?? [partner(5000)]);
     const getCurrentPosition = options?.locationError
@@ -44,6 +45,9 @@ describe('DiscoveryComponent Nearby GPS search', () => {
           },
         );
     const online = signal(options?.online ?? true);
+    const currentUser = signal<{ is_vip: boolean } | null>(
+      options?.isVip ? { is_vip: true } : null,
+    );
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
@@ -58,7 +62,7 @@ describe('DiscoveryComponent Nearby GPS search', () => {
           },
         },
         { provide: SafetyService, useValue: { getBlockedIdsAsync: vi.fn().mockResolvedValue([]) } },
-        { provide: AuthService, useValue: { currentUser: signal(null), getAccessToken: vi.fn() } },
+        { provide: AuthService, useValue: { currentUser, getAccessToken: vi.fn() } },
         {
           provide: OfflineDiscoveryCacheService,
           useValue: {
@@ -183,5 +187,66 @@ describe('DiscoveryComponent Nearby GPS search', () => {
     await component.searchPartners();
     expect(component.partners()[0].formattedDistance).toMatch(/ km$/);
     expect(component.partners()[0].formattedDistance).not.toContain('mi');
+  });
+
+  it('enables the distance slider for VIP users in Nearby mode and passes custom radius to PostGIS search', async () => {
+    const { component, findPartners, fixture } = await setup({ isVip: true });
+
+    component.onFilterSelect('nearby');
+    await vi.waitFor(() => expect(findPartners).toHaveBeenCalledTimes(1));
+
+    expect(component.selectedDistanceKm()).toBe(10);
+    expect(findPartners).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        latitude: 51.5074,
+        longitude: -0.1278,
+        radius_metres: 10_000,
+        sort: 'nearest',
+      }),
+      expect.any(AbortSignal),
+    );
+
+    const slider: HTMLInputElement = fixture.nativeElement.querySelector(
+      'app-distance-slider input[type="range"]',
+    );
+    const vipNote = fixture.nativeElement.querySelector('#distanceVipNote');
+    expect(slider.disabled).toBe(false);
+    expect(vipNote).toBeFalsy();
+
+    component.onDistanceChanged(75);
+    await vi.waitFor(() => expect(findPartners).toHaveBeenCalledTimes(2));
+
+    expect(component.selectedDistanceKm()).toBe(75);
+    expect(findPartners).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        latitude: 51.5074,
+        longitude: -0.1278,
+        radius_metres: 75_000,
+        sort: 'nearest',
+      }),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it('disables the distance slider and displays the VIP upsell note for non-VIP users in Nearby mode', async () => {
+    const { component, findPartners, fixture } = await setup({ isVip: false });
+
+    component.onFilterSelect('nearby');
+    await vi.waitFor(() => expect(findPartners).toHaveBeenCalledTimes(1));
+
+    const slider: HTMLInputElement = fixture.nativeElement.querySelector(
+      'app-distance-slider input[type="range"]',
+    );
+    const vipNote = fixture.nativeElement.querySelector('#distanceVipNote');
+
+    expect(slider.disabled).toBe(true);
+    expect(vipNote).toBeTruthy();
+    expect(component.selectedDistanceKm()).toBe(10);
+    expect(findPartners).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        radius_metres: 10_000,
+      }),
+      expect.any(AbortSignal),
+    );
   });
 });
