@@ -49,6 +49,9 @@ export class MetricsService {
   readonly tsReportsByCategory: Counter<string>;
   readonly tsModerationQueueLatency: Histogram<string>;
 
+  // LLM prompt-injection guard metrics
+  readonly llmPromptGuardEvents: Counter<string>;
+
   // LingQ Reading Engine metrics
   readonly readingEngineSessions: Counter<string>;
   readonly readingEngineWordsParsed: Counter<string>;
@@ -304,6 +307,13 @@ export class MetricsService {
       labelNames: ['language'],
       registers: [this.register],
       buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
+    });
+
+    this.llmPromptGuardEvents = new Counter({
+      name: 'hellotalk_llm_prompt_guard_events_total',
+      help: 'LLM prompt guard findings by AI tool: injection signals, withheld third-party text, sanitised content, rejected requests and unguarded provider calls',
+      labelNames: ['tool', 'event'],
+      registers: [this.register],
     });
 
     this.readingEngineAiRequests = new Counter({
@@ -843,6 +853,14 @@ export class MetricsService {
       { language },
       durationSeconds,
     );
+  }
+
+  /**
+   * Counts one prompt guard finding. `tool` and `event` come from closed sets
+   * in llm-guard, so label cardinality stays bounded; never pass user text.
+   */
+  recordLlmPromptGuardEvent(tool: string, event: string): void {
+    this.llmPromptGuardEvents.inc({ tool, event });
   }
 
   recordReadingEngineAiRequest(endpoint: string, status: string): void {

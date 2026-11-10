@@ -1,5 +1,15 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { ChatLlmService, LlmChatMessage } from './chat-llm.service';
+import {
+  buildConversationPrompt,
+  requireScreenedReply,
+} from '../llm-guard/prompt-guard';
+import { ChatLlmService } from './chat-llm.service';
+
+const MAX_REPLY_CHARS = 8_000;
+
+export const CONVERSATION_PARTNER_INSTRUCTIONS = [
+  "You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user's level (i+1). Encourage Active Production by asking open-ended questions. Use Retrieval Practice by referencing past conversation points. Facilitate Spaced Repetition by deliberately reusing recently learned vocabulary. Provide Meaningful Feedback by naturally modelling correct grammar.",
+];
 
 @Injectable()
 export class ChatLlmProxyService {
@@ -14,20 +24,14 @@ export class ChatLlmProxyService {
       throw new BadRequestException('Message text cannot be empty');
     }
 
-    const messages: LlmChatMessage[] = [
-      {
-        role: 'system',
-        content:
-          "You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user's level (i+1). Encourage Active Production by asking open-ended questions. Use Retrieval Practice by referencing past conversation points. Facilitate Spaced Repetition by deliberately reusing recently learned vocabulary. Provide Meaningful Feedback by naturally modelling correct grammar.",
-      },
-      ...history.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      { role: 'user', content: messageText },
-    ];
-
-    return this.chatLlmService.proxyChatMessages(messages);
+    return this.reply(
+      buildConversationPrompt({
+        tool: 'chat_llm_proxy',
+        instructions: CONVERSATION_PARTNER_INSTRUCTIONS,
+        history,
+        message: messageText,
+      }),
+    );
   }
 
   async proxyChatWithHistory(
@@ -38,18 +42,23 @@ export class ChatLlmProxyService {
       throw new BadRequestException('Conversation cannot be empty');
     }
 
-    const messages: LlmChatMessage[] = [
-      {
-        role: 'system',
-        content:
-          "You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user's level (i+1). Encourage Active Production by asking open-ended questions. Use Retrieval Practice by referencing past conversation points. Facilitate Spaced Repetition by deliberately reusing recently learned vocabulary. Provide Meaningful Feedback by naturally modelling correct grammar.",
-      },
-      ...conversation.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    ];
+    return this.reply(
+      buildConversationPrompt({
+        tool: 'chat_llm_proxy',
+        instructions: CONVERSATION_PARTNER_INSTRUCTIONS,
+        history: conversation,
+      }),
+    );
+  }
 
-    return this.chatLlmService.proxyChatMessages(messages);
+  private async reply(
+    messages: Parameters<ChatLlmService['proxyChatMessages']>[0],
+  ): Promise<{ response: string }> {
+    const result = await this.chatLlmService.proxyChatMessages(messages);
+    return {
+      response: requireScreenedReply(result.response, {
+        maxLength: MAX_REPLY_CHARS,
+      }),
+    };
   }
 }
