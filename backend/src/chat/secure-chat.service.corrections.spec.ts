@@ -131,13 +131,9 @@ function createService(options: { isMember: boolean; explanation?: string }) {
   const centrifugo = { publish: vi.fn().mockResolvedValue(undefined) };
   const events = { emit: vi.fn() };
   const chatLlm = {
-    proxyMessage: vi
+    chatCompletion: vi
       .fn()
-      .mockResolvedValue(
-        options.explanation
-          ? { response: options.explanation }
-          : { response: '' },
-      ),
+      .mockResolvedValue(options.explanation ? options.explanation : ''),
   };
 
   const service = new SecureChatService(
@@ -176,7 +172,7 @@ describe('SecureChatService correction authorisation', () => {
 
     expect(messages.insert).not.toHaveBeenCalled();
     expect(centrifugo.publish).not.toHaveBeenCalled();
-    expect(chatLlm.proxyMessage).not.toHaveBeenCalled();
+    expect(chatLlm.chatCompletion).not.toHaveBeenCalled();
   });
 
   it('stores a member correction in the source room and publishes it there', async () => {
@@ -225,7 +221,7 @@ describe('SecureChatService correction authorisation', () => {
       },
     });
     // A correction that already carries a teaching note is never re-enriched.
-    expect(chatLlm.proxyMessage).not.toHaveBeenCalled();
+    expect(chatLlm.chatCompletion).not.toHaveBeenCalled();
   });
 
   it('enriches a group correction that carries no explanation', async () => {
@@ -246,7 +242,7 @@ describe('SecureChatService correction authorisation', () => {
       explanation: 'Went is the past tense of go.',
     };
 
-    expect(chatLlm.proxyMessage).toHaveBeenCalledTimes(1);
+    expect(chatLlm.chatCompletion).toHaveBeenCalledTimes(1);
     expect(messages.update).toHaveBeenCalledWith({
       correction_payload: enrichedPayload,
     });

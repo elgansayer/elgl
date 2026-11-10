@@ -78,7 +78,7 @@ function createService(from: Mock, getPreview: Mock) {
     { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) } as never,
     { getPreview } as never,
     { isSpam: vi.fn().mockReturnValue(false) } as never,
-    { proxyMessage: vi.fn() } as never,
+    { chatCompletion: vi.fn() } as never,
     {} as never,
     { awardXpForActivity: vi.fn().mockResolvedValue(undefined) } as never,
     {} as never,

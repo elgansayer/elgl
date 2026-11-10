@@ -482,7 +482,7 @@ export class ChatService {
     return message;
   }
 
-  /**
+  /** Attempt to sync all offline queued messages.
    * Replays the queued offline messages of the signed-in account, oldest first.
    *
    * Overlapping calls share one replay, so a message is never sent twice concurrently. Each
