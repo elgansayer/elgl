@@ -1,5 +1,6 @@
 import {
   Injectable,
+  ConflictException,
   ForbiddenException,
   BadRequestException,
   NotFoundException,
@@ -42,6 +43,9 @@ import { UsersService } from '../users/users.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
 import { randomUUID } from 'crypto';
+
+/** PostgreSQL SQLSTATE raised when an insert violates a unique or primary key constraint. */
+const SQLSTATE_UNIQUE_VIOLATION = '23505';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -429,11 +433,69 @@ export class ChatService {
     }
   }
 
+  /**
+   * Looks up a message previously persisted under a client-generated id.
+   *
+   * Returns the stored message when it belongs to the same sender and room, so
+   * a replayed offline-queue request is idempotent. A matching id that belongs
+   * to another sender or room is rejected without revealing anything about it.
+   */
+  private async findReplayedMessage(
+    senderId: string,
+    roomId: string,
+    clientMessageId: string,
+  ): Promise<ChatMessage | null> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('chat_messages')
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .eq('id', clientMessageId)
+      .maybeSingle();
+
+    if (error) {
+      // The primary key still prevents a duplicate row if the insert proceeds.
+      this.logger.warn('chat.replay_lookup_failed');
+      return null;
+    }
+    if (!data) {
+      return null;
+    }
+    if (data.sender_id !== senderId || data.room_id !== roomId) {
+      throw new ConflictException('client_message_id is already in use');
+    }
+    return data;
+  }
+
   async sendMessage(
     senderId: string,
     dto: SendMessageDto,
   ): Promise<ChatMessage> {
     const supabase = this.supabaseService.getClient();
+    const clientMessageId = dto.client_message_id?.toLowerCase();
+
+    // A queued offline message is replayed until the client sees a response, so
+    // the first request may already have persisted it. Return the stored message
+    // before the abuse checks (a duplicate-content check would reject the replay)
+    // and without repeating side effects such as XP, push and realtime fan-out.
+    if (clientMessageId) {
+      const replayed = await this.findReplayedMessage(
+        senderId,
+        dto.room_id,
+        clientMessageId,
+      );
+      if (replayed) {
+        return replayed;
+      }
+    }
 
     // Get room members to check if any are blocked
     const { data: roomMembers } = await supabase
@@ -457,13 +519,16 @@ export class ChatService {
         this.safetyService.getBlockedAndBlockerIds(receiverId),
         this.safetyService.getBlockedAndBlockerIds(senderId),
       ]);
+      // A block is a permanent policy refusal: answer 403 rather than an opaque
+      // 500 so an offline-queue replay discards the message instead of retrying
+      // it as though the server were unavailable.
       // Check if the receiver has blocked the sender
       if (receiverBlockedIds.includes(senderId)) {
-        throw new Error('You cannot send messages to this user.');
+        throw new ForbiddenException('You cannot send messages to this user.');
       }
       // Check if the sender has blocked the receiver
       if (senderBlockedIds.includes(receiverId)) {
-        throw new Error('You cannot send messages to this user.');
+        throw new ForbiddenException('You cannot send messages to this user.');
       }
 
       // Enforce receiver's message filters for initial messages only
@@ -483,6 +548,7 @@ export class ChatService {
     const insertResponse = await supabase
       .from('chat_messages')
       .insert({
+        ...(clientMessageId ? { id: clientMessageId } : {}),
         room_id: dto.room_id,
         sender_id: senderId,
         message_type: dto.message_type,
@@ -510,6 +576,20 @@ export class ChatService {
       .single();
 
     if (insertResponse.error || !insertResponse.data) {
+      if (
+        clientMessageId &&
+        insertResponse.error?.code === SQLSTATE_UNIQUE_VIOLATION
+      ) {
+        // A concurrent replay of the same queued message won the insert.
+        const replayed = await this.findReplayedMessage(
+          senderId,
+          dto.room_id,
+          clientMessageId,
+        );
+        if (replayed) {
+          return replayed;
+        }
+      }
       const msg = insertResponse.error?.message ?? 'Unknown error';
       throw new Error(`Failed to save message: ${msg}`);
     }

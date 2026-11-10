@@ -49,6 +49,7 @@ describe('ChatRoomComponent translation and correction contract', () => {
         {
           provide: ChatService,
           useValue: {
+            queuedCount: signal(0),
             getRooms: vi.fn().mockResolvedValue([]),
             getGroupMembers: vi.fn().mockResolvedValue([
               {

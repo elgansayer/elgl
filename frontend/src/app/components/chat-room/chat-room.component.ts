@@ -54,6 +54,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 import { applyChatRoomRealtimeEvent, isChatMessage, isRecord } from './chat-room-realtime';
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
+import { NetworkStatusService } from '../../services/network-status.service';
 import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 function isGroupMember(value: unknown): value is GroupMember {
@@ -109,7 +110,13 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly translationCache = inject(TranslationCacheService);
   private readonly unreadCounter = inject(UnreadCounterService);
   private readonly chatEncryption = inject(PersonalChatEncryptionService);
+  private readonly networkStatus = inject(NetworkStatusService);
   private readonly pendingMessageScroll = signal<string | null>(null);
+
+  /** Connectivity, and the messages written offline that are still waiting to be sent. */
+  readonly isOnline = this.networkStatus.isOnline;
+  readonly queuedCount = this.chatService.queuedCount;
+  readonly showOfflineStatus = computed(() => !this.isOnline() || this.queuedCount() > 0);
 
   id = input.required<string>();
 

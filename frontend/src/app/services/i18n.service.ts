@@ -927,6 +927,8 @@ export class I18nService {
     'chatRoom.offlineWarning': 'You are offline. Messages will be sent when you reconnect.',
     'chatRoom.queuedMessages': '{{count}} message(s) queued',
     'chatRoom.queued': 'queued',
+    'chatRoom.offlineMessagesRejected':
+      '{{count}} queued message(s) could not be delivered and were discarded.',
     'chatRoom.typing': 'Someone is typing...',
     'chatRoom.someoneTyping': 'Someone is typing...',
     'chatRoom.originalPlaceholder': 'Original sentence',

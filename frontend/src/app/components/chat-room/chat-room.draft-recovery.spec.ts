@@ -58,6 +58,7 @@ describe('ChatRoomComponent failed-send draft recovery', () => {
         {
           provide: ChatService,
           useValue: {
+            queuedCount: signal(0),
             getRooms: vi.fn().mockResolvedValue([]),
             getGroupMembers: vi.fn().mockResolvedValue([]),
             getMessages: vi.fn().mockResolvedValue([]),

@@ -70,6 +70,7 @@ describe('ChatRoomComponent doodle sharing contract', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 
     const chatService = {
+      queuedCount: signal(0),
       getRooms: vi.fn().mockResolvedValue([]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
       getMessages: vi.fn().mockResolvedValue([]),
