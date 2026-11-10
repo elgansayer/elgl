@@ -227,7 +227,11 @@
             {{ 'profile.correctorScore' | t }}
           </p>
           <p class="text-sm font-bold text-primary-ink">
-            @if (profile()?.corrector_score != null) {
+            @if (profile()?.corrector_score_unavailable) {
+              {{ 'profile.correctorScoreUnavailable' | t }}
+            } @else if (
+              profile()?.corrector_score !== null && profile()?.corrector_score !== undefined
+            ) {
               {{ profile()?.corrector_score }} / 5
             } @else {
               {{ 'profile.noRatings' | t }}
@@ -285,6 +289,12 @@
           class="app-pill text-center"
           [attr.aria-label]="'profile.navFav' | t"
           >{{ 'profile.navFav' | t }}</a
+        >
+        <a
+          routerLink="/stats"
+          class="app-pill text-center"
+          [attr.aria-label]="'profile.statsLink' | t"
+          >{{ 'profile.statsLink' | t }}</a
         >
         <a
           routerLink="/vocabulary"

@@ -4,7 +4,20 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
+import {
+  buildDataPrompt,
+  requireScreenedReply,
+} from '../llm-guard/prompt-guard';
 import { ChatMessageEvent } from '../notifications/events/notification.events';
+
+const DEFAULT_TIP = 'Keep practising every day!';
+const MAX_TIP_CHARS = 500;
+
+const DAILY_TIP_INSTRUCTIONS = [
+  'Give a short daily language-learning tip in one or two sentences.',
+  'Include practical advice and do not include greetings.',
+  'Respond only with the tip text.',
+];
 
 @Injectable()
 export class DailyTipService {
@@ -28,13 +41,22 @@ export class DailyTipService {
       .eq('id', userId)
       .single();
     const lang = user?.target_languages?.[0] ?? user?.native_language ?? 'en';
-    const prompt = `Give me a short daily learning tip (1-2 sentences) for someone learning ${lang}. Include practical advice. Do not include greetings.`;
     try {
-      const { response } = await this.llmProxyService.proxyMessage(prompt);
-      return response?.trim() ?? 'Keep practising every day!';
+      return await this.generateTip(lang);
     } catch {
-      return 'Keep practising every day!';
+      return DEFAULT_TIP;
     }
+  }
+
+  private async generateTip(language: string): Promise<string> {
+    const response = await this.llmProxyService.chatCompletion(
+      buildDataPrompt({
+        tool: 'daily_tip',
+        instructions: DAILY_TIP_INSTRUCTIONS,
+        data: { language },
+      }),
+    );
+    return requireScreenedReply(response, { maxLength: MAX_TIP_CHARS });
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
@@ -71,11 +93,8 @@ export class DailyTipService {
         chunk.map(async (user) => {
           const lang =
             user.target_languages?.[0] ?? user.native_language ?? 'en';
-          const prompt = `Give me a short daily learning tip (1-2 sentences) for someone learning ${lang}. Include practical advice. Do not include greetings.`;
           try {
-            const { response } =
-              await this.llmProxyService.proxyMessage(prompt);
-            const tipText = response?.trim() ?? 'Keep practising every day!';
+            const tipText = await this.generateTip(lang);
 
             // Emit a push notification via the existing notification system
             const event = new ChatMessageEvent(

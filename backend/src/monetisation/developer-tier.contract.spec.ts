@@ -43,8 +43,37 @@ describe('Developer Tier product contract', () => {
       /@Post\('generate-api-key'\)\s+@UseGuards\(SupabaseAuthGuard, VipGuard\)\s+@RequireVip\('developer'\)/,
     );
     expect(controller).toMatch(
-      /@Get\('analytics'\)\s+@UseGuards\(SupabaseAuthGuard, VipGuard\)\s+@RequireVip\('developer'\)/,
+      /@Get\('analytics'\)\s+@UseGuards\(DeveloperApiKeyGuard, SupabaseAuthGuard, VipGuard\)\s+@RequireVip\('developer'\)/,
     );
+    expect(controller).toMatch(
+      /@Delete\('api-key'\)\s+@UseGuards\(SupabaseAuthGuard, VipGuard\)\s+@RequireVip\('developer'\)/,
+    );
+  });
+
+  it('accepts the issued key as a Bearer token with a hashed database lookup', () => {
+    const guard = readRepositoryFile(
+      'backend/src/monetisation/guards/developer-api-key.guard.ts',
+    );
+
+    expect(guard).toContain("createHash('sha256')");
+    expect(guard).toContain("eq('developer_api_key_hash', digest)");
+    expect(guard).toContain("'x-api-key'");
+    expect(guard).toContain('ht_dev_');
+    expect(guard).toContain('DEVELOPER_RATE_LIMIT_RPM = 600');
+    expect(guard).toContain('developerApiKeyAuthenticated = true');
+  });
+
+  it('records API-key usage for the analytics dashboard', () => {
+    const interceptor = readRepositoryFile(
+      'backend/src/monetisation/interceptors/developer-api-usage.interceptor.ts',
+    );
+    const migration = readRepositoryFile(
+      'supabase/migrations/20261107090000_developer_api_usage_metrics.sql',
+    );
+
+    expect(interceptor).toContain("rpc('record_developer_api_usage'");
+    expect(migration).toContain('record_developer_api_usage');
+    expect(migration).toContain('TO service_role');
   });
 
   it('keeps the paid Developer tier, cryptographic key generation, and 600 RPM contract', () => {
@@ -59,6 +88,7 @@ describe('Developer Tier product contract', () => {
       "user.vip_tier?.startsWith('developer') ? 600 : 60",
     );
     expect(service).toContain('Developer Tier: 20 UKP / $26 USD per month');
+    expect(service).toContain('async revokeApiKey(');
   });
 
   it('keeps persisted Developer credentials one-way and browser-managed writes blocked', () => {

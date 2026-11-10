@@ -1,6 +1,7 @@
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { GlobalErrorHandler } from './error-handler.service';
 
@@ -34,7 +35,7 @@ describe('GlobalErrorHandler privacy contract', () => {
     // rethrowing would turn a reported HTTP failure into a second application failure.
     expect(() => handler.handleError(error)).not.toThrow();
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     expect(req.request.body.url).toBe('https://api.example.com/private/path');
     expect(JSON.stringify(req.request.body)).not.toContain('token=secret');
     req.flush({ status: 'logged' });
@@ -48,7 +49,7 @@ describe('GlobalErrorHandler privacy contract', () => {
 
     handler.handleError(error);
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     expect(req.request.body.message).toHaveLength(1000);
     expect(req.request.body.stack.length).toBeLessThanOrEqual(12000);
     expect(req.request.body.stackFrames.length).toBeLessThanOrEqual(30);
@@ -62,7 +63,7 @@ describe('GlobalErrorHandler privacy contract', () => {
     handler.handleError(first);
     handler.handleError(second);
 
-    const requests = httpTesting.match('/api/analytics/client-error');
+    const requests = httpTesting.match(`${environment.apiUrl}/analytics/client-error`);
     expect(requests).toHaveLength(1);
     requests[0].flush({ status: 'logged' });
   });

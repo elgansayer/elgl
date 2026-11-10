@@ -170,14 +170,7 @@ export class LivekitService {
     const iceServersToUse =
       tokenResult.iceServers && tokenResult.iceServers.length > 0
         ? tokenResult.iceServers
-        : [
-            { urls: 'stun:stun.l.google.com:19302' },
-            {
-              urls: environment.turnServerUrl,
-              username: environment.turnUsername,
-              credential: environment.turnPassword,
-            },
-          ];
+        : [{ urls: 'stun:stun.l.google.com:19302' }];
 
     // Connect with retry for transient network failures.
     let lastError: Error | undefined;

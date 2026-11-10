@@ -1,0 +1,6 @@
+globalThis.__HELLOTALK_CONFIG__ = {
+  supabaseUrl: "${PUBLIC_SUPABASE_URL}",
+  supabaseAnonKey: "${PUBLIC_SUPABASE_ANON_KEY}",
+  centrifugoUrl: "${PUBLIC_CENTRIFUGO_URL}",
+  liveKitUrl: "${PUBLIC_LIVEKIT_URL}"
+};

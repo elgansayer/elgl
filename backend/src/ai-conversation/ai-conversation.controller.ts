@@ -11,6 +11,7 @@ import { User } from '@supabase/supabase-js';
 import { AiConversationService } from './ai-conversation.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { AiConversationMessageDto } from './dto/ai-conversation-message.dto';
 
 @Controller('ai-conversation')
 export class AiConversationController {
@@ -25,12 +26,7 @@ export class AiConversationController {
   @Post('message')
   async handleMessage(
     @CurrentUser() user: User | null,
-    @Body()
-    dto: {
-      message: string;
-      scenarioId?: string;
-      conversationHistory?: { role: 'user' | 'assistant'; content: string }[];
-    },
+    @Body() dto: AiConversationMessageDto,
   ): Promise<{ reply: string }> {
     if (!user) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
@@ -53,7 +49,7 @@ export class AiConversationController {
     const reply = await this.aiConversationService.generateReply(
       user.id,
       dto.message,
-      dto.scenarioId,
+      dto.scenarioId ?? undefined,
       dto.conversationHistory,
     );
     return { reply };

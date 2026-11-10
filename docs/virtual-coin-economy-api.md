@@ -79,7 +79,7 @@ Client A                NestJS API              Centrifugo            Client B
 
 ### Receipt Verification Chain
 
-1. **Apple IAP**: Receipt is verified against `https://buy.itunes.apple.com/verifyReceipt` (production) or sandbox endpoint. The response's `latest_receipt_info` is parsed for `product_id` and `transaction_id`.
+1. **Apple IAP**: Receipt is verified server-side with Apple's `verifyReceipt` API. The receipt is sent to the production endpoint first; a `21007` response is retried against the sandbox endpoint. A sandbox receipt is rejected when `NODE_ENV=production`, the receipt bundle ID must match `APPLE_BUNDLE_ID` (a receipt with no bundle ID is rejected, and production rejects all Apple receipts if `APPLE_BUNDLE_ID` is unset), and the purchase `product_id` must be a configured iOS coin product before any balance mutation. The latest transaction across `latest_receipt_info` and `receipt.in_app` is used, and its `quantity` is multiplied by the server-side package coins so multi-quantity purchases credit the correct amount.
 2. **Google Play**: Purchase token is verified via `androidpublisher.purchases.products.get()` API. The `purchaseState` must be 0 (purchased) and `consumptionState` must be 0 (not yet consumed).
 3. **Stripe**: Checkout session is retrieved via `stripe.checkout.sessions.retrieve(sessionId)`. The session `payment_status` must be `paid` and `status` must be `complete`.
 
@@ -98,8 +98,8 @@ export const COIN_PACKAGES: CoinPackage[] = [
     price_usd: 4.99,
     platform_product_id: {
       ios: 'com.linguaexchange.coins.small',
-      android: 'com.linguaexchange.coins.small',
-      web: 'price_small_coins',
+      android: 'coins_small',
+      web: 'coins_small_web',
     },
   },
   // ... medium, large, mega packs

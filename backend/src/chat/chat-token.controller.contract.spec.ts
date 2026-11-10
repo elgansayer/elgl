@@ -25,6 +25,8 @@ import type { ChatService } from './chat.service';
 import type { CentrifugoService } from './centrifugo.service';
 import type { ConversationStarterService } from './conversation-starter.service';
 import type { TranslationService } from './translation.service';
+import type { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import type { ReadReceiptsService } from './read-receipts.service';
 
 describe('POST /chat/token contract', () => {
   let chatService: { generateConnectionToken: Mock };
@@ -52,6 +54,8 @@ describe('POST /chat/token contract', () => {
       centrifugoService as unknown as CentrifugoService,
       {} as ConversationStarterService,
       {} as TranslationService,
+      {} as PersonalChatEncryptionService,
+      {} as ReadReceiptsService,
     );
   });
 

@@ -15,6 +15,8 @@ It reports:
 
 The dashboard renders weekly study time as a line chart, activity totals as a pie chart, and message/correction/Moment totals as summary cards.
 
+The profile screen links to the dashboard through the "My Stats" shortcut, so the page is reachable from in-app navigation without typing the `/stats` URL.
+
 ## Authentication and privacy
 
 `StatsController.getMyStats()` is guarded by `SupabaseAuthGuard`. The controller takes the user ID only from the authenticated request subject and does not accept another user ID from query/body input.
