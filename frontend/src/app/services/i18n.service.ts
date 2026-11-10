@@ -873,6 +873,14 @@ export class I18nService {
     'video_call.call_duration_aria': 'Call duration',
     'video_call.controls_toolbar_aria': 'Call controls',
     'video_call.presenting_badge_aria': 'You are presenting your screen',
+    'video_call.exchange_timer_aria': 'Language exchange turn timer',
+    'video_call.exchange_your_turn': 'Your turn to speak',
+    'video_call.exchange_partner_turn': 'Partner turn to speak',
+    'video_call.exchange_speak_your_language': 'Speak your language now',
+    'video_call.exchange_listen_and_wait': 'Listen and wait for your turn',
+    'video_call.exchange_end_turn': 'End my turn',
+    'video_call.exchange_end_turn_aria': 'End your speaking turn',
+    'video_call.exchange_muted_until_turn': 'Microphone is muted until your turn',
 
     // Split Screen Video Component
     'splitScreen.streamErrorAria': 'Video stream error',

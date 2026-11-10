@@ -5,6 +5,7 @@ import { ActiveCallComponent } from './active-call.component';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { LivekitService } from '../../services/livekit.service';
+import { ExchangeTimerService } from '../../services/exchange-timer.service';
 
 describe('ActiveCallComponent', () => {
   let fixture: ComponentFixture<ActiveCallComponent>;
@@ -18,9 +19,21 @@ describe('ActiveCallComponent', () => {
       publishTracks: vi.fn().mockResolvedValue(undefined),
       toggleMute: vi.fn().mockResolvedValue(true),
       toggleSpeakerphone: vi.fn().mockReturnValue(true),
+      setMuted: vi.fn().mockResolvedValue(false),
       leaveRoom: vi.fn(),
     };
   }
+
+  const mockExchangeTimer = {
+    isActive: signal(false),
+    isMyTurn: signal(true),
+    canSpeak: signal(true),
+    currentSpeakerLanguage: signal<string | null>(null),
+    remainingSeconds: signal(0),
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn(),
+    advanceTurn: vi.fn().mockResolvedValue(true),
+  };
 
   function createAuthMock() {
     return {
@@ -48,6 +61,7 @@ describe('ActiveCallComponent', () => {
         { provide: I18nService, useValue: mockI18nService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: LivekitService, useValue: mockLivekitService },
+        { provide: ExchangeTimerService, useValue: mockExchangeTimer },
       ],
     }).compileComponents();
 
@@ -74,6 +88,11 @@ describe('ActiveCallComponent', () => {
   beforeEach(() => {
     mockLivekitService = createLivekitMock();
     mockAuthService = createAuthMock();
+    mockExchangeTimer.isActive.set(false);
+    mockExchangeTimer.isMyTurn.set(true);
+    mockExchangeTimer.canSpeak.set(true);
+    mockExchangeTimer.stop.mockClear();
+    mockExchangeTimer.start.mockClear();
   });
 
   it('should create', async () => {
@@ -161,6 +180,40 @@ describe('ActiveCallComponent', () => {
       const [muteButton] = fixture.nativeElement.querySelectorAll('button');
       expect(muteButton.getAttribute('aria-label')).toBe('voip.mute');
       expect(muteButton.classList).not.toContain('bg-danger');
+    });
+  });
+
+  describe('exchange turn enforcement', () => {
+    it('mutes the microphone and disables the mute control while the partner holds the turn', async () => {
+      mockExchangeTimer.isActive.set(true);
+      mockExchangeTimer.isMyTurn.set(false);
+      mockExchangeTimer.canSpeak.set(false);
+
+      await createComponent();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(mockLivekitService.setMuted).toHaveBeenCalledWith(true);
+      const [muteButton] = fixture.nativeElement.querySelectorAll('button');
+      expect((muteButton as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('restores the microphone when the participant regains the turn', async () => {
+      mockExchangeTimer.isActive.set(true);
+      mockExchangeTimer.isMyTurn.set(false);
+      mockExchangeTimer.canSpeak.set(false);
+
+      await createComponent();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      mockLivekitService.setMuted.mockClear();
+
+      mockExchangeTimer.isMyTurn.set(true);
+      mockExchangeTimer.canSpeak.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(mockLivekitService.setMuted).toHaveBeenCalledWith(false);
     });
   });
 
