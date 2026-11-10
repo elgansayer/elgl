@@ -51,9 +51,7 @@ describe('LeaderboardService', () => {
     return { mockClient, mockSelect, mockOrder, mockLimit };
   }
 
-  async function createService(
-    mockClient: ReturnType<typeof setupService>['mockClient'],
-  ) {
+  async function createService(mockClient: unknown) {
     const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [
         LeaderboardService,
@@ -71,6 +69,118 @@ describe('LeaderboardService', () => {
     const { mockClient } = setupService([]);
     service = await createService(mockClient);
     expect(service).toBeDefined();
+  });
+
+  function setupRpcService(rpcResult: { data: unknown; error: unknown }) {
+    const mockRpc = vi.fn().mockResolvedValue(rpcResult);
+    const mockClient = { rpc: mockRpc };
+
+    return { mockRpc, mockClient };
+  }
+
+  describe('getWeeklyLeaderboard', () => {
+    it('splits corrector and study-hour rows into their categories', async () => {
+      const { mockClient, mockRpc } = setupRpcService({
+        data: [
+          {
+            category: 'correctors',
+            user_id: 'user-1',
+            display_name: 'Alice',
+            avatar_url: 'https://example.com/alice.png',
+            score: 12,
+          },
+          {
+            category: 'study_hours',
+            user_id: 'user-2',
+            display_name: 'Bob',
+            avatar_url: null,
+            score: 4.5,
+          },
+        ],
+        error: null,
+      });
+      service = await createService(mockClient);
+
+      const result = await service.getWeeklyLeaderboard(10);
+
+      expect(mockRpc).toHaveBeenCalledWith('get_weekly_leaderboard', {
+        p_limit: 10,
+      });
+      expect(result.correctors).toEqual([
+        {
+          user_id: 'user-1',
+          display_name: 'Alice',
+          avatar_url: 'https://example.com/alice.png',
+          score: 12,
+        },
+      ]);
+      expect(result.study_hours).toEqual([
+        {
+          user_id: 'user-2',
+          display_name: 'Bob',
+          avatar_url: null,
+          score: 4.5,
+        },
+      ]);
+    });
+
+    it('accepts numeric scores returned as strings', async () => {
+      const { mockClient } = setupRpcService({
+        data: [
+          {
+            category: 'study_hours',
+            user_id: 'user-2',
+            display_name: null,
+            avatar_url: null,
+            score: '3.7',
+          },
+        ],
+        error: null,
+      });
+      service = await createService(mockClient);
+
+      const result = await service.getWeeklyLeaderboard();
+
+      expect(result.study_hours[0].score).toBe(3.7);
+    });
+
+    it('clamps oversized limits before calling the database', async () => {
+      const { mockClient, mockRpc } = setupRpcService({
+        data: [],
+        error: null,
+      });
+      service = await createService(mockClient);
+
+      await service.getWeeklyLeaderboard(5000);
+
+      expect(mockRpc).toHaveBeenCalledWith('get_weekly_leaderboard', {
+        p_limit: 100,
+      });
+    });
+
+    it('throws when the RPC returns an error', async () => {
+      const { mockClient } = setupRpcService({
+        data: null,
+        error: { message: 'Database connection failed' },
+      });
+      service = await createService(mockClient);
+
+      await expect(service.getWeeklyLeaderboard()).rejects.toThrow(
+        'Failed to fetch weekly leaderboard: Database connection failed',
+      );
+    });
+
+    it('throws when the RPC returns an invalid row', async () => {
+      const { mockClient } = setupRpcService({
+        data: [{ category: 'correctors', user_id: 42, score: 1 }],
+        error: null,
+      });
+      service = await createService(mockClient);
+
+      await expect(service.getWeeklyLeaderboard()).rejects.toThrow(
+        'Failed to fetch weekly leaderboard: invalid result',
+      );
+    });
   });
 
   describe('getTopCorrectors', () => {

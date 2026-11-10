@@ -2325,6 +2325,16 @@ export interface Database {
         Args: { user_id: string; amount: number };
         Returns: void;
       };
+      get_weekly_leaderboard: {
+        Args: { p_limit?: number };
+        Returns: {
+          category: string;
+          user_id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          score: number;
+        }[];
+      };
       search_nearby_users: {
         Args: {
           search_lat: number;
