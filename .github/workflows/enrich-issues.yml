@@ -59,7 +59,7 @@ jobs:
               if any(x in text for x in ('admin','moderation','trust & safety','trust and safety','abuse','fraud','audit')): return 'admin / trust & safety'
               if any(x in text for x in ('frontend','angular','component','design','accessibility')): return 'frontend / product UI'
               if any(x in text for x in ('backend','nestjs','api','database','migration','postgres','redis')): return 'backend / platform'
-              if any(x in text for x in ('deploy','docker','podman','ci','workflow','factory','queue','worker','observability')): return 'infrastructure / delivery'
+              if any(x in text for x in ('deploy','docker','podman','ci','workflow','queue','worker','observability')): return 'infrastructure / delivery'
               if any(x in text for x in ('test','coverage','e2e','performance','benchmark')): return 'quality / testing'
               return 'product / engineering'
           def enrichment(issue):

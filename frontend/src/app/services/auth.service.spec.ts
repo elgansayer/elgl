@@ -2,21 +2,23 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
 import { SupabaseService } from './supabase.service';
-import { FcmService } from './fcm.service';
+import { FirebaseMessagingService } from './firebase-messaging.service';
 import { PLATFORM_ID } from '@angular/core';
 
 describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
 
+  const getClient = vi.fn(() => ({
+    auth: {
+      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
+      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      setSession: vi.fn().mockResolvedValue({ data: { session: {} }, error: null }),
+    },
+  }));
+
   const mockSupabaseService = {
-    getClient: () => ({
-      auth: {
-        onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
-        getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
-        setSession: vi.fn().mockResolvedValue({ data: { session: {} }, error: null }),
-      }
-    })
+    getClient,
   };
 
   const mockFcmService = {
@@ -26,17 +28,37 @@ describe('AuthService', () => {
   };
 
   beforeEach(() => {
+    getClient.mockClear();
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
         AuthService,
         { provide: SupabaseService, useValue: mockSupabaseService },
-        { provide: FcmService, useValue: mockFcmService },
+        { provide: FirebaseMessagingService, useValue: mockFcmService },
         { provide: PLATFORM_ID, useValue: 'browser' }
       ]
     });
     service = TestBed.inject(AuthService);
     httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  it('does not create a browser Supabase client during server rendering', () => {
+    TestBed.resetTestingModule();
+    getClient.mockClear();
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        AuthService,
+        { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: FirebaseMessagingService, useValue: mockFcmService },
+        { provide: PLATFORM_ID, useValue: 'server' },
+      ],
+    });
+
+    const serverService = TestBed.inject(AuthService);
+
+    expect(getClient).not.toHaveBeenCalled();
+    expect(serverService.isLoading()).toBe(false);
   });
 
   afterEach(() => {

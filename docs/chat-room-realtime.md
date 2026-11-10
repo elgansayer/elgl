@@ -22,6 +22,15 @@ The room treats Centrifugo payloads as untrusted input. `chat-room-realtime.ts` 
 5. The sender applies that status update to the existing message, so the already-rendered receipt changes without a history refresh.
 6. Authoritative `message_deleted` / `deleted_for=everyone` events remove the message from the open room.
 
+## Delivery and read receipt detail
+
+`message_receipts` stores one row per recipient and message with `delivered` or `read` state and an optional `read_at` timestamp. `chat_messages.delivery_status` remains the aggregate value rendered as the single tick (`sent`), double tick (`delivered`), or blue double tick (`read`).
+
+- `GET /chat/messages/:messageId/receipts` returns `{ messageId, deliveryStatus, readBy, totalMembers }`. `readBy` contains each reader's display name, avatar and read time. The authenticated caller must belong to the message room; non-members receive `null`.
+- The sender's own receipt is never recorded. A receipt is upgraded monotonically (`delivered` then `read`) and repeated calls are no-ops.
+- Group messages only show `read` once every other room member has read. Until then the aggregate remains `delivered` when at least one recipient has received it.
+- A successful receipt writes `status_update` on `chat:<roomId>` for the tick and `receipt_update` on `chat:<roomId>:receipts` for receipt detail subscribers.
+
 Read acknowledgement is idempotent. The frontend keeps an in-flight message-ID set so reconnect/history and realtime delivery cannot create a local request storm for the same message. Failures do not hide or fabricate messages; a later reload/realtime event can retry the acknowledgement.
 
 ## Failure and degraded behaviour
@@ -30,6 +39,7 @@ Read acknowledgement is idempotent. The frontend keeps an in-flight message-ID s
 - Centrifugo disconnect does not discard persisted history. Reconnect remains owned by `CentrifugeService`.
 - Malformed, wrong-room, unknown-status, and unrelated realtime payloads are ignored.
 - A failed read acknowledgement is non-blocking. Message reading remains usable and the persisted server state is retried naturally on a later room load/event.
+- If a receipt write fails, the message remains readable and the failure is logged without message content. The next acknowledgement retries the idempotent upsert.
 - Typing failures are intentionally non-critical and never gate message sending.
 - Duplicate message events are merged by ID instead of producing duplicate bubbles.
 
@@ -60,6 +70,6 @@ The normal frontend Vitest/static-analysis/build jobs exercise the integration w
 
 ## Rollout and rollback
 
-There is no schema migration, new endpoint, configuration key, dependency, or persisted client state. Frontend and backend contracts already exist, so the frontend can roll out independently.
+The change uses the existing `message_receipts` table and adds one read endpoint. No configuration key, dependency, or persisted client state is introduced. Frontend and backend can roll out independently because the tick UI already tolerates the aggregate status alone.
 
 Rollback is a normal revert of the frontend integration/helper/tests/docs. Persisted messages and delivery statuses require no cleanup. During rollback, the previous UI still loads messages and renders receipt values returned by history, but live receipt changes may again require a refresh.

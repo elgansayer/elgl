@@ -65,5 +65,15 @@ describe('ChatSettingsController', () => {
       expect(result).toEqual(dto);
       expect(service.updateSettings).toHaveBeenCalledWith('user-123', dto);
     });
+
+    it('should pass the Appearance chat text size through to the service', async () => {
+      const req = { user: { sub: 'user-123' } };
+      const dto: ChatSettingsDto = { textSize: 'large' };
+
+      const result = await controller.updateSettings(req, dto);
+
+      expect(result).toEqual({ textSize: 'large' });
+      expect(service.updateSettings).toHaveBeenCalledWith('user-123', dto);
+    });
   });
 });

@@ -27,6 +27,7 @@ import { FavouritesService } from '../favourites/favourites.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import type { User } from '@supabase/supabase-js';
 import { AiGenerateReplyDto, SendMessageDto } from './dto/send-message.dto';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
@@ -46,6 +47,7 @@ describe('ChatController', () => {
   let conversationStarterService: ConversationStarterService;
   let translationService: TranslationService;
   let personalChatEncryptionService: PersonalChatEncryptionService;
+  let readReceiptsService: ReadReceiptsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -116,6 +118,12 @@ describe('ChatController', () => {
             getConversationKey: vi.fn(),
           },
         },
+        {
+          provide: ReadReceiptsService,
+          useValue: {
+            getReceiptStatus: vi.fn(),
+          },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
@@ -133,6 +141,7 @@ describe('ChatController', () => {
     personalChatEncryptionService = module.get<PersonalChatEncryptionService>(
       PersonalChatEncryptionService,
     );
+    readReceiptsService = module.get<ReadReceiptsService>(ReadReceiptsService);
   });
 
   afterEach(() => {
@@ -673,6 +682,39 @@ describe('ChatController', () => {
         'read',
       );
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('getMessageReceipts', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.getMessageReceipts(null, 'msg-1');
+      expect(result).toBeNull();
+      expect(readReceiptsService.getReceiptStatus).not.toHaveBeenCalled();
+    });
+
+    it('should return per-user receipt status for an authenticated member', async () => {
+      const status = {
+        messageId: 'msg-1',
+        deliveryStatus: 'read' as const,
+        readBy: [
+          {
+            userId: 'user-2',
+            displayName: 'Partner',
+            avatarUrl: null,
+            readAt: '2026-11-09T10:00:00.000Z',
+          },
+        ],
+        totalMembers: 1,
+      };
+      (readReceiptsService.getReceiptStatus as Mock).mockResolvedValue(status);
+
+      const result = await controller.getMessageReceipts(mockUser(), 'msg-1');
+
+      expect(readReceiptsService.getReceiptStatus).toHaveBeenCalledWith(
+        'msg-1',
+        'user-1',
+      );
+      expect(result).toEqual(status);
     });
   });
 

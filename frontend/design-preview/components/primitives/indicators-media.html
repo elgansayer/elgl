@@ -305,6 +305,10 @@
         .lottie-spark {
           animation: none;
         }
+        .animate-eq {
+          animation: none;
+          height: 70%;
+        }
       }
     </style>
   </head>
@@ -491,12 +495,19 @@
           between animated bars (staggered <code>animation-delay</code> per bar, computed as
           <code>-(i &times; 0.18) % 1</code> seconds so they never all peak in sync) and a flat,
           dimmed <code>opacity-40</code> row pinned to <code>4px</code> tall when the speaker is
-          silent.
+          silent. Under <code>prefers-reduced-motion: reduce</code> the animated bars render as a
+          static <code>70%</code>-height row. The host carries <code>role="img"</code> plus an
+          <code>aria-label</code> (optional <code>ariaLabel</code> input override, otherwise an
+          active/inactive caption) and a visually hidden <code>sr-only</code> caption; the bar row
+          itself is <code>aria-hidden="true"</code>, so none of that changes the visible artwork.
         </p>
         <div class="demo-block">
           <p class="demo-label">Active (speaking)</p>
           <div class="demo-row">
-            <div class="flex items-end justify-center gap-0.5 h-5 text-primary-ink">
+            <div
+              class="flex items-end justify-center gap-0.5 h-5 text-primary-ink"
+              aria-hidden="true"
+            >
               <div class="w-1 rounded-t-sm bg-current animate-eq" style="animation-delay: 0s"></div>
               <div
                 class="w-1 rounded-t-sm bg-current animate-eq"
@@ -519,11 +530,26 @@
             <div
               class="flex items-end justify-center gap-0.5 h-5 text-primary-ink"
               style="opacity: 0.4"
+              aria-hidden="true"
             >
               <div class="w-1 rounded-t-sm bg-current" style="height: 4px"></div>
               <div class="w-1 rounded-t-sm bg-current" style="height: 4px"></div>
               <div class="w-1 rounded-t-sm bg-current" style="height: 4px"></div>
               <div class="w-1 rounded-t-sm bg-current" style="height: 4px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="demo-block">
+          <p class="demo-label">Active (reduced motion)</p>
+          <div class="demo-row">
+            <div
+              class="flex items-end justify-center gap-0.5 h-5 text-primary-ink"
+              aria-hidden="true"
+            >
+              <div class="w-1 rounded-t-sm bg-current" style="height: 70%"></div>
+              <div class="w-1 rounded-t-sm bg-current" style="height: 70%"></div>
+              <div class="w-1 rounded-t-sm bg-current" style="height: 70%"></div>
+              <div class="w-1 rounded-t-sm bg-current" style="height: 70%"></div>
             </div>
           </div>
         </div>
