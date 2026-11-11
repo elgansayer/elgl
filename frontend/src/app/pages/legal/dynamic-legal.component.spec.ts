@@ -54,7 +54,7 @@ describe('DynamicLegalComponent', () => {
                 'legal.privacyPolicy': 'Privacy Policy',
                 'legal.errorPrivacy': 'We could not load the Privacy Policy. Please try again.',
                 'legal.loadingDocument': 'Loading legal document...',
-                'legal.document': 'Legal Document',
+                'legal.document': 'Legal Information',
                 'legal.errorDocument': 'We could not load the legal document. Please try again.',
                 'legal.retry': 'Try again',
               };
