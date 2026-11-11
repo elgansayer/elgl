@@ -94,6 +94,11 @@ Reports: `npm run audit:design`, `npm run audit:design-render` (screenshots in `
 
 ## Status updates
 
+- **11 November 2026, issue #9466:** finding 1 is fixed. `I18nService.baseDictionary` is now the single English source
+  of truth; the redundant `frontend/src/assets/i18n/en.json` copy has been removed and
+  `frontend/public/assets/i18n/en-GB.json` is generated from the dictionary with `npm run generate:i18n-english`.
+  Every key used by a template or `t()` call has real British English copy, and `npm run check:i18n-coverage` fails CI
+  on missing keys, key-name-derived copy, or mirror drift.
 - **28 October 2026, issue #9462:** the "Icons and emoji" and "Copy leaks infrastructure" runtime defects in
   finding 5 are fixed. `voip-active-call` draws Lucide glyphs through ng-icons, `classroomsMarketplace.title`
   stores the emoji character, the `nav.*`, `moments.readAloud` and `moments.stopReading` labels no longer repeat
