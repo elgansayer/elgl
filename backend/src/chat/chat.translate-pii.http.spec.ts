@@ -15,6 +15,7 @@ import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 
 /**
@@ -98,6 +99,7 @@ describe('PII scrubbing for /api/chat translation over HTTP', () => {
         { provide: CentrifugoService, useValue: {} },
         { provide: ConversationStarterService, useValue: {} },
         { provide: PersonalChatEncryptionService, useValue: {} },
+        { provide: ReadReceiptsService, useValue: {} },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
