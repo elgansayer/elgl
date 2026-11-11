@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { NlpService } from './nlp.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 const mockGuess = vi.fn();
 
@@ -1442,5 +1443,380 @@ describe('NlpService', () => {
         expect.objectContaining({ original: 'friend', isCorrect: true }),
       ]);
     });
+  });
+  describe('PII scrubbing before DeepL and Azure', () => {
+    const email = 'john.doe@example.com';
+    const placeholderPattern = /PII[A-Z]{8}\d+Z/;
+
+    function placeholderOf(text: string): string {
+      const match = placeholderPattern.exec(text);
+      if (!match) throw new Error('The provider request has no placeholder');
+      return match[0];
+    }
+
+    function requestBody(callIndex: number): string {
+      return String((global.fetch as Mock).mock.calls[callIndex][1].body);
+    }
+
+    function expectNoSensitiveData(callIndex: number): void {
+      const body = requestBody(callIndex);
+      expect(body).not.toContain('john');
+      expect(body).not.toContain('example.com');
+    }
+
+    function ok(payload: unknown): object {
+      return { ok: true, json: () => Promise.resolve(payload) };
+    }
+
+    /** Text DeepL received in the nth call. */
+    function deepLText(callIndex: number): string {
+      return JSON.parse(requestBody(callIndex)).text[0];
+    }
+
+    /** Text Azure received in the nth call. */
+    function azureText(callIndex: number): string {
+      return JSON.parse(requestBody(callIndex))[0].Text;
+    }
+
+    beforeEach(() => {
+      mockGuess.mockReturnValue([{ alpha2: 'en', score: 0.99 }]);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    describe('translate', () => {
+      it('masks the DeepL request and the reverse look-up and restores both results', async () => {
+        (global.fetch as Mock)
+          .mockImplementationOnce(() =>
+            Promise.resolve(
+              ok({
+                translations: [
+                  {
+                    text: `Contáctame en ${placeholderOf(deepLText(0))} mañana`,
+                  },
+                ],
+              }),
+            ),
+          )
+          .mockImplementationOnce(() =>
+            Promise.resolve(
+              ok({
+                translations: [
+                  {
+                    text: `Contact me at ${placeholderOf(deepLText(1))} tomorrow`,
+                  },
+                ],
+              }),
+            ),
+          );
+
+        const result = await service.translate('user-1', true, {
+          text: `Contact me at ${email} tomorrow`,
+          source_language: 'en',
+          target_language: 'es',
+        });
+
+        expect(result.translated_text).toBe(`Contáctame en ${email} mañana`);
+        expect(result.transliteration).toBe(`Contact me at ${email} tomorrow`);
+        expect(result.original_text).toBe(`Contact me at ${email} tomorrow`);
+        expect(global.fetch).toHaveBeenCalledTimes(2);
+        expectNoSensitiveData(0);
+        expectNoSensitiveData(1);
+        expect(deepLText(0)).toMatch(/^Contact me at PII[A-Z]{8}0Z tomorrow$/);
+      });
+
+      it('does not call DeepL when only sensitive data would be sent', async () => {
+        const result = await service.translate('user-1', true, {
+          text: email,
+          source_language: 'en',
+          target_language: 'es',
+        });
+
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(result).toMatchObject({
+          original_text: email,
+          translated_text: email,
+          transliteration: email,
+          definition: `Translation of "${email}" in es`,
+        });
+      });
+
+      it('uses the local fallback when DeepL damages a placeholder', async () => {
+        (global.fetch as Mock).mockResolvedValueOnce(
+          ok({ translations: [{ text: 'Contáctame mañana' }] }),
+        );
+
+        const result = await service.translate('user-1', true, {
+          text: `Contact me at ${email} tomorrow`,
+          source_language: 'en',
+          target_language: 'es',
+        });
+
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(result.translated_text).toBe(`Contact me at ${email} tomorrow`);
+        expect(result.definition).toContain('temporarily unavailable');
+      });
+
+      it('keeps the translation as the transliteration when only the reverse look-up damages a placeholder', async () => {
+        (global.fetch as Mock)
+          .mockImplementationOnce(() =>
+            Promise.resolve(
+              ok({
+                translations: [{ text: `Hola ${placeholderOf(deepLText(0))}` }],
+              }),
+            ),
+          )
+          .mockResolvedValueOnce(ok({ translations: [{ text: 'Hello' }] }));
+
+        const result = await service.translate('user-1', true, {
+          text: `Hi ${email}`,
+          source_language: 'en',
+          target_language: 'es',
+        });
+
+        expect(result.translated_text).toBe(`Hola ${email}`);
+        expect(result.transliteration).toBe(`Hola ${email}`);
+      });
+
+      it('receives the metrics service from the Nest container', async () => {
+        const metrics = {
+          recordPiiScrub: vi.fn(),
+          recordPiiRedactions: vi.fn(),
+        };
+        const module = await Test.createTestingModule({
+          providers: [
+            NlpService,
+            { provide: ConfigService, useValue: mockConfigService },
+            {
+              provide: SupabaseService,
+              useValue: {
+                getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
+              },
+            },
+            { provide: LlmProxyService, useValue: mockLlmProxyService },
+            { provide: MetricsService, useValue: metrics },
+          ],
+        }).compile();
+        (global.fetch as Mock).mockResolvedValue(
+          ok({ translations: [{ text: 'no placeholder' }] }),
+        );
+
+        await module.get(NlpService).translate('user-1', true, {
+          text: `Hi ${email}`,
+          source_language: 'en',
+          target_language: 'es',
+        });
+
+        expect(metrics.recordPiiScrub).toHaveBeenCalledWith(
+          'deepl',
+          'translate',
+          'redacted',
+        );
+      });
+
+      it('records value-free metrics and logs', async () => {
+        const metrics = {
+          recordPiiScrub: vi.fn(),
+          recordPiiRedactions: vi.fn(),
+        };
+        const debug = vi
+          .spyOn(Logger.prototype, 'debug')
+          .mockImplementation(() => {});
+        const instrumented = new NlpService(
+          {
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
+          } as unknown as SupabaseService,
+          mockConfigService as unknown as ConfigService,
+          mockLlmProxyService as unknown as LlmProxyService,
+          metrics as unknown as MetricsService,
+        );
+        (global.fetch as Mock).mockResolvedValue(
+          ok({ translations: [{ text: 'no placeholder' }] }),
+        );
+
+        await instrumented.translate('user-1', true, {
+          text: `Hi ${email}`,
+          source_language: 'en',
+          target_language: 'es',
+        });
+
+        expect(metrics.recordPiiScrub).toHaveBeenCalledWith(
+          'deepl',
+          'translate',
+          'redacted',
+        );
+        expect(metrics.recordPiiScrub).toHaveBeenCalledWith(
+          'deepl',
+          'translate',
+          'placeholder_mismatch',
+        );
+        expect(metrics.recordPiiRedactions).toHaveBeenCalledWith(
+          'deepl',
+          'translate',
+          'email',
+          1,
+        );
+        expect(JSON.stringify(debug.mock.calls)).not.toContain('john');
+      });
+    });
+
+    describe('grammarCheck', () => {
+      it('masks the detection, dictionary and explanation requests and restores the results', async () => {
+        (global.fetch as Mock)
+          .mockResolvedValueOnce(ok([{ language: 'en' }]))
+          .mockImplementationOnce(() =>
+            Promise.resolve(
+              ok([
+                {
+                  displayTarget: azureText(1).replace('I go', 'I went'),
+                },
+              ]),
+            ),
+          )
+          .mockImplementationOnce(() =>
+            Promise.resolve(
+              ok([
+                {
+                  translations: [
+                    {
+                      text: `Past tense needed near ${placeholderOf(azureText(2))}`,
+                    },
+                  ],
+                },
+              ]),
+            ),
+          );
+
+        const result = await service.grammarCheck('user-1', true, {
+          text: `I go to see ${email}`,
+        });
+
+        expect(result).toEqual({
+          original: `I go to see ${email}`,
+          corrected: `I went to see ${email}`,
+          explanation: `Past tense needed near ${email}`,
+          errors_found: 1,
+        });
+        expect(global.fetch).toHaveBeenCalledTimes(3);
+        for (const call of [0, 1, 2]) expectNoSensitiveData(call);
+      });
+
+      it('keeps the original text when Azure damages a placeholder in the correction', async () => {
+        (global.fetch as Mock)
+          .mockResolvedValueOnce(ok([{ language: 'en' }]))
+          .mockResolvedValueOnce(ok([{ displayTarget: 'I went to see' }]))
+          .mockResolvedValueOnce(
+            ok([
+              { translations: [{ text: 'Corrected without a placeholder' }] },
+            ]),
+          );
+
+        const result = await service.grammarCheck('user-1', true, {
+          text: `I go to see ${email}`,
+        });
+
+        expect(result.corrected).toBe(`I go to see ${email}`);
+        expect(result.errors_found).toBe(0);
+        expect(result.explanation).toBe('Corrected via Azure AI');
+        for (const call of [0, 1, 2]) expectNoSensitiveData(call);
+      });
+
+      it('does not call Azure when only sensitive data would be sent', async () => {
+        const result = await service.grammarCheck('user-1', true, {
+          text: email,
+        });
+
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(result.corrected).toBe(email);
+        expect(result.errors_found).toBe(0);
+      });
+    });
+
+    describe('translateAndCorrect', () => {
+      it('masks every DeepL and Azure request and restores the translation and corrections', async () => {
+        (global.fetch as Mock)
+          .mockImplementationOnce(() =>
+            Promise.resolve(
+              ok({
+                translations: [
+                  { text: `Elle va voir ${placeholderOf(deepLText(0))}` },
+                ],
+              }),
+            ),
+          )
+          .mockResolvedValueOnce(ok([{ language: 'en' }]))
+          .mockImplementationOnce(() =>
+            Promise.resolve(
+              ok([{ displayTarget: azureText(2).replace('go', 'goes') }]),
+            ),
+          )
+          .mockImplementationOnce(() =>
+            Promise.resolve(
+              ok([
+                {
+                  translations: [
+                    {
+                      text: `Third person near ${placeholderOf(azureText(3))}`,
+                    },
+                  ],
+                },
+              ]),
+            ),
+          );
+
+        const result = await service.translateAndCorrect('user-1', true, {
+          text: `She go to see ${email}`,
+          target_language: 'fr',
+        });
+
+        expect(result.translated_text).toBe(`Elle va voir ${email}`);
+        expect(result.original_text).toBe(`She go to see ${email}`);
+        expect(result.wordCorrections[1]).toEqual({
+          original: 'go',
+          corrected: 'goes',
+          explanation: `Third person near ${email}`,
+          offset: 4,
+          isCorrect: false,
+        });
+        expect(global.fetch).toHaveBeenCalledTimes(4);
+        for (const call of [0, 1, 2, 3]) expectNoSensitiveData(call);
+      });
+
+      it('falls back to the source text when DeepL damages a placeholder', async () => {
+        (global.fetch as Mock).mockResolvedValueOnce(
+          ok({ translations: [{ text: 'Elle va voir' }] }),
+        );
+        configValuesWithoutAzure();
+
+        const result = await service.translateAndCorrect('user-1', true, {
+          text: `She go to see ${email}`,
+          target_language: 'fr',
+        });
+
+        expect(result.translated_text).toBe(`She go to see ${email}`);
+        expectNoSensitiveData(0);
+      });
+
+      it('does not call a provider when only sensitive data would be sent', async () => {
+        const result = await service.translateAndCorrect('user-1', true, {
+          text: email,
+          target_language: 'fr',
+        });
+
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(result.translated_text).toBe(email);
+        expect(result.wordCorrections.every((word) => word.isCorrect)).toBe(
+          true,
+        );
+      });
+    });
+
+    function configValuesWithoutAzure(): void {
+      mockConfigService.get.mockImplementation((key: string) =>
+        key === 'DEEPL_API_KEY' ? 'mock-deepl-key' : null,
+      );
+    }
   });
 });
