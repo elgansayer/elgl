@@ -28,8 +28,14 @@ describe('LlmProxyService', () => {
     const controller = new AbortController();
 
     await expect(
-      service.proxyMessage('Generate this', controller.signal),
-    ).resolves.toEqual({ response: 'Generated response' });
+      service.chatCompletion(
+        [
+          { role: 'system', content: 'Be helpful.' },
+          { role: 'user', content: 'Generate this' },
+        ],
+        controller.signal,
+      ),
+    ).resolves.toBe('Generated response');
 
     expect(fetchMock).toHaveBeenCalledWith(
       'https://provider.example.test/completions',
@@ -54,8 +60,11 @@ describe('LlmProxyService', () => {
       get: vi.fn((_key: string, fallback?: string) => fallback),
     } as never);
 
-    await expect(service.proxyMessage('Generate this')).rejects.toThrow(
-      'LLM provider returned HTTP 503',
-    );
+    await expect(
+      service.chatCompletion([
+        { role: 'system', content: 'Be helpful.' },
+        { role: 'user', content: 'Generate this' },
+      ]),
+    ).rejects.toThrow('LLM provider returned HTTP 503');
   });
 });

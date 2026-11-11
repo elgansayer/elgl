@@ -455,6 +455,7 @@
         "frontend/src/app/components/voip-call",
         "frontend/src/app/components/voip-active-call",
         "frontend/src/app/components/video-call",
+        "frontend/src/app/components/exchange-timer",
         "frontend/src/app/components/split-screen-video",
         "frontend/src/app/components/video-room",
         "frontend/src/app/components/audio-room",
@@ -478,7 +479,7 @@
       "claudeDesignPath": "features/calls-live.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1195-e2ee-personal-messages (e2ee secured badge is conditionally rendered on connected calls; call controls and visual contract are unchanged); issue-1777-live-chat-overlay (additive Centrifugo listener and reduced-motion support for live chat overlay; visual contract is unchanged); issue-1788-raise-hand-approve-speaker (consolidated approve speaker modal into standalone component matching existing preview specimen and added decline/dismiss stage handlers; visual contract is unchanged); issue-1840-quick-polls (accessible poll dialogs, explicit numeric result cues, voting actions and reconnect recovery); issue-1828-bookmark-feedback (the existing Favourite action now reports success or failure through the shared translated toast; the message action menu and message layout are unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1195-e2ee-personal-messages (e2ee secured badge is conditionally rendered on connected calls; call controls and visual contract are unchanged); issue-1777-live-chat-overlay (additive Centrifugo listener and reduced-motion support for live chat overlay; visual contract is unchanged); issue-1788-raise-hand-approve-speaker (consolidated approve speaker modal into standalone component matching existing preview specimen and added decline/dismiss stage handlers; visual contract is unchanged); issue-1840-quick-polls (accessible poll dialogs, explicit numeric result cues, voting actions and reconnect recovery); issue-1828-bookmark-feedback (the existing Favourite action now reports success or failure through the shared translated toast; the message action menu and message layout are unchanged); issue-2037-exchange-timers-2026-11-10 (1:1 calls render a reciprocal turn timer with current speaker language, countdown and end-turn action; mute controls are disabled while the partner holds the turn)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",
@@ -606,13 +607,15 @@
         "frontend/src/app/components/study-streak-counter",
         "frontend/src/app/components/study-streak-widget",
         "frontend/src/app/components/celebration-overlay",
-        "frontend/src/app/components/language-challenges"
+        "frontend/src/app/components/language-challenges",
+        "frontend/src/app/components/ipa-alphabet",
+        "frontend/src/app/components/verb-conjugation-trainer"
       ],
       "previewPaths": ["frontend/design-preview/features/learning.html"],
       "claudeDesignPath": "features/learning.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1792-flashcard-review-interactions (in-flight save disabling, accessibility attributes, and audio lifecycle cleanup preserve the existing review layout; the visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1792-flashcard-review-interactions (in-flight save disabling, accessibility attributes, and audio lifecycle cleanup preserve the existing review layout; the visual contract is unchanged); issue-2035-verb-conjugation-ipa-alphabet (adds the verb conjugation trainer and IPA alphabet practice specimens)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",

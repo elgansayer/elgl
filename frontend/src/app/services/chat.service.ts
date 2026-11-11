@@ -1,18 +1,47 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
+import { NetworkStatusService } from './network-status.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 import { ChatCacheService } from './chat-cache.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import { I18nService } from './i18n.service';
+import { showErrorToast } from './toast.service';
 import { Router } from '@angular/router';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Client errors that can succeed on a later attempt, for example once the session is refreshed. */
+const RETRYABLE_CLIENT_ERROR_STATUSES: ReadonlySet<number> = new Set([401, 408, 425, 429]);
+
+/**
+ * True when the server definitively refused a replayed message (validation, a block, a missing
+ * room, an oversized payload). Network failures (status 0), expired sessions, throttling and
+ * server errors are not permanent: the message stays queued and is retried.
+ */
+function isPermanentRejection(error: unknown): boolean {
+  return (
+    error instanceof HttpErrorResponse &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    !RETRYABLE_CLIENT_ERROR_STATUSES.has(error.status)
+  );
+}
+
+/** Outcome of replaying the offline message queue. */
+export interface OfflineSyncResult {
+  /** Delivered, or already stored by an earlier attempt, and removed from the queue. */
+  sent: number;
+  /** Still queued because delivery or dequeueing failed; retried on the next trigger. */
+  failed: number;
+  /** Permanently refused by the server and removed from the queue. */
+  rejected: number;
 }
 
 export interface CorrectionPayload {
@@ -227,6 +256,7 @@ export class ChatService {
   private authService = inject(AuthService);
   private safetyService = inject(SafetyService);
   private offlineQueue = inject(OfflineQueueService);
+  private networkStatus = inject(NetworkStatusService);
   private hapticFeedback = inject(HapticFeedbackService);
   private chatCache = inject(ChatCacheService);
   private router = inject(Router);
@@ -249,10 +279,23 @@ export class ChatService {
     );
   }
 
+  /** The replay currently running, shared so overlapping triggers never send a message twice. */
+  private offlineSyncInFlight: Promise<OfflineSyncResult> | null = null;
+
+  /** True while a signed-in account has connectivity, which is when queued messages can be sent. */
+  private readonly canReplayOfflineQueue = computed(
+    () => !!this.authService.currentUser()?.id && this.networkStatus.isOnline(),
+  );
+
   constructor() {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => this.syncOfflineMessages());
-    }
+    // Replay the offline queue each time a signed-in account gains connectivity: on reconnecting,
+    // on signing in, and at start-up for messages a previous session left queued. Syncing to the
+    // network is a side effect that cannot be expressed declaratively.
+    effect(() => {
+      if (this.canReplayOfflineQueue()) {
+        untracked(() => void this.syncOfflineMessages());
+      }
+    });
   }
 
   readonly isUserBlocked = computed(() => {
@@ -439,45 +482,96 @@ export class ChatService {
     return message;
   }
 
-  /** Attempt to sync all offline queued messages. Individual failures do not block the rest. */
-  async syncOfflineMessages(): Promise<{ sent: number; failed: number }> {
-    let sent = 0;
-    let failed = 0;
-    const token = this.authService.getAccessToken();
-    if (!token) return { sent, failed };
+  /** Attempt to sync all offline queued messages.
+   * Replays the queued offline messages of the signed-in account, oldest first.
+   *
+   * Overlapping calls share one replay, so a message is never sent twice concurrently. Each
+   * message is sent with its queue id as `client_message_id`, which the API stores as the message
+   * id: if a response is lost the retry returns the original message instead of a duplicate.
+   * A failed message holds back later messages of the same room so none overtakes it, while other
+   * rooms continue. The server permanently refusing a message removes it from the queue.
+   */
+  syncOfflineMessages(): Promise<OfflineSyncResult> {
+    this.offlineSyncInFlight ??= this.replayOfflineQueue().finally(() => {
+      this.offlineSyncInFlight = null;
+    });
+    return this.offlineSyncInFlight;
+  }
+
+  private async replayOfflineQueue(): Promise<OfflineSyncResult> {
+    const result: OfflineSyncResult = { sent: 0, failed: 0, rejected: 0 };
+    if (!this.authService.getAccessToken()) return result;
+
+    let messages: ChatMessage[];
+    try {
+      messages = await this.offlineQueue.getQueuedMessages();
+    } catch {
+      // Fixed diagnostic: provider errors can carry private content.
+      console.error('chat.offline_queue_unreadable');
+      return result;
+    }
+
+    const stalledRooms = new Set<string>();
+    for (const message of messages) {
+      if (stalledRooms.has(message.room_id)) {
+        result.failed++;
+        continue;
+      }
+      const outcome = await this.replayQueuedMessage(message);
+      if (outcome === 'retry') {
+        stalledRooms.add(message.room_id);
+        result.failed++;
+      } else {
+        result[outcome]++;
+      }
+    }
+
+    if (result.failed > 0 || result.rejected > 0) {
+      console.warn('chat.offline_sync_incomplete', { ...result });
+    }
+    if (result.rejected > 0) {
+      showErrorToast(
+        this.i18n.translate('chatRoom.offlineMessagesRejected', { count: result.rejected }),
+      );
+    }
+    return result;
+  }
+
+  /** Sends one queued message and dequeues it unless it must be retried later. */
+  private async replayQueuedMessage(message: ChatMessage): Promise<'sent' | 'rejected' | 'retry'> {
+    let outcome: 'sent' | 'rejected' = 'sent';
+    try {
+      await firstValueFrom(
+        this.http.post<ChatMessage>(
+          `${this.baseUrl}/messages`,
+          {
+            room_id: message.room_id,
+            message_type: message.message_type,
+            text_content: message.text_content,
+            media_url: message.media_url,
+            correction_payload: message.correction_payload,
+            correction_request_payload: message.correction_request_payload,
+            reply_to_id: message.reply_to_id,
+            status_reply_payload: message.status_reply_payload,
+            is_encrypted: message.is_encrypted,
+            encrypted_payload: message.encrypted_payload,
+            client_message_id: message.id,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (error) {
+      if (!isPermanentRejection(error)) return 'retry';
+      outcome = 'rejected';
+    }
 
     try {
-      const messages = await this.offlineQueue.getQueuedMessages();
-      for (const msg of messages) {
-        const payload = {
-          room_id: msg.room_id,
-          message_type: msg.message_type,
-          text_content: msg.text_content,
-          media_url: msg.media_url,
-          correction_payload: msg.correction_payload,
-          correction_request_payload: msg.correction_request_payload,
-          reply_to_id: msg.reply_to_id,
-          status_reply_payload: msg.status_reply_payload,
-          is_encrypted: msg.is_encrypted,
-          encrypted_payload: msg.encrypted_payload,
-        };
-
-        try {
-          await firstValueFrom(
-            this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
-              headers: this.getHeaders(),
-            }),
-          );
-          await this.offlineQueue.removeMessage(msg.id);
-          sent++;
-        } catch {
-          failed++;
-        }
-      }
-    } catch (error) {
-      console.error('Failed to sync offline messages:', error);
+      await this.offlineQueue.removeMessage(message.id);
+    } catch {
+      // Still queued, so the next replay resends it. The API answers that idempotently.
+      return 'retry';
     }
-    return { sent, failed };
+    return outcome;
   }
 
   async getMessages(roomId: string, search?: string): Promise<ChatMessage[]> {

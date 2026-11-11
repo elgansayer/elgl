@@ -115,11 +115,48 @@ export interface CoinPackage {
   };
 }
 
+export type PurchasePlatform = 'ios' | 'android' | 'web';
+
 export interface VerifiedReceipt {
   valid: boolean;
   productId: string;
   transactionId: string;
-  platform: 'ios' | 'android' | 'web';
+  platform: PurchasePlatform;
+  quantity: number;
+}
+
+interface AppleReceiptTransaction {
+  quantity?: string;
+  product_id?: string;
+  transaction_id?: string;
+  original_transaction_id?: string;
+  purchase_date_ms?: string;
+  bundle_id?: string;
+}
+
+interface AppleVerifyReceiptResponse {
+  status: number;
+  environment?: 'Sandbox' | 'Production';
+  bundle_id?: string;
+  latest_receipt_info?: AppleReceiptTransaction[];
+  receipt?: {
+    bundle_id?: string;
+    in_app?: AppleReceiptTransaction[];
+  };
+}
+
+function isAppleVerifyReceiptResponse(
+  value: unknown,
+): value is AppleVerifyReceiptResponse {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('status' in value)) return false;
+  return typeof value.status === 'number';
+}
+
+function isAppleReceiptTransaction(
+  value: unknown,
+): value is AppleReceiptTransaction {
+  return typeof value === 'object' && value !== null;
 }
 
 export const COIN_PACKAGES: CoinPackage[] = [
@@ -646,16 +683,6 @@ export class EconomyService {
     return { claimed: true, coins_rewarded: reward, new_balance: newBalance };
   }
 
-  verifyPurchaseReceipt(_dto: {
-    receipt_token: string;
-    platform: string;
-  }): Promise<boolean> {
-    // Implement server-side receipt verification logic here
-    // This is a placeholder implementation
-    const isValid = true; // Replace with actual verification logic
-    return Promise.resolve(isValid);
-  }
-
   async purchaseCoins(
     userId: string,
     dto: PurchaseCoinsDto,
@@ -663,24 +690,29 @@ export class EconomyService {
     const startTime = Date.now();
     const supabase = this.supabaseService.getClient();
 
-    const platform = this.detectPlatform(dto.receipt_token);
+    const detectedPlatform = this.detectPlatform(dto.receipt_token);
+    const hasPlatformPrefix =
+      dto.receipt_token.startsWith('ios_') ||
+      dto.receipt_token.startsWith('android_') ||
+      dto.receipt_token.startsWith('stripe_');
 
-    if (dto.platform && dto.platform !== platform) {
-      this.metricsService.recordCoinFraudAttempt(platform, 'platform_mismatch');
+    // A client-declared platform must not contradict the receipt prefix. Raw
+    // Apple receipts carry no prefix, so only enforce this when one is present.
+    if (
+      dto.platform &&
+      hasPlatformPrefix &&
+      dto.platform !== detectedPlatform
+    ) {
+      this.metricsService.recordCoinFraudAttempt(
+        detectedPlatform,
+        'platform_mismatch',
+      );
       throw new BadRequestException(
-        `Receipt platform (${platform}) does not match provided platform (${dto.platform})`,
+        `Receipt platform (${detectedPlatform}) does not match provided platform (${dto.platform})`,
       );
     }
 
-    const isReceiptValid = await this.verifyPurchaseReceipt({
-      receipt_token: dto.receipt_token,
-      platform,
-    });
-
-    if (!isReceiptValid) {
-      this.metricsService.recordCoinFraudAttempt(platform, 'invalid_receipt');
-      throw new BadRequestException('Invalid purchase receipt');
-    }
+    const platform: PurchasePlatform = dto.platform ?? detectedPlatform;
 
     // For web (Stripe) ensure a pending purchase record was created server-side
     if (platform === 'web') {
@@ -721,29 +753,39 @@ export class EconomyService {
       }
     }
 
-    // 1. Verify with the store/provider
-    const verifiedReceipt = await this.verifyReceipt(
-      dto.receipt_token,
-      platform,
-      userId,
-    );
+    // 1. Verify with the store/provider. A rejected receipt must never reach
+    // the persistence or balance-credit steps below.
+    let verifiedReceipt: VerifiedReceipt;
+    try {
+      verifiedReceipt = await this.verifyReceipt(
+        dto.receipt_token,
+        platform,
+        userId,
+      );
+    } catch (error: unknown) {
+      this.metricsService.recordCoinFraudAttempt(platform, 'invalid_receipt');
+      this.logger.warn(
+        `Receipt verification failed for ${platform} purchase by user ${userId}: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      throw error;
+    }
 
     if (!verifiedReceipt.valid) {
+      this.metricsService.recordCoinFraudAttempt(platform, 'invalid_receipt');
       throw new BadRequestException('Receipt verification failed');
     }
 
-    const { productId, transactionId } = verifiedReceipt;
+    const { productId, transactionId, quantity } = verifiedReceipt;
 
     // 2. Find corresponding coin package (coins amount is derived server-side)
-    const coinPackage = COIN_PACKAGES.find(
-      (pkg) =>
-        pkg.platform_product_id.ios === productId ||
-        pkg.platform_product_id.android === productId ||
-        pkg.platform_product_id.web === productId,
-    );
+    const coinPackage = this.getCoinPackageByProductId(productId, platform);
     if (!coinPackage) {
       throw new BadRequestException(`Unknown product ID: ${productId}.`);
     }
+    const coinsToCredit = coinPackage.coins * quantity;
+    const amountPaid = coinPackage.price * quantity;
 
     if (platform === 'web') {
       // Update the existing pending record to completed
@@ -830,8 +872,8 @@ export class EconomyService {
           supabase.from('coin_purchases').insert({
             user_id: userId,
             package_id: coinPackage.id,
-            coins_added: coinPackage.coins,
-            amount_paid: coinPackage.price,
+            coins_added: coinsToCredit,
+            amount_paid: amountPaid,
             currency: 'usd',
             receipt_token: dto.receipt_token,
             platform,
@@ -889,7 +931,7 @@ export class EconomyService {
 
     const currentBalance =
       typeof userData.coins_balance === 'number' ? userData.coins_balance : 0;
-    const newBalance = currentBalance + coinPackage.coins;
+    const newBalance = currentBalance + coinsToCredit;
 
     const { error: updateError } = await withExponentialBackoff(
       () =>
@@ -922,7 +964,7 @@ export class EconomyService {
     }
 
     this.logger.info(
-      `User ${userId} received ${coinPackage.coins} coins (transaction ${(transactionId ?? '').slice(-8) || '[unknown]'})`,
+      `User ${userId} received ${coinsToCredit} coins (transaction ${(transactionId ?? '').slice(-8) || '[unknown]'})`,
     );
 
     this.invalidateUserEconomyCaches(userId);
@@ -930,7 +972,7 @@ export class EconomyService {
       platform,
       coinPackage.id,
       'success',
-      coinPackage.price,
+      amountPaid,
     );
     this.metricsService.observeCoinTransactionLatency(
       'purchase_coins',
@@ -938,12 +980,12 @@ export class EconomyService {
     );
 
     return {
-      coins: coinPackage.coins,
+      coins: coinsToCredit,
       new_balance: newBalance,
     };
   }
 
-  private detectPlatform(receiptToken: string): 'ios' | 'android' | 'web' {
+  private detectPlatform(receiptToken: string): PurchasePlatform {
     if (receiptToken.startsWith('ios_')) return 'ios';
     if (receiptToken.startsWith('android_')) return 'android';
     return 'web';
@@ -972,7 +1014,7 @@ export class EconomyService {
 
   private async verifyReceipt(
     receiptToken: string,
-    platform: string,
+    platform: PurchasePlatform,
     userId: string,
   ): Promise<VerifiedReceipt> {
     switch (platform) {
@@ -988,20 +1030,124 @@ export class EconomyService {
   private async verifyAppleReceipt(
     receiptToken: string,
   ): Promise<VerifiedReceipt> {
-    const verificationUrl =
-      this.configService.get<string>('APPLE_VERIFICATION_URL') ??
-      'https://sandbox.itunes.apple.com/verifyReceipt';
     const sharedSecret = this.configService.get<string>('APPLE_SHARED_SECRET');
 
     if (!sharedSecret) {
       throw new BadRequestException('Apple shared secret not configured');
     }
 
+    // Clients prefix raw App Store receipt data with `ios_` so the platform can
+    // be detected without trusting a client-supplied flag alone.
+    const receiptData = receiptToken.replace(/^ios_/, '');
+    if (!receiptData) {
+      throw new BadRequestException('Invalid Apple receipt token');
+    }
+
+    const configuredUrl =
+      this.configService.get<string>('APPLE_VERIFICATION_URL') ??
+      'https://buy.itunes.apple.com/verifyReceipt';
+    const sandboxUrl = 'https://sandbox.itunes.apple.com/verifyReceipt';
+
+    let body = await this.postAppleReceipt(
+      configuredUrl,
+      receiptData,
+      sharedSecret,
+    );
+    let usedSandbox = configuredUrl === sandboxUrl;
+
+    // Apple recommends sending to production first and retrying a 21007
+    // response against the sandbox. A sandbox receipt must never be accepted as
+    // a production payment merely because sandbox verification succeeds.
+    if (body.status === 21007) {
+      usedSandbox = true;
+      body = await this.postAppleReceipt(sandboxUrl, receiptData, sharedSecret);
+    }
+
+    if (body.status !== 0) {
+      throw new BadRequestException(
+        `Apple receipt verification failed (status: ${body.status})`,
+      );
+    }
+
+    const nodeEnv = this.configService.get<string>('NODE_ENV');
+    if (
+      nodeEnv === 'production' &&
+      (usedSandbox || body.environment === 'Sandbox')
+    ) {
+      throw new BadRequestException(
+        'Apple sandbox receipts are not accepted in production',
+      );
+    }
+
+    const expectedBundleId = this.configService.get<string>('APPLE_BUNDLE_ID');
+    const receiptBundleId = body.receipt?.bundle_id ?? body.bundle_id;
+    // Fail closed: a receipt from another app (or one with no bundle ID) must
+    // never credit coins, and production must always pin the expected bundle.
+    if (!expectedBundleId && nodeEnv === 'production') {
+      throw new BadRequestException('Apple bundle ID not configured');
+    }
+    if (expectedBundleId && receiptBundleId !== expectedBundleId) {
+      throw new BadRequestException('Apple receipt bundle ID mismatch');
+    }
+
+    const transactions = [
+      ...(Array.isArray(body.latest_receipt_info)
+        ? body.latest_receipt_info
+        : []),
+      ...(Array.isArray(body.receipt?.in_app) ? body.receipt.in_app : []),
+    ].filter(isAppleReceiptTransaction);
+
+    if (transactions.length === 0) {
+      throw new BadRequestException('No purchase information in receipt');
+    }
+
+    const latest = transactions.reduce((current, candidate) => {
+      const currentMs = Number.parseInt(current.purchase_date_ms ?? '0', 10);
+      const candidateMs = Number.parseInt(
+        candidate.purchase_date_ms ?? '0',
+        10,
+      );
+      return candidateMs > currentMs ? candidate : current;
+    });
+
+    if (!latest.product_id || !latest.transaction_id) {
+      throw new BadRequestException(
+        'Apple receipt is missing a product or transaction ID',
+      );
+    }
+
+    // Reject product IDs that are not configured iOS coin products before any
+    // balance mutation happens.
+    if (!this.getCoinPackageByProductId(latest.product_id, 'ios')) {
+      throw new BadRequestException(
+        `Unknown product ID: ${latest.product_id}.`,
+      );
+    }
+
+    const quantity = Number.parseInt(latest.quantity ?? '1', 10);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
+      throw new BadRequestException('Invalid Apple purchase quantity');
+    }
+
+    return {
+      valid: true,
+      productId: latest.product_id,
+      transactionId: latest.transaction_id,
+      platform: 'ios',
+      quantity,
+    };
+  }
+
+  private async postAppleReceipt(
+    url: string,
+    receiptData: string,
+    sharedSecret: string,
+  ): Promise<AppleVerifyReceiptResponse> {
     const response = await withExponentialBackoff(
       () =>
         firstValueFrom(
-          this.httpService.post(verificationUrl, {
-            'receipt-data': receiptToken,
+          this.httpService.post<unknown>(url, {
+            'receipt-data': receiptData,
             password: sharedSecret,
             'exclude-old-transactions': true,
           }),
@@ -1010,34 +1156,11 @@ export class EconomyService {
       { logger: this.logger },
     );
 
-    const body = response.data as {
-      status: number;
-      latest_receipt_info?: Array<{
-        product_id: string;
-        transaction_id: string;
-      }>;
-    };
-    if (!body) {
+    if (!isAppleVerifyReceiptResponse(response.data)) {
       throw new BadRequestException('Invalid Apple receipt response');
     }
 
-    if (body.status !== 0 && body.status !== 21007) {
-      throw new BadRequestException(
-        `Apple receipt verification failed (status: ${body.status})`,
-      );
-    }
-
-    const latestReceiptInfo = body.latest_receipt_info?.[0];
-    if (!latestReceiptInfo) {
-      throw new BadRequestException('No purchase information in receipt');
-    }
-
-    return {
-      valid: true,
-      productId: latestReceiptInfo.product_id,
-      transactionId: latestReceiptInfo.transaction_id,
-      platform: 'ios',
-    };
+    return response.data;
   }
 
   private async verifyGooglePlayReceipt(
@@ -1095,6 +1218,7 @@ export class EconomyService {
       productId: body.productId,
       transactionId: body.orderId,
       platform: 'android',
+      quantity: 1,
     };
   }
 
@@ -1146,8 +1270,8 @@ export class EconomyService {
       );
     }
 
-    // Verify that the product ID matches one of our known packages
-    const coinPackage = this.getCoinPackageByProductId(productId);
+    // Verify that the product ID matches one of our known web packages
+    const coinPackage = this.getCoinPackageByProductId(productId, 'web');
     if (!coinPackage) {
       throw new BadRequestException(
         `Unknown product ID in Stripe metadata: ${productId}`,
@@ -1166,17 +1290,16 @@ export class EconomyService {
       productId,
       transactionId: session.id,
       platform: 'web',
+      quantity: 1,
     };
   }
 
   private getCoinPackageByProductId(
     productId: string,
+    platform: PurchasePlatform,
   ): CoinPackage | undefined {
     return COIN_PACKAGES.find(
-      (pkg) =>
-        pkg.platform_product_id.ios === productId ||
-        pkg.platform_product_id.android === productId ||
-        pkg.platform_product_id.web === productId,
+      (pkg) => pkg.platform_product_id[platform] === productId,
     );
   }
 
