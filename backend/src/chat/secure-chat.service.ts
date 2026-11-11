@@ -198,11 +198,13 @@ export class SecureChatService extends ChatService {
 
     let message: ChatMessage = insertResponse.data;
     // Link previews are enrichment only and must never block a group send.
+    // They are never resolved for encrypted content, matching direct sends.
     const linkPreview =
-      dto.message_type === 'text'
+      !dto.is_encrypted && dto.message_type === 'text'
         ? await this.resolveLinkPreview(dto.text_content)
         : null;
     if (linkPreview) {
+      await this.persistLinkPreview(message.id, linkPreview);
       message = { ...message, link_preview: linkPreview };
     }
 
