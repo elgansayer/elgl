@@ -1,15 +1,30 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { firstValueFrom } from 'rxjs';
 import { AppCardComponent } from '../primitives/card/card.component';
-import { EventsService, type Event, type EventCategory } from '../../services/events.service';
+import { EventRsvpControlsComponent } from '../event-rsvp-controls/event-rsvp-controls.component';
+import {
+  EventsService,
+  type Event,
+  type EventCategory,
+  type EventVenueType,
+} from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
+const MAP_ZOOM_DELTA = 0.01;
+
 @Component({
   selector: 'app-event-detail',
-  imports: [RouterLink, HlmButton, AppCardComponent, TranslatePipe],
+  imports: [
+    RouterLink,
+    HlmButton,
+    AppCardComponent,
+    TranslatePipe,
+    EventRsvpControlsComponent,
+  ],
   template: `
     <main class="mx-auto w-full max-w-2xl p-4" aria-labelledby="event-detail-title">
       @if (isLoading()) {
@@ -38,6 +53,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
               }
             </header>
 
+            @if (item.is_cancelled) {
+              <p role="status" class="mt-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger-ink">
+                {{ 'events.cancelled' | t }}
+              </p>
+            }
+
             @if (item.description) {
               <section class="mt-5" [attr.aria-label]="'events.description' | t">
                 <p class="whitespace-pre-wrap text-sm leading-6 text-text-secondary">
@@ -63,6 +84,29 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   <dd class="mt-1 text-sm text-text-primary">{{ item.language_pair }}</dd>
                 </div>
               }
+              @if (item.venue_type) {
+                <div>
+                  <dt class="text-xs font-semibold text-text-muted">{{ 'events.venueType' | t }}</dt>
+                  <dd class="mt-1 text-sm text-text-primary">{{ venueLabel(item.venue_type) | t }}</dd>
+                </div>
+              }
+              @if (item.timezone) {
+                <div>
+                  <dt class="text-xs font-semibold text-text-muted">{{ 'events.timezone' | t }}</dt>
+                  <dd class="mt-1 text-sm text-text-primary">{{ item.timezone }}</dd>
+                </div>
+              }
+              @if (ticketPrice(); as price) {
+                <div>
+                  <dt class="text-xs font-semibold text-text-muted">{{ 'events.ticketPrice' | t }}</dt>
+                  <dd
+                    class="mt-1 text-sm font-semibold text-text-primary"
+                    [attr.aria-label]="ticketPriceAria()"
+                  >
+                    {{ price }}
+                  </dd>
+                </div>
+              }
               @if (item.attendees_count !== undefined) {
                 <div>
                   <dt class="text-xs font-semibold text-text-muted">
@@ -80,6 +124,41 @@ import { TranslatePipe } from '../../services/translate.pipe';
                 </div>
               }
             </dl>
+
+            @if (mapEmbed(); as mapUrl) {
+              <section class="mt-5" [attr.aria-label]="'events.map' | t">
+                <h2 class="mb-2 text-sm font-semibold text-text-primary">{{ 'events.map' | t }}</h2>
+                <div class="overflow-hidden rounded-lg border border-surface-100">
+                  <iframe
+                    [src]="mapUrl"
+                    [title]="'events.mapAlt' | t"
+                    class="h-56 w-full border-0"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                  ></iframe>
+                </div>
+                @if (mapHref(); as link) {
+                  <a
+                    [href]="link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="mt-2 inline-flex min-h-11 items-center rounded-app text-sm font-semibold text-primary-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    {{ 'events.openMap' | t }}
+                  </a>
+                }
+              </section>
+            }
+
+            <section class="mt-5 border-t border-surface-100 pt-4" [attr.aria-label]="'events.rsvp' | t">
+              <h2 class="text-sm font-semibold text-text-primary">{{ 'events.rsvp' | t }}</h2>
+              <app-event-rsvp-controls
+                [eventId]="item.id"
+                [eventTitle]="item.title"
+                [maxParticipants]="item.max_participants"
+                [mutable]="canRsvp(item)"
+              />
+            </section>
 
             @if (item.host_name) {
               <div class="mt-5 border-t border-surface-100 pt-4">
@@ -101,10 +180,69 @@ export class EventDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly eventsService = inject(EventsService);
   private readonly i18n = inject(I18nService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly event = signal<Event | null>(null);
   readonly isLoading = signal(false);
   readonly error = signal(false);
+
+  readonly ticketPrice = computed(() => {
+    const item = this.event();
+    if (!item) return null;
+    const prices: string[] = [];
+    if (typeof item.ticket_price_gbp === 'number') {
+      prices.push(this.formatCurrency(item.ticket_price_gbp, 'GBP'));
+    }
+    if (typeof item.ticket_price_usd === 'number') {
+      prices.push(this.formatCurrency(item.ticket_price_usd, 'USD'));
+    }
+    return prices.length > 0 ? prices.join(' / ') : null;
+  });
+
+  readonly ticketPriceAria = computed(() => {
+    const item = this.event();
+    if (!item) return '';
+    const prices: string[] = [];
+    if (typeof item.ticket_price_gbp === 'number') {
+      prices.push(
+        `${this.i18n.translate('events.ticketGbp')}: ${this.formatCurrency(item.ticket_price_gbp, 'GBP')}`,
+      );
+    }
+    if (typeof item.ticket_price_usd === 'number') {
+      prices.push(
+        `${this.i18n.translate('events.ticketUsd')}: ${this.formatCurrency(item.ticket_price_usd, 'USD')}`,
+      );
+    }
+    return prices.join('. ');
+  });
+
+  readonly mapEmbed = computed<SafeResourceUrl | null>(() => {
+    const item = this.event();
+    const coordinates = item ? this.coordinates(item) : null;
+    if (!coordinates) return null;
+    const bbox = [
+      coordinates.longitude - MAP_ZOOM_DELTA,
+      coordinates.latitude - MAP_ZOOM_DELTA,
+      coordinates.longitude + MAP_ZOOM_DELTA,
+      coordinates.latitude + MAP_ZOOM_DELTA,
+    ].join(',');
+    const url =
+      'https://www.openstreetmap.org/export/embed.html' +
+      `?bbox=${encodeURIComponent(bbox)}&layer=mapnik` +
+      `&marker=${coordinates.latitude}%2C${coordinates.longitude}`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  readonly mapHref = computed(() => {
+    const item = this.event();
+    const coordinates = item ? this.coordinates(item) : null;
+    if (!coordinates) return null;
+    return (
+      'https://www.openstreetmap.org/' +
+      `?mlat=${coordinates.latitude}&mlon=${coordinates.longitude}` +
+      `#map=15/${coordinates.latitude}/${coordinates.longitude}`
+    );
+  });
   private eventId = '';
   private requestId = 0;
 
@@ -126,6 +264,19 @@ export class EventDetailComponent implements OnInit {
     }).format(parsed);
   }
 
+  canRsvp(event: Event): boolean {
+    return !event.is_cancelled && Date.parse(event.date_time) > Date.now();
+  }
+
+  venueLabel(venueType: EventVenueType): string {
+    const labels: Record<EventVenueType, string> = {
+      audio_room: 'events.venueAudio',
+      zoom: 'events.venueZoom',
+      in_person: 'events.venueInPerson',
+    };
+    return labels[venueType];
+  }
+
   categoryLabel(category: EventCategory): string {
     const labels: Record<EventCategory, string> = {
       audio_room: 'events.categoryAudioRoom',
@@ -134,6 +285,34 @@ export class EventDetailComponent implements OnInit {
       cultural_exchange: 'events.categoryCulturalExchange',
     };
     return labels[category];
+  }
+
+  private coordinates(
+    event: Event,
+  ): { latitude: number; longitude: number } | null {
+    if (event.venue_type !== 'in_person') return null;
+    const { latitude, longitude } = event;
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return null;
+    }
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return null;
+    }
+    return { latitude, longitude };
+  }
+
+  private formatCurrency(amount: number, currency: 'GBP' | 'USD'): string {
+    return new Intl.NumberFormat(this.i18n.currentLang(), {
+      style: 'currency',
+      currency,
+    }).format(amount);
   }
 
   private async load(): Promise<void> {

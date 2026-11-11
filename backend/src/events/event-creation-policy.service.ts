@@ -19,6 +19,7 @@ export class EventCreationPolicyService {
   async assertCanCreate(userId: string, dto: CreateEventDto): Promise<void> {
     this.assertFutureDate(dto.date_time);
     this.assertTimezone(dto.timezone);
+    this.assertCoordinatePair(dto);
 
     switch (dto.venue_type) {
       case 'audio_room':
@@ -40,6 +41,16 @@ export class EventCreationPolicyService {
     if (!Number.isFinite(timestamp) || timestamp <= Date.now()) {
       throw new BadRequestException(
         'Event date and time must be in the future',
+      );
+    }
+  }
+
+  private assertCoordinatePair(dto: CreateEventDto): void {
+    const hasLatitude = dto.latitude !== undefined;
+    const hasLongitude = dto.longitude !== undefined;
+    if (hasLatitude !== hasLongitude) {
+      throw new BadRequestException(
+        'Both latitude and longitude are required for a map location',
       );
     }
   }
