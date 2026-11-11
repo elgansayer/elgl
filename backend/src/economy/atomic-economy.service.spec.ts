@@ -77,7 +77,7 @@ describe('AtomicEconomyService daily check-in', () => {
     expect(result.coins_rewarded).toBeLessThanOrEqual(10);
     expect(result.new_balance).toBe(57);
     expect(rpc).toHaveBeenCalledWith(
-      'claim_daily_checkin_reward',
+      'claim_daily_checkin',
       expect.objectContaining({
         p_user_id: 'user-1',
         p_reward: expect.any(Number),

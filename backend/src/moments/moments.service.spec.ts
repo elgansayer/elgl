@@ -540,6 +540,101 @@ describe('MomentsService', () => {
       const result = await service.likeMoment('user-1', 'm-1');
       expect(result).toEqual({ likes_count: 3, is_liked: true });
     });
+
+    describe('author notification', () => {
+      const mockLikeTables = (options: {
+        authorId: string;
+        existingLike?: boolean;
+        insertResult?: { error: { message: string } | null };
+      }) => {
+        const insert = vi
+          .fn()
+          .mockResolvedValue(options.insertResult ?? { error: null });
+        const momentsTable = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi
+            .fn()
+            .mockResolvedValueOnce({ data: { user_id: options.authorId } })
+            .mockResolvedValueOnce({ data: { likes_count: 2 } }),
+          update: vi.fn().mockReturnThis(),
+        };
+        mockSupabaseClient.from = vi
+          .fn()
+          .mockImplementation((table: string) => {
+            if (table === 'moment_likes') {
+              return {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                single: vi.fn().mockResolvedValue({
+                  data: options.existingLike ? { id: 'like-1' } : null,
+                }),
+                insert,
+                delete: vi.fn().mockReturnThis(),
+              };
+            }
+            if (table === 'moments') return momentsTable;
+            return mockQueryBuilder;
+          });
+        return insert;
+      };
+
+      it('emits user.liked for the moment author when a like is persisted', async () => {
+        const emitSpy = vi.spyOn(eventEmitter, 'emit');
+        mockLikeTables({ authorId: 'author-1' });
+
+        await service.likeMoment('user-1', 'm-1');
+
+        expect(emitSpy).toHaveBeenCalledWith(
+          'user.liked',
+          expect.objectContaining({
+            actorId: 'user-1',
+            targetUserId: 'author-1',
+            targetType: 'moment',
+            targetId: 'm-1',
+          }),
+        );
+      });
+
+      it('does not notify when a like is removed', async () => {
+        const emitSpy = vi.spyOn(eventEmitter, 'emit');
+        mockLikeTables({ authorId: 'author-1', existingLike: true });
+
+        await service.likeMoment('user-1', 'm-1');
+
+        expect(emitSpy).not.toHaveBeenCalledWith(
+          'user.liked',
+          expect.anything(),
+        );
+      });
+
+      it('does not notify when users like their own moment', async () => {
+        const emitSpy = vi.spyOn(eventEmitter, 'emit');
+        mockLikeTables({ authorId: 'user-1' });
+
+        await service.likeMoment('user-1', 'm-1');
+
+        expect(emitSpy).not.toHaveBeenCalledWith(
+          'user.liked',
+          expect.anything(),
+        );
+      });
+
+      it('does not notify when the like could not be persisted', async () => {
+        const emitSpy = vi.spyOn(eventEmitter, 'emit');
+        mockLikeTables({
+          authorId: 'author-1',
+          insertResult: { error: { message: 'write failed' } },
+        });
+
+        await service.likeMoment('user-1', 'm-1');
+
+        expect(emitSpy).not.toHaveBeenCalledWith(
+          'user.liked',
+          expect.anything(),
+        );
+      });
+    });
   });
 
   describe('addComment and getComments', () => {

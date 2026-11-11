@@ -15,6 +15,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { XpModule } from '../xp/xp.module';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
+import { CorrectorScoreModule } from '../corrector-score/corrector-score.module';
 
 // Keep the existing controller implementation free of documentation-only churn while
 // still making the full profile surface discoverable and authenticated in live Swagger.
@@ -28,6 +29,7 @@ ApiBearerAuth('bearer')(UsersController);
     MediaModule,
     XpModule,
     TwoFactorModule,
+    CorrectorScoreModule,
   ],
   controllers: [UsersController, DeviceLinkController],
   providers: [

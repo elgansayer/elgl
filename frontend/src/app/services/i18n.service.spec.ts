@@ -200,6 +200,14 @@ describe('I18nService', () => {
     expect(service.translate('profile.proficiencyUnset')).toBe('Not set');
   });
 
+  it('should expose the dynamic font size labels', () => {
+    expect(service.translate('settings.fontSize')).toBe('Font size');
+    expect(service.translate('settings.textSize')).toBe('Text size');
+    expect(service.translate('settings.textSizeSmall')).toBe('Small');
+    expect(service.translate('settings.textSizeMedium')).toBe('Medium');
+    expect(service.translate('settings.textSizeLarge')).toBe('Large');
+  });
+
   it('should translate the audio intro feed empty state from the base dictionary', () => {
     expect(service.translate('discovery.audioIntroFeed.title')).toBe('Audio introductions');
     expect(
@@ -387,6 +395,14 @@ describe('I18nService', () => {
       return Object.entries(service.translations()).filter(([key]) => key.startsWith(prefix));
     }
 
+    it('provides localised hobby failure and interaction labels', () => {
+      expect(service.translate('hobby.loadError')).not.toBe('hobby.loadError');
+      expect(service.translate('hobby.actionError')).not.toBe('hobby.actionError');
+      expect(service.translate('hobby.editProficiencyLabel', { name: 'Cooking' })).toContain(
+        'Cooking',
+      );
+    });
+
     it('stores the classrooms title as an emoji character rather than HTML entities', () => {
       const title = service.translate('classroomsMarketplace.title');
 
@@ -448,6 +464,37 @@ describe('I18nService', () => {
     });
   });
 
+  describe('sticker store copy', () => {
+    it.each([
+      'sticker.filterLabel',
+      'stickerStore.title',
+      'stickerStore.subtitle',
+      'stickerStore.emptyTitle',
+      'stickerStore.emptyDescription',
+      'stickerStore.loadErrorTitle',
+      'stickerStore.loadErrorDescription',
+      'stickerStore.insufficientCoins',
+      'stickerStore.ownedBadge',
+      'stickerStore.unlocked',
+      'stickerStore.animatedBadge',
+      'stickerStore.animatedDescription',
+    ])('keeps the sticker store key %s resolvable', (key) => {
+      const text = service.translate(key);
+
+      expect(text).not.toBe(key);
+      expect(text.trim().length).toBeGreaterThan(0);
+    });
+
+    it('interpolates the purchase accessible name with pack name and cost', () => {
+      expect(
+        service.translate('stickerStore.purchaseAria', {
+          name: 'Happy Corgi Pack',
+          cost: 50,
+        }),
+      ).toBe('Unlock Happy Corgi Pack for 50 coins');
+    });
+  });
+
   describe('doodle chat copy', () => {
     it.each([
       ['chatRoom.doodleBtn', 'Doodle'],
@@ -470,6 +517,32 @@ describe('I18nService', () => {
 
       expect(text).not.toBe(key);
       expect(text.trim().length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('restore purchases copy', () => {
+    it.each([
+      ['restore_purchases', 'Restore Purchases'],
+      ['restoring', 'Restoring...'],
+      ['subscription.plans.restorePrompt', 'Already subscribed? Restore your purchase.'],
+      ['restorePurchases.success', 'Your purchases have been restored.'],
+      [
+        'restorePurchases.noSubscriptionFound',
+        'No previous purchases were found for this account.',
+      ],
+      [
+        'restorePurchases.failed',
+        'We could not restore your purchases. Please try again.',
+      ],
+    ])('resolves %s instead of echoing the key', (key, expected) => {
+      expect(service.translate(key)).toBe(expected);
+    });
+
+    it('resolves the restore description instead of echoing the key', () => {
+      const text = service.translate('restore_purchases_description');
+
+      expect(text).not.toBe('restore_purchases_description');
+      expect(text.length).toBeGreaterThan(0);
     });
   });
 });

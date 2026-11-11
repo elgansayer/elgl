@@ -117,7 +117,7 @@ export class AtomicEconomyService extends EconomyService {
       const client = this.dailyCheckInSupabase.getClient();
       const response = await withExponentialBackoff(
         () =>
-          client.rpc('claim_daily_checkin_reward', {
+          client.rpc('claim_daily_checkin', {
             p_user_id: userId,
             p_reward: reward,
           }),

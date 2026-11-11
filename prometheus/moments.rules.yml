@@ -1,0 +1,78 @@
+# Prometheus alerting rules for the Moments architecture (#2049).
+#
+# These rules alert on the hellotalk_moments_for_you_* metrics exposed by the
+# NestJS backend at /api/metrics. See docs/moments-monitoring.md for the full
+# metric catalogue, thresholds and operator runbooks.
+#
+# Rules are evaluated by Prometheus (evaluation_interval: 15s) and can be
+# routed by Alertmanager once an alertmanager target is configured in
+# prometheus.yml.
+
+groups:
+  - name: moments
+    rules:
+      - alert: MomentsForYouRankingLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(hellotalk_moments_for_you_ranking_duration_seconds_bucket[10m]))) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          team: moments
+          service: hellotalk
+        annotations:
+          summary: For You ranking p95 latency above 1.5 seconds
+          description: The 95th percentile For You ranking latency has exceeded 1.5 seconds for 5 minutes. Check Supabase query performance, the Redis timeline queue and the moments indexes named in docs/moments_for_you_ranking.md.
+
+      - alert: MomentsForYouDegradedRateHigh
+        expr: (sum(rate(hellotalk_moments_for_you_ranking_duration_seconds_count{outcome="degraded"}[10m])) / clamp_min(sum(rate(hellotalk_moments_for_you_ranking_duration_seconds_count[10m])), 0.001)) * 100 > 20
+        for: 10m
+        labels:
+          severity: warning
+          team: moments
+          service: hellotalk
+        annotations:
+          summary: More than 20% of For You requests are degraded
+          description: Over a fifth of For You feed requests were served without a candidate source or viewer context in the last 10 minutes. Inspect the hellotalk_moments_for_you_degraded_total reasons and the matching warn log events.
+
+      - alert: MomentsForYouEmptyRateHigh
+        expr: (sum(rate(hellotalk_moments_for_you_ranking_duration_seconds_count{outcome="empty"}[15m])) / clamp_min(sum(rate(hellotalk_moments_for_you_ranking_duration_seconds_count[15m])), 0.001)) * 100 > 50
+        for: 15m
+        labels:
+          severity: warning
+          team: moments
+          service: hellotalk
+        annotations:
+          summary: More than 50% of For You requests return an empty feed
+          description: Over half of For You requests had no eligible candidate in the last 15 minutes. Check the Moments dataset, targeted-language routing, visibility filters and the candidate pool size metric.
+
+      - alert: MomentsForYouRankingStalled
+        expr: sum(rate(hellotalk_moments_for_you_ranking_duration_seconds_count[30m])) == 0
+        for: 30m
+        labels:
+          severity: critical
+          team: moments
+          service: hellotalk
+        annotations:
+          summary: No For You ranking activity in the last 30 minutes
+          description: The For You ranking pipeline has recorded no requests for 30 minutes. This may indicate an outage of the feed endpoint, an unreachable metrics endpoint or a metrics ingestion problem.
+
+      - alert: MomentsForYouCandidatePoolThin
+        expr: (sum(rate(hellotalk_moments_for_you_candidates_sum{stage="pool"}[15m])) / clamp_min(sum(rate(hellotalk_moments_for_you_candidates_count{stage="pool"}[15m])), 0.001) < 1) and (sum(rate(hellotalk_moments_for_you_candidates_count{stage="pool"}[15m])) > 0)
+        for: 15m
+        labels:
+          severity: warning
+          team: moments
+          service: hellotalk
+        annotations:
+          summary: For You candidate pool averages fewer than one Moment
+          description: The average candidate pool has contained fewer than one Moment per request for 15 minutes while traffic continues. Check the newest-Moments and in-network queries, Redis timeline health and the Moments indexes.
+
+      - alert: MomentsForYouDegradedSourceSpike
+        expr: sum by (reason) (increase(hellotalk_moments_for_you_degraded_total[15m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+          team: moments
+          service: hellotalk
+        annotations:
+          summary: A Moments For You candidate source is failing repeatedly
+          description: A single degradation reason ({{ $labels.reason }}) has fired more than 20 times in the last 15 minutes. Correlate with warn log events for that stage and the Supabase or Redis dependency it names.

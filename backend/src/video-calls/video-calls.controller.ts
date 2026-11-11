@@ -1,8 +1,10 @@
 import {
   Controller,
   Post,
+  Put,
   Body,
   Get,
+  Param,
   UseGuards,
   UseInterceptors,
   Req,
@@ -10,12 +12,14 @@ import {
 } from '@nestjs/common';
 import { VideoCallsService } from './video-calls.service';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
+import { VideoExchangeTimerService } from './video-exchange-timer.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -25,6 +29,7 @@ import {
 } from '../common/cache.interceptor';
 import { StartVideoCallDto } from './dto/start-video-call.dto';
 import { AcceptVideoCallDto } from './dto/accept-video-call.dto';
+import { AdvanceExchangeTimerDto } from './dto/advance-exchange-timer.dto';
 import {
   VideoCallsRateLimit,
   VideoCallsRateLimiterGuard,
@@ -42,6 +47,7 @@ export class VideoCallsController {
   constructor(
     private readonly videoCallsService: VideoCallsService,
     private readonly degradationService: VideoCallsDegradationService,
+    private readonly exchangeTimerService: VideoExchangeTimerService,
   ) {}
 
   @Post('start')
@@ -163,6 +169,81 @@ export class VideoCallsController {
   ) {
     const userId = req.user!.id;
     return this.videoCallsService.joinRoom(userId, body.roomName);
+  }
+
+  @Get(':roomName/exchange-timer')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Get the 50/50 exchange turn timer for a 1:1 call',
+    description:
+      'Returns the current speaking turn, language pair and remaining seconds for the authenticated ' +
+      'participant. Turn handovers are calculated server-side so a client cannot extend its own turn.',
+  })
+  @ApiParam({
+    name: 'roomName',
+    description: 'LiveKit room name of the 1:1 call',
+    example: 'video_a1b2c3d4-e5f6-4789-abcd-ef1234567890',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Exchange timer state for the authenticated participant.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Call is unavailable or user is not a participant.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Exchange timer state is temporarily unavailable.',
+  })
+  getExchangeTimer(
+    @Req() req: AuthenticatedRequest,
+    @Param('roomName') roomName: string,
+  ) {
+    return this.exchangeTimerService.getStatus(roomName, req.user!.id);
+  }
+
+  @Put(':roomName/exchange-timer/advance')
+  @VideoCallsRateLimit({ maxRequests: 30, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'End the current speaking turn early',
+    description:
+      'Allows the current speaker to hand the turn to the other participant before the timer expires. ' +
+      'The expected turn index makes retries idempotent and rejects conflicting concurrent advances.',
+  })
+  @ApiParam({
+    name: 'roomName',
+    description: 'LiveKit room name of the 1:1 call',
+    example: 'video_a1b2c3d4-e5f6-4789-abcd-ef1234567890',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Updated exchange timer state.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'The turn has not started or the turn index is invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the current speaker may end the turn.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Exchange timer state is temporarily unavailable.',
+  })
+  advanceExchangeTimer(
+    @Req() req: AuthenticatedRequest,
+    @Param('roomName') roomName: string,
+    @Body() body: AdvanceExchangeTimerDto,
+  ) {
+    return this.exchangeTimerService.advanceTurn(
+      roomName,
+      req.user!.id,
+      body.expectedTurnIndex,
+    );
   }
 
   @Get('health')

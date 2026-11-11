@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { VideoCallsController } from './video-calls.controller';
 import { VideoCallsService } from './video-calls.service';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
+import { VideoExchangeTimerService } from './video-exchange-timer.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   VIDEO_CALLS_RATE_LIMIT_KEY,
@@ -29,6 +30,11 @@ describe('VideoCallsController', () => {
     isAvailable: vi.fn().mockReturnValue(true),
   };
 
+  const mockExchangeTimerService = {
+    getStatus: vi.fn(),
+    advanceTurn: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [VideoCallsController],
@@ -43,6 +49,10 @@ describe('VideoCallsController', () => {
         {
           provide: VideoCallsDegradationService,
           useValue: mockDegradationService,
+        },
+        {
+          provide: VideoExchangeTimerService,
+          useValue: mockExchangeTimerService,
         },
         {
           provide: VideoCallsRateLimiterGuard,
@@ -92,6 +102,18 @@ describe('VideoCallsController', () => {
         VideoCallsController.prototype.acceptCall,
       ),
     ).toEqual({ maxRequests: 10, windowSeconds: 60 });
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.advanceExchangeTimer,
+      ),
+    ).toEqual({ maxRequests: 30, windowSeconds: 60 });
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.getExchangeTimer,
+      ),
+    ).toBeUndefined();
     expect(
       Reflect.getMetadata(
         VIDEO_CALLS_RATE_LIMIT_KEY,
@@ -179,6 +201,70 @@ describe('VideoCallsController', () => {
       await expect(controller.acceptCall(req, { roomName })).rejects.toThrow(
         'Call is unavailable',
       );
+    });
+  });
+
+  describe('exchange timer', () => {
+    it('should return the timer state for the authenticated participant', async () => {
+      const status = {
+        active: true,
+        waitingForParticipant: false,
+        reciprocal: true,
+        roomName,
+        turnDurationSeconds: 300,
+        turnIndex: 0,
+        currentSpeakerId: mockUser.id,
+        currentSpeakerLanguage: 'en',
+        remainingSeconds: 240,
+        isCurrentSpeaker: true,
+        participants: [],
+      };
+      mockExchangeTimerService.getStatus.mockResolvedValue(status);
+
+      const result = await controller.getExchangeTimer(mockReq, roomName);
+
+      expect(mockExchangeTimerService.getStatus).toHaveBeenCalledWith(
+        roomName,
+        mockUser.id,
+      );
+      expect(result).toEqual(status);
+    });
+
+    it('should advance the turn for the authenticated participant', async () => {
+      const status = { active: true, turnIndex: 1 };
+      mockExchangeTimerService.advanceTurn.mockResolvedValue(status);
+
+      const result = await controller.advanceExchangeTimer(mockReq, roomName, {
+        expectedTurnIndex: 0,
+      });
+
+      expect(mockExchangeTimerService.advanceTurn).toHaveBeenCalledWith(
+        roomName,
+        mockUser.id,
+        0,
+      );
+      expect(result).toEqual(status);
+    });
+
+    it('should return inactive timer state when the feature is disabled', async () => {
+      const inactive = {
+        active: false,
+        waitingForParticipant: false,
+        reciprocal: false,
+        roomName,
+        turnDurationSeconds: 300,
+        turnIndex: 0,
+        currentSpeakerId: null,
+        currentSpeakerLanguage: null,
+        remainingSeconds: 0,
+        isCurrentSpeaker: false,
+        participants: [],
+      };
+      mockExchangeTimerService.getStatus.mockResolvedValue(inactive);
+
+      await expect(
+        controller.getExchangeTimer(mockReq, roomName),
+      ).resolves.toEqual(inactive);
     });
   });
 

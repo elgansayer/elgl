@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unattended Claude Design automation, run from cron on the factory host.
+# Unattended Claude Design automation, run from cron on the VPS.
 #
 #   scripts/design-sync/run-automation.sh sync      nightly two-way Claude Design sync
 #   scripts/design-sync/run-automation.sh improve   weekly design audit + critique + follow-ups

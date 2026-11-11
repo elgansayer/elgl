@@ -21,7 +21,7 @@ The Angular app already calls this endpoint after authenticated startup. It open
 `20260825090000_atomic_daily_checkins.sql` owns the mutation boundary:
 
 - `daily_checkins` has a `(user_id, checkin_date)` primary key.
-- `claim_daily_checkin(uuid)` locks the user's balance row with `FOR UPDATE`.
+- `claim_daily_checkin(uuid, integer)` locks the user's balance row with `FOR UPDATE` and accepts only the application-generated 5-10 coin reward.
 - the user balance update, daily claim record, and `coin_transactions` ledger entry happen in one PostgreSQL transaction;
 - the function derives the calendar day in UTC;
 - browser roles cannot execute the function or mutate the table directly; only the service role can execute the claim RPC.
@@ -50,6 +50,6 @@ Relevant automated coverage:
 
 ## Rollout and rollback
 
-Deploy the migration before or with the backend version that calls `claim_daily_checkin`. The migration is additive and safe to replay through the repository migration runner.
+Deploy the migrations before or with the backend version that calls `claim_daily_checkin`. The migrations are additive and safe to replay through the repository migration runner.
 
 Rollback should restore the previous application version while leaving `daily_checkins` and its ledger history in place. Do not delete claim rows or subtract awarded coins during rollback: those rows are financial/economy history and prevent accidental duplicate grants if the atomic path is re-enabled.

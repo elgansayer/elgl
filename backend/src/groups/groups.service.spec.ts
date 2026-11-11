@@ -4,6 +4,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
+import { GroupChatService } from '../chat/group-chat.service';
 import { InterestsService } from '../interests/interests.service';
 
 describe('GroupsService', () => {
@@ -11,8 +12,10 @@ describe('GroupsService', () => {
   let supabaseService: SupabaseService;
   let centrifugoService: CentrifugoService;
   let interestsService: InterestsService;
+  let groupChatService: { create: Mock };
 
   beforeEach(async () => {
+    groupChatService = { create: vi.fn() };
     const moduleRef = await Test.createTestingModule({
       providers: [
         GroupsService,
@@ -27,6 +30,10 @@ describe('GroupsService', () => {
         {
           provide: InterestsService,
           useValue: { findById: vi.fn() },
+        },
+        {
+          provide: GroupChatService,
+          useValue: groupChatService,
         },
       ],
     }).compile();
@@ -519,6 +526,118 @@ describe('GroupsService', () => {
     await expect(
       service.deleteGroupResource('group-1', 'res-1', 'user-1'),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  describe('getOrCreateGroupChat', () => {
+    it('returns the linked room without creating a duplicate chat', async () => {
+      const membershipBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi
+          .fn()
+          .mockResolvedValue({ data: { id: 'membership-1' }, error: null }),
+      };
+      const groupBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'group-1', name: 'Group', chat_room_id: 'room-1' },
+          error: null,
+        }),
+      };
+      (supabaseService.getClient as unknown as Mock).mockReturnValue({
+        from: vi.fn((table: string) =>
+          table === 'group_members' ? membershipBuilder : groupBuilder,
+        ),
+      });
+
+      await expect(
+        service.getOrCreateGroupChat('user-1', 'group-1'),
+      ).resolves.toEqual({ roomId: 'room-1' });
+      expect(groupChatService.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects callers who are not group members', async () => {
+      const membershipBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+      (supabaseService.getClient as unknown as Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue(membershipBuilder),
+      });
+
+      await expect(
+        service.getOrCreateGroupChat('user-1', 'group-1'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('creates and links a chat room on first open', async () => {
+      const membershipBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi
+          .fn()
+          .mockResolvedValue({ data: { id: 'membership-1' }, error: null }),
+      };
+      const membersBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        returns: vi.fn().mockResolvedValue({
+          data: [
+            { user_id: 'user-1', user: null },
+            { user_id: 'user-2', user: null },
+          ],
+          error: null,
+        }),
+      };
+      const groupBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'group-1', name: 'Group', chat_room_id: null },
+          error: null,
+        }),
+      };
+      const linkBuilder = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ error: null }),
+      };
+      const linkedBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { chat_room_id: 'room-new' },
+          error: null,
+        }),
+      };
+      let membershipCalls = 0;
+      let groupCalls = 0;
+      (supabaseService.getClient as unknown as Mock).mockReturnValue({
+        from: vi.fn((table: string) => {
+          if (table === 'group_members') {
+            membershipCalls += 1;
+            return membershipCalls === 1 ? membershipBuilder : membersBuilder;
+          }
+          groupCalls += 1;
+          return groupCalls === 1
+            ? groupBuilder
+            : groupCalls === 2
+              ? linkBuilder
+              : linkedBuilder;
+        }),
+      });
+      groupChatService.create.mockResolvedValue({ id: 'room-new' });
+
+      await expect(
+        service.getOrCreateGroupChat('user-1', 'group-1'),
+      ).resolves.toEqual({ roomId: 'room-new' });
+      expect(groupChatService.create).toHaveBeenCalledWith('user-1', {
+        name: 'Group',
+        memberIds: ['user-2'],
+      });
+    });
   });
 
   it('deleteGroupResource deletes resource when the caller is admin', async () => {

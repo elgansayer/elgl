@@ -1,11 +1,11 @@
 # Core product E2E flows
 
-Issue #1401 requires end-to-end coverage for authentication, chat messaging, and Moment creation. The repository already had a basic Playwright baseline from #1051, but several assertions were conditional or timer-driven and could pass without exercising the product mutation. The core suites now use deterministic first-party API boundaries and assert the actual request payloads produced by the Angular UI.
+Issue #1401 requires end-to-end coverage for authentication, chat messaging, and Moment creation. The repository already had a basic Playwright baseline from #1051, but several assertions were conditional or timer-driven and could pass without exercising the product mutation. The core suites now use deterministic first-party API boundaries and assert the actual request payloads produced by the Angular UI. Issue #1893 extends those suites with authenticated password-change feedback and chat failure-retry coverage.
 
 ## Authoritative specifications
 
-- `e2e/tests/auth.spec.ts` drives the real forgot-password forms, verifies password-reset request payloads, exercises token-based reset navigation, and keeps onboarding language selection covered.
-- `e2e/tests/chat-messaging.spec.ts` loads a deterministic room/history fixture through the public chat APIs, types into the production composer, submits through the grammar-check path, verifies `POST /api/chat/messages`, and confirms the returned message is rendered.
+- `e2e/tests/auth.spec.ts` drives the real forgot-password forms, verifies password-reset request payloads, exercises token-based reset navigation, submits the authenticated password-change form, proves a rejected password change keeps the form available, and keeps onboarding language selection covered.
+- `e2e/tests/chat-messaging.spec.ts` loads a deterministic room/history fixture through the public chat APIs, types into the production composer, submits through the grammar-check path, verifies `POST /api/chat/messages`, confirms the returned message is rendered, and proves a failed send leaves the unsent text available for retry.
 - `e2e/tests/moment-creation.spec.ts` loads the real Moments screen, opens the composer, runs the grammar-check boundary, verifies `POST /api/moments`, confirms the created Moment is rendered, and proves a failed publish leaves the draft available for retry.
 
 These specifications exercise the Angular components and services in a real browser. Only backend/provider boundaries are intercepted; the tests do not replace the UI with test-only components or mutate production data.
@@ -35,7 +35,7 @@ That command starts the configured NestJS and Angular web servers and executes t
 
 ## Failure behaviour
 
-The contract fails if a required file disappears, a critical API interaction is removed, a core suite is disabled, or timer/conditional-pass patterns are reintroduced. The browser flows themselves fail if the UI no longer sends the expected request, changes the request payload unexpectedly, fails to render the authoritative response, or loses retryable draft state after a Moment publish failure.
+The contract fails if a required file disappears, a critical API interaction is removed, a core suite is disabled, or timer/conditional-pass patterns are reintroduced. The browser flows themselves fail if the UI no longer sends the expected request, changes the request payload unexpectedly, fails to render the authoritative response, loses retryable draft state after a chat send or Moment publish failure, or hides the recovery controls after a rejected password change.
 
 Product changes that intentionally alter routes, payloads, or journeys must update the corresponding E2E specification and this contract in the same pull request. Provider/network failures in tests should be represented by explicit route fixtures rather than hidden retries or sleeps.
 

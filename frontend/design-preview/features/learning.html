@@ -1921,6 +1921,114 @@
           States: create · creating · list · loading · error with refresh
         </footer>
       </section>
+
+      <section class="specimen" data-component="components/verb-conjugation-trainer">
+        <header>
+          <h2>Verb conjugation trainer</h2>
+          <code>components/verb-conjugation-trainer</code>
+        </header>
+        <div class="body">
+          <div class="stack">
+            <h3 class="title" style="margin: 0">Verb conjugation</h3>
+            <p class="muted" style="margin: 0">
+              Practise present, past and future forms one verb at a time.
+            </p>
+          </div>
+          <div class="row wrap">
+            <label class="field grow"
+              >Language<select>
+                <option>Spanish</option>
+                <option>French</option>
+              </select></label
+            ><label class="field grow"
+              >Tense<select>
+                <option>Present</option>
+                <option>Past</option>
+              </select></label
+            >
+          </div>
+          <button class="btn" type="button">New session</button>
+          <div class="card stack">
+            <span class="state-label">Question 2 of 8</span>
+            <p class="title" style="margin: 0">
+              Conjugate <span lang="es">hablar</span> for <b>yo</b> in the present tense.
+            </p>
+            <p class="muted" style="margin: 0">Translation: to speak</p>
+            <p class="secondary" lang="es" style="margin: 0">hablar</p>
+            <div class="row wrap" role="group" aria-label="Verb conjugation answer options">
+              <button class="btn secondary-btn" type="button" aria-pressed="true">hablo</button
+              ><button class="btn secondary-btn" type="button" aria-pressed="false">hablas</button
+              ><button class="btn secondary-btn" type="button" aria-pressed="false">habla</button
+              ><button class="btn secondary-btn" type="button" aria-pressed="false">hablamos</button>
+            </div>
+            <div class="alert success" role="status">
+              Correct. <span lang="es">hablo</span> is the first-person present form.
+            </div>
+            <button class="btn" type="button">Next question</button>
+          </div>
+        </div>
+        <footer>
+          States: loading · error with retry · unanswered · correct · incorrect with expected answer ·
+          complete · 390px single column · RTL
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/ipa-alphabet">
+        <header>
+          <h2>IPA alphabet</h2>
+          <code>components/ipa-alphabet</code>
+        </header>
+        <div class="body">
+          <div class="stack">
+            <h3 class="title" style="margin: 0">IPA alphabet</h3>
+            <p class="muted" style="margin: 0">
+              Learn the sounds of a language and practise telling them apart.
+            </p>
+          </div>
+          <label class="field"
+            >Language<select>
+              <option>Spanish</option>
+              <option>French</option>
+            </select></label
+          >
+          <div class="row wrap" role="group" aria-label="IPA alphabet mode">
+            <button class="btn" type="button" aria-pressed="true">Sound chart</button
+            ><button class="btn secondary-btn" type="button" aria-pressed="false">Practice</button>
+          </div>
+          <div class="card stack">
+            <span class="state-label">Vowels</span>
+            <ul style="list-style: none; margin: 0; padding: 0" class="stack">
+              <li class="row">
+                <b class="title" lang="es">/iː/</b
+                ><span class="muted grow">see</span
+                ><span class="secondary">Long close front unrounded vowel.</span>
+              </li>
+              <li class="row">
+                <b class="title" lang="es">/æ/</b
+                ><span class="muted grow">cat</span
+                ><span class="secondary">Short open front unrounded vowel.</span>
+              </li>
+            </ul>
+          </div>
+          <div class="card stack">
+            <span class="state-label">Practice · Question 3 of 10</span>
+            <p class="title" style="margin: 0" lang="en">/θ/</p>
+            <p class="muted" style="margin: 0">Voiceless dental fricative.</p>
+            <p class="secondary" style="margin: 0">Which word contains this sound?</p>
+            <div class="row wrap" role="group" aria-label="IPA alphabet answer options">
+              <button class="btn secondary-btn" type="button" aria-pressed="false">think</button
+              ><button class="btn secondary-btn" type="button" aria-pressed="false">ship</button
+              ><button class="btn secondary-btn" type="button" aria-pressed="false">zoo</button>
+            </div>
+            <div class="alert success" role="status">Correct. /θ/ appears in think.</div>
+            <button class="btn" type="button">Next question</button>
+          </div>
+        </div>
+        <footer>
+          States: loading · error with retry · sound chart grouped by phoneme type · practice correct ·
+          practice incorrect with expected answer · complete · restart · 390px single column · RTL
+        </footer>
+      </section>
     </main>
 
     <script>

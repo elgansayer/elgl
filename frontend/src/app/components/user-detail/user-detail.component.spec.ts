@@ -208,6 +208,40 @@ describe('UserDetailComponent bio translation', () => {
     expect(fixture.nativeElement.textContent).not.toContain('discovery.vipBadge');
   });
 
+  it('renders the aggregate corrector score on an external profile', async () => {
+    getUserProfile.mockResolvedValue(makeProfile('rated-user', 'Bio', { corrector_score: 4.7 }));
+
+    fixture.componentRef.setInput('userId', 'rated-user');
+    fixture.detectChanges();
+    await component.loadProfile('rated-user');
+    fixture.detectChanges();
+
+    const score = fixture.nativeElement.querySelector(
+      '[data-testid="corrector-score"]',
+    ) as HTMLElement;
+    expect(score.textContent).toContain('profile.correctorScore');
+    expect(score.textContent).toContain('4.7 / 5');
+  });
+
+  it('distinguishes no ratings from an unavailable score', async () => {
+    component.profile.set(makeProfile('unrated-user', 'Bio', { corrector_score: null }));
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="corrector-score"]').textContent,
+    ).toContain('profile.noRatings');
+
+    component.profile.set(
+      makeProfile('unavailable-user', 'Bio', {
+        corrector_score: null,
+        corrector_score_unavailable: true,
+      }),
+    );
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="corrector-score"]').textContent,
+    ).toContain('profile.correctorScoreUnavailable');
+  });
+
   it('translates into the active UI language and can show the original again', async () => {
     translateBio.mockResolvedValue('Biografía traducida');
 

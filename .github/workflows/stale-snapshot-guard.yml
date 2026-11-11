@@ -14,7 +14,7 @@ on:
   # did not show.
   merge_group:
 
-# No cancel-in-progress: the Factory adds and removes review labels, and a
+# No cancel-in-progress: automation adds and removes review labels, and a
 # cancelled run is reported as a failed check that sends PRs to repair.
 
 permissions:
