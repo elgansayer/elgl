@@ -130,6 +130,26 @@
         </div>
       </div>
 
+      <div
+        data-testid="corrector-score"
+        class="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-surface-100 bg-surface-300 p-4"
+      >
+        <p class="text-xs font-bold uppercase text-text-secondary">
+          {{ 'profile.correctorScore' | t }}
+        </p>
+        <p class="text-sm font-bold text-primary-ink">
+          @if (profile()?.corrector_score_unavailable) {
+            {{ 'profile.correctorScoreUnavailable' | t }}
+          } @else if (
+            profile()?.corrector_score !== null && profile()?.corrector_score !== undefined
+          ) {
+            {{ profile()?.corrector_score }} / 5
+          } @else {
+            {{ 'profile.noRatings' | t }}
+          }
+        </p>
+      </div>
+
       <div class="bg-surface-300 p-5 rounded-2xl mb-6 shadow-inner border border-surface-100">
         <h3 class="text-text-secondary text-xs font-bold uppercase mb-3">
           {{ 'profile.about' | t }}

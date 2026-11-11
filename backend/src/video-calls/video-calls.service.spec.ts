@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { AccessToken } from 'livekit-server-sdk';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { VideoCallsEncryptionService } from './video-calls-encryption.service';
+import { VideoExchangeTimerService } from './video-exchange-timer.service';
 import { MetricsService } from '../metrics/metrics.service';
 
 const mockCreateRoom = vi.fn();
@@ -86,6 +87,11 @@ describe('VideoCallsService', () => {
     getKeyForParticipant: vi.fn().mockResolvedValue('room-e2ee-key'),
   };
 
+  const mockExchangeTimerService = {
+    startSession: vi.fn().mockResolvedValue(undefined),
+    markParticipantJoined: vi.fn().mockResolvedValue(undefined),
+  };
+
   describe('production credential validation', () => {
     it.each([
       ['test-livekit-api-key', 'production-secret'],
@@ -115,6 +121,7 @@ describe('VideoCallsService', () => {
               buildIceServers: vi.fn().mockReturnValue([]),
             } as unknown as LivekitService,
             mockMetricsService as unknown as MetricsService,
+            mockExchangeTimerService as unknown as VideoExchangeTimerService,
           ),
       ).toThrow(
         'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
@@ -137,6 +144,8 @@ describe('VideoCallsService', () => {
     mockEncryptionService.getKeyForParticipant
       .mockClear()
       .mockResolvedValue('room-e2ee-key');
+    mockExchangeTimerService.startSession.mockClear();
+    mockExchangeTimerService.markParticipantJoined.mockClear();
 
     Object.values(mockMetricsService).forEach((fn) => fn.mockClear());
 
@@ -169,6 +178,10 @@ describe('VideoCallsService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
+        },
+        {
+          provide: VideoExchangeTimerService,
+          useValue: mockExchangeTimerService,
         },
       ],
     }).compile();
@@ -218,6 +231,10 @@ describe('VideoCallsService', () => {
             provide: MetricsService,
             useValue: mockMetricsService,
           },
+          {
+            provide: VideoExchangeTimerService,
+            useValue: mockExchangeTimerService,
+          },
         ],
       }).compile(),
     ).rejects.toThrow(
@@ -251,6 +268,14 @@ describe('VideoCallsService', () => {
         callerId,
         remoteUserId,
       );
+      expect(mockExchangeTimerService.startSession).toHaveBeenCalledWith(
+        expectedRoomName,
+        callerId,
+        remoteUserId,
+      );
+      expect(
+        mockExchangeTimerService.markParticipantJoined,
+      ).toHaveBeenCalledWith(expectedRoomName, callerId);
       expect(result).toEqual(
         expect.objectContaining({
           token: 'mock-livekit-jwt',
@@ -339,6 +364,9 @@ describe('VideoCallsService', () => {
         roomName,
         remoteUserId,
       );
+      expect(
+        mockExchangeTimerService.markParticipantJoined,
+      ).toHaveBeenCalledWith(roomName, remoteUserId);
       expect(mockAddGrant).toHaveBeenCalledWith(
         expect.objectContaining({ room: roomName }),
       );

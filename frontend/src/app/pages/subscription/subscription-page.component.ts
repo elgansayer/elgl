@@ -127,14 +127,14 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
               </app-card>
             }
           </div>
-
-          <div class="mt-8 text-center">
-            <p class="text-xs text-text-secondary mb-2">
-              {{ 'restore_purchases_description' | t }}
-            </p>
-            <app-restore-purchases-button />
-          </div>
         }
+
+        <div class="mt-8 text-center">
+          <p class="text-xs text-text-secondary mb-2">
+            {{ 'restore_purchases_description' | t }}
+          </p>
+          <app-restore-purchases-button />
+        </div>
       </div>
     </div>
   `,

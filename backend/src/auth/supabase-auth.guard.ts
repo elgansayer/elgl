@@ -36,6 +36,9 @@ export class SupabaseAuthGuard implements CanActivate {
 
     if (contextType === 'http') {
       const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+      if (request.developerApiKeyAuthenticated) {
+        return true;
+      }
       targetObject = request;
       request.user = undefined;
       token = this.extractBearerToken(request.headers.authorization);

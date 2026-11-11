@@ -47,6 +47,24 @@ function getGlobalIntentUri(): string | undefined {
   return undefined;
 }
 
+function safeDecode(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+function isSafePathId(id: string): boolean {
+  if (!id || id === '.' || id === '..') return false;
+  if (id.includes('/') || id.includes('\\')) return false;
+  for (const character of id) {
+    const code = character.charCodeAt(0);
+    if (code < 0x20 || code === 0x7f) return false;
+  }
+  return true;
+}
+
 function tryParseHellotalkUri(uri: string): ParsedDeepLink | null {
   if (!uri.startsWith(`${DEEPLINK_SCHEME}://`)) return null;
 
@@ -56,19 +74,23 @@ function tryParseHellotalkUri(uri: string): ParsedDeepLink | null {
   const host = slashIndex >= 0 ? withoutScheme.slice(0, slashIndex) : withoutScheme;
   const rest = slashIndex >= 0 ? withoutScheme.slice(slashIndex) : '';
 
-  const queryIndex = rest.indexOf('?');
-  const path = queryIndex >= 0 ? rest.slice(0, queryIndex) : rest;
-  const queryString = queryIndex >= 0 ? rest.slice(queryIndex + 1) : '';
+  const hashIndex = rest.indexOf('#');
+  const withoutFragment = hashIndex >= 0 ? rest.slice(0, hashIndex) : rest;
+
+  const queryIndex = withoutFragment.indexOf('?');
+  const path = queryIndex >= 0 ? withoutFragment.slice(0, queryIndex) : withoutFragment;
+  const queryString = queryIndex >= 0 ? withoutFragment.slice(queryIndex + 1) : '';
 
   const params: Record<string, string> = {};
   if (queryString) {
     for (const pair of queryString.split('&')) {
       const eqIndex = pair.indexOf('=');
-      if (eqIndex >= 0) {
-        params[decodeURIComponent(pair.slice(0, eqIndex))] = decodeURIComponent(
-          pair.slice(eqIndex + 1),
-        );
-      }
+      if (eqIndex < 0) continue;
+
+      const key = safeDecode(pair.slice(0, eqIndex));
+      const value = safeDecode(pair.slice(eqIndex + 1));
+      if (key === null || value === null) return null;
+      params[key] = value;
     }
   }
 
@@ -119,20 +141,25 @@ export class DeepLinkService {
 
   /**
    * Process the initial deep link that launched the app.
-   * Called on bootstrap in main.ts.
+   * Called from the application initializer on bootstrap.
    */
   processInitialDeepLink(): void {
-    if (typeof window === 'undefined' || typeof this.document === 'undefined') {
+    const view = this.document?.defaultView;
+    if (!view) {
       return;
     }
 
-    const href = window.location.href;
+    const href = view.location.href;
     if (href.startsWith(`${DEEPLINK_SCHEME}://`)) {
       const parsed = tryParseHellotalkUri(href);
       if (parsed) {
         const internalPath = this.toInternalPath(parsed);
         if (internalPath) {
-          this.location.replaceState(internalPath);
+          try {
+            this.location.replaceState(internalPath);
+          } catch {
+            // replaceState can be rejected by some native webview origins.
+          }
           void this.router.navigateByUrl(internalPath, { replaceUrl: true });
         }
       }
@@ -171,16 +198,16 @@ export class DeepLinkService {
    * Returns null if the host is not a recognised route.
    */
   toInternalPath(parsed: ParsedDeepLink): string | null {
-    const id = parsed.path.replace(/^\/|\/$/g, '');
+    const id = parsed.path.replace(/^\/+|\/+$/g, '');
     const query = new URLSearchParams(parsed.params).toString();
     const querySuffix = query ? `?${query}` : '';
 
     switch (parsed.host) {
       case 'profile':
-        if (!id) return null;
+        if (!isSafePathId(id)) return null;
         return `/profile/${id}${querySuffix}`;
       case 'chat':
-        if (!id) return null;
+        if (!isSafePathId(id)) return null;
         return `/chat/${id}${querySuffix}`;
       case 'moments':
         return `/moments${querySuffix}`;
@@ -189,10 +216,13 @@ export class DeepLinkService {
       case 'settings':
         return `/settings${querySuffix}`;
       case 'groups':
+        if (id && !isSafePathId(id)) return null;
         return id ? `/groups/${id}${querySuffix}` : `/groups${querySuffix}`;
       case 'events':
+        if (id && !isSafePathId(id)) return null;
         return id ? `/events/${id}${querySuffix}` : `/events${querySuffix}`;
       case 'audio-rooms':
+        if (id && !isSafePathId(id)) return null;
         return id ? `/audio-rooms/${id}${querySuffix}` : `/audio-rooms${querySuffix}`;
       case 'vip':
         return `/subscription${querySuffix}`;

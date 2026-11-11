@@ -255,6 +255,21 @@ Per-endpoint, per-user Redis sliding-window rate limiting with defence-in-depth:
 
 All cached responses include Cloudflare's `CDN-Cache-Control` header for edge caching. On error, caching headers are overridden to `private, no-store` to prevent storing broken responses.
 
+### 6.2 PWA and IndexedDB offline reading
+
+The Angular service worker (`frontend/ngsw-config.json`) precaches the app shell and lazily caches curated content, lesson, and suggestion API responses under the `api-reading-engine` data group, so a recent reading session survives an outage.
+
+`OfflineReadingService` adds a durable, article-level cache for the reading list. It owns IndexedDB database `hellotalk_reading_offline` (version 1) with two stores:
+
+| Store | Key | Contents |
+|---|---|---|
+| `articles` | `id` | Title, content, language, difficulty, topic, optional audio URL, word count, and `cachedAt` |
+| `reading_history` | auto-increment | Article id, title, difficulty, topic, and `readAt` |
+
+Articles are cached after every successful resource fetch and are capped at 50, with the oldest `cachedAt` entries evicted first. Reading history is capped at the 50 most recent entries when read. `ReadingEngineComponent` reads the cache when the browser is offline or when the API request fails, and records history locally. The service tracks `NetworkStatusService` plus the browser `online`/`offline` events through its `isOfflineMode` signal, and `clearAll()` removes both stores.
+
+Cached articles are public reading content, not account data, so they do not need owner scoping. The cache is a read fallback only: reviews, saves, and other mutations still require the API and are never replayed from this store.
+
 ---
 
 ## 7. Frontend Component Architecture

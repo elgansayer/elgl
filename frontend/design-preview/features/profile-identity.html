@@ -956,9 +956,7 @@
             </div>
           </div>
           <span class="state-label">Adding · search</span>
-          <label class="field"
-            >Search hobbies<input placeholder="Search hobbies..." value="kal"
-          /></label>
+          <label class="field">Search hobbies<input value="kal" /></label>
           <div class="list">
             <div>Calligraphy</div>
             <div class="title" style="color: rgb(var(--primary-text))">Create "kal"</div>
@@ -976,10 +974,14 @@
               ><span class="chip tide" lang="ja">和音 · chord</span>
             </div>
           </div>
+          <span class="state-label">Loading · unavailable · mutation failed</span>
+          <p class="muted" aria-live="polite" style="margin: 0">Loading hobbies...</p>
+          <div class="alert error" role="alert">Hobbies could not be loaded. Retry</div>
+          <div class="alert error" role="alert">Your change could not be saved.</div>
         </div>
         <footer>
           States shown: list with proficiency · search/create · no results · empty · hobby
-          vocabulary
+          vocabulary · loading · unavailable/retry · mutation failure
         </footer>
       </section>
 
