@@ -68,6 +68,7 @@
     "check:touch-target-sizing": "node --test scripts/verify-touch-target-sizing.test.mjs && node scripts/verify-touch-target-sizing.mjs",
     "check:keyboard-interaction-contract": "node --test scripts/verify-keyboard-interaction-contract.test.mjs && node scripts/verify-keyboard-interaction-contract.mjs",
     "check:observability-stack": "node --test scripts/verify-observability-stack.test.mjs && node scripts/verify-observability-stack.mjs",
+    "check:moments-monitoring": "node --test scripts/verify-moments-monitoring.test.mjs && node scripts/verify-moments-monitoring.mjs",
     "check:livekit-networking": "node --test scripts/verify-livekit-turn-networking.test.mjs && node scripts/verify-livekit-turn-networking.mjs",
     "check:moments-reference-analysis": "node --test scripts/check-moments-reference-analysis.test.mjs && node scripts/check-moments-reference-analysis.mjs",
     "check:search-reference-analysis": "node --test scripts/check-search-reference-analysis.test.mjs && node scripts/check-search-reference-analysis.mjs",
