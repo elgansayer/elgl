@@ -87,7 +87,7 @@ interface InterestTopic {
       <!-- Loading -->
       @if (loading()) {
         <div class="flex-1 flex items-center justify-center text-text-secondary" aria-busy="true">
-          {{ 'loading' | t }}
+          {{ 'common.loading' | t }}
         </div>
       }
 
@@ -153,7 +153,7 @@ interface InterestTopic {
                       [disabled]="joiningId() === group.id"
                     >
                       {{
-                        joiningId() === group.id ? ('loading' | t) : ('groups_discovery_join' | t)
+                        joiningId() === group.id ? ('common.loading' | t) : ('groups_discovery_join' | t)
                       }}
                     </button>
                   } @else if (group.is_member) {

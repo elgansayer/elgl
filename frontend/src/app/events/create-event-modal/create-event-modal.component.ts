@@ -105,7 +105,7 @@ const venueLocationValidator: ValidatorFn = (
           <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" novalidate>
             <div class="mb-3">
               <label class="mb-1 block text-sm font-medium" for="titleInput">
-                {{ 'events.title' | t }}
+                {{ 'events.eventTitle' | t }}
               </label>
               <input
                 hlmInput
