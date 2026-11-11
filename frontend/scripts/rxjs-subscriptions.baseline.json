@@ -1,0 +1,159 @@
+{
+  "$comment": "Audited subscription call sites in frontend production code, checked by scripts/check-rxjs-subscriptions.mjs. Paths are relative to frontend/src. Counts only ever go down: migrate a site to toSignal(), resource(), linkedSignal() or elapsedSeconds() and lower or remove its entry in the same change. A new site needs an entry with a teardown and a reviewed reason. docs/rxjs-subscription-audit.md explains the audit.",
+  "entries": [
+    {
+      "file": "app/app.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "CentrifugeService.disconnect() clears every channel on sign-out; the root component lives for the whole session",
+      "reason": "Realtime channel handle for the signed-in user's gift events, not an RxJS stream"
+    },
+    {
+      "file": "app/components/audio-intro-recorder/audio-intro-recorder.component.ts",
+      "rule": "set-interval",
+      "count": 1,
+      "teardown": "clearRecordingTimer() on stop, on finalise and in destroyRef.onDestroy",
+      "reason": "Recording clock that also stops MediaRecorder at the maximum duration, an imperative side effect that a derived signal cannot perform"
+    },
+    {
+      "file": "app/components/audio-recorder/audio-recorder.component.ts",
+      "rule": "set-interval",
+      "count": 1,
+      "teardown": "stopTimer() on stop, on recorder stop and in ngOnDestroy",
+      "reason": "Recording clock that also stops MediaRecorder at the maximum duration, an imperative side effect that a derived signal cannot perform"
+    },
+    {
+      "file": "app/components/chat-room/chat-room.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "CentrifugeService.unsubscribe(chat:<room>) before switching room and in ngOnDestroy",
+      "reason": "Realtime channel handle, not an RxJS stream"
+    },
+    {
+      "file": "app/components/discovery/discovery.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "takeUntilDestroyed(destroyRef)",
+      "reason": "Debounces the filter-change trigger. A signal version is a toObservable and toSignal round trip with the same behaviour, and this component's specs are skipped, so there is no safety net for a deeper rewrite"
+    },
+    {
+      "file": "app/components/discovery/discovery.component.ts",
+      "rule": "subject",
+      "count": 1,
+      "teardown": "completed in ngOnDestroy; its only subscriber is bound with takeUntilDestroyed(destroyRef)",
+      "reason": "Event trigger for the debounced partner search, not state"
+    },
+    {
+      "file": "app/components/incoming-call/incoming-call.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "CentrifugeService.unsubscribe(channel) before resubscribing, once the call is handled and in ngOnDestroy",
+      "reason": "Realtime channel handle, not an RxJS stream"
+    },
+    {
+      "file": "app/components/instant-video-recorder/instant-video-recorder.component.ts",
+      "rule": "set-interval",
+      "count": 1,
+      "teardown": "clearTimer() on stop and in ngOnDestroy",
+      "reason": "Recording clock that also stops MediaRecorder at the maximum duration, an imperative side effect that a derived signal cannot perform"
+    },
+    {
+      "file": "app/components/pronunciation-feedback/pronunciation-feedback.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "takeUntilDestroyed(destroyRef) cancels the in-flight upload when the component is destroyed",
+      "reason": "One-shot HttpClient request from a service that still returns an Observable; moving it to resource() means rewriting the timer-driven recording flow and its specs"
+    },
+    {
+      "file": "app/components/soundboard/soundboard.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "CentrifugeService.unsubscribe(channel) in destroyRef.onDestroy",
+      "reason": "Realtime channel handle, not an RxJS stream"
+    },
+    {
+      "file": "app/components/voice-recorder/voice-recorder.component.ts",
+      "rule": "set-interval",
+      "count": 1,
+      "teardown": "clearTimer() on stop and in ngOnDestroy",
+      "reason": "Recording clock that also stops MediaRecorder at the maximum duration, an imperative side effect that a derived signal cannot perform"
+    },
+    {
+      "file": "app/components/voiceroom-notes/voiceroom-notes.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "CentrifugeService.unsubscribe(room_<id>) on room change and in destroyRef.onDestroy",
+      "reason": "Realtime channel handle, not an RxJS stream"
+    },
+    {
+      "file": "app/features/premium-ai/conversation-analysis-launcher.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "takeUntilDestroyed(destroyRef)",
+      "reason": "Router.events is Observable-only and each navigation resets the payment idempotency key; a toSignal and effect rewrite would reorder that reset around coin-charging calls"
+    },
+    {
+      "file": "app/features/settings/components/profile-settings/profile-settings.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "takeUntilDestroyed(destroyRef)",
+      "reason": "Reactive Forms exposes valueChanges only as an Observable; moving this form to Signal Forms is a separate rewrite"
+    },
+    {
+      "file": "app/pages/chat/chat-page.component.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "CentrifugeService.unsubscribe(chat:<room>) on room change and in destroyRef.onDestroy",
+      "reason": "Realtime channel handle, not an RxJS stream"
+    },
+    {
+      "file": "app/services/audio-room-degradation.service.ts",
+      "rule": "set-interval",
+      "count": 1,
+      "teardown": "stopMonitoring() when the store leaves the room; startMonitoring() always stops the previous timer first",
+      "reason": "Health polling of an external endpoint through a non-Angular API, a documented exception in the service"
+    },
+    {
+      "file": "app/services/audio-rooms.store.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "CentrifugeService.unsubscribe(room_<id>) when joining another room and when leaving",
+      "reason": "Realtime channel handle, not an RxJS stream"
+    },
+    {
+      "file": "app/services/centrifuge.service.ts",
+      "rule": "subscribe",
+      "count": 4,
+      "teardown": "unsubscribe(), releaseIfUnused(), clearActiveSubscriptions() and disconnect() release every handle",
+      "reason": "This service is the realtime transport that owns the Centrifuge client's channel subscriptions"
+    },
+    {
+      "file": "app/services/centrifugo.service.ts",
+      "rule": "subscribe",
+      "count": 4,
+      "teardown": "its own unsubscribe() and disconnect(); no production code imports it",
+      "reason": "Unreferenced duplicate of CentrifugeService; delete it rather than extend it"
+    },
+    {
+      "file": "app/services/location.service.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "returns a disposer that unsubscribes the channel; the caller must invoke it",
+      "reason": "Realtime channel handle, not an RxJS stream"
+    },
+    {
+      "file": "app/services/sw-update.service.ts",
+      "rule": "subscribe",
+      "count": 2,
+      "teardown": "takeUntilDestroyed(destroyRef); initialise() is idempotent so each stream is subscribed once",
+      "reason": "SwUpdate exposes versionUpdates and unrecoverable only as Observables, and both handlers perform side effects (log, reload)"
+    },
+    {
+      "file": "app/services/typing.service.ts",
+      "rule": "subscribe",
+      "count": 1,
+      "teardown": "CentrifugeService.unsubscribe(chat:<room>:typing) in disconnect()",
+      "reason": "Realtime channel handle, not an RxJS stream"
+    }
+  ]
+}

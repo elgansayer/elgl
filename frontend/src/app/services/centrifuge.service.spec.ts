@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { CentrifugeService } from './centrifuge.service';
+import { CentrifugeService, MAX_RETAINED_EVENTS } from './centrifuge.service';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 
@@ -170,6 +170,34 @@ describe('CentrifugeService', () => {
 
     expect(handler).toHaveBeenCalledTimes(2);
     expect(handler.mock.calls).toEqual([['first'], ['second']]);
+  });
+
+  it('retains only the latest publications so a long session cannot grow memory without bound', () => {
+    const handler = vi.fn();
+    const sub = service.subscribe('chat:room-1', handler) as unknown as MockSubscription;
+    const total = MAX_RETAINED_EVENTS + 25;
+
+    for (let index = 0; index < total; index += 1) {
+      sub.emit('publication', { data: index });
+    }
+
+    const retained = service.events();
+    expect(handler).toHaveBeenCalledTimes(total);
+    expect(retained).toHaveLength(MAX_RETAINED_EVENTS);
+    expect(retained[0]).toEqual({ channel: 'chat:room-1', data: total - MAX_RETAINED_EVENTS });
+    expect(retained.at(-1)).toEqual({ channel: 'chat:room-1', data: total - 1 });
+  });
+
+  it('keeps every publication while the window is not yet full', () => {
+    const sub = service.subscribe('chat:room-1', vi.fn()) as unknown as MockSubscription;
+
+    sub.emit('publication', { data: 'first' });
+    sub.emit('publication', { data: 'second' });
+
+    expect(service.events()).toEqual([
+      { channel: 'chat:room-1', data: 'first' },
+      { channel: 'chat:room-1', data: 'second' },
+    ]);
   });
 
   it('preserves the live-room channel and delivers each valid publication once', () => {

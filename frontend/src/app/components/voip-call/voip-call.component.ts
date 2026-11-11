@@ -11,8 +11,8 @@ import {
   effect,
 } from '@angular/core';
 
-import { interval } from 'rxjs';
 import { FormsModule } from '@angular/forms';
+import { elapsedSeconds, formatClock } from '../../core/reactive/elapsed-seconds';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
@@ -207,7 +207,9 @@ export class VoipCallComponent implements OnDestroy {
   readonly callState = signal<CallState>('ringing');
   readonly isMuted = signal(false);
   readonly isVideoEnabled = signal(false);
-  readonly callDurationSeconds = signal(0);
+  private readonly isConnected = computed(() => this.callState() === 'connected');
+  /** Seconds since the call connected; the timer is owned by this component's lifetime. */
+  readonly callDurationSeconds = elapsedSeconds(this.isConnected);
 
   readonly callStatusText = computed(() => {
     switch (this.callState()) {
@@ -228,14 +230,8 @@ export class VoipCallComponent implements OnDestroy {
     }
   });
 
-  readonly formattedDuration = computed(() => {
-    const totalSeconds = this.callDurationSeconds();
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  });
+  readonly formattedDuration = computed(() => formatClock(this.callDurationSeconds()));
 
-  private callDurationSub: { unsubscribe(): void } | null = null;
   private localAudioTrack: LocalTrack | null = null;
   private localVideoTrack: LocalTrack | null = null;
   private remoteAudioTrack: RemoteTrack | null = null;
@@ -243,15 +239,6 @@ export class VoipCallComponent implements OnDestroy {
   private room: Room | null = null;
 
   constructor() {
-    // Auto-start timer when connected
-    effect(() => {
-      if (this.callState() === 'connected') {
-        this.startDurationTimer();
-      } else {
-        this.stopDurationTimer();
-      }
-    });
-
     // Auto-enable video if it's a video call
     effect(() => {
       if (this.isVideoCall()) {
@@ -345,23 +332,7 @@ export class VoipCallComponent implements OnDestroy {
     }
   }
 
-  private startDurationTimer(): void {
-    this.callDurationSeconds.set(0);
-    this.stopDurationTimer();
-    this.callDurationSub = interval(1000).subscribe(() => {
-      this.callDurationSeconds.update((v) => v + 1);
-    });
-  }
-
-  private stopDurationTimer(): void {
-    if (this.callDurationSub) {
-      this.callDurationSub.unsubscribe();
-      this.callDurationSub = null;
-    }
-  }
-
   private cleanup(): void {
-    this.stopDurationTimer();
     this.livekitService.leaveRoom();
     this.localAudioTrack = null;
     this.localVideoTrack = null;

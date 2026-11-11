@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, DestroyRef } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   Room,
   RoomEvent,
@@ -9,11 +9,11 @@ import {
   VideoPresets,
   ExternalE2EEKeyProvider,
 } from 'livekit-client';
-import { firstValueFrom, interval, Subscription } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { elapsedSeconds } from '../core/reactive/elapsed-seconds';
 
 export interface VideoCallState {
   roomName: string;
@@ -21,7 +21,6 @@ export interface VideoCallState {
   isConnected: boolean;
   isMuted: boolean;
   isVideoOff: boolean;
-  callDuration: number;
 }
 
 @Injectable({
@@ -30,9 +29,7 @@ export interface VideoCallState {
 export class VideoCallService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
-  private destroyRef = inject(DestroyRef);
   private room: Room | null = null;
-private durationSubscription: Subscription | null = null;
   private e2eeWorker: Worker | null = null;
   // Bound handlers for cleanup to prevent listener leaks
   private onParticipantConnectedBound: ((participant: RemoteParticipant) => void) | null = null;
@@ -42,6 +39,8 @@ private durationSubscription: Subscription | null = null;
   private onConnectionStateChangedBound: ((state: string) => void) | null = null;
 
   readonly callState = signal<VideoCallState | null>(null);
+  /** Seconds since the call connected; the timer is owned by this service's injector. */
+  readonly callDuration = elapsedSeconds(computed(() => this.callState()?.isConnected === true));
   readonly localVideoTrack = signal<MediaStreamTrack | null>(null);
   readonly remoteVideoTrack = signal<MediaStreamTrack | null>(null);
   readonly remoteAudioTrack = signal<MediaStreamTrack | null>(null);
@@ -96,10 +95,7 @@ private durationSubscription: Subscription | null = null;
         isConnected: true,
         isMuted: false,
         isVideoOff: false,
-        callDuration: 0,
       });
-
-      this.startDurationTimer();
 
       const localVideoPublication = this.room.localParticipant.getTrackPublication(
         Track.Source.Camera,
@@ -168,10 +164,7 @@ private durationSubscription: Subscription | null = null;
         isConnected: true,
         isMuted: false,
         isVideoOff: false,
-        callDuration: 0,
       });
-
-      this.startDurationTimer();
 
       const localVideoPublication = this.room.localParticipant.getTrackPublication(
         Track.Source.Camera,
@@ -213,7 +206,6 @@ private durationSubscription: Subscription | null = null;
       this.room = null;
     }
 
-    this.stopDurationTimer();
     this.disposeE2eeWorker();
     this.isEncrypted.set(false);
 
@@ -335,27 +327,5 @@ private durationSubscription: Subscription | null = null;
         }
       }
     });
-  }
-
-  private startDurationTimer(): void {
-    this.stopDurationTimer();
-    this.durationSubscription = interval(1000)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        const currentState = this.callState();
-        if (currentState) {
-          this.callState.set({
-            ...currentState,
-            callDuration: currentState.callDuration + 1,
-          });
-        }
-      });
-  }
-
-  private stopDurationTimer(): void {
-    if (this.durationSubscription) {
-      this.durationSubscription.unsubscribe();
-      this.durationSubscription = null;
-    }
   }
 }

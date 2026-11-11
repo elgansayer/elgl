@@ -17,14 +17,18 @@ export class SwUpdateService {
   readonly updateAvailable = signal(false);
   readonly updateActivated = signal(false);
 
+  private initialised = false;
+
   /**
    * Checks for available updates and subscribes to version-ready events.
-   * Should be called once during app initialisation in the browser.
+   * Should be called once during app initialisation in the browser; repeat calls are ignored so
+   * the service-worker streams are never subscribed to twice.
    */
   initialise(): void {
-    if (!this.swUpdate.isEnabled) {
+    if (!this.swUpdate.isEnabled || this.initialised) {
       return;
     }
+    this.initialised = true;
 
     this.swUpdate.versionUpdates
       .pipe(

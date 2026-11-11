@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { defer, of, throwError } from 'rxjs';
+import { Observable, defer, of, throwError } from 'rxjs';
 
 import { DiscoverySearchFailureKind, DiscoveryService } from './discovery.service';
 import { AuthService } from './auth.service';
@@ -277,5 +277,77 @@ describe('DiscoveryService offline privacy boundary', () => {
     expect(params.get('native_languages')).toBe('es');
     expect(params.get('target_language')).toBe('fr');
     expect(params.get('level')).toBe('B1');
+  });
+});
+
+describe('DiscoveryService search cancellation', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  async function createService(get: ReturnType<typeof vi.fn>): Promise<DiscoveryService> {
+    await TestBed.configureTestingModule({
+      providers: [
+        DiscoveryService,
+        { provide: HttpClient, useValue: { get } },
+        {
+          provide: AuthService,
+          useValue: {
+            getAccessToken: vi.fn(() => 'token'),
+            currentUser: signal({ id: 'viewer-1' }),
+          },
+        },
+        { provide: SafetyService, useValue: { getBlockedAndBlockerIdsStrict: vi.fn() } },
+        { provide: ChatService, useValue: {} },
+        { provide: UserService, useValue: {} },
+        { provide: OfflineDiscoveryCacheService, useValue: { isOnline: signal(true) } },
+      ],
+    }).compileComponents();
+    return TestBed.inject(DiscoveryService);
+  }
+
+  it('abandons the in-flight request and resolves empty when the signal aborts', async () => {
+    let released = false;
+    const pending = new Observable<never>(() => () => {
+      released = true;
+    });
+    const service = await createService(vi.fn(() => pending));
+    const controller = new AbortController();
+
+    const search = service.findPartners({}, controller.signal);
+    expect(released).toBe(false);
+    controller.abort();
+
+    await expect(search).resolves.toEqual([]);
+    expect(released).toBe(true);
+  });
+
+  it('does not call the API when the signal is already aborted', async () => {
+    const get = vi.fn(() => of([{ id: 'partner-1' }]));
+    const service = await createService(get);
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(service.findPartners({}, controller.signal)).resolves.toEqual([]);
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('removes its abort listener once the request settles, so a shared signal keeps no handler', async () => {
+    const controller = new AbortController();
+    const added = vi.spyOn(controller.signal, 'addEventListener');
+    const removed = vi.spyOn(controller.signal, 'removeEventListener');
+    const service = await createService(vi.fn(() => of([])));
+
+    await expect(service.findPartners({}, controller.signal)).resolves.toEqual([]);
+
+    expect(added).toHaveBeenCalledOnce();
+    expect(removed).toHaveBeenCalledOnce();
+    expect(removed.mock.calls[0][1]).toBe(added.mock.calls[0][1]);
+  });
+
+  it('searches normally without an abort signal', async () => {
+    const service = await createService(vi.fn(() => of([])));
+
+    await expect(service.findPartners({})).resolves.toEqual([]);
   });
 });

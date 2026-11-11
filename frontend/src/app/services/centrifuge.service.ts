@@ -11,6 +11,11 @@ const MAX_RECONNECT_ATTEMPTS = 8;
 const BASE_RECONNECT_DELAY_MS = 500;
 /** Maximum delay cap in milliseconds. */
 const MAX_RECONNECT_DELAY_MS = 30_000;
+/**
+ * Most recent publications kept in `events`. The list is a bounded debugging window, not a
+ * message store: an unbounded copy of every realtime message grows for the whole session.
+ */
+export const MAX_RETAINED_EVENTS = 100;
 
 type ConnectionStatus =
   'disconnected' | 'connecting' | 'reconnecting' | 'connected' | 'rate-limited' | 'error';
@@ -53,6 +58,7 @@ export class CentrifugeService {
   private clientGeneration = 0;
   private hasConnectedOnce = false;
 
+  /** The latest `MAX_RETAINED_EVENTS` publications across all channels, oldest first. */
   readonly events = signal<CentrifugeEvent[]>([]);
   readonly isConnected = signal<boolean>(false);
   readonly connectionStatus = signal<ConnectionStatus>('disconnected');
@@ -126,7 +132,9 @@ export class CentrifugeService {
       for (const listener of this.additiveListeners.get(channel) ?? []) {
         listener(ctx.data);
       }
-      this.events.update((prev) => [...prev, { channel, data: ctx.data }]);
+      this.events.update((prev) =>
+        [...prev, { channel, data: ctx.data }].slice(-MAX_RETAINED_EVENTS),
+      );
     });
     subscription.subscribe();
     this.subscriptions.set(channel, subscription);

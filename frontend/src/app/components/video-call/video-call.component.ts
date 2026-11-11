@@ -12,7 +12,6 @@ import {
   viewChild,
   ElementRef,
 } from '@angular/core';
-import { interval } from 'rxjs';
 import {
   Room,
   RoomEvent,
@@ -23,6 +22,7 @@ import {
   createLocalTracks,
   Track,
 } from 'livekit-client';
+import { elapsedSeconds, formatClock } from '../../core/reactive/elapsed-seconds';
 import { LivekitService } from '../../services/livekit.service';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
@@ -434,15 +434,17 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
   readonly isAudioMuted = signal(false);
   readonly isVideoMuted = signal(false);
-  readonly callDuration = signal('00:00');
   readonly isInPip = signal(false);
   readonly pipAvailable = computed(
     () => typeof document !== 'undefined' && document.pictureInPictureEnabled,
   );
   readonly isScreenSharing = signal(false);
   readonly connectionState = signal<'connecting' | 'connected' | 'error'>('connecting');
-  private callStartTime: number = 0;
-  private durationSub: { unsubscribe(): void } | null = null;
+  /** Seconds since the call connected; the timer is owned by this component's lifetime. */
+  private readonly connectedSeconds = elapsedSeconds(
+    computed(() => this.connectionState() === 'connected'),
+  );
+  readonly callDuration = computed(() => formatClock(this.connectedSeconds()));
 
   constructor() {
     // React to the main (screen share, falling back to camera) remote track and detach the
@@ -543,17 +545,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       }
 
       this.connectionState.set('connected');
-
-      // Start call duration timer
-      this.callStartTime = Date.now();
-      this.durationSub = interval(1000).subscribe(() => {
-        const elapsed = Math.floor((Date.now() - this.callStartTime) / 1000);
-        const mins = Math.floor(elapsed / 60);
-        const secs = elapsed % 60;
-        this.callDuration.set(
-          `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`,
-        );
-      });
     } catch {
       this.connectionState.set('error');
     }
@@ -656,11 +647,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   private cleanup(): void {
-    if (this.durationSub) {
-      this.durationSub.unsubscribe();
-      this.durationSub = null;
-    }
-
     // Detach all remote tracks from video elements before stopping them
     this.remoteCameraTrack()?.detach();
     this.remoteScreenShareTrack()?.detach();

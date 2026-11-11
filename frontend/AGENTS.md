@@ -57,6 +57,7 @@ exception with a comment.
 - **NEVER `setTimeout` / `setInterval` for state or async work** - use `resource()` with a polling `loader`, or `interval()` from rxjs converted via `toSignal()`.
 - **NEVER `.toPromise()`** (deprecated) - use `firstValueFrom()` or `lastValueFrom()`.
 - **NEVER import from `rxjs/operators`** - operators are exported from `rxjs` directly.
+- Mechanically enforced by `npm run check:rxjs-subscriptions` (part of `lint:check`): every remaining `.subscribe()`, `new Subject` and `setInterval` call site is audited in `scripts/rxjs-subscriptions.baseline.json` with its teardown, and new ones fail until a reviewed entry is added. Use `elapsedSeconds()` for "time since X" clocks and `linkedSignal` to follow a store signal. See `../docs/rxjs-subscription-audit.md`.
 
 ## TypeScript Best Practices
 

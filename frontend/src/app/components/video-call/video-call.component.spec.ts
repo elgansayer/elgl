@@ -1,7 +1,8 @@
-import { vi, Mocked } from 'vitest';
+import { vi, Mocked, type MockInstance } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ComponentRef } from '@angular/core';
 import { VideoCallComponent } from './video-call.component';
+import { ELAPSED_TICK_MS } from '../../core/reactive/elapsed-seconds';
 import { LivekitService } from '../../services/livekit.service';
 import { LocalTrackPublication, RemoteTrack, Track } from 'livekit-client';
 
@@ -242,5 +243,113 @@ describe('VideoCallComponent - screen sharing', () => {
 
     expect(component.remoteCameraTrack()).toBeNull();
     expect(component.remoteScreenShareTrack()).toBeNull();
+  });
+});
+
+describe('VideoCallComponent - call timer', () => {
+  let component: VideoCallComponent;
+  let fixture: ComponentFixture<VideoCallComponent>;
+  let setIntervalSpy: MockInstance<typeof setInterval>;
+  let clearIntervalSpy: MockInstance<typeof clearInterval>;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    // RxJS `interval` goes through the global timers; spying on them isolates the call clock from
+    // the one-shot timers zoneless change detection and Spartan Helm schedule on every update.
+    setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
+
+    await TestBed.configureTestingModule({
+      imports: [VideoCallComponent],
+      providers: [{ provide: LivekitService, useValue: {} }],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(VideoCallComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('roomName', 'room-1');
+    fixture.componentRef.setInput('otherUserId', 'user-456');
+    fixture.componentRef.setInput('currentUserId', 'user-123');
+    // The LiveKit connection flow is covered elsewhere; this suite drives the connection state.
+    vi.spyOn(component, 'ngOnInit').mockResolvedValue();
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    setIntervalSpy.mockRestore();
+    clearIntervalSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  function connect(): void {
+    component.connectionState.set('connected');
+    fixture.detectChanges();
+  }
+
+  /** Handles of the one-second call clock, ignoring unrelated timers such as Supabase's refresh. */
+  function clockHandles(): unknown[] {
+    return setIntervalSpy.mock.calls.flatMap(([, delay], index) =>
+      delay === ELAPSED_TICK_MS ? [setIntervalSpy.mock.results[index]?.value] : [],
+    );
+  }
+
+  function clockWasCleared(): boolean {
+    const [clock] = clockHandles();
+    return clearIntervalSpy.mock.calls.some(([cleared]) => cleared === clock);
+  }
+
+  it('shows 00:00 and starts no clock until the call connects', () => {
+    vi.advanceTimersByTime(5000);
+
+    expect(clockHandles()).toHaveLength(0);
+    expect(component.callDuration()).toBe('00:00');
+  });
+
+  it('counts the connected duration as mm:ss', () => {
+    connect();
+
+    vi.advanceTimersByTime(65_000);
+
+    expect(component.callDuration()).toBe('01:05');
+    expect(clockHandles()).toHaveLength(1);
+  });
+
+  it('renders the running clock in the connected call UI', () => {
+    connect();
+    vi.advanceTimersByTime(9000);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('00:09');
+  });
+
+  it('stops and resets the clock when the connection errors', () => {
+    connect();
+    vi.advanceTimersByTime(3000);
+    expect(clockWasCleared()).toBe(false);
+
+    component.connectionState.set('error');
+    fixture.detectChanges();
+
+    expect(clockWasCleared()).toBe(true);
+    expect(component.callDuration()).toBe('00:00');
+  });
+
+  it('releases the clock when the component is destroyed', () => {
+    connect();
+    expect(clockWasCleared()).toBe(false);
+
+    fixture.destroy();
+
+    expect(clockWasCleared()).toBe(true);
+  });
+
+  it('never starts a clock when the connection completes after the component was destroyed', () => {
+    fixture.destroy();
+
+    // The LiveKit connection resolves asynchronously and can finish after the user has left.
+    component.connectionState.set('connected');
+    TestBed.tick();
+    vi.advanceTimersByTime(5000);
+
+    expect(clockHandles()).toHaveLength(0);
   });
 });

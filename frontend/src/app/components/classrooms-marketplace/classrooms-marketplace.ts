@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
+import { Component, inject, signal, computed, linkedSignal, OnInit } from '@angular/core';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
@@ -10,8 +10,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { withRetry } from '../../services/http-retry';
-import { firstValueFrom, interval } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { JoyrideModule } from 'ngx-joyride';
@@ -34,12 +33,19 @@ export class ClassroomsMarketplace implements OnInit {
   private authService = inject(AuthService);
   private http = inject(HttpClient);
   private errorHandler = inject(VideoClassroomErrorHandlerService);
-  private destroyRef = inject(DestroyRef);
   private onboardingService = inject(VideoClassroomOnboardingService);
   private offlineService = inject(OfflineVideoClassroomService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
-  readonly rooms = signal<AudioRoomRecord[]>([]);
+  /**
+   * Marketplace listing. It follows the shared store's room list whenever that list has rooms,
+   * which replaces the old 5 second poll of the same signal, and keeps what was loaded over HTTP
+   * or from the offline cache while the store is empty.
+   */
+  readonly rooms = linkedSignal<AudioRoomRecord[], AudioRoomRecord[]>({
+    source: this.store.activeRooms,
+    computation: (live, previous) => (live.length > 0 ? live : (previous?.value ?? [])),
+  });
   readonly isLoading = signal(true);
   readonly selectedLanguage = signal<string | null>(null);
   readonly errorMessage = signal<string>('');
@@ -72,7 +78,6 @@ export class ClassroomsMarketplace implements OnInit {
   // LiveKit integration requires imperative setup; exception permitted per AGENTS.md 5.3
   ngOnInit(): void {
     this.loadRooms();
-    this.subscribeToUpdates();
   }
 
   async loadRooms(): Promise<void> {
@@ -104,18 +109,6 @@ export class ClassroomsMarketplace implements OnInit {
     }
   }
 
-  private subscribeToUpdates(): void {
-    // Watch active rooms from the store for real-time updates
-    interval(5000)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        const fresh = this.store.activeRooms();
-        if (fresh.length > 0) {
-          this.rooms.set(fresh);
-        }
-      });
-  }
-
   selectLanguage(lang: string | null): void {
     this.selectedLanguage.set(lang);
   }
@@ -124,8 +117,8 @@ export class ClassroomsMarketplace implements OnInit {
     await this.errorHandler.wrapClassroomCall(
       'createClassroom',
       async () => {
-        const created = await this.store.createRoom(title, languagePair, topicTag, true);
-        this.rooms.update((r) => [created, ...r]);
+        // The store prepends the new room to its list, which `rooms` follows.
+        await this.store.createRoom(title, languagePair, topicTag, true);
       },
       { roomName: title },
     );

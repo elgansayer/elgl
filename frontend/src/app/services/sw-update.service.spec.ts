@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApplicationRef } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { Subject } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SwUpdateService } from './sw-update.service';
 
 describe('SwUpdateService', () => {
@@ -41,6 +41,10 @@ describe('SwUpdateService', () => {
     service = TestBed.inject(SwUpdateService);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
@@ -65,6 +69,44 @@ describe('SwUpdateService', () => {
     versionUpdatesSubject.next({ type: 'NO_NEW_VERSION_DETECTED' });
 
     expect(service.updateAvailable()).toBe(false);
+  });
+
+  it('subscribes to the service worker streams once however often initialise is called', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const event: VersionReadyEvent = {
+      type: 'VERSION_READY',
+      currentVersion: { hash: 'abc123' },
+      latestVersion: { hash: 'def456' },
+    };
+
+    service.initialise();
+    service.initialise();
+    service.initialise();
+    versionUpdatesSubject.next(event);
+
+    expect(versionUpdatesSubject.observers).toHaveLength(1);
+    expect(unrecoverableSubject.observers).toHaveLength(1);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(mockSwUpdate.checkForUpdate).toHaveBeenCalledOnce();
+  });
+
+  it('does not subscribe at all while the service worker is disabled', () => {
+    mockSwUpdate.isEnabled = false;
+
+    service.initialise();
+
+    expect(versionUpdatesSubject.observers).toHaveLength(0);
+    expect(unrecoverableSubject.observers).toHaveLength(0);
+  });
+
+  it('releases both subscriptions when the injector is destroyed', () => {
+    service.initialise();
+    expect(versionUpdatesSubject.observers).toHaveLength(1);
+
+    TestBed.resetTestingModule();
+
+    expect(versionUpdatesSubject.observers).toHaveLength(0);
+    expect(unrecoverableSubject.observers).toHaveLength(0);
   });
 
   it('should reload on unrecoverable event', () => {

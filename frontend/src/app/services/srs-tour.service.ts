@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { JoyrideService } from 'ngx-joyride';
+import { firstValueFrom, lastValueFrom, timer } from 'rxjs';
 import { I18nService } from './i18n.service';
 
 export const SRS_TOUR_STEPS = [
@@ -28,6 +29,8 @@ interface SrsTourOptions {
 }
 
 const SRS_TOUR_STORAGE_KEY = 'hellotalk_srs_tour_completed';
+/** Time for the vocabulary page to render its tour anchors once navigation has settled. */
+const TOUR_ANCHOR_SETTLE_MS = 500;
 
 @Injectable({ providedIn: 'root' })
 export class SrsTourService {
@@ -37,6 +40,9 @@ export class SrsTourService {
 
   readonly hasCompletedTour = signal(this.checkTourCompleted());
 
+  /** Set from the click until the tour ends, so a double click cannot queue a second tour. */
+  private tourRequested = false;
+
   private checkTourCompleted(): boolean {
     try {
       return window.localStorage.getItem(SRS_TOUR_STORAGE_KEY) === 'true';
@@ -45,10 +51,43 @@ export class SrsTourService {
     }
   }
 
-  startTour(): void {
-    const steps: string[] = [...SRS_TOUR_STEPS];
+  async startTour(): Promise<void> {
+    if (this.tourRequested || this.joyrideService.isTourInProgress()) return;
+    this.tourRequested = true;
+    try {
+      if (!(await this.openVocabularyPage())) return;
+      await this.runTour();
+      this.markTourCompleted();
+    } finally {
+      this.tourRequested = false;
+    }
+  }
 
-    const options: SrsTourOptions = {
+  /** Navigates to the vocabulary page, then gives it time to render the tour anchors. */
+  private async openVocabularyPage(): Promise<boolean> {
+    try {
+      await this.router.navigate(['/vocabulary']);
+    } catch {
+      return false;
+    }
+    await firstValueFrom(timer(TOUR_ANCHOR_SETTLE_MS));
+    return true;
+  }
+
+  /** Resolves when the tour ends, and holds no subscription on joyride's step stream afterwards. */
+  private async runTour(): Promise<void> {
+    try {
+      await lastValueFrom(this.joyrideService.startTour(this.tourOptions()), {
+        defaultValue: undefined,
+      });
+    } catch {
+      // The tour errors when a step anchor is missing; it still counts as seen.
+    }
+  }
+
+  private tourOptions(): SrsTourOptions {
+    const steps: string[] = [...SRS_TOUR_STEPS];
+    return {
       steps,
       startWith: steps[0],
       stepDefaultPosition: 'bottom',
@@ -63,19 +102,6 @@ export class SrsTourService {
         close: this.i18n.translate('srsTour.closeBtn'),
       },
     };
-
-    // Navigate to vocabulary page first
-    this.router.navigate(['/vocabulary']).then(() => {
-      setTimeout(() => {
-        this.joyrideService.startTour(options).subscribe({
-          complete: () => this.markTourCompleted(),
-          error: () => {
-            // Tour may error if steps aren't all found - still mark as seen
-            this.markTourCompleted();
-          },
-        });
-      }, 500);
-    });
   }
 
   private markTourCompleted(): void {

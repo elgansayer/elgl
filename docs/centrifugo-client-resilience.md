@@ -73,3 +73,7 @@ The pull-request CI suite remains authoritative for the complete repository veri
 There is no schema, API response-shape or server configuration change. Deploy the frontend normally after required checks pass.
 
 Rollback is a normal application revert. No database or credential rollback is required. A rollback must not introduce client-side Centrifugo signing secrets or bypass the authenticated `POST /chat/token` boundary.
+
+## Retained event window
+
+`CentrifugeService.events` exposes the latest `MAX_RETAINED_EVENTS` (100) publications across all channels, oldest first. It is a bounded diagnostic window, not a message store: consumers receive messages through their channel handler and persisted history comes from the API. The list previously kept every publication for the whole session, which grew memory without bound in busy rooms. See [RxJS subscription audit](rxjs-subscription-audit.md).

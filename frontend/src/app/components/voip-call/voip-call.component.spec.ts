@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, Mocked } from 'vitest';
+import { describe, it, expect, vi, Mocked, type MockInstance } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VoipCallComponent } from './voip-call.component';
 import { ComponentRef } from '@angular/core';
+import { ELAPSED_TICK_MS } from '../../core/reactive/elapsed-seconds';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
@@ -242,5 +243,122 @@ describe('VoipCallComponent encryption indicator', () => {
 
     component.callState.set('ended');
     fixture.detectChanges();
+  });
+});
+
+describe('VoipCallComponent call timer', () => {
+  let fixture: ComponentFixture<VoipCallComponent>;
+  let component: VoipCallComponent;
+  let leaveRoom: ReturnType<typeof vi.fn>;
+  let setIntervalSpy: MockInstance<typeof setInterval>;
+  let clearIntervalSpy: MockInstance<typeof clearInterval>;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    // RxJS `interval` goes through the global timers; spying on them isolates the call clock from
+    // the one-shot timers zoneless change detection and Spartan Helm schedule on every update.
+    setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
+    leaveRoom = vi.fn();
+
+    await TestBed.configureTestingModule({
+      imports: [VoipCallComponent],
+      providers: [
+        { provide: LivekitService, useValue: { leaveRoom } },
+        { provide: AuthService, useValue: { currentUser: vi.fn() } },
+        { provide: ChatService, useValue: { sendMessage: vi.fn() } },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(VoipCallComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('callDirection', 'incoming');
+    fixture.componentRef.setInput('remoteUserId', 'user-456');
+    fixture.componentRef.setInput('displayName', 'Test User');
+    fixture.componentRef.setInput('roomName', 'test-room');
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    setIntervalSpy.mockRestore();
+    clearIntervalSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  function connect(): void {
+    component.callState.set('connected');
+    fixture.detectChanges();
+  }
+
+  /** Handles of the one-second call clock, ignoring unrelated timers such as Supabase's refresh. */
+  function clockHandles(): unknown[] {
+    return setIntervalSpy.mock.calls.flatMap(([, delay], index) =>
+      delay === ELAPSED_TICK_MS ? [setIntervalSpy.mock.results[index]?.value] : [],
+    );
+  }
+
+  function clockWasCleared(): boolean {
+    const [clock] = clockHandles();
+    return clearIntervalSpy.mock.calls.some(([cleared]) => cleared === clock);
+  }
+
+  it('does not start a clock before the call connects', () => {
+    vi.advanceTimersByTime(5000);
+
+    expect(clockHandles()).toHaveLength(0);
+    expect(component.formattedDuration()).toBe('00:00');
+  });
+
+  it('counts the connected duration into the formatted clock', () => {
+    connect();
+
+    vi.advanceTimersByTime(5000);
+    expect(component.callDurationSeconds()).toBe(5);
+    expect(component.formattedDuration()).toBe('00:05');
+
+    vi.advanceTimersByTime(55_000);
+    expect(component.formattedDuration()).toBe('01:00');
+    expect(clockHandles()).toHaveLength(1);
+  });
+
+  it('renders the running clock inside the connected call UI', () => {
+    connect();
+    vi.advanceTimersByTime(7000);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('00:07');
+  });
+
+  it('stops the clock as soon as the call leaves the connected state', () => {
+    connect();
+    vi.advanceTimersByTime(3000);
+    expect(clockWasCleared()).toBe(false);
+
+    component.callState.set('ended');
+    fixture.detectChanges();
+
+    expect(clockWasCleared()).toBe(true);
+    expect(component.callDurationSeconds()).toBe(0);
+  });
+
+  it('releases the clock and leaves the room when the component is destroyed', () => {
+    connect();
+    expect(clockWasCleared()).toBe(false);
+
+    fixture.destroy();
+
+    expect(clockWasCleared()).toBe(true);
+    expect(leaveRoom).toHaveBeenCalledOnce();
+  });
+
+  it('never starts a clock when the call connects after the component was destroyed', () => {
+    fixture.destroy();
+
+    // acceptCall awaits LiveKit and can resolve after the user has left.
+    component.callState.set('connected');
+    TestBed.tick();
+    vi.advanceTimersByTime(5000);
+
+    expect(clockHandles()).toHaveLength(0);
   });
 });

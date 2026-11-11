@@ -74,3 +74,85 @@ describe('VideoCallService E2EE', () => {
     expect(service.isEncrypted()).toBe(false);
   });
 });
+
+describe('VideoCallService call duration', () => {
+  let service: VideoCallService;
+  const connectedState = {
+    roomName: 'video_11111111-2222-4333-8444-555555555555',
+    remoteParticipantId: 'remote-user-123',
+    isConnected: true,
+    isMuted: false,
+    isVideoOff: false,
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        VideoCallService,
+        { provide: AuthService, useValue: { getAccessToken: vi.fn() } },
+      ],
+    });
+    service = TestBed.inject(VideoCallService);
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+  });
+
+  it('stays at zero with no timer while there is no call', () => {
+    vi.advanceTimersByTime(5000);
+
+    expect(service.callDuration()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('counts seconds while connected without rewriting the call state each tick', () => {
+    service.callState.set(connectedState);
+    TestBed.tick();
+    const stateBeforeTicks = service.callState();
+
+    vi.advanceTimersByTime(4000);
+
+    expect(service.callDuration()).toBe(4);
+    expect(service.callState()).toBe(stateBeforeTicks);
+  });
+
+  it('keeps counting through mute and camera toggles', () => {
+    service.callState.set(connectedState);
+    TestBed.tick();
+    vi.advanceTimersByTime(2000);
+
+    service.callState.set({ ...connectedState, isMuted: true });
+    TestBed.tick();
+    vi.advanceTimersByTime(3000);
+
+    expect(service.callDuration()).toBe(5);
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it('stops and resets the timer when the call ends', async () => {
+    service.callState.set(connectedState);
+    TestBed.tick();
+    vi.advanceTimersByTime(3000);
+    expect(vi.getTimerCount()).toBe(1);
+
+    await service.endCall();
+    TestBed.tick();
+
+    expect(service.callDuration()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('releases the timer when the service injector is destroyed mid-call', () => {
+    service.callState.set(connectedState);
+    TestBed.tick();
+    expect(vi.getTimerCount()).toBe(1);
+
+    TestBed.resetTestingModule();
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});

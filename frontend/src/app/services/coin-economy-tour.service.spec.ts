@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { CoinEconomyTourService } from './coin-economy-tour.service';
 import { JoyrideService } from 'ngx-joyride';
 import { I18nService } from './i18n.service';
@@ -67,6 +67,15 @@ describe('CoinEconomyTourService', () => {
     expect(options.customTexts).toBeDefined();
   });
 
+  it('does not hold a subscription on the step stream joyride returns', () => {
+    const stepStream = new Subject<unknown>();
+    joyrideServiceMock.startTour.mockReturnValue(stepStream);
+
+    expect(service.startTour()).toBe(true);
+
+    expect(stepStream.observed).toBe(false);
+  });
+
   it('should not start a tour if one is already in progress', () => {
     joyrideServiceMock.isTourInProgress.mockReturnValue(true);
 
@@ -78,6 +87,16 @@ describe('CoinEconomyTourService', () => {
   it('should close the tour', () => {
     service.closeTour();
     expect(joyrideServiceMock.closeTour).toHaveBeenCalledOnce();
+  });
+
+  it('can start a new tour after closing one', () => {
+    joyrideServiceMock.startTour.mockReturnValue(of({}));
+    expect(service.startTour()).toBe(true);
+
+    service.closeTour();
+    expect(service.startTour()).toBe(true);
+
+    expect(joyrideServiceMock.startTour).toHaveBeenCalledTimes(2);
   });
 
   it('should report tour in progress status', () => {

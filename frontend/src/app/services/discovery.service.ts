@@ -8,7 +8,8 @@ import {
   timer,
   throwError,
   retry,
-  Subject,
+  fromEvent,
+  NEVER,
   takeUntil,
 } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -211,13 +212,8 @@ export class DiscoveryService {
       return [];
     }
 
-    // Build cancellation notifier from AbortSignal
-    const cancel$ = new Subject<void>();
-    if (abortSignal) {
-      if (abortSignal.aborted) {
-        return [];
-      }
-      abortSignal.addEventListener('abort', () => cancel$.next(), { once: true });
+    if (abortSignal?.aborted) {
+      return [];
     }
 
     let users: UserProfile[];
@@ -232,7 +228,9 @@ export class DiscoveryService {
               delay: (error: unknown) =>
                 isTransientPartnerSearchFailure(error) ? timer(1000) : throwError(() => error),
             }),
-            takeUntil(cancel$),
+            // fromEvent removes its abort listener once the request settles, so a signal that
+            // outlives the request never keeps a dead handler.
+            takeUntil(abortSignal ? fromEvent(abortSignal, 'abort') : NEVER),
           ),
         // A cancelled request completes without a value; that is a superseded search, not a failure.
         { defaultValue: [] },
