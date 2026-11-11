@@ -73,7 +73,7 @@ const PAGE_SIZE = 20;
 
     <!-- Event list -->
     @if (isLoading() && events().length === 0) {
-      <p role="status">{{ 'loading' | t }}</p>
+      <p role="status">{{ 'common.loading' | t }}</p>
     } @else if (error() && events().length === 0) {
       <div role="alert" class="flex flex-col items-start gap-3">
         <p class="text-danger-ink">{{ 'common.error_generic' | t }}</p>
@@ -128,7 +128,7 @@ const PAGE_SIZE = 20;
           (click)="loadMore()"
         >
           @if (isLoading()) {
-            {{ 'loading' | t }}
+            {{ 'common.loading' | t }}
           } @else {
             {{ 'events.load_more' | t }}
           }
