@@ -2,9 +2,11 @@ import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   ExecutionContext,
+  ForbiddenException,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { AccountSuspensionService } from '../account-suspension/account-suspension.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -342,6 +344,99 @@ describe('SupabaseAuthGuard', () => {
           new UnauthorizedException('Unsupported execution context'),
         );
       });
+    });
+  });
+
+  describe('account suspension', () => {
+    let findActive: Mock;
+    let suspensionGuard: SupabaseAuthGuard;
+
+    beforeEach(async () => {
+      findActive = vi.fn();
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          SupabaseAuthGuard,
+          {
+            provide: SupabaseService,
+            useValue: {
+              getClient: vi
+                .fn()
+                .mockReturnValue({ auth: { getUser: mockAuthGetUser } }),
+            },
+          },
+          { provide: AccountSuspensionService, useValue: { findActive } },
+        ],
+      }).compile();
+      suspensionGuard = module.get(SupabaseAuthGuard);
+      mockAuthGetUser.mockResolvedValue({
+        data: { user: { id: 'user-123' } },
+        error: null,
+      });
+    });
+
+    const httpContext = (request: any) =>
+      createMockExecutionContext('http', request);
+
+    it('allows an identity that has no active suspension', async () => {
+      findActive.mockResolvedValue(null);
+      const request: any = { headers: { authorization: 'Bearer token' } };
+
+      await expect(
+        suspensionGuard.canActivate(httpContext(request)),
+      ).resolves.toBe(true);
+      expect(findActive).toHaveBeenCalledWith('user-123');
+      expect(request.user).toEqual({ id: 'user-123' });
+    });
+
+    it('rejects a suspended identity with only the end time and a stable code', async () => {
+      findActive.mockResolvedValue({
+        id: 'suspension-1',
+        expiresAt: '2026-12-01T00:00:00.000Z',
+      });
+      const request: any = { headers: { authorization: 'Bearer token' } };
+
+      const error = await suspensionGuard
+        .canActivate(httpContext(request))
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getResponse()).toEqual({
+        statusCode: 403,
+        error: 'Forbidden',
+        code: 'ACCOUNT_SUSPENDED',
+        message: 'This account is temporarily suspended.',
+        suspendedUntil: '2026-12-01T00:00:00.000Z',
+      });
+      // A suspended identity is never exposed to downstream handlers.
+      expect(request.user).toBeUndefined();
+    });
+
+    it('applies to websocket handshakes as well', async () => {
+      findActive.mockResolvedValue({
+        id: 'suspension-1',
+        expiresAt: '2026-12-01T00:00:00.000Z',
+      });
+      const client: any = {
+        handshake: { headers: { authorization: 'Bearer token' } },
+      };
+
+      await expect(
+        suspensionGuard.canActivate(createMockExecutionContext('ws', client)),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(client.user).toBeUndefined();
+    });
+
+    it('does not consult suspensions for an invalid token', async () => {
+      mockAuthGetUser.mockResolvedValue({
+        data: { user: null },
+        error: new Error('expired'),
+      });
+      const request: any = { headers: { authorization: 'Bearer token' } };
+
+      await expect(
+        suspensionGuard.canActivate(httpContext(request)),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(findActive).not.toHaveBeenCalled();
     });
   });
 });

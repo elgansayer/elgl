@@ -714,7 +714,27 @@ type ReportRow = {
   status: string;
   description?: string | null;
   context_url?: string | null;
+  /** Soft reference (no foreign key) so deleting the Moment keeps the case. */
+  reported_moment_id?: string | null;
+  /** Text captured when the Moment was flagged, at most 1000 characters. */
+  reported_moment_excerpt?: string | null;
   created_at?: string;
+};
+
+type AccountSuspensionRow = {
+  id: string;
+  user_id: string;
+  reason_code: string;
+  operator_note: string | null;
+  report_id: string | null;
+  issued_by: string | null;
+  idempotency_key: string;
+  created_at: string;
+  expires_at: string;
+  lifted_at: string | null;
+  lifted_by: string | null;
+  lift_reason_code: string | null;
+  lift_operator_note: string | null;
 };
 
 export interface Database {
@@ -1856,6 +1876,8 @@ export interface Database {
           status?: string;
           description?: string | null;
           context_url?: string | null;
+          reported_moment_id?: string | null;
+          reported_moment_excerpt?: string | null;
           created_at?: string;
           id?: string;
         };
@@ -1866,8 +1888,32 @@ export interface Database {
           status?: string;
           description?: string | null;
           context_url?: string | null;
+          reported_moment_id?: string | null;
+          reported_moment_excerpt?: string | null;
           created_at?: string;
           id?: string;
+        }>;
+        Relationships: [];
+      };
+      account_suspensions: {
+        Row: AccountSuspensionRow;
+        Insert: {
+          user_id: string;
+          reason_code: string;
+          idempotency_key: string;
+          expires_at: string;
+          operator_note?: string | null;
+          report_id?: string | null;
+          issued_by?: string | null;
+          id?: string;
+          created_at?: string;
+        };
+        // History is append-only: only the one-time lift columns ever change.
+        Update: Partial<{
+          lifted_at: string | null;
+          lifted_by: string | null;
+          lift_reason_code: string | null;
+          lift_operator_note: string | null;
         }>;
         Relationships: [];
       };

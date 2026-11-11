@@ -200,4 +200,89 @@ describe('VersionService', () => {
     });
     process.env.MINIMUM_SUPPORTED_APP_VERSION = saved;
   });
+
+  describe('client version enforcement', () => {
+    afterEach(() => {
+      delete process.env.CLIENT_VERSION_ENFORCEMENT;
+    });
+
+    it('enforces by default', () => {
+      delete process.env.CLIENT_VERSION_ENFORCEMENT;
+      expect(new VersionService().getEnforcementMode()).toBe('enforce');
+    });
+
+    it.each(['enforce', 'report-only', 'off', ' report-only '])(
+      'accepts enforcement mode %j',
+      (mode) => {
+        process.env.CLIENT_VERSION_ENFORCEMENT = mode;
+        expect(new VersionService().getEnforcementMode()).toBe(mode.trim());
+      },
+    );
+
+    it.each(['', 'ENFORCE', 'strict', 'true'])(
+      'fails fast for unknown enforcement mode %j',
+      (mode) => {
+        process.env.CLIENT_VERSION_ENFORCEMENT = mode;
+        expect(() => new VersionService()).toThrow(
+          'CLIENT_VERSION_ENFORCEMENT must be one of: enforce, report-only, off',
+        );
+      },
+    );
+
+    describe('evaluateClientVersion', () => {
+      let service: VersionService;
+
+      beforeEach(async () => {
+        process.env.GITHUB_REPO = 'username/repo';
+        fetchMock.mockResolvedValue({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              tag_name: 'v3.0.0',
+              html_url: 'https://github.com/username/repo/releases/tag/v3.0.0',
+            }),
+        });
+        service = new VersionService();
+        await service.onModuleInit();
+        process.env.GITHUB_REPO = '';
+      });
+
+      it('requires an upgrade below the minimum, carrying public policy only', () => {
+        expect(service.evaluateClientVersion('1.0.9')).toEqual({
+          status: 'upgrade_required',
+          minimumSupported: '1.1.0',
+          latest: '3.0.0',
+          updateUrl: 'https://github.com/username/repo/releases/tag/v3.0.0',
+        });
+      });
+
+      it('treats the minimum itself as supported while newer builds exist', () => {
+        expect(service.evaluateClientVersion('1.1.0').status).toBe(
+          'update_available',
+        );
+      });
+
+      it('reports supported once the client is on the latest build', () => {
+        expect(service.evaluateClientVersion('v3.0.0').status).toBe(
+          'supported',
+        );
+        expect(service.evaluateClientVersion('3.1.0').status).toBe('supported');
+      });
+
+      it('orders prereleases below the release they precede', () => {
+        expect(service.evaluateClientVersion('1.1.0-rc.1').status).toBe(
+          'upgrade_required',
+        );
+      });
+
+      it.each([undefined, '', 'banana', '1.2', '1.2.3.4'])(
+        'classifies %j as unknown instead of guessing',
+        (declared) => {
+          expect(service.evaluateClientVersion(declared).status).toBe(
+            'unknown',
+          );
+        },
+      );
+    });
+  });
 });

@@ -97,13 +97,11 @@ The search page uses a semantic search form, labelled inputs, native buttons, a 
 
 ## Account enforcement is not part of this surface
 
-The portal gives operators investigation and navigation, not enforcement. Suspending, restricting, locking or restoring an account is deliberately absent, because the platform has no enforcement model for it yet and a control that records intent without enforcing it would be a fabricated privileged action.
+The user pages give operators investigation and navigation, not enforcement. Suspending, restricting or restoring an account happens in the moderation queue, where it is tied to a reviewed case: see [MODERATION_ENFORCEMENT.md](./MODERATION_ENFORCEMENT.md). The user pages do not yet show a user's suspension state.
 
-- There is no persisted account restriction (state, scope, expiry, reason, actor), and nothing in `SupabaseAuthGuard`, realtime token issuance or the room and call services reads one.
-- The legacy `POST /admin/users/:id/ban` only inserts a `blocks` row from the operator's own account to the target, and `POST /admin/users/:id/warn` only inserts an `admin_warning` report. Neither stops the target using the platform, so the portal must not present them as bans, suspensions or warnings delivered to the user.
-- The prerequisites that [EXECUTION_ROADMAP.md](EXECUTION_ROADMAP.md) lists for medium and high-impact mutations are not in place on `/admin/v1`: mandatory reason-code DTOs, idempotency keys with optimistic concurrency, step-up authentication, and independent approval for destructive or broad actions.
-
-A future issue that adds restrictions needs, in this order: a migration for a time-bounded, reversible restriction record with an expiry and an append-only history; enforcement in the authentication boundary and realtime token issuance with a bounded cache; `/admin/v1` mutations behind a dedicated capability that require a reason code and idempotency key and are audited; and only then portal controls with explicit target, scope and consequence confirmation. Do not add portal buttons ahead of that backend.
+- Time-bounded suspensions are persisted in `account_suspensions` (state, expiry, reason code, actor, append-only history) and enforced in `SupabaseAuthGuard`, so they also cover realtime token issuance and the room and call endpoints that sit behind it.
+- The legacy `POST /admin/users/:id/ban` still only inserts a `blocks` row from the operator's own account to the target, and `POST /admin/users/:id/warn` only inserts an `admin_warning` report. Neither stops the target using the platform, so the portal must not present them as bans, suspensions or warnings delivered to the user. Use the moderation queue's suspension instead.
+- Still absent from `/admin/v1`: step-up authentication and independent approval. They are the prerequisite for permanent bans and for suspensions longer than 90 days, which is why the API refuses both.
 
 ## Verification
 

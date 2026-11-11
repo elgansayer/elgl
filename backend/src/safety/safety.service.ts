@@ -11,6 +11,9 @@ import { SafetyCacheInvalidationService } from './safety-cache-invalidation.serv
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 
+/** Matches the reports.reported_moment_excerpt length constraint. */
+const MOMENT_EXCERPT_LENGTH = 1000;
+
 export const SAFETY_CATEGORIES = [
   {
     value: 'harassment',
@@ -80,6 +83,10 @@ export class SafetyService {
       throw new NotFoundException('Reported user not found');
     }
 
+    const momentEvidence = dto.moment_id
+      ? await this.loadFlaggedMoment(dto.moment_id, dto.reported_id)
+      : null;
+
     const {
       data,
       error,
@@ -93,9 +100,28 @@ export class SafetyService {
           description: dto.description || null,
           context_url: dto.context_url || null,
           status: 'pending',
+          ...(momentEvidence
+            ? {
+                reported_moment_id: momentEvidence.id,
+                reported_moment_excerpt: momentEvidence.excerpt,
+              }
+            : {}),
         })
         .select('id')
         .single();
+
+    if (error && momentEvidence && error.code === '23505') {
+      // The reporter already flagged this Moment: a retry resolves to that case.
+      const { data: existing } = await supabase
+        .from('reports')
+        .select('id')
+        .eq('reporter_id', reporterId)
+        .eq('reported_moment_id', momentEvidence.id)
+        .maybeSingle();
+      if (existing && typeof existing.id === 'string') {
+        return { id: existing.id };
+      }
+    }
 
     if (error) {
       this.logger.error(
@@ -119,6 +145,40 @@ export class SafetyService {
     void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
 
     return { id: data.id };
+  }
+
+  /**
+   * Confirms the Moment exists and belongs to the reported member, and captures
+   * a bounded text snapshot so deleting the Moment cannot erase the evidence.
+   */
+  private async loadFlaggedMoment(
+    momentId: string,
+    reportedUserId: string,
+  ): Promise<{ id: string; excerpt: string | null }> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('moments')
+      .select('id, user_id, text_content')
+      .eq('id', momentId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to load flagged moment ${momentId}`);
+      throw new Error('Failed to submit report');
+    }
+    if (!data) {
+      throw new NotFoundException('Moment not found');
+    }
+    if (data.user_id !== reportedUserId) {
+      throw new BadRequestException(
+        'The Moment does not belong to the reported user',
+      );
+    }
+
+    const text = typeof data.text_content === 'string' ? data.text_content : '';
+    // Code points, not UTF-16 units: a cut surrogate pair would be rejected by Postgres.
+    const excerpt = Array.from(text).slice(0, MOMENT_EXCERPT_LENGTH).join('');
+    return { id: momentId, excerpt: excerpt || null };
   }
 
   async blockUser(

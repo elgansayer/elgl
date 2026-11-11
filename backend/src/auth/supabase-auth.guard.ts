@@ -1,11 +1,15 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   Logger,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
+import { ACCOUNT_SUSPENDED_CODE } from '../account-suspension/account-suspension.constants';
+import { AccountSuspensionService } from '../account-suspension/account-suspension.service';
 import { AuthenticatedRequest } from './authenticated-request.interface';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -27,7 +31,12 @@ interface WsHandshakeClient {
 export class SupabaseAuthGuard implements CanActivate {
   private readonly logger = new Logger(SupabaseAuthGuard.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    // Optional so feature-module test beds that never register the global
+    // AccountSuspensionModule keep compiling; AppModule always provides it.
+    @Optional() private readonly suspensions?: AccountSuspensionService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const contextType = context.getType();
@@ -72,6 +81,7 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     const user = result.data.user;
+    await this.assertNotSuspended(user.id);
 
     if (contextType === 'http') {
       const request = targetObject as AuthenticatedRequest;
@@ -82,6 +92,26 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     return true;
+  }
+
+  /**
+   * Rejects an identity that an operator has suspended. The body carries only
+   * the end time, so the client can explain the restriction without exposing the
+   * internal reason or notes. The lookup fails open (see AccountSuspensionService).
+   */
+  private async assertNotSuspended(userId: string): Promise<void> {
+    const active = await this.suspensions?.findActive(userId);
+    if (!active) {
+      return;
+    }
+
+    throw new ForbiddenException({
+      statusCode: 403,
+      error: 'Forbidden',
+      code: ACCOUNT_SUSPENDED_CODE,
+      message: 'This account is temporarily suspended.',
+      suspendedUntil: active.expiresAt,
+    });
   }
 
   private extractBearerToken(header: AuthorizationHeader): string | undefined {

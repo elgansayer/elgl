@@ -6,19 +6,41 @@ import {
   AdminModerationReport,
   AdminModerationService,
 } from '../admin-moderation.service';
+import { FlaggedMomentsPanelComponent } from './flagged-moments-panel.component';
 
 @Component({
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, FlaggedMomentsPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="panel" aria-labelledby="moderation-title">
       <p class="eyebrow">Moderation</p>
-      <h2 id="moderation-title">Report triage queue</h2>
+      <h2 id="moderation-title">Moderation</h2>
+
+      <div class="view-switch" role="group" aria-label="Moderation queue">
+        <button
+          type="button"
+          [attr.aria-pressed]="view() === 'reports'"
+          (click)="showView('reports')"
+        >
+          Member reports
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="view() === 'moments'"
+          (click)="showView('moments')"
+        >
+          Flagged Moments
+        </button>
+      </div>
+
+      @if (view() === 'moments') {
+        <app-flagged-moments-panel />
+      } @else {
       <p>
-        Read-only moderation reports authorized by
-        <code>moderation.cases.read</code>. Enforcement actions are intentionally not
-        available in this stage.
+        Read-only member reports authorised by
+        <code>moderation.cases.read</code>. Decisions and suspensions for flagged
+        Moments are made in the Flagged Moments queue.
       </p>
 
       <form class="filters" (ngSubmit)="load(true)">
@@ -142,9 +164,13 @@ import {
           <button type="button" (click)="nextPage()" [disabled]="busy() || page() >= totalPages()">Next</button>
         </nav>
       }
+      }
     </section>
   `,
   styles: [`
+    .view-switch { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1rem; }
+    .view-switch button { min-block-size: 2.75rem; padding-inline: 1rem; }
+    .view-switch button[aria-pressed='true'] { font-weight: 700; text-decoration: underline; }
     .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .5rem; max-width: 56rem; align-items: end; }
     .filters label { display: grid; gap: .35rem; }
     .filter-row { display: flex; flex-wrap: wrap; gap: .5rem; }
@@ -163,6 +189,7 @@ import {
 export class ModerationPageComponent {
   private readonly moderation = inject(AdminModerationService);
   readonly pageSize = 20;
+  readonly view = signal<'reports' | 'moments'>('moments');
   reportId = '';
   status = '';
   reasonCategory = '';
@@ -177,8 +204,12 @@ export class ModerationPageComponent {
   readonly loaded = signal(false);
   readonly error = signal<string | null>(null);
 
-  constructor() {
-    void this.load(true);
+  /** Switches queue. The member-report list loads on first view, not on page entry. */
+  showView(view: 'reports' | 'moments'): void {
+    this.view.set(view);
+    if (view === 'reports' && !this.loaded() && !this.busy()) {
+      void this.load(true);
+    }
   }
 
   async load(resetPage = false): Promise<void> {

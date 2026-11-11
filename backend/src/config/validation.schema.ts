@@ -296,6 +296,9 @@ export const validationSchema = Joi.object({
 
   // -- Versioning --
   MINIMUM_SUPPORTED_APP_VERSION: Joi.string().default('1.0.0'),
+  CLIENT_VERSION_ENFORCEMENT: Joi.string()
+    .valid('enforce', 'report-only', 'off')
+    .default('enforce'),
   GITHUB_REPO: Joi.string().optional().allow(''),
 
   // -- Spam Detection --

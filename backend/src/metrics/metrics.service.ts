@@ -119,6 +119,11 @@ export class MetricsService {
   readonly adminActiveBlocks: Gauge<string>;
   readonly adminLoginHistoryRequests: Counter<string>;
 
+  // Client version enforcement and account suspension metrics
+  readonly clientVersionChecks: Counter<string>;
+  readonly accountSuspensionActions: Counter<string>;
+  readonly accountSuspensionCheckFailures: Counter<string>;
+
   // Link Preview (OpenGraph scraper) metrics
   readonly linkPreviewRequests: Counter<string>;
   readonly linkPreviewFailures: Counter<string>;
@@ -686,6 +691,26 @@ export class MetricsService {
       registers: [this.register],
     });
 
+    this.clientVersionChecks = new Counter({
+      name: 'hellotalk_client_version_checks_total',
+      help: 'Client version policy decisions by outcome (missing, invalid, supported, upgrade_required, report_only)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
+
+    this.accountSuspensionActions = new Counter({
+      name: 'hellotalk_account_suspension_actions_total',
+      help: 'Account suspension issue and lift operations by action and result',
+      labelNames: ['action', 'result'],
+      registers: [this.register],
+    });
+
+    this.accountSuspensionCheckFailures = new Counter({
+      name: 'hellotalk_account_suspension_check_failures_total',
+      help: 'Authentication-boundary suspension lookups that failed open',
+      registers: [this.register],
+    });
+
     this.adminLoginHistoryRequests = new Counter({
       name: 'hellotalk_admin_login_history_requests_total',
       help: 'Total number of admin login history lookup requests',
@@ -1131,6 +1156,28 @@ export class MetricsService {
 
   recordAdminLoginHistoryRequest(result: 'success' | 'failure'): void {
     this.adminLoginHistoryRequests.inc({ result });
+  }
+
+  /**
+   * Records one client version policy decision. The outcome is a closed enum:
+   * raw version strings are client-controlled and must never become labels.
+   */
+  recordClientVersionCheck(
+    outcome:
+      'missing' | 'invalid' | 'supported' | 'upgrade_required' | 'report_only',
+  ): void {
+    this.clientVersionChecks.inc({ outcome });
+  }
+
+  recordAccountSuspensionAction(
+    action: 'issue' | 'lift',
+    result: 'success' | 'replayed' | 'conflict' | 'failure',
+  ): void {
+    this.accountSuspensionActions.inc({ action, result });
+  }
+
+  recordAccountSuspensionCheckFailure(): void {
+    this.accountSuspensionCheckFailures.inc();
   }
 
   // --- Link Preview (OpenGraph scraper) metric helpers ---

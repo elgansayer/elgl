@@ -10,6 +10,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LocationModule } from './location/location.module';
 import { SupabaseModule } from './supabase/supabase.module';
+import { AccountSuspensionModule } from './account-suspension/account-suspension.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { MediaModule } from './media/media.module';
@@ -110,6 +111,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     RetryModule,
     LivekitModule,
     SupabaseModule,
+    AccountSuspensionModule,
     LocationModule,
     AuthModule,
     UsersModule,

@@ -7,8 +7,10 @@ import { AdminAuditQueryService } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminController } from './admin.controller';
+import { AdminFlaggedMomentsService } from './admin-flagged-moments.service';
 import { AdminLoginHistoryQueryService } from './admin-login-history-query.service';
 import { AdminModerationQueryService } from './admin-moderation-query.service';
+import { AdminModerationV1Controller } from './admin-moderation-v1.controller';
 import { AdminMutationAuditInterceptor } from './admin-mutation-audit.interceptor';
 import { AdminNetworkAbuseV1Controller } from './admin-network-abuse-v1.controller';
 import { AdminNetworkAbuseService } from './admin-network-abuse.service';
@@ -33,6 +35,7 @@ import { NetworkAbuseGuard } from './guards/network-abuse.guard';
   controllers: [
     AdminController,
     AdminV1Controller,
+    AdminModerationV1Controller,
     AdminRolesV1Controller,
     AdminOperationalEventsV1Controller,
     AdminNetworkAbuseV1Controller,
@@ -44,6 +47,7 @@ import { NetworkAbuseGuard } from './guards/network-abuse.guard';
     AdminAuthorizationService,
     AdminAuditService,
     AdminAuditQueryService,
+    AdminFlaggedMomentsService,
     AdminLoginHistoryQueryService,
     AdminModerationQueryService,
     AdminNetworkAbuseService,

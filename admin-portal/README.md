@@ -23,6 +23,6 @@ The development server uses port `4300` by default.
 
 ## Modules
 
-Overview, users, moderation, network security, roles, audit, logs and system health are wired to their versioned `/api/admin/v1` contracts and gated by the backend capability named on each route. User management is an investigation surface (search, open by ID, detail and capability-gated login history); `docs/admin/USER_MANAGEMENT.md` records its failure states and why account enforcement actions are not part of it yet.
+Overview, users, moderation, network security, roles, audit, logs and system health are wired to their versioned `/api/admin/v1` contracts and gated by the backend capability named on each route. User management is an investigation surface (search, open by ID, detail and capability-gated login history); `docs/admin/USER_MANAGEMENT.md` records its failure states. Moderation reviews flagged Moments and can suspend an author for a bounded time; `docs/admin/MODERATION_ENFORCEMENT.md` records that contract.
 
 See `docs/admin/README.md`, `docs/admin/ARCHITECTURE.md`, `docs/admin/ADMIN_PORTAL.md`, `docs/admin/SECURITY.md`, and `docs/admin/MODULES.md` before implementing privileged features.

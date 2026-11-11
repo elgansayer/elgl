@@ -11,6 +11,7 @@ type ProviderToken = unknown;
 /** Every feature module that AppModule is expected to import. */
 const EXPECTED_MODULE_NAMES = [
   'SupabaseModule',
+  'AccountSuspensionModule',
   'AuthModule',
   'UsersModule',
   'MediaModule',

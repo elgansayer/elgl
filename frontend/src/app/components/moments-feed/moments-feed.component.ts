@@ -3,6 +3,7 @@ import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { showToast } from '../../services/toast.service';
+import { ReportUserModalService } from '../report-user-modal/report-user-modal.service';
 import {
   Component,
   DestroyRef,
@@ -109,6 +110,7 @@ export class MomentsFeedComponent {
   private readonly i18n = inject(I18nService);
   private readonly draftService = inject(DraftService);
   private readonly translationCacheService = inject(TranslationCacheService);
+  private readonly reportModalService = inject(ReportUserModalService);
 
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
@@ -455,6 +457,11 @@ export class MomentsFeedComponent {
       console.error('Failed to save moment text to LingQ deck:', e);
       showToast(this.i18n.translate('moments.saveErrorAlert'));
     }
+  }
+
+  /** Opens the shared report dialog to flag this Moment for moderator review. */
+  reportMoment(moment: MomentRecord): void {
+    this.reportModalService.open(moment.user_id, undefined, moment.id);
   }
 
   async toggleComments(moment: MomentRecord): Promise<void> {

@@ -18,6 +18,10 @@ The endpoint is public because a client must be able to determine compatibility 
 
 The minimum-version response uses `Cache-Control: no-store`. Compatibility policy can change independently of an already running client, so intermediaries and browsers must not extend an obsolete minimum-version decision through cached API data.
 
+## Enforcement
+
+The floor is enforced by the API as well as published: clients that declare a build below it in `X-App-Version` receive HTTP 426. See [Client version enforcement](./client-version-enforcement.md) for the contract, modes (`CLIENT_VERSION_ENFORCEMENT`), rollout and rollback.
+
 ## Failure behaviour
 
 The minimum-supported version is local configuration and does not depend on GitHub, Redis, Supabase, or another network provider. A GitHub release lookup failure can affect the separate `latest` version field returned by `GET /version`, but it does not affect `GET /version/minimum`.

@@ -325,6 +325,17 @@
               >
                 <span>{{ moment.likes_count || 0 }}</span>
               </button>
+              @if (moment.user_id !== authService.currentUser()?.id) {
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="reportMoment(moment)"
+                  class="flex items-center gap-1 hover:text-danger-ink font-bold transition-colors"
+                  [attr.aria-label]="'moments.reportBtn' | t"
+                >
+                  <span aria-hidden="true">🚩</span> <span>{{ 'moments.reportBtn' | t }}</span>
+                </button>
+              }
               <button
                 hlmBtn
                 (click)="toggleComments(moment)"

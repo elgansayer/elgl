@@ -15,6 +15,10 @@ The Angular shell evaluates the installed `APP_VERSION` against the operator-con
 
 The policy request is browser-only. Server-side rendering does not make an extra version-policy request.
 
+## Server enforcement
+
+The shell also reacts to the API refusing a request. The `clientVersionInterceptor` sends `X-App-Version`; an HTTP 426 `CLIENT_UPGRADE_REQUIRED` response opens the same non-dismissible modal immediately. See [Client version enforcement](./client-version-enforcement.md).
+
 ## Failure behavior
 
 A version-policy outage or malformed response must not brick clients that are still supported by the bundled policy. `VersionCheckService` therefore marks the remote check as failed and immediately falls back to `MIN_SUPPORTED_VERSION`.

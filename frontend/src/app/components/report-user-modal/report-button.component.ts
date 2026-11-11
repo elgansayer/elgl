@@ -32,9 +32,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class ReportButtonComponent {
   readonly userId = input.required<string>();
   readonly contextUrl = input<string>();
+  /** Set to flag a specific Moment by this user instead of the profile. */
+  readonly momentId = input<string>();
   private readonly reportModalService = inject(ReportUserModalService);
 
   openReportModal(): void {
-    this.reportModalService.open(this.userId(), this.contextUrl());
+    this.reportModalService.open(this.userId(), this.contextUrl(), this.momentId());
   }
 }

@@ -27,6 +27,9 @@ import {
 } from '@nestjs/swagger';
 import { ModerationItem, ModerationService } from './moderation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { RequireAdminCapabilities } from '../admin/decorators/require-admin-capabilities.decorator';
+import { AdminCapabilityGuard } from '../admin/guards/admin-capability.guard';
+import { AdminGuard } from '../admin/guards/admin.guard';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
@@ -38,7 +41,12 @@ export class ModerationController {
   constructor(private readonly moderationService: ModerationService) {}
 
   @Get('items')
+  @UseGuards(AdminGuard, AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.read')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @ApiForbiddenResponse({
+    description: 'Caller lacks the moderation.cases.read capability',
+  })
   @ApiOperation({
     summary: 'List moderation queue items',
     description:
@@ -190,6 +198,8 @@ export class ModerationController {
   }
 
   @Post('approve')
+  @UseGuards(AdminGuard, AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.manage')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
@@ -219,6 +229,8 @@ export class ModerationController {
   }
 
   @Post('reject')
+  @UseGuards(AdminGuard, AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.manage')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
@@ -248,7 +260,12 @@ export class ModerationController {
   }
 
   @Get('analyse/:userId')
+  @UseGuards(AdminGuard, AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.read')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiForbiddenResponse({
+    description: 'Caller lacks the moderation.cases.read capability',
+  })
   @ApiOperation({
     summary: 'Analyse user for dating behaviour risk',
     description:

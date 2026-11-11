@@ -132,6 +132,115 @@ describe('SafetyService', () => {
       logSpy.mockRestore();
     });
 
+    describe('flagging a Moment', () => {
+      const momentId = '77777777-7777-4777-8777-777777777777';
+      const dto = {
+        reported_id: 'reported-1',
+        reason_category: 'harassment',
+        moment_id: momentId,
+      };
+
+      beforeEach(() => {
+        // reported user exists
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: { id: 'reported-1' },
+          error: null,
+        });
+      });
+
+      it('links the report to the Moment with a bounded text snapshot', async () => {
+        mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+          data: {
+            id: momentId,
+            user_id: 'reported-1',
+            text_content: `${'a'.repeat(999)}😀😀`,
+          },
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: { id: 'report-id' },
+          error: null,
+        });
+
+        await expect(service.reportUser('user-1', dto)).resolves.toEqual({
+          id: 'report-id',
+        });
+
+        const payload = mockQueryBuilder.insert.mock.calls[0][0];
+        expect(payload.reported_moment_id).toBe(momentId);
+        // 1000 code points: the second emoji is cut whole, never mid surrogate pair.
+        expect(Array.from(payload.reported_moment_excerpt)).toHaveLength(1000);
+        expect(payload.reported_moment_excerpt.endsWith('😀')).toBe(true);
+        expect(payload.reported_moment_excerpt.includes('\uD83D\uD83D')).toBe(
+          false,
+        );
+      });
+
+      it('stores no snapshot for a Moment without text', async () => {
+        mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+          data: { id: momentId, user_id: 'reported-1', text_content: null },
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: { id: 'report-id' },
+          error: null,
+        });
+
+        await service.reportUser('user-1', dto);
+
+        expect(
+          mockQueryBuilder.insert.mock.calls[0][0].reported_moment_excerpt,
+        ).toBeNull();
+      });
+
+      it('rejects a Moment that does not exist', async () => {
+        mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+          data: null,
+          error: null,
+        });
+
+        await expect(service.reportUser('user-1', dto)).rejects.toThrow(
+          'Moment not found',
+        );
+        expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
+      });
+
+      it('rejects a Moment attributed to a different author', async () => {
+        mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+          data: { id: momentId, user_id: 'someone-else', text_content: 'x' },
+          error: null,
+        });
+
+        await expect(service.reportUser('user-1', dto)).rejects.toThrow(
+          'The Moment does not belong to the reported user',
+        );
+        expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
+      });
+
+      it('resolves a repeated flag by the same reporter to the existing case', async () => {
+        mockQueryBuilder.maybeSingle
+          .mockResolvedValueOnce({
+            data: { id: momentId, user_id: 'reported-1', text_content: 'x' },
+            error: null,
+          })
+          .mockResolvedValueOnce({
+            data: { id: 'existing-report' },
+            error: null,
+          });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: null,
+          error: { code: '23505', message: 'duplicate key' },
+        });
+
+        await expect(service.reportUser('user-1', dto)).resolves.toEqual({
+          id: 'existing-report',
+        });
+        expect(
+          mockMetricsService.recordTsReportSubmitted,
+        ).not.toHaveBeenCalled();
+      });
+    });
+
     it('should throw when reporting self', async () => {
       await expect(
         service.reportUser('user-1', {

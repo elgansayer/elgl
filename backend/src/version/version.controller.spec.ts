@@ -1,6 +1,7 @@
 import { RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ALLOW_OUTDATED_CLIENT_KEY } from './client-version.constants';
 import { VersionController } from './version.controller';
 import { VersionService } from './version.service';
 
@@ -8,6 +9,7 @@ describe('VersionController', () => {
   let controller: VersionController;
   const mockGetVersion = vi.fn();
   const mockGetMinimumSupportedVersion = vi.fn();
+  const mockEvaluateClientVersion = vi.fn();
 
   beforeEach(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -18,6 +20,7 @@ describe('VersionController', () => {
           useValue: {
             getVersion: mockGetVersion,
             getMinimumSupportedVersion: mockGetMinimumSupportedVersion,
+            evaluateClientVersion: mockEvaluateClientVersion,
           },
         },
       ],
@@ -44,6 +47,43 @@ describe('VersionController', () => {
     expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
       RequestMethod.GET,
     );
+  });
+
+  it('keeps the whole controller reachable for outdated clients', () => {
+    expect(
+      Reflect.getMetadata(ALLOW_OUTDATED_CLIENT_KEY, VersionController),
+    ).toBe(true);
+  });
+
+  it('exposes the compatibility handshake as GET /version/check', () => {
+    const handler = VersionController.prototype.checkClientVersion;
+
+    expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe('check');
+    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+      RequestMethod.GET,
+    );
+  });
+
+  describe('checkClientVersion', () => {
+    it('delegates the declared header value to the service', () => {
+      const evaluation = {
+        status: 'upgrade_required',
+        minimumSupported: '2.0.0',
+        latest: '2.1.0',
+      };
+      mockEvaluateClientVersion.mockReturnValue(evaluation);
+
+      expect(controller.checkClientVersion('1.0.0')).toEqual(evaluation);
+      expect(mockEvaluateClientVersion).toHaveBeenCalledWith('1.0.0');
+    });
+
+    it('passes a missing header through as undefined', () => {
+      mockEvaluateClientVersion.mockReturnValue({ status: 'unknown' });
+
+      controller.checkClientVersion(undefined);
+
+      expect(mockEvaluateClientVersion).toHaveBeenCalledWith(undefined);
+    });
   });
 
   describe('getVersion', () => {

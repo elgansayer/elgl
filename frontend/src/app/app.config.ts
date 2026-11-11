@@ -21,6 +21,8 @@ import { routes } from './app.routes';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
 import { retryInterceptor } from './interceptors/retry.interceptor';
+import { clientVersionInterceptor } from './interceptors/client-version.interceptor';
+import { accountSuspensionInterceptor } from './interceptors/account-suspension.interceptor';
 import { initialiseOfflineDiscoveryCache } from './services/offline-discovery-cache.service';
 
 export async function initialiseRuntimeConfiguration(
@@ -62,7 +64,7 @@ export function initialiseDeepLinks(
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withFetch(), withInterceptors([retryInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([clientVersionInterceptor, accountSuspensionInterceptor, retryInterceptor])),
     provideClientHydration(),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),

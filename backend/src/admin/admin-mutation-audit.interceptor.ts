@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   CallHandler,
   ExecutionContext,
   Injectable,
@@ -32,6 +33,8 @@ const SAFE_IDENTIFIER = /^[A-Za-z0-9_-]{1,200}$/;
 const SAFE_CORRELATION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const ADMIN_REASON_CODES = new Set<string>(ADMIN_ACTION_REASON_CODES);
 const USERS_PATH = /(?:^|\/)users(?:\/|$)/;
+const FLAGGED_MOMENTS_PATH = /(?:^|\/)flagged-moments(?:\/|$)/;
+const SUSPENSIONS_PATH = /(?:^|\/)suspensions(?:\/|$)/;
 
 // These operations already produce richer, semantic audit events in their
 // controllers. Keying by controller + handler is independent of global prefixes
@@ -127,11 +130,19 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     // Validate the only free-text field before a mutation can run. This avoids
     // a successful state change followed by an audit failure caused by a note
     // containing an apparent credential or exceeding the audit limit.
-    const operatorNote = normalizeAdminOperatorNote(
-      typeof request.body?.operatorNote === 'string'
-        ? request.body.operatorNote
-        : undefined,
-    );
+    let operatorNote: string | null;
+    try {
+      operatorNote = normalizeAdminOperatorNote(
+        typeof request.body?.operatorNote === 'string'
+          ? request.body.operatorNote
+          : undefined,
+      );
+    } catch (error) {
+      // A rejected note is caller input, not a server fault: answer 400, not 500.
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Invalid operator note',
+      );
+    }
 
     const record = (
       outcome: 'success' | 'failed',
@@ -182,8 +193,15 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     if (request.params?.roleId) return 'admin-role';
 
     const resourcePath = `${request.baseUrl ?? ''}${request.path ?? ''}`;
+    // Users win first: in `/users/:id/suspensions` the identifier is the user.
     if (targetId && USERS_PATH.test(resourcePath)) {
       return 'user';
+    }
+    if (targetId && FLAGGED_MOMENTS_PATH.test(resourcePath)) {
+      return 'moderation-report';
+    }
+    if (targetId && SUSPENSIONS_PATH.test(resourcePath)) {
+      return 'account-suspension';
     }
     return 'admin-resource';
   }

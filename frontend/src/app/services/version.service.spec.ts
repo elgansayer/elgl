@@ -110,6 +110,55 @@ describe('VersionService', () => {
 
     await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
   });
+
+  describe('applyUpgradeRequired', () => {
+    it('opens the update surface with the server policy', () => {
+      service.applyUpgradeRequired({
+        code: 'CLIENT_UPGRADE_REQUIRED',
+        minimumSupported: ' 3.4.5 ',
+        updateUrl: 'https://example.org/releases/latest',
+      });
+
+      expect(service.isDeprecated()).toBe(true);
+      expect(service.minimumSupportedVersion()).toBe('3.4.5');
+      expect(service.updateUrl()).toBe('https://example.org/releases/latest');
+    });
+
+    it('keeps the bundled policy for malformed minimum versions and unsafe URLs', () => {
+      const bundledMinimum = service.minimumSupportedVersion();
+      const bundledUrl = service.updateUrl();
+
+      service.applyUpgradeRequired({
+        code: 'CLIENT_UPGRADE_REQUIRED',
+        minimumSupported: 'soon',
+        updateUrl: 'javascript:alert(1)',
+      });
+
+      expect(service.isDeprecated()).toBe(true);
+      expect(service.minimumSupportedVersion()).toBe(bundledMinimum);
+      expect(service.updateUrl()).toBe(bundledUrl);
+    });
+
+    it.each([null, undefined, 'text', 426, {}, { code: 'OTHER' }])(
+      'ignores a body that is not the upgrade-required contract: %j',
+      (body) => {
+        service.applyUpgradeRequired(body);
+
+        expect(service.isDeprecated()).toBe(false);
+      },
+    );
+
+    it('is superseded by the next policy refresh when the floor is lowered', async () => {
+      service.applyUpgradeRequired({ code: 'CLIENT_UPGRADE_REQUIRED' });
+      expect(service.isDeprecated()).toBe(true);
+
+      const result = service.checkVersion();
+      httpMock.expectOne(`${environment.apiUrl}/version`).flush(supportedResponse);
+
+      await expect(result).resolves.toBe(false);
+      expect(service.isDeprecated()).toBe(false);
+    });
+  });
 });
 
 describe('compareSemanticVersions', () => {

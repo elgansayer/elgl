@@ -42,6 +42,7 @@ export class ReportUserModalComponent {
 
   private readonly reportUserId = signal('');
   private readonly contextUrl = signal<string | undefined>(undefined);
+  private readonly momentId = signal<string | undefined>(undefined);
 
   readonly loadingCategories = signal(false);
   readonly loadError = signal(false);
@@ -61,10 +62,11 @@ export class ReportUserModalComponent {
 
   readonly canSubmit = computed(() => this.reportForm().valid() && !this.isSubmitting());
 
-  /** Opens the modal for the given target user. Called by ReportUserModalService. */
-  open(userId: string, contextUrl?: string): void {
+  /** Opens the modal for the given target user, optionally flagging one of their Moments. */
+  open(userId: string, contextUrl?: string, momentId?: string): void {
     this.reportUserId.set(userId);
     this.contextUrl.set(contextUrl);
+    this.momentId.set(momentId);
     this.formModel.set({ category: '', description: '', blockUser: false });
     this.errorMessage.set(null);
     this.isOpen.set(true);
@@ -127,6 +129,7 @@ export class ReportUserModalComponent {
       reason_category: model.category,
       description: model.description || undefined,
       context_url: this.contextUrl(),
+      moment_id: this.momentId(),
     };
 
     try {

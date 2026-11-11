@@ -3,6 +3,44 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ModerationController } from './moderation.controller';
 import { ModerationService } from './moderation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { ADMIN_CAPABILITIES_METADATA_KEY } from '../admin/decorators/require-admin-capabilities.decorator';
+import { AdminCapabilityGuard } from '../admin/guards/admin-capability.guard';
+import { AdminGuard } from '../admin/guards/admin.guard';
+
+describe('ModerationController authorization boundary', () => {
+  const handlers = ModerationController.prototype;
+
+  it('authenticates every route at the controller level', () => {
+    expect(Reflect.getMetadata(GUARDS_METADATA, ModerationController)).toEqual([
+      SupabaseAuthGuard,
+    ]);
+  });
+
+  it.each([
+    ['getItems', 'moderation.cases.read'],
+    ['approve', 'moderation.cases.manage'],
+    ['reject', 'moderation.cases.manage'],
+    ['analyseUser', 'moderation.cases.read'],
+  ] as const)('restricts %s to operators holding %s', (handler, capability) => {
+    expect(Reflect.getMetadata(GUARDS_METADATA, handlers[handler])).toEqual([
+      AdminGuard,
+      AdminCapabilityGuard,
+    ]);
+    expect(
+      Reflect.getMetadata(ADMIN_CAPABILITIES_METADATA_KEY, handlers[handler]),
+    ).toEqual([capability]);
+  });
+
+  it('keeps reporting open to every authenticated member', () => {
+    expect(
+      Reflect.getMetadata(GUARDS_METADATA, handlers.reportUser),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(ADMIN_CAPABILITIES_METADATA_KEY, handlers.reportUser),
+    ).toBeUndefined();
+  });
+});
 
 describe('ModerationController', () => {
   let controller: ModerationController;
@@ -25,6 +63,10 @@ describe('ModerationController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(AdminGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(AdminCapabilityGuard)
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 

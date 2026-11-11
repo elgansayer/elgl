@@ -6,6 +6,8 @@ import { environment } from '../../environments/environment';
 import { APP_VERSION, MIN_SUPPORTED_VERSION } from '../version.constants';
 
 const DEFAULT_UPDATE_URL = 'https://github.com/elgansayer/elgl/releases/latest';
+/** Machine-readable code of the API's HTTP 426 forced-update response. */
+export const UPGRADE_REQUIRED_CODE = 'CLIENT_UPGRADE_REQUIRED';
 const SEMVER_PATTERN =
   /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
@@ -174,6 +176,29 @@ export class VersionService {
     } finally {
       this.isChecking.set(false);
     }
+  }
+
+  /**
+   * Applies an HTTP 426 `CLIENT_UPGRADE_REQUIRED` policy pushed by the API. The
+   * server rejected the build version this client declared, so the blocking
+   * update surface opens immediately instead of waiting for the next poll. A
+   * later `checkVersion()` recomputes the state, so a rollback self-heals.
+   */
+  applyUpgradeRequired(body: unknown): void {
+    if (typeof body !== 'object' || body === null) return;
+    if (!('code' in body) || body.code !== UPGRADE_REQUIRED_CODE) return;
+
+    if ('minimumSupported' in body && typeof body.minimumSupported === 'string') {
+      const minimum = parseSemanticVersion(body.minimumSupported)
+        ? body.minimumSupported.trim()
+        : null;
+      if (minimum) this.minimumSupportedVersion.set(minimum);
+    }
+    if ('updateUrl' in body) {
+      const updateUrl = safeUpdateUrl(body.updateUrl);
+      if (updateUrl) this.updateUrl.set(updateUrl);
+    }
+    this.isDeprecated.set(true);
   }
 
   private readMinimumSupported(response: VersionInfo): string | null {

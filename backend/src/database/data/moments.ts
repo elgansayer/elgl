@@ -124,3 +124,37 @@ export function buildSeedMomentGraph(
     })),
   };
 }
+
+export interface SeedFlaggedMomentReport {
+  reporter_id: string;
+  reported_user_id: string;
+  reported_moment_id: string;
+  reported_moment_excerpt: string;
+  reason_category: 'spam';
+  description: string;
+  status: 'pending';
+}
+
+/**
+ * Builds one pending report that flags the seeded Moment, so the moderation
+ * queue is populated in local development. Columns follow
+ * supabase/migrations/20261109120000_moderation_flagged_moments_and_suspensions.sql.
+ */
+export function buildSeedFlaggedMomentReport(
+  graph: SeedMomentGraph,
+  reporterId: string,
+): SeedFlaggedMomentReport {
+  return {
+    reporter_id: reporterId,
+    reported_user_id: graph.moment.user_id,
+    reported_moment_id: graph.moment.id,
+    // Mirrors the 1000 character snapshot SafetyService takes when a Moment is flagged.
+    reported_moment_excerpt: Array.from(graph.moment.text_content)
+      .slice(0, 1000)
+      .join(''),
+    reason_category: 'spam',
+    description:
+      'Development seed: sample flagged Moment for the moderation queue.',
+    status: 'pending',
+  };
+}

@@ -8,6 +8,8 @@ export interface ReportUserDto {
   reason_category: string;
   description?: string;
   context_url?: string;
+  /** Flags one Moment by the reported user so reviewers see it in the Moments queue. */
+  moment_id?: string;
 }
 
 export interface ReportResponse {

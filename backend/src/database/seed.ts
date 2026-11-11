@@ -1,7 +1,11 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { buildSeedMomentGraph, type SeedMomentGraph } from './data/moments';
+import {
+  buildSeedFlaggedMomentReport,
+  buildSeedMomentGraph,
+  type SeedMomentGraph,
+} from './data/moments';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -190,14 +194,19 @@ async function seedMomentsAndAudioRooms(supabase: any) {
     const host = usersList[0];
     const partner = usersList[1];
 
-    await seedMomentGraph(
-      supabase,
-      buildSeedMomentGraph({
-        hostId: host.id,
-        partnerId: partner.id,
-        likerIds: usersList.map((user: { id: string }) => user.id),
-      }),
-    );
+    const momentGraph = buildSeedMomentGraph({
+      hostId: host.id,
+      partnerId: partner.id,
+      likerIds: usersList.map((user: { id: string }) => user.id),
+    });
+    await seedMomentGraph(supabase, momentGraph);
+
+    const { error: reportErr } = await supabase
+      .from('reports')
+      .insert(buildSeedFlaggedMomentReport(momentGraph, partner.id));
+    if (reportErr) {
+      console.error('Failed to seed flagged moment report:', reportErr);
+    }
 
     await supabase.from('audio_rooms').insert([
       {

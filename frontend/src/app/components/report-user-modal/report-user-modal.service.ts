@@ -11,7 +11,7 @@ export class ReportUserModalService {
     this.modalComponent = modal;
   }
 
-  open(userId: string, contextUrl?: string): void {
-    this.modalComponent?.open(userId, contextUrl);
+  open(userId: string, contextUrl?: string, momentId?: string): void {
+    this.modalComponent?.open(userId, contextUrl, momentId);
   }
 }

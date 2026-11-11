@@ -1,4 +1,8 @@
-import { CallHandler, ExecutionContext } from '@nestjs/common';
+import {
+  BadRequestException,
+  CallHandler,
+  ExecutionContext,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -161,6 +165,68 @@ describe('AdminMutationAuditInterceptor', () => {
     const recorded = audit.record.mock.calls[0][0];
     expect(JSON.stringify(recorded)).not.toContain('must-never-be-audited');
   });
+
+  it.each([
+    ['/flagged-moments/:id/resolve', 'moderation-report'],
+    ['/suspensions/:id/lift', 'account-suspension'],
+    ['/users/:id/suspensions', 'user'],
+  ])(
+    'classifies the audit target of %s as %s with its reason code',
+    async (path, targetType) => {
+      const { interceptor, audit } = interceptorWithAudit();
+      const next: CallHandler = { handle: () => of({ ok: true }) };
+
+      await firstValueFrom(
+        interceptor.intercept(
+          contextFor(
+            'POST',
+            '/api/admin/v1/moderation',
+            path,
+            { sub: 'admin-user' },
+            { body: { reasonCode: 'policy_violation', operatorNote: 'seen' } },
+          ),
+          next,
+        ),
+      );
+
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorUserId: 'admin-user',
+          targetId: 'target-user',
+          targetType,
+          reasonCode: 'policy_violation',
+          operatorNote: 'seen',
+          outcome: 'success',
+        }),
+      );
+    },
+  );
+
+  it.each([
+    ['a credential', 'password: hunter2'],
+    ['an over-long note', 'x'.repeat(1001)],
+  ])(
+    'answers 400 before the mutation runs when the operator note holds %s',
+    (_label, operatorNote) => {
+      const { interceptor, audit } = interceptorWithAudit();
+      const handle = vi.fn(() => of({ ok: true }));
+
+      expect(() =>
+        interceptor.intercept(
+          contextFor(
+            'POST',
+            '/api/admin/v1/moderation',
+            '/users/:id/suspensions',
+            { sub: 'admin-user' },
+            { body: { reasonCode: 'policy_violation', operatorNote } },
+          ),
+          { handle },
+        ),
+      ).toThrow(BadRequestException);
+      expect(handle).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    },
+  );
 
   it('does not misclassify a failed success-audit write as an operation failure', async () => {
     const { interceptor, audit } = interceptorWithAudit();

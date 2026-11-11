@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsString,
   IsIn,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 
@@ -30,6 +31,14 @@ export class ReportUserDto {
   @IsOptional()
   @IsString()
   context_url?: string;
+
+  /**
+   * Flags one Moment authored by `reported_id`. The report then appears in the
+   * moderation queue for flagged Moments instead of only against the member.
+   */
+  @IsOptional()
+  @IsUUID()
+  moment_id?: string;
 }
 
 export class BlockUserDto {

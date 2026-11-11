@@ -1,4 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  CLIENT_VERSION_ENFORCEMENT_MODES,
+  ClientVersionEnforcementMode,
+  ClientVersionEvaluation,
+} from './client-version.constants';
+import { compareSemanticVersions } from './semantic-version';
 
 interface GithubRelease {
   tag_name?: string;
@@ -39,6 +45,26 @@ function parseMinimumSupportedVersion(value: string | undefined): string {
   return candidate;
 }
 
+function parseEnforcementMode(
+  value: string | undefined,
+): ClientVersionEnforcementMode {
+  if (value === undefined) {
+    return 'enforce';
+  }
+
+  const candidate = value.trim();
+  const mode = CLIENT_VERSION_ENFORCEMENT_MODES.find(
+    (allowed) => allowed === candidate,
+  );
+  if (!mode) {
+    throw new Error(
+      `CLIENT_VERSION_ENFORCEMENT must be one of: ${CLIENT_VERSION_ENFORCEMENT_MODES.join(', ')}`,
+    );
+  }
+
+  return mode;
+}
+
 @Injectable()
 export class VersionService implements OnModuleInit {
   private readonly logger = new Logger(VersionService.name);
@@ -46,12 +72,16 @@ export class VersionService implements OnModuleInit {
   private latestVersion: string;
   private updateUrl?: string;
   private readonly minimumSupportedVersion: string;
+  private readonly enforcementMode: ClientVersionEnforcementMode;
 
   constructor() {
     this.currentVersion = process.env.npm_package_version || '0.0.0';
     this.latestVersion = this.currentVersion;
     this.minimumSupportedVersion = parseMinimumSupportedVersion(
       process.env.MINIMUM_SUPPORTED_APP_VERSION,
+    );
+    this.enforcementMode = parseEnforcementMode(
+      process.env.CLIENT_VERSION_ENFORCEMENT,
     );
   }
 
@@ -135,6 +165,51 @@ export class VersionService implements OnModuleInit {
   getMinimumSupportedVersion(): { minimumSupported: string } {
     return {
       minimumSupported: this.minimumSupportedVersion,
+    };
+  }
+
+  getEnforcementMode(): ClientVersionEnforcementMode {
+    return this.enforcementMode;
+  }
+
+  /**
+   * Classifies a client-declared version against the operator policy. A missing
+   * or malformed value is `unknown`: it is never guessed to be old or new.
+   */
+  evaluateClientVersion(
+    declaredVersion: string | undefined,
+  ): ClientVersionEvaluation {
+    const policy = {
+      minimumSupported: this.minimumSupportedVersion,
+      latest: this.latestVersion,
+      ...(this.updateUrl ? { updateUrl: this.updateUrl } : {}),
+    };
+
+    if (declaredVersion === undefined) {
+      return { status: 'unknown', ...policy };
+    }
+
+    const againstMinimum = compareSemanticVersions(
+      declaredVersion,
+      this.minimumSupportedVersion,
+    );
+    if (againstMinimum === null) {
+      return { status: 'unknown', ...policy };
+    }
+    if (againstMinimum < 0) {
+      return { status: 'upgrade_required', ...policy };
+    }
+
+    const againstLatest = compareSemanticVersions(
+      declaredVersion,
+      this.latestVersion,
+    );
+    return {
+      status:
+        againstLatest !== null && againstLatest < 0
+          ? 'update_available'
+          : 'supported',
+      ...policy,
     };
   }
 }
