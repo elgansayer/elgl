@@ -131,6 +131,10 @@ prometheus_scrape:
       - hellotalk_tutor_profiles_availability_stale: gauge
       - hellotalk_tutor_profiles_api_errors_total: counter
       - hellotalk_tutor_profiles_booking_duration_seconds: histogram
+      # Moments metrics (Datadog custom metrics, #2049)
+      - hellotalk_moments_for_you_ranking_duration_seconds: histogram
+      - hellotalk_moments_for_you_candidates: histogram
+      - hellotalk_moments_for_you_degraded_total: counter
       # Node.js default metrics (prefixed with hellotalk_)
       - hellotalk_nodejs_heap_size_total_bytes: gauge
       - hellotalk_nodejs_heap_size_used_bytes: gauge

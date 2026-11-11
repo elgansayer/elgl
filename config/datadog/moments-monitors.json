@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for the Moments architecture (#2049). All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent. See docs/moments-monitoring.md for thresholds and runbooks.",
+  "monitors": [
+    {
+      "name": "[Moments] For You ranking latency high",
+      "type": "query alert",
+      "query": "avg(last_10m):p95:hellotalk_moments_for_you_ranking_duration_seconds{*} > 1.5",
+      "message": "{{#is_alert}}\nFor You ranking p95 latency has exceeded 1.5 seconds over the last 10 minutes. Learners are waiting too long for a personalised feed.\n\n**Current value:** {{value}}s\n**Threshold:** 1.5s\n\n**Actions:**\n1. Check Supabase query performance for the newest-Moments and in-network reads.\n2. Verify the Redis timeline queue is healthy and not cold for most viewers.\n3. Confirm the moments and moment_likes indexes named in docs/moments_for_you_ranking.md exist.\n4. Check for a deployment that removed a bound or introduced an N+1 query.\n{{/is_alert}}\n\n{{#is_warning}}\nFor You ranking latency approaching the threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:moments", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 1.5,
+          "warning": 0.75
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Moments] For You degraded request rate high",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_moments_for_you_ranking_duration_seconds{outcome:degraded}.as_count() / avg:hellotalk_moments_for_you_ranking_duration_seconds{*}.as_count() > 0.2",
+      "message": "{{#is_alert}}\nMore than 20% of For You requests were degraded over the last 10 minutes. These requests are served without an optional candidate source or viewer context, so ranking quality is reduced.\n\n**Current value:** {{value}}\n**Threshold:** 0.2 (20%)\n\n**Actions:**\n1. Inspect the hellotalk_moments_for_you_degraded_total reasons by label.\n2. Correlate with the fixed moments_for_you_* warn log events.\n3. Check Supabase and Redis connectivity for the failing stage.\n4. Confirm the feed still returns a safe fallback rather than a 5xx.\n{{/is_alert}}\n\n{{#is_warning}}\nDegraded For You request rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:moments", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0.2,
+          "warning": 0.1
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Moments] For You empty feed rate high",
+      "type": "query alert",
+      "query": "avg(last_15m):avg:hellotalk_moments_for_you_ranking_duration_seconds{outcome:empty}.as_count() / avg:hellotalk_moments_for_you_ranking_duration_seconds{*}.as_count() > 0.5",
+      "message": "{{#is_alert}}\nMore than 50% of For You requests returned an empty feed over the last 15 minutes. Learners are seeing the empty state for the default Moments filter.\n\n**Current value:** {{value}}\n**Threshold:** 0.5 (50%)\n\n**Actions:**\n1. Verify the Moments dataset is populated and not filtered out by targeted-language routing.\n2. Check visibility filters and block lookups for unexpected rejection of every candidate.\n3. Inspect the candidate pool size metric and the newest-Moments query.\n4. Confirm the empty state is rendered rather than an error.\n{{/is_alert}}\n\n{{#is_warning}}\nEmpty For You feed rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:moments", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.5,
+          "warning": 0.25
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Moments] For You ranking stalled",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_moments_for_you_ranking_duration_seconds{*}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo For You ranking requests have been recorded in the last 30 minutes. This may indicate a complete outage of the Moments feed endpoint or a metrics ingestion problem.\n\n**Actions:**\n1. Verify the NestJS backend is running and healthy.\n2. Request /api/moments/feed?filter=For%20You directly.\n3. Confirm the Datadog Agent is scraping /api/metrics.\n4. Check for deployment or infrastructure incidents.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:moments", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 35,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Moments] For You candidate pool thin",
+      "type": "query alert",
+      "query": "avg(last_15m):avg:hellotalk_moments_for_you_candidates{stage:pool}.avg() < 1",
+      "message": "{{#is_alert}}\nThe average For You candidate pool has been smaller than one Moment for 15 minutes. The ranking pipeline has almost nothing to score, so most requests will return an empty feed.\n\n**Current value:** {{value}}\n**Threshold:** 1 Moment per request\n\n**Actions:**\n1. Check the newest-Moments and in-network candidate queries.\n2. Verify the Redis timeline queue and follow-graph fallback.\n3. Confirm targeted-language routing and visibility filters are not rejecting the whole pool.\n4. Review recent Moments activity and moderation actions.\n{{/is_alert}}\n\n{{#is_warning}}\nFor You candidate pool below the warning threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:moments", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 1,
+          "warning": 5
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Moments] Candidate source degradation spike",
+      "type": "query alert",
+      "query": "avg(last_15m):avg:hellotalk_moments_for_you_degraded_total{*} by {reason}.as_count() > 20",
+      "message": "{{#is_alert}}\nA single Moments For You degradation reason fired more than 20 times in the last 15 minutes. Reason: {{reason.name}}.\n\n**Current value:** {{value}}\n**Threshold:** 20 events in 15 minutes\n\n**Actions:**\n1. Map the reason to the failing stage in docs/moments-monitoring.md.\n2. Check the matching Supabase or Redis dependency.\n3. Confirm the feed is degrading safely rather than returning a 5xx.\n4. If a dependency recovered, confirm the degradation rate returns to zero.\n{{/is_alert}}\n\n{{#is_warning}}\nCandidate source degradation elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:moments", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        },
+        "timeout_h": 0
+      }
+    }
+  ]
+}
