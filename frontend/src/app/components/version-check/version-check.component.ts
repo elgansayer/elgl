@@ -9,27 +9,27 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     <div class="p-4">
-      <h2>{{ 'appVersion' | t }}</h2>
+      <h2>{{ 'versionCheck.title' | t }}</h2>
       @if (versionError()) {
         <p class="text-danger-ink">{{ versionError() }}</p>
       }
       @if (!versionLoaded()) {
-        <p>{{ 'loading' | t }}</p>
+        <p>{{ 'common.loading' | t }}</p>
       } @else {
-        <p>{{ 'currentVersion' | t }}: {{ version().current }}</p>
-        <p>{{ 'latestVersion' | t }}: {{ version().latest }}</p>
+        <p>{{ 'versionCheck.current' | t }}: {{ version().current }}</p>
+        <p>{{ 'versionCheck.latest' | t }}: {{ version().latest }}</p>
         @if (updateAvailable()) {
-          <p class="text-success">{{ 'updateAvailable' | t }}</p>
+          <p class="text-success">{{ 'versionCheck.updateAvailable' | t }}</p>
           @if (version().updateUrl) {
             <a hlmBtn [href]="version().updateUrl" target="_blank" rel="noopener noreferrer" size="touch">
-              {{ 'downloadUpdate' | t }}
+              {{ 'versionCheck.download' | t }}
             </a>
           }
         } @else {
-          <p>{{ 'upToDate' | t }}</p>
+          <p>{{ 'versionCheck.upToDate' | t }}</p>
         }
         <button hlmBtn type="button" variant="secondary" size="touch" (click)="checkUpdate()">
-          {{ 'checkForUpdates' | t }}
+          {{ 'versionCheck.check' | t }}
         </button>
       }
     </div>

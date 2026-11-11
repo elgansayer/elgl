@@ -12,9 +12,9 @@ export interface AgeRange {
   selector: 'app-age-range-slider',
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
-    <div class="flex flex-col" role="group" [attr.aria-label]="'age_range' | t">
+    <div class="flex flex-col" role="group" [attr.aria-label]="'settings.messageFilters.ageRange' | t">
       <span class="text-sm text-text-secondary pb-1" id="age-range-label">
-        {{ 'age_range' | t }}
+        {{ 'settings.messageFilters.ageRange' | t }}
         <span class="ps-1">({{ minAge() }} - {{ maxAge() }})</span>
       </span>
       <div class="relative h-8">
@@ -28,7 +28,7 @@ export interface AgeRange {
           (input)="onMinChange($event)"
           step="1"
           class="absolute inset-0 w-full h-full z-10 appearance-none bg-transparent cursor-pointer"
-          aria-label="{{ 'age_min' | t }}"
+          aria-label="{{ 'settings.messageFilters.ageMin' | t }}"
           aria-valuemin="{{ minLimit() }}"
           aria-valuemax="{{ maxLimit() }}"
           aria-valuenow="{{ minAge() }}"
@@ -45,7 +45,7 @@ export interface AgeRange {
           (input)="onMaxChange($event)"
           step="1"
           class="absolute inset-0 w-full h-full z-20 appearance-none bg-transparent cursor-pointer"
-          aria-label="{{ 'age_max' | t }}"
+          aria-label="{{ 'settings.messageFilters.ageMax' | t }}"
           aria-valuemin="{{ minLimit() }}"
           aria-valuemax="{{ maxLimit() }}"
           aria-valuenow="{{ maxAge() }}"
