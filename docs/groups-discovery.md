@@ -78,3 +78,22 @@ Repository CI remains authoritative for the complete frontend unit, static-analy
 There is no schema or API migration in this completion change. The runtime validation is additive at the consumer boundary and remains compatible with the existing backend response shape. Rollout is the normal frontend deployment path.
 
 Rollback is a normal revert of the component/tests/documentation commits. It does not modify group memberships or user data and requires no cleanup.
+
+## Group profile and chat routing (#2029)
+
+The discovery cards link to a dedicated group landing route (`/groups/:groupId`, with
+`/community/groups/:groupId` as a canonical alias). The landing page loads the group info, member roster,
+announcements and settings through the authenticated NestJS groups API and renders the roster with profile-safe
+display names and avatars.
+
+Members can open the group chat from the landing page. `POST /groups/:groupId/chat` verifies group membership,
+returns the linked chat room, or creates one through the existing group-chat service on first use and persists
+the room link in `groups.chat_room_id`. The link is unique, so retries and concurrent first opens converge on a
+single room. Non-members must join before the chat action is available.
+
+Owners see the admin tooling: posting announcements and removing members. Destructive member removal requires an
+inline confirmation before the mutation is sent. Errors and success states are announced with appropriate ARIA
+roles, and all layout uses logical direction utilities.
+
+Documented trade-off: a group that already exceeded the 19-person group-chat limit cannot open a single chat
+room; the API returns a bounded validation error instead of silently dropping members.

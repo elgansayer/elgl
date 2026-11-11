@@ -34,6 +34,8 @@ import { DisappearingMessagesCleanupService } from './disappearing-messages-clea
 import { DisappearingMessagesInterceptor } from './disappearing-messages.interceptor';
 import { PersonalUnreadListener } from './listeners/personal-unread.listener';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { GroupChatController } from './group-chat.controller';
+import { GroupChatService } from './group-chat.service';
 
 @Module({
   imports: [
@@ -55,9 +57,11 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
+    GroupChatController,
   ],
   providers: [
     CentrifugoService,
+    GroupChatService,
     ReadReceiptsService,
     TranslationService,
     ChatLlmService,
@@ -90,6 +94,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     SystemMessageService,
     ChatSettingsService,
     PersonalChatEncryptionService,
+    GroupChatService,
   ],
 })
 export class ChatModule {}
