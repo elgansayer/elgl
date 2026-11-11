@@ -5,6 +5,7 @@
     <app-forced-update-modal [storeUrl]="versionService.updateUrl()" />
   }
   <app-no-network-banner />
+  <app-call-audio-status />
   @if (authService.appLocked()) {
     <div
       class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"

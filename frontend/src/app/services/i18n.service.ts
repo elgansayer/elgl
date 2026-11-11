@@ -1979,6 +1979,19 @@ export class I18nService {
     'voip.callerAvatar': 'Caller avatar',
     'common.unknownCaller': 'Unknown Caller',
 
+    // Call audio status (headset, microphone and playback recovery)
+    'callAudio.playbackBlocked':
+      'Sound is paused by your browser, so you cannot hear the other person yet.',
+    'callAudio.playbackResume': 'Turn on sound',
+    'callAudio.microphoneInterrupted':
+      'Your microphone stopped working, so others may not be able to hear you.',
+    'callAudio.microphoneReconnect': 'Reconnect microphone',
+    'callAudio.inputChanged': 'Microphone switched to {{device}}.',
+    'callAudio.inputChangedDefault': 'Microphone switched to your default device.',
+    'callAudio.outputChanged': 'Sound output switched to {{device}}.',
+    'callAudio.outputChangedDefault': 'Sound output switched to your default device.',
+    'callAudio.dismiss': 'Dismiss',
+
     // Admin Portal (User Management)
     'admin.navLink': '🛠️ Admin',
     'admin.title': 'Admin Portal',

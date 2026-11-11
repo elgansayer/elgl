@@ -1933,6 +1933,76 @@
         </footer>
       </section>
 
+      <section class="specimen" data-component="components/call-audio-status">
+        <header>
+          <h2>Call audio status</h2>
+          <code>components/call-audio-status</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Sound blocked by the browser</span>
+          <div
+            class="row"
+            role="alert"
+            style="
+              flex-wrap: wrap;
+              padding: 12px 16px;
+              border-radius: 16px;
+              border: 1px solid rgb(var(--warning));
+              background: rgb(var(--surface-200));
+              font-size: 14px;
+              font-weight: 600;
+            "
+          >
+            <p class="grow" dir="auto" style="margin: 0">
+              Sound is paused by your browser, so you cannot hear the other person yet.
+            </p>
+            <button class="btn">Turn on sound</button>
+          </div>
+          <span class="state-label">Microphone stopped working</span>
+          <div
+            class="row"
+            role="alert"
+            style="
+              flex-wrap: wrap;
+              padding: 12px 16px;
+              border-radius: 16px;
+              border: 1px solid rgb(var(--warning));
+              background: rgb(var(--surface-200));
+              font-size: 14px;
+              font-weight: 600;
+            "
+          >
+            <p class="grow" dir="auto" style="margin: 0">
+              Your microphone stopped working, so others may not be able to hear you.
+            </p>
+            <button class="btn">Reconnect microphone</button>
+            <button class="btn ghost">Dismiss</button>
+          </div>
+          <span class="state-label">Headset or speaker changed</span>
+          <div
+            class="row"
+            role="status"
+            style="
+              flex-wrap: wrap;
+              padding: 12px 16px;
+              border-radius: 16px;
+              border: 1px solid rgb(var(--surface-100));
+              background: rgb(var(--surface-200));
+              font-size: 14px;
+              font-weight: 600;
+            "
+          >
+            <p class="grow" dir="auto" style="margin: 0">Microphone switched to USB Headset.</p>
+            <button class="btn ghost">Dismiss</button>
+          </div>
+        </div>
+        <footer>
+          States: hidden while everything works · sound blocked (alert) · microphone interrupted
+          with reconnect (alert) · audio device changed (polite status) · dismissed · reconnecting
+          (button busy)
+        </footer>
+      </section>
+
       <section class="specimen" data-component="components/instant-video-recorder">
         <header>
           <h2>Video note recorder</h2>

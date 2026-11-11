@@ -38,6 +38,7 @@ import { AppLanguageSelectorComponent } from './components/app-language-selector
 import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
+import { CallAudioStatusComponent } from './components/call-audio-status/call-audio-status.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
 import { MobileNavigationComponent } from './components/mobile-navigation/mobile-navigation.component';
 import { TourService } from './services/tour.service';
@@ -71,6 +72,7 @@ type UnreadRefreshSource = 'all' | 'chat' | 'notifications';
     GiftAnimationOverlayComponent,
     ForcedUpdateModalComponent,
     NoNetworkBannerComponent,
+    CallAudioStatusComponent,
     DesktopSidebarComponent,
     MobileNavigationComponent,
     JoyrideModule,

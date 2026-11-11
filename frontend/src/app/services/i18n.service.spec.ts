@@ -437,6 +437,35 @@ describe('I18nService', () => {
       },
     );
 
+    it('words the call audio status copy plainly, without emoji or the name of the media provider', () => {
+      const copy = entriesUnder('callAudio.');
+
+      expect(copy.map(([key]) => key).sort()).toEqual([
+        'callAudio.dismiss',
+        'callAudio.inputChanged',
+        'callAudio.inputChangedDefault',
+        'callAudio.microphoneInterrupted',
+        'callAudio.microphoneReconnect',
+        'callAudio.outputChanged',
+        'callAudio.outputChangedDefault',
+        'callAudio.playbackBlocked',
+        'callAudio.playbackResume',
+      ]);
+      for (const [key, value] of copy) {
+        expect(value, key).not.toMatch(INFRASTRUCTURE);
+        expect(value, key).not.toMatch(EMOJI);
+      }
+    });
+
+    it('names the new device in the call audio change notices', () => {
+      expect(service.translate('callAudio.inputChanged', { device: 'USB Headset' })).toBe(
+        'Microphone switched to USB Headset.',
+      );
+      expect(service.translate('callAudio.outputChanged', { device: 'Bluetooth Speaker' })).toBe(
+        'Sound output switched to Bluetooth Speaker.',
+      );
+    });
+
     it('words the voice note upload state without naming the storage provider', () => {
       expect(service.translate('voiceRecorder.uploadingBtn')).toBe('⏳ Uploading...');
 

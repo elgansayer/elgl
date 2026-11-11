@@ -19,6 +19,7 @@ import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
 import { EconomyStore } from './economy.store';
 import { AudioRoomDegradationService } from './audio-room-degradation.service';
+import { CallAudioSessionService } from './call-audio-session.service';
 import type { GiftAnimationType } from './gift-animation.service';
 import { parseQuickPollRealtimeEvent, PollResult, QuickPollService } from './quick-poll.service';
 
@@ -193,6 +194,7 @@ export class AudioRoomsStore {
   private i18n = inject(I18nService);
   private economyStore = inject(EconomyStore);
   private degradationService = inject(AudioRoomDegradationService);
+  private callAudioSession = inject(CallAudioSessionService);
   private quickPollService = inject(QuickPollService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
@@ -435,6 +437,8 @@ export class AudioRoomsStore {
             .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
           await this.livekitRoom.connect(tokenRes.livekit_url, tokenRes.token);
           this.isConnectedToLiveKit.set(true);
+          // Play the room's audio and recover from headset, interruption and background changes.
+          this.callAudioSession.attach(this.livekitRoom, 'room');
 
           if (tokenRes.is_speaker) {
             await this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
@@ -1128,6 +1132,7 @@ export class AudioRoomsStore {
         this.livekitRoom.off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
         this.onTrackUnsubscribedBound = null;
       }
+      this.callAudioSession.detach(this.livekitRoom);
       this.livekitRoom.disconnect();
       this.livekitRoom = null;
     }

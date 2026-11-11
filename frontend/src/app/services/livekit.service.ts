@@ -10,6 +10,7 @@ import {
   ExternalE2EEKeyProvider,
   Track,
 } from 'livekit-client';
+import { CallAudioSessionService } from './call-audio-session.service';
 
 /** ICE server descriptor returned by the backend token endpoint. */
 export interface IceServer {
@@ -43,6 +44,7 @@ const ROOM_CONNECT_BASE_DELAY_MS = 800;
 })
 export class LivekitService {
   private http = inject(HttpClient);
+  private audioSession = inject(CallAudioSessionService);
   onTrackSubscribed?: (track: RemoteTrack, publication: unknown) => void;
 
   private room: Room | null = null;
@@ -58,7 +60,8 @@ export class LivekitService {
   /** Signal indicating whether LiveKit SFU connection is active */
   readonly livekitConnected = signal(false);
 
-  private createRoom(options: RoomOptions): Room {
+  /** Creates a LiveKit room. Callers that join a room themselves use this so tests can supply one. */
+  createRoom(options: RoomOptions): Room {
     return new Room(options);
   }
 
@@ -188,15 +191,20 @@ export class LivekitService {
             iceServers: iceServersToUse,
           },
         });
-        this.livekitConnected.set(true);
-        return room;
       } catch (err: unknown) {
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < MAX_ROOM_CONNECT_RETRIES - 1) {
           const delay = ROOM_CONNECT_BASE_DELAY_MS * Math.pow(2, attempt);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
+        continue;
       }
+      this.livekitConnected.set(true);
+      // Remote audio is rendered, and headset, interruption and background recovery run,
+      // for as long as this room is attached. Attaching sits outside the retry so a failure
+      // here can never trigger a second connect on a room that is already connected.
+      this.audioSession.attach(room, 'call');
+      return room;
     }
 
     // All connection attempts failed. Tear down the E2EE worker as well as
@@ -258,6 +266,7 @@ export class LivekitService {
 
   leaveRoom(): void {
     if (this.room) {
+      this.audioSession.detach(this.room);
       this.room.disconnect();
       this.room = null;
     }

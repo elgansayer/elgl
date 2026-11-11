@@ -24,6 +24,7 @@ import {
   Track,
 } from 'livekit-client';
 import { LivekitService } from '../../services/livekit.service';
+import { CallAudioSessionService } from '../../services/call-audio-session.service';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
@@ -396,6 +397,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class VideoCallComponent implements OnInit, OnDestroy {
   private livekitService = inject(LivekitService);
+  private callAudioSession = inject(CallAudioSessionService);
 
   // View children for video elements
   readonly remoteVideoRef = viewChild<ElementRef<HTMLVideoElement>>('remoteVideo');
@@ -504,7 +506,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         this.livekitService.degradationReason.set(tokenResult.degradationReason);
       }
 
-      this.room = new Room({
+      this.room = this.livekitService.createRoom({
         adaptiveStream: true,
         dynacast: true,
         videoCaptureDefaults: {
@@ -528,6 +530,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         .on(RoomEvent.Disconnected, this.onDisconnectedBound);
 
       await this.room.connect(this.livekitService.getLiveKitUrl(), tokenResult.token);
+      // Render remote audio and recover from headset, interruption and background changes.
+      this.callAudioSession.attach(this.room, 'call');
 
       // Create and publish local tracks using createLocalTracks
       const tracks = await createLocalTracks({ audio: true, video: true });
@@ -700,6 +704,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         this.room.off(RoomEvent.Disconnected, this.onDisconnectedBound);
         this.onDisconnectedBound = null;
       }
+      this.callAudioSession.detach(this.room);
       this.room.disconnect();
       this.room = null;
     }

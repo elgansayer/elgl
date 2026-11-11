@@ -1,6 +1,7 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, effect, untracked } from '@angular/core';
 import type { User } from '@supabase/supabase-js';
 import { AuthService } from './auth.service';
+import { CallAudioSessionService } from './call-audio-session.service';
 
 @Injectable({ providedIn: 'root' })
 export class AppLockService {
@@ -8,6 +9,7 @@ export class AppLockService {
   private readonly credentialIdKey = 'hellotalk-biometric-credential-id';
 
   private readonly authService = inject(AuthService);
+  private readonly callAudioSession = inject(CallAudioSessionService);
 
   private readonly appLockedSignal = signal<boolean>(false);
   private readonly biometricEnabledSignal = signal<boolean>(false);
@@ -16,6 +18,9 @@ export class AppLockService {
   readonly appLocked = this.appLockedSignal.asReadonly();
   readonly biometricEnabled = this.biometricEnabledSignal.asReadonly();
   readonly biometricAvailable = this.biometricAvailableSignal.asReadonly();
+
+  /** A lock requested while a call was live, applied the moment the call ends. */
+  private readonly lockPending = signal<boolean>(false);
 
   constructor() {
     const stored =
@@ -27,6 +32,17 @@ export class AppLockService {
       this.appLockedSignal.set(true);
     }
     this.determineBiometricAvailability();
+
+    effect(() => {
+      const pending = this.lockPending();
+      const callActive = this.callAudioSession.isCallActive();
+      if (pending && !callActive) {
+        untracked(() => {
+          this.lockPending.set(false);
+          this.lockNow();
+        });
+      }
+    });
   }
 
   private async determineBiometricAvailability(): Promise<void> {
@@ -70,6 +86,7 @@ export class AppLockService {
     localStorage.removeItem(this.credentialIdKey);
     this.biometricEnabledSignal.set(false);
     this.appLockedSignal.set(false);
+    this.lockPending.set(false);
     return true;
   }
 
@@ -94,9 +111,16 @@ export class AppLockService {
   }
 
   lockNow(): void {
-    if (this.biometricEnabledSignal()) {
-      this.appLockedSignal.set(true);
+    if (!this.biometricEnabledSignal()) {
+      return;
     }
+    if (this.callAudioSession.isCallActive()) {
+      // Locking routes to the lock screen, which destroys the call screen and hangs up. Going
+      // to the background must not end a call, so the lock waits until the call does.
+      this.lockPending.set(true);
+      return;
+    }
+    this.appLockedSignal.set(true);
   }
 
   private async registerCredential(user: User): Promise<string | null> {
