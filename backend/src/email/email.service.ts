@@ -54,4 +54,38 @@ export class EmailService {
     // Do not log recipient PII or reset credentials.
     this.logger.log('Password reset email dispatched');
   }
+
+  /**
+   * Sends a plain-text transactional message (for example a legal notice).
+   * The subject is rejected if it could break out of the header, and neither
+   * the recipient nor the body is logged. Failures propagate so callers can
+   * record them against the record the message belongs to.
+   */
+  async sendPlainTextEmail(
+    to: string,
+    subject: string,
+    text: string,
+  ): Promise<void> {
+    if (/[\r\n]/.test(subject) || /[\r\n]/.test(to)) {
+      throw new Error('Email headers must not contain line breaks');
+    }
+
+    const fromName = this.configService.get<string>(
+      'MAIL_FROM_NAME',
+      'HelloTalk',
+    );
+    const fromAddress = this.configService.get<string>(
+      'MAIL_FROM_ADDRESS',
+      'noreply@hellotalk.com',
+    );
+
+    await this.transporter.sendMail({
+      from: `"${fromName}" <${fromAddress}>`,
+      to,
+      subject,
+      text,
+    });
+
+    this.logger.log('Transactional email dispatched');
+  }
 }

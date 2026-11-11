@@ -1,11 +1,17 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   Logger,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { User } from '@supabase/supabase-js';
+import { AGE_GATE_EXEMPT_METADATA_KEY } from '../age-gate/age-gate-exempt.decorator';
+import { AGE_GATE_ERROR_CODES } from '../age-gate/age-gate.constants';
+import { AgeGateStatusService } from '../age-gate/age-gate-status.service';
 import { AuthenticatedRequest } from './authenticated-request.interface';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -27,7 +33,11 @@ interface WsHandshakeClient {
 export class SupabaseAuthGuard implements CanActivate {
   private readonly logger = new Logger(SupabaseAuthGuard.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    @Optional() private readonly ageGateStatus?: AgeGateStatusService,
+    @Optional() private readonly reflector?: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const contextType = context.getType();
@@ -81,7 +91,41 @@ export class SupabaseAuthGuard implements CanActivate {
       client.user = user;
     }
 
+    await this.assertAgeAssurance(context, user);
+
     return true;
+  }
+
+  /**
+   * COPPA age gate: an account that has not declared an eligible date of birth
+   * (or was blocked for declaring an ineligible one) is refused everywhere
+   * except routes marked @AgeGateExempt(). The user is attached to the request
+   * first so exempt handlers and exception filters can still identify them.
+   */
+  private async assertAgeAssurance(
+    context: ExecutionContext,
+    user: User,
+  ): Promise<void> {
+    if (!this.ageGateStatus) return;
+
+    const exempt = this.reflector?.getAllAndOverride<boolean | undefined>(
+      AGE_GATE_EXEMPT_METADATA_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (exempt === true) return;
+
+    const decision = await this.ageGateStatus.evaluate(user.id);
+    if (decision.allowed) return;
+
+    throw new ForbiddenException({
+      statusCode: 403,
+      error: 'Forbidden',
+      code: decision.code,
+      message:
+        decision.code === AGE_GATE_ERROR_CODES.blocked
+          ? 'This account is not eligible to use the service'
+          : 'Age confirmation is required',
+    });
   }
 
   private extractBearerToken(header: AuthorizationHeader): string | undefined {

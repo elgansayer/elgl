@@ -25,7 +25,12 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `privacy_hide_age` (Boolean, default `false`)
 - `privacy_hide_location` (Boolean, default `false`)
 - `privacy_hide_from_search` (Boolean, default `false`)
+- `date_of_birth` (Nullable Date, private, written only by the age-gate service, never stored for a blocked account)
+- `age_gate_status` (Text, `'legacy'`, `'required'`, `'passed'` or `'blocked_under_age'`; existing accounts are `'legacy'`, new accounts default to `'required'`)
+- `age_gate_completed_at` (Nullable Timestamp with time zone, set when the first declaration is recorded)
 - `created_at` (Timestamp with time zone, default `now()`)
+
+The three age-gate columns are protected by the `users_protect_age_gate_columns` trigger: browser roles (`anon`, `authenticated`) cannot change them or the derived `age` of a verified account, whatever the row level security policy allows. See `supabase/migrations/20261111120000_coppa_age_gate.sql`.
 
 ### Table: `profile_visits`
 
@@ -56,6 +61,7 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - `comments_count` (Integer, default `0`, denormalised counter maintained by the API)
 - `is_ephemeral` (Boolean, default `false`, `true` for 24 hour stories)
 - `expires_at` (Nullable Timestamp with time zone, story expiry, indexed together with `is_ephemeral`)
+- `dmca_disabled_at` (Nullable Timestamp with time zone, set while a copyright notice has disabled the Moment; its content columns are blanked and the originals are held in `dmca_content_snapshots`)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
 
 ### Table: `moment_comments`
@@ -67,6 +73,7 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - `correction_payload` (JSONB, nullable, e.g., `{ "original": "...", "corrected": "...", "explanation": "..." }` where `explanation` is optional)
 - `parent_comment_id` (Nullable UUID, Foreign Key referencing `moment_comments.id`, `ON DELETE CASCADE`, indexed, set on a threaded reply)
 - `reply_to_user_id` (Nullable UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, the author being replied to)
+- `dmca_disabled_at` (Nullable Timestamp with time zone, set while a copyright notice has disabled the comment)
 - `created_at` (Timestamp with time zone, default `now()`)
 
 ### Table: `moment_likes`
@@ -163,6 +170,24 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - `blocks`: `id`, `blocker_id`, `blocked_id`, `created_at`
 - `reports`: `id`, `reporter_id`, `reported_user_id`, `reason_category`, `description`, `context_url`, `status`, `created_at`
 
+### Tables: `age_gate_events` & `age_gate_lockouts` (COPPA age assurance)
+
+Both are service-role only (row level security enabled, no browser grants).
+
+- `age_gate_events`: `id`, `subject_id` (UUID, deliberately not a foreign key, so rows outlive erased accounts), `outcome` (`'passed'`, `'blocked_under_age'`, `'lockout_blocked'`, `'erasure_scheduled'`, `'identity_purged'`), `minimum_age`, `created_at`. No date of birth, email or name. Retention: 24 months.
+- `age_gate_lockouts`: `identifier_hash` (Primary Key, keyed HMAC-SHA-256 of the lowercase email, 64 hex characters), `locked_until`, `created_at`. Rows expire after 7 days and are purged hourly.
+
+### Tables: `dmca_notices`, `dmca_counter_notices`, `dmca_notice_events` & `dmca_content_snapshots` (DMCA takedown flow)
+
+All four are service-role only.
+
+- `dmca_notices`: one row per identified item. `reference` (public `DMCA-XXXXXXXXXX`), `status` (`'pending_verification'`, `'expired'`, `'needs_review'`, `'content_disabled'`, `'counter_notice_received'`, `'restored'`, `'rejected'`, `'withdrawn'`, `'litigation_hold'`), claimant contact details, `copyrighted_work`, `material_reference`, the two statutory statements and `electronic_signature` (all must be true or non-empty), resolved `target_type` (`'moment'` or `'moment_comment'`), `target_id`, `target_owner_id`, `verification_token_hash` (SHA-256 of the emailed token, shared by the items of one submission), `verification_expires_at`, `verified_at`, `content_disabled_at`, `counter_notice_at`, `restore_after`, `closed_at`. Retention: 3 years after `closed_at`; unconfirmed notices 30 days.
+- `dmca_counter_notices`: one per notice (`notice_id` Primary Key), `full_name`, `address`, `phone`, the perjury and jurisdiction statements, `electronic_signature`.
+- `dmca_notice_events`: `notice_id`, `event`, `actor_type` (`'claimant'`, `'owner'`, `'operator'`, `'system'`), `actor_id`, `created_at`. Names and actors only, never free text.
+- `dmca_content_snapshots`: `(target_type, target_id)` Primary Key, `owner_id`, `snapshot` (JSONB original content), `media_state` (`'none'`, `'pending_quarantine'`, `'quarantined'`, `'pending_restore'`), `media_objects` (JSONB hosted files and their private quarantine keys), `restored_at`. Deleted on restore or when the target no longer exists.
+
+Service-role functions: `dmca_disable_content(target_type, target_id)` snapshots then blanks the live row atomically; `dmca_restore_content(notice_id, target_type, target_id)` restores unless another live notice covers the item; `dmca_orphaned_snapshots(limit)` lists snapshots whose item was deleted. The `protect_dmca_disabled_content` trigger stops browser roles editing disabled content or its marker.
+
 ---
 
 ## 2. Backend Routing & Integrations (NestJS Modules)
@@ -172,6 +197,22 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - Validates Supabase JWTs using custom `SupabaseAuthGuard`.
 - Mints Centrifugo connection tokens (`centrifuge.token()`) with sub claims matching `users.id`.
 - Mints LiveKit room access tokens using `livekit-server-sdk` with fine-grained participant grants (`roomJoin: true`, `canPublish: false` for listeners; `canPublish: true` when promoted).
+
+### Age Gate (COPPA)
+
+- Every account must declare a date of birth before using the API. `SupabaseAuthGuard` reads `users.age_gate_status` (only `'passed'` is cached, for 60 seconds) and answers 403 with `code` `AGE_GATE_REQUIRED` or `AGE_GATE_BLOCKED`, on HTTP and WebSocket handshakes, except on routes marked `@AgeGateExempt()` (the age-gate controller and `POST /privacy/delete-account`).
+- `GET /api/age-gate/status` returns `{ status, required, blocked }`. `POST /api/age-gate` takes `{ "dateOfBirth": "YYYY-MM-DD" }` (UTC calendar date, first declaration wins). Neither response reveals the minimum age or the stored date.
+- A declaration under 13 (or from an email address locked out in the last 7 days) blocks the account in one statement: status `'blocked_under_age'`, date and age cleared, profile hidden, deletion scheduled immediately, sign-in banned. An hourly job finishes any that were missed and removes the sign-in identity once the existing deletion pipeline has erased the account.
+- `AGE_GATE_LEGACY_ENFORCEMENT_FROM` (ISO 8601, optional) is the instant from which `'legacy'` accounts must also declare a date of birth.
+
+### DMCA Takedown Flow
+
+- `POST /api/dmca/notices` (public, 5 per hour per address) stores one pending notice per identified item and emails one confirmation link. `POST /api/dmca/notices/verify` (public) confirms it; nothing is disabled before that. Repeating a used token reports the current state.
+- Confirmed notices are located (content identifier, or an uploaded file URL whose key names the owner), disabled atomically, hosted files moved to a private prefix, and both parties emailed. Material that cannot be located goes to `needs_review`.
+- `GET /api/dmca/notices/mine` and `POST /api/dmca/notices/:id/counter-notice` (authenticated owner). After a counter-notification the material is restored 10 business days later unless an operator records a litigation hold.
+- `GET /api/admin/v1/dmca/notices`, `GET .../:id` (`moderation.cases.read`) and `POST .../:id/decision` (`moderation.cases.manage`, decisions `disable`, `reject`, `withdraw`, `litigation_hold`, with an audited `reasonCode`). Three live notices in 12 months queue the owner in `reports` for review.
+- `GET /api/legal/dmca` serves the public copyright policy and designated agent (`DMCA_AGENT_*`).
+- See `docs/compliance-coppa-dmca.md` for operation, rollout and rollback.
 
 ### Discovery & Proximity Module
 

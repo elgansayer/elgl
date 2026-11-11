@@ -13,6 +13,26 @@ export const authRoutes: Routes = [
     title: 'Onboarding - HelloTalk',
   },
   {
+    path: 'age-gate',
+    loadComponent: () =>
+      import('../components/age-gate/age-gate.component').then((m) => m.AgeGateComponent),
+    title: 'Confirm your date of birth - HelloTalk',
+  },
+  {
+    path: 'dmca',
+    loadComponent: () =>
+      import('../components/dmca-notice-form/dmca-notice-form.component').then(
+        (m) => m.DmcaNoticeFormComponent,
+      ),
+    title: 'Report copyright infringement - HelloTalk',
+  },
+  {
+    path: 'dmca/verify',
+    loadComponent: () =>
+      import('../components/dmca-verify/dmca-verify.component').then((m) => m.DmcaVerifyComponent),
+    title: 'Confirm copyright notice - HelloTalk',
+  },
+  {
     path: 'forgot-password',
     loadComponent: () =>
       import('../components/forgot-password/forgot-password.component').then(

@@ -429,7 +429,7 @@ export class PrivacyService {
     const { data: profile, error: profileError } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, location, mock_location, is_vip, vip_tier, coins_balance, study_streak_days, correction_ratio, is_serious_learner, privacy_hide_from_search, privacy_hide_location, is_deletion_pending, created_at',
+        'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, location, mock_location, is_vip, vip_tier, coins_balance, study_streak_days, correction_ratio, is_serious_learner, privacy_hide_from_search, privacy_hide_location, is_deletion_pending, date_of_birth, age_gate_status, created_at',
       )
       .eq('id', userId)
       .single();

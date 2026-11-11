@@ -309,6 +309,14 @@ export const validationSchema = Joi.object({
   PRIVACY_EFFECTIVE_DATE: Joi.string().optional().allow(''),
   TOS_EFFECTIVE_DATE: Joi.string().optional().allow(''),
 
+  // -- Compliance: COPPA age gate and DMCA designated agent --
+  // Accounts created before the age gate are grandfathered until this instant.
+  AGE_GATE_LEGACY_ENFORCEMENT_FROM: Joi.string().isoDate().optional().allow(''),
+  DMCA_AGENT_NAME: Joi.string().max(200).optional().allow(''),
+  DMCA_AGENT_EMAIL: Joi.string().email().max(254).optional().allow(''),
+  DMCA_AGENT_POSTAL_ADDRESS: Joi.string().max(500).optional().allow(''),
+  DMCA_AGENT_PHONE: Joi.string().max(40).optional().allow(''),
+
   // -- Datadog metrics (optional) --
   // The StatsD exporter stays disabled unless host, port and key are all set.
   DD_AGENT_HOST: Joi.string().hostname().optional().allow(''),

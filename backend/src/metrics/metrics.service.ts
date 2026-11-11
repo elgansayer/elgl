@@ -38,6 +38,10 @@ export class MetricsService {
   readonly srsDecksTotal: Gauge<string>;
   readonly srsDecksCreated: Counter<string>;
 
+  // Compliance metrics (COPPA age gate, DMCA takedown flow)
+  readonly complianceAgeGateDecisions: Counter<string>;
+  readonly complianceDmcaEvents: Counter<string>;
+
   // Trust & Safety metrics
   readonly tsReportsSubmitted: Counter<string>;
   readonly tsBlocksCreated: Counter<string>;
@@ -217,6 +221,22 @@ export class MetricsService {
     this.srsDecksCreated = new Counter({
       name: 'hellotalk_srs_decks_created_total',
       help: 'Total number of decks created',
+      registers: [this.register],
+    });
+
+    // --- Compliance Metrics ---
+
+    this.complianceAgeGateDecisions = new Counter({
+      name: 'hellotalk_compliance_age_gate_decisions_total',
+      help: 'Age-gate decisions by outcome (passed, blocked_under_age, lockout_blocked)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
+
+    this.complianceDmcaEvents = new Counter({
+      name: 'hellotalk_compliance_dmca_events_total',
+      help: 'DMCA takedown flow events by name (for example notice_received, content_disabled, content_restored, email_failed)',
+      labelNames: ['event'],
       registers: [this.register],
     });
 
@@ -784,6 +804,16 @@ export class MetricsService {
 
   recordSrsDeckCreated(): void {
     this.srsDecksCreated.inc();
+  }
+
+  // --- Compliance metric helpers ---
+
+  recordAgeGateDecision(outcome: string): void {
+    this.complianceAgeGateDecisions.inc({ outcome });
+  }
+
+  recordDmcaEvent(event: string): void {
+    this.complianceDmcaEvents.inc({ event });
   }
 
   // --- Trust & Safety metric helpers ---

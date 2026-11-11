@@ -11,6 +11,7 @@ import { AppService } from './app.service';
 import { LocationModule } from './location/location.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
+import { AgeGateModule } from './age-gate/age-gate.module';
 import { UsersModule } from './users/users.module';
 import { MediaModule } from './media/media.module';
 import { DiscoveryModule } from './discovery/discovery.module';
@@ -50,6 +51,7 @@ import { StudyStreakModule } from './study-streak/study-streak.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { LegalModule } from './legal/legal.module';
+import { DmcaModule } from './dmca/dmca.module';
 import { AiConversationModule } from './ai-conversation/ai-conversation.module';
 import { CorrectorScoreModule } from './corrector-score/corrector-score.module';
 import { AchievementsModule } from './achievements/achievements.module';
@@ -112,6 +114,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     SupabaseModule,
     LocationModule,
     AuthModule,
+    AgeGateModule,
     UsersModule,
     MediaModule,
     DiscoveryModule,
@@ -145,6 +148,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     HostDashboardModule,
     PrivacyModule,
     LegalModule,
+    DmcaModule,
     AiConversationModule,
     AchievementsModule,
     CulturalModule,

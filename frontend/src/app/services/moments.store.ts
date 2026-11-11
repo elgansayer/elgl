@@ -20,6 +20,8 @@ export interface MomentComment {
   parent_comment_id?: string;
   reply_to_user_id?: string;
   created_at: string;
+  /** Set while a copyright notice has disabled the comment; its text is blank. */
+  dmca_disabled_at?: string | null;
   upVotes?: number;
   downVotes?: number;
   userVote?: string | null;
@@ -57,6 +59,8 @@ export interface MomentRecord {
   likes_count: number;
   comments_count: number;
   created_at: string;
+  /** Set while a copyright notice has disabled the Moment; its content is blank. */
+  dmca_disabled_at?: string | null;
   /** Normalised hashtags derived from text_content. Only present on For You responses. */
   hashtags?: string[];
   author?: {

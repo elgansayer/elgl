@@ -2,6 +2,11 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
+import type {
+  DmcaActorType,
+  DmcaNoticeStatus,
+  DmcaTargetType,
+} from '../dmca/dmca.constants';
 
 export type UsersRow = {
   id: string;
@@ -86,6 +91,90 @@ export type UsersRow = {
   deletion_requested_at?: string | null;
   deletion_grace_days?: number | null;
   is_deletion_pending?: boolean | null;
+  /** Private; written only by the age-gate service (see migration 20261111120000). */
+  date_of_birth?: string | null;
+  age_gate_status?: 'legacy' | 'required' | 'passed' | 'blocked_under_age';
+  age_gate_completed_at?: string | null;
+};
+
+export type DmcaNoticeRow = {
+  id: string;
+  reference: string;
+  status: DmcaNoticeStatus;
+  claimant_name: string;
+  claimant_email: string;
+  claimant_organisation: string | null;
+  claimant_address: string | null;
+  claimant_phone: string | null;
+  copyrighted_work: string;
+  material_reference: string;
+  good_faith_statement: boolean;
+  accuracy_statement: boolean;
+  electronic_signature: string;
+  target_type: DmcaTargetType | null;
+  target_id: string | null;
+  target_owner_id: string | null;
+  verification_token_hash: string | null;
+  verification_expires_at: string | null;
+  verified_at: string | null;
+  content_disabled_at: string | null;
+  counter_notice_at: string | null;
+  restore_after: string | null;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DmcaCounterNoticeRow = {
+  notice_id: string;
+  submitted_by: string | null;
+  full_name: string;
+  address: string;
+  phone: string | null;
+  good_faith_statement: boolean;
+  jurisdiction_consent: boolean;
+  electronic_signature: string;
+  created_at: string;
+};
+
+export type DmcaNoticeEventRow = {
+  id: number;
+  notice_id: string;
+  event: string;
+  actor_type: DmcaActorType;
+  actor_id: string | null;
+  created_at: string;
+};
+
+export type DmcaContentSnapshotRow = {
+  target_type: DmcaTargetType;
+  target_id: string;
+  owner_id: string;
+  snapshot: unknown;
+  media_state:
+    'none' | 'pending_quarantine' | 'quarantined' | 'pending_restore';
+  media_objects: unknown;
+  restored_at: string | null;
+  created_at: string;
+};
+
+export type AgeGateEventRow = {
+  id: string;
+  subject_id: string | null;
+  outcome:
+    | 'passed'
+    | 'blocked_under_age'
+    | 'lockout_blocked'
+    | 'erasure_scheduled'
+    | 'identity_purged';
+  minimum_age: number;
+  created_at: string;
+};
+
+export type AgeGateLockoutRow = {
+  identifier_hash: string;
+  locked_until: string;
+  created_at: string;
 };
 
 export type AudioRoomsRow = {
@@ -724,6 +813,66 @@ export interface Database {
         Row: UsersRow;
         Insert: Partial<UsersRow>;
         Update: Partial<UsersRow>;
+        Relationships: [];
+      };
+      dmca_notices: {
+        Row: DmcaNoticeRow;
+        Insert: Omit<
+          DmcaNoticeRow,
+          | 'id'
+          | 'status'
+          | 'target_type'
+          | 'target_id'
+          | 'target_owner_id'
+          | 'verification_token_hash'
+          | 'verification_expires_at'
+          | 'verified_at'
+          | 'content_disabled_at'
+          | 'counter_notice_at'
+          | 'restore_after'
+          | 'closed_at'
+          | 'created_at'
+          | 'updated_at'
+        > &
+          Partial<DmcaNoticeRow>;
+        Update: Partial<DmcaNoticeRow>;
+        Relationships: [];
+      };
+      dmca_counter_notices: {
+        Row: DmcaCounterNoticeRow;
+        Insert: Omit<
+          DmcaCounterNoticeRow,
+          'created_at' | 'phone' | 'submitted_by'
+        > &
+          Partial<DmcaCounterNoticeRow>;
+        Update: Partial<DmcaCounterNoticeRow>;
+        Relationships: [];
+      };
+      dmca_notice_events: {
+        Row: DmcaNoticeEventRow;
+        Insert: Omit<DmcaNoticeEventRow, 'id' | 'created_at' | 'actor_id'> &
+          Partial<Pick<DmcaNoticeEventRow, 'actor_id'>>;
+        Update: Partial<DmcaNoticeEventRow>;
+        Relationships: [];
+      };
+      dmca_content_snapshots: {
+        Row: DmcaContentSnapshotRow;
+        Insert: Partial<DmcaContentSnapshotRow>;
+        Update: Partial<DmcaContentSnapshotRow>;
+        Relationships: [];
+      };
+      age_gate_events: {
+        Row: AgeGateEventRow;
+        Insert: Omit<AgeGateEventRow, 'id' | 'created_at'> &
+          Partial<Pick<AgeGateEventRow, 'id' | 'created_at'>>;
+        Update: Partial<AgeGateEventRow>;
+        Relationships: [];
+      };
+      age_gate_lockouts: {
+        Row: AgeGateLockoutRow;
+        Insert: Omit<AgeGateLockoutRow, 'created_at'> &
+          Partial<Pick<AgeGateLockoutRow, 'created_at'>>;
+        Update: Partial<AgeGateLockoutRow>;
         Relationships: [];
       };
       reading_engine_crash_reports: {
@@ -1850,7 +1999,8 @@ export interface Database {
       reports: {
         Row: ReportRow;
         Insert: {
-          reporter_id: string;
+          // Nullable in the database: system-raised reports have no reporter.
+          reporter_id: string | null;
           reported_user_id: string;
           reason_category: string;
           status?: string;
@@ -2282,6 +2432,26 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      dmca_disable_content: {
+        Args: { p_target_type: string; p_target_id: string };
+        Returns: unknown;
+      };
+      dmca_restore_content: {
+        Args: {
+          p_notice_id: string;
+          p_target_type: string;
+          p_target_id: string;
+        };
+        Returns: unknown;
+      };
+      dmca_orphaned_snapshots: {
+        Args: { p_limit: number };
+        Returns: {
+          target_type: DmcaTargetType;
+          target_id: string;
+          media_objects: unknown;
+        }[];
+      };
       transfer_audio_room_tip: {
         Args: {
           p_room_id: string;

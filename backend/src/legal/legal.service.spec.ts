@@ -73,7 +73,7 @@ describe('LegalService', () => {
       }).compile();
       const customService = moduleRef.get(LegalService);
 
-      expect(customService.getTermsOfService().lastUpdated).toBe('2026-07-01');
+      expect(customService.getTermsOfService().lastUpdated).toBe('2026-11-11');
     });
   });
 
@@ -125,7 +125,7 @@ describe('LegalService', () => {
       }).compile();
       const customService = moduleRef.get(LegalService);
 
-      expect(customService.getPrivacyPolicy().lastUpdated).toBe('2026-07-01');
+      expect(customService.getPrivacyPolicy().lastUpdated).toBe('2026-11-11');
     });
   });
 
@@ -185,6 +185,119 @@ describe('LegalService', () => {
       );
       expect(warnSpy).not.toHaveBeenCalled();
       warnSpy.mockRestore();
+    });
+  });
+  describe('age check and copyright wording (#2044)', () => {
+    const configWith = (values: Record<string, string>) =>
+      Test.createTestingModule({
+        providers: [
+          LegalService,
+          {
+            provide: ConfigService,
+            useValue: { get: vi.fn((key: string) => values[key]) },
+          },
+        ],
+      })
+        .compile()
+        .then((moduleRef) => moduleRef.get(LegalService));
+
+    it('tells users the age is checked and that blocked accounts are removed', () => {
+      const terms = service.getTermsOfService();
+      const account = terms.sections.find(
+        (section) => section.id === 'account',
+      );
+
+      expect(account?.content).toContain('at least 13 years of age');
+      expect(account?.content).toContain('date of birth');
+    });
+
+    it('explains what happens to a child account without promising to keep the date', async () => {
+      const custom = await configWith({
+        DMCA_AGENT_EMAIL: 'privacy@example.com',
+      });
+      const children = custom
+        .getPrivacyPolicy()
+        .sections.find((section) => section.id === 'children');
+
+      expect(children?.content).toContain('block the account immediately');
+      expect(children?.content).toContain('do not store the date');
+      expect(children?.content).toContain('delete the personal information');
+      expect(children?.content).toContain('privacy@example.com');
+    });
+
+    it('declares the date of birth as collected data', () => {
+      const collected = service
+        .getPrivacyPolicy()
+        .sections.find((section) => section.id === 'information-we-collect');
+      expect(collected?.content).toContain('date of birth');
+    });
+
+    it.each(['dmca', 'copyright', 'copyright-policy', ' DMCA '])(
+      'serves the copyright policy for %j',
+      (type) => {
+        expect(service.getDocument(type).title).toBe('Copyright Policy (DMCA)');
+      },
+    );
+
+    it('lists the statutory elements, the counter-notification route and the repeat infringer rule', () => {
+      const policy = service.getCopyrightPolicy();
+      const text = (id: string) =>
+        policy.sections.find((section) => section.id === id)?.content ?? '';
+
+      expect(policy.sections.map((section) => section.id)).toEqual([
+        'overview',
+        'filing',
+        'confirmation',
+        'counter-notification',
+        'repeat-infringers',
+        'misrepresentation',
+        'designated-agent',
+      ]);
+      expect(text('filing')).toContain('under penalty of perjury');
+      expect(text('filing')).toContain('electronic signature');
+      expect(text('confirmation')).toContain(
+        'Nothing is removed until you confirm',
+      );
+      expect(text('counter-notification')).toContain('10 business days');
+      expect(text('repeat-infringers')).toContain('three or more');
+      expect(text('misrepresentation')).toContain('512(f)');
+    });
+
+    it('publishes the configured designated agent and omits blank details', async () => {
+      const custom = await configWith({
+        DMCA_AGENT_NAME: ' Copyright Desk ',
+        DMCA_AGENT_EMAIL: 'agent@example.com',
+        DMCA_AGENT_POSTAL_ADDRESS: '1 High Street, London',
+        DMCA_AGENT_PHONE: '   ',
+      });
+      const agent = custom
+        .getCopyrightPolicy()
+        .sections.find((section) => section.id === 'designated-agent');
+
+      expect(agent?.content).toBe(
+        'Our designated agent for notices of claimed infringement is: Name: Copyright Desk; Email: agent@example.com; Postal address: 1 High Street, London.',
+      );
+    });
+
+    it('falls back to the legal mailbox when no agent is configured', async () => {
+      const custom = await configWith({});
+      const agent = custom
+        .getCopyrightPolicy()
+        .sections.find((section) => section.id === 'designated-agent');
+
+      expect(agent?.content).toBe(
+        'Our designated agent for notices of claimed infringement is: Email: legal@hellotalk.nexus.',
+      );
+    });
+
+    it('never uses an em dash in any legal text', () => {
+      for (const document of [
+        service.getTermsOfService(),
+        service.getPrivacyPolicy(),
+        service.getCopyrightPolicy(),
+      ]) {
+        expect(JSON.stringify(document)).not.toContain('\u2014');
+      }
     });
   });
 });

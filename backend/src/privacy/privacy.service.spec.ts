@@ -192,6 +192,25 @@ describe('PrivacyService', () => {
       );
     });
 
+    it('includes the stored date of birth and age-gate state in the data subject archive', async () => {
+      await service.requestArchive('user-1', {});
+
+      const profileColumns = mockFrom.mock.calls.flatMap((call, index) => {
+        if (call[0] !== 'users') return [];
+        const query = mockFrom.mock.results[index]?.value as {
+          select: { mock: { calls: unknown[][] } };
+        };
+        return query.select.mock.calls.map((args) => String(args[0]));
+      });
+
+      expect(
+        profileColumns.some((columns) => columns.includes('date_of_birth')),
+      ).toBe(true);
+      expect(
+        profileColumns.some((columns) => columns.includes('age_gate_status')),
+      ).toBe(true);
+    });
+
     it('reuses an unexpired ready archive without rebuilding private data', async () => {
       latestArchive = {
         id: '11111111-1111-4111-8111-111111111111',

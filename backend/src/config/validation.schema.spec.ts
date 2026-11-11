@@ -282,4 +282,56 @@ describe('validationSchema', () => {
       ).toBeUndefined();
     });
   });
+  describe('compliance settings', () => {
+    const base = { TRANSFER_SECRET: 'test-transfer-secret' };
+
+    it('leaves the age gate and DMCA agent optional', () => {
+      const { error, value } = validationSchema.validate(base);
+
+      expect(error).toBeUndefined();
+      expect(value.AGE_GATE_LEGACY_ENFORCEMENT_FROM).toBeUndefined();
+      expect(value.DMCA_AGENT_EMAIL).toBeUndefined();
+    });
+
+    it('accepts blank values so a copied .env.example boots', () => {
+      const { error } = validationSchema.validate({
+        ...base,
+        AGE_GATE_LEGACY_ENFORCEMENT_FROM: '',
+        DMCA_AGENT_NAME: '',
+        DMCA_AGENT_EMAIL: '',
+        DMCA_AGENT_POSTAL_ADDRESS: '',
+        DMCA_AGENT_PHONE: '',
+      });
+
+      expect(error).toBeUndefined();
+    });
+
+    it('accepts an ISO 8601 enforcement instant and rejects anything else', () => {
+      expect(
+        validationSchema.validate({
+          ...base,
+          AGE_GATE_LEGACY_ENFORCEMENT_FROM: '2027-01-01T00:00:00.000Z',
+        }).error,
+      ).toBeUndefined();
+      expect(
+        validationSchema.validate({
+          ...base,
+          AGE_GATE_LEGACY_ENFORCEMENT_FROM: 'next tuesday',
+        }).error,
+      ).toBeDefined();
+    });
+
+    it('requires the designated agent email to be an email address', () => {
+      expect(
+        validationSchema.validate({
+          ...base,
+          DMCA_AGENT_EMAIL: 'agent@example.com',
+        }).error,
+      ).toBeUndefined();
+      expect(
+        validationSchema.validate({ ...base, DMCA_AGENT_EMAIL: 'not-an-email' })
+          .error,
+      ).toBeDefined();
+    });
+  });
 });

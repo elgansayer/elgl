@@ -192,6 +192,25 @@ describe('UsersService', () => {
       expect(result).toMatchObject(mockProfile);
     });
 
+    it('should never expose private age-assurance columns', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: 'user-1',
+          display_name: 'HelloUser',
+          date_of_birth: '2010-01-01',
+          age_gate_status: 'passed',
+          age_gate_completed_at: '2026-11-11T09:00:00.000Z',
+        },
+        error: null,
+      });
+
+      const result = await service.getProfile('user-1');
+
+      expect(result).not.toHaveProperty('date_of_birth');
+      expect(result).not.toHaveProperty('age_gate_status');
+      expect(result).not.toHaveProperty('age_gate_completed_at');
+    });
+
     it('should throw NotFoundException instead of returning a mock profile when absent', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
@@ -729,7 +748,13 @@ describe('UsersService', () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({
-          data: { id: 'user-1', display_name: 'Ada' },
+          data: {
+            id: 'user-1',
+            display_name: 'Ada',
+            date_of_birth: '2010-01-01',
+            age_gate_status: 'passed',
+            age_gate_completed_at: '2026-11-11T09:00:00.000Z',
+          },
           error: null,
         }),
       };
@@ -765,6 +790,9 @@ describe('UsersService', () => {
         followingCount: 3,
         profileVisitsCount: 2,
       });
+      expect(stats).not.toHaveProperty('date_of_birth');
+      expect(stats).not.toHaveProperty('age_gate_status');
+      expect(stats).not.toHaveProperty('age_gate_completed_at');
       // moments and moment_comments are owned through user_id; there is no
       // author_id column (005_moments.sql).
       expect(moments.eq).toHaveBeenCalledWith('user_id', 'user-1');

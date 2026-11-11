@@ -104,4 +104,51 @@ describe('EmailService (unit)', () => {
       expect(loggedText).not.toContain('secret-reset-token');
     });
   });
+  describe('sendPlainTextEmail', () => {
+    it('sends a plain-text message from the configured sender', async () => {
+      await service.sendPlainTextEmail('person@example.com', 'Subject', 'Body');
+
+      expect(transporter.sendMail).toHaveBeenCalledWith({
+        from: expect.stringContaining('HelloTalk'),
+        to: 'person@example.com',
+        subject: 'Subject',
+        text: 'Body',
+      });
+    });
+
+    it.each([
+      ['subject', 'Hello\r\nBcc: attacker@example.com', 'person@example.com'],
+      ['recipient', 'Subject', 'person@example.com\nBcc: attacker@example.com'],
+    ])('refuses a %s containing a line break', async (_label, subject, to) => {
+      await expect(
+        service.sendPlainTextEmail(to, subject, 'Body'),
+      ).rejects.toThrow('Email headers must not contain line breaks');
+      expect(transporter.sendMail).not.toHaveBeenCalled();
+    });
+
+    it('does not log the recipient or the body', async () => {
+      const log = vi
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+
+      await service.sendPlainTextEmail(
+        'person@example.com',
+        'Subject',
+        'Secret body',
+      );
+
+      expect(JSON.stringify(log.mock.calls)).not.toContain(
+        'person@example.com',
+      );
+      expect(JSON.stringify(log.mock.calls)).not.toContain('Secret body');
+    });
+
+    it('propagates transport failures to the caller', async () => {
+      transporter.sendMail.mockRejectedValue(new Error('smtp down'));
+
+      await expect(
+        service.sendPlainTextEmail('person@example.com', 'Subject', 'Body'),
+      ).rejects.toThrow('smtp down');
+    });
+  });
 });

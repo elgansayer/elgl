@@ -918,6 +918,18 @@
               </a>
               <a class="nav-row" href="#">
                 <span class="left"
+                  ><span class="ico">©️</span
+                  ><span
+                    ><span class="label" style="display: block">Copyright notices</span
+                    ><span style="font-size: 11px; color: rgb(var(--text-secondary))"
+                      >See notices about your content and send a counter-notification.</span
+                    ></span
+                  ></span
+                >
+                <span class="chev">→</span>
+              </a>
+              <a class="nav-row" href="#">
+                <span class="left"
                   ><span class="ico">📋</span
                   ><span
                     ><span class="label" style="display: block">Privacy policy</span
@@ -965,8 +977,8 @@
       a representative "2 active" state. Notification settings mirrors the category-by-channel
       toggle matrix in <code>notification-settings.component.html</code>, reduced to 5
       representative categories rather than the full list. Privacy hub mirrors
-      <code>privacy-settings.component.html</code>'s nav-card list plus the muted-words quick
-      management panel (add input + remove action) as the danger-flavoured list the task asked for;
+      <code>privacy-settings.component.html</code>'s nav-card list (including the copyright-notices
+      entry) plus the muted-words quick management panel (add input + remove action) as the danger-flavoured list the task asked for;
       the "3 blocked" badge on that nav row stands in for the live count from
       <code>BlockedUsersService</code>. Omitted from all three: loading/error banner states, and the
       appearance/language/message-filter/GDPR/help destination pages themselves (each is reached via

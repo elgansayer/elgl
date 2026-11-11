@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { User } from '@supabase/supabase-js';
+import { AgeGateExempt } from '../age-gate/age-gate-exempt.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PrivacyService } from './privacy.service';
@@ -59,7 +60,10 @@ export class PrivacyController {
     };
   }
 
+  // Closing an account must stay possible for accounts that have not (or
+  // cannot) pass the age gate.
   @Post('delete-account')
+  @AgeGateExempt()
   @HttpCode(HttpStatus.ACCEPTED)
   @Throttle({ default: { limit: 3, ttl: 60 * 60 * 1000 } })
   async deleteAccount(

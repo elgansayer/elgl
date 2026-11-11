@@ -241,6 +241,15 @@
             </div>
 
             <!-- Content -->
+            @if (moment.dmca_disabled_at) {
+              <p
+                class="mt-2 text-sm italic text-text-muted"
+                role="note"
+                data-testid="moment-dmca-disabled"
+              >
+                {{ 'dmca.contentDisabled' | t }}
+              </p>
+            }
             @if (moment.text_content) {
               <div class="text-[15px] leading-relaxed text-text-primary mt-2">
                 <app-tokenised-text
@@ -408,6 +417,15 @@
                         }}</span>
                       </div>
                     </div>
+                    @if (comment.dmca_disabled_at) {
+                      <p
+                        class="text-sm italic text-text-muted"
+                        role="note"
+                        data-testid="comment-dmca-disabled"
+                      >
+                        {{ 'dmca.commentDisabled' | t }}
+                      </p>
+                    }
                     @if (comment.text_content) {
                       <p class="text-sm text-text-primary">{{ comment.text_content }}</p>
                     }

@@ -107,6 +107,7 @@ describe('PrivacySettingsComponent', () => {
       '/settings/blocks',
       '/settings/gdpr',
       '/settings/account/deletion',
+      '/settings/copyright-notices',
       '/privacy',
     ];
 

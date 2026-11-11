@@ -132,6 +132,12 @@ export class PrivacySettingsComponent {
       route: '/settings/account/deletion',
     },
     {
+      icon: '\u00A9\uFE0F',
+      titleKey: 'privacy.hub.copyrightNotices',
+      descriptionKey: 'privacy.hub.copyrightNoticesDesc',
+      route: '/settings/copyright-notices',
+    },
+    {
       icon: '\uD83D\uDCCB',
       titleKey: 'privacy.hub.privacyPolicy',
       descriptionKey: 'privacy.hub.privacyPolicyDesc',

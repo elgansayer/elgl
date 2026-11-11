@@ -85,4 +85,26 @@ describe('UpdateProfileDto', () => {
       true,
     );
   });
+  describe('self-declared age', () => {
+    it.each([13, 30, 120])('accepts %i', async (age) => {
+      const errors = await validate(
+        Object.assign(new UpdateProfileDto(), { age }),
+      );
+
+      expect(errors.filter((error) => error.property === 'age')).toHaveLength(
+        0,
+      );
+    });
+
+    it.each([0, 1, 12, -5, 121, 150, 12.5])(
+      'rejects %s so a declared child age is never accepted',
+      async (age) => {
+        const errors = await validate(
+          Object.assign(new UpdateProfileDto(), { age }),
+        );
+
+        expect(errors.some((error) => error.property === 'age')).toBe(true);
+      },
+    );
+  });
 });

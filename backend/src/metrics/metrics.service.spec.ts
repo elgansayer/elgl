@@ -658,4 +658,32 @@ describe('MetricsService', () => {
       );
     });
   });
+  describe('compliance metrics', () => {
+    it('counts age-gate decisions by outcome without identifiers', async () => {
+      service.recordAgeGateDecision('passed');
+      service.recordAgeGateDecision('blocked_under_age');
+      service.recordAgeGateDecision('blocked_under_age');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_compliance_age_gate_decisions_total{outcome="passed"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_compliance_age_gate_decisions_total{outcome="blocked_under_age"} 2',
+      );
+    });
+
+    it('counts DMCA flow events by name', async () => {
+      service.recordDmcaEvent('notice_received');
+      service.recordDmcaEvent('content_disabled');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_compliance_dmca_events_total{event="notice_received"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_compliance_dmca_events_total{event="content_disabled"} 1',
+      );
+    });
+  });
 });

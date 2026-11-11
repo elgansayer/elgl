@@ -25,6 +25,24 @@ import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { DataExportWorker } from './data-export.worker';
 
+/**
+ * Age-assurance columns are private to the account and are returned only by the
+ * age-gate endpoints. Profile and stats responses are built from `select('*')`,
+ * so they must be removed before the row leaves the service. COPPA data
+ * minimisation (migration 20261111120000) requires this.
+ */
+const PRIVATE_PROFILE_COLUMNS = [
+  'date_of_birth',
+  'age_gate_status',
+  'age_gate_completed_at',
+] as const;
+
+function removePrivateProfileColumns(row: object): void {
+  for (const column of PRIVATE_PROFILE_COLUMNS) {
+    Reflect.deleteProperty(row, column);
+  }
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -90,6 +108,7 @@ export class UsersService {
     }
 
     const profile = response.data as UserProfile;
+    removePrivateProfileColumns(profile);
 
     // Fetch related profile data concurrently to improve performance
     const [scoreRes, fcRes, fngRes, xpTotal] = await Promise.all([
@@ -1246,6 +1265,7 @@ export class UsersService {
     }
 
     const user = userRes.data as UserProfile;
+    removePrivateProfileColumns(user);
     const momentsCount = momentsCountRes.count ?? 0;
     const commentsCount = commentsCountRes.count ?? 0;
     const followersCount = followersCountRes.count ?? 0;

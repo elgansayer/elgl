@@ -21,6 +21,14 @@ export const settingsRoutes: Routes = [
     title: 'Account Settings - HelloTalk',
   },
   {
+    path: 'settings/copyright-notices',
+    loadComponent: () =>
+      import('../components/copyright-notices/copyright-notices.component').then(
+        (m) => m.CopyrightNoticesComponent,
+      ),
+    title: 'Copyright notices - HelloTalk',
+  },
+  {
     path: 'settings/notification',
     loadComponent: () =>
       import('../pages/settings/notification-settings/notification-settings.component').then(

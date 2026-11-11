@@ -15,6 +15,10 @@ import {
   Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  COPPA_MINIMUM_AGE,
+  MAXIMUM_PLAUSIBLE_AGE,
+} from '../../age-gate/age-gate.constants';
 import type { ProficiencyLevel } from '../proficiency-level';
 
 export class CoordinatesDto {
@@ -231,10 +235,12 @@ export class UpdateProfileDto {
   @MaxLength(200)
   mock_city?: string;
 
+  // Self-declared ages below the COPPA minimum are never accepted; the
+  // authoritative age comes from the date of birth recorded by the age gate.
   @IsOptional()
   @IsInt()
-  @Min(0)
-  @Max(150)
+  @Min(COPPA_MINIMUM_AGE)
+  @Max(MAXIMUM_PLAUSIBLE_AGE)
   age?: number;
 
   @IsOptional()

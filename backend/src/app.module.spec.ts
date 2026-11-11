@@ -12,6 +12,7 @@ type ProviderToken = unknown;
 const EXPECTED_MODULE_NAMES = [
   'SupabaseModule',
   'AuthModule',
+  'AgeGateModule',
   'UsersModule',
   'MediaModule',
   'DiscoveryModule',
@@ -41,6 +42,7 @@ const EXPECTED_MODULE_NAMES = [
   'StudyStreakModule',
   'HostDashboardModule',
   'PrivacyModule',
+  'DmcaModule',
   'AiConversationModule',
   'AchievementsModule',
   'CulturalModule',
