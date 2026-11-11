@@ -44,6 +44,10 @@ import {
 } from './interfaces/chat-message.interface';
 import { ChatService } from './chat.service';
 import { CentrifugoService } from './centrifugo.service';
+import {
+  MessageReceiptStatus,
+  ReadReceiptsService,
+} from './read-receipts.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
@@ -75,6 +79,7 @@ export class ChatController {
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
     private readonly personalChatEncryptionService: PersonalChatEncryptionService,
+    private readonly readReceiptsService: ReadReceiptsService,
   ) {}
 
   // Tighter than the app-wide default (10/60s, app.module.ts) - this mints a
@@ -356,6 +361,15 @@ export class ChatController {
     if (!user) return null;
     await this.chatService.updateMessageStatus(user.id, messageId, dto.status);
     return { success: true };
+  }
+
+  @Get('messages/:messageId/receipts')
+  async getMessageReceipts(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+  ): Promise<MessageReceiptStatus | null> {
+    if (!user) return null;
+    return await this.readReceiptsService.getReceiptStatus(messageId, user.id);
   }
 
   @Post('messages/:messageId/view')

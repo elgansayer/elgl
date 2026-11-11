@@ -83,6 +83,10 @@ export type UsersRow = {
   language_levels?: Record<string, string> | null;
   chat_preferences?: Record<string, unknown> | null;
   developer_api_key?: string | null;
+  developer_api_key_hash?: string | null;
+  developer_api_key_prefix?: string | null;
+  developer_api_key_last_four?: string | null;
+  developer_api_key_created_at?: string | null;
   deletion_requested_at?: string | null;
   deletion_grace_days?: number | null;
   is_deletion_pending?: boolean | null;
@@ -726,6 +730,39 @@ export interface Database {
         Update: Partial<UsersRow>;
         Relationships: [];
       };
+      learning_practice_attempts: {
+        Row: {
+          id: string;
+          user_id: string;
+          module: 'verb_conjugation' | 'ipa_alphabet';
+          item_id: string;
+          language_code: string;
+          submitted_answer: string;
+          correct: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          module: 'verb_conjugation' | 'ipa_alphabet';
+          item_id: string;
+          language_code: string;
+          submitted_answer: string;
+          correct: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          user_id: string;
+          module: 'verb_conjugation' | 'ipa_alphabet';
+          item_id: string;
+          language_code: string;
+          submitted_answer: string;
+          correct: boolean;
+          created_at: string;
+        }>;
+        Relationships: [];
+      };
       reading_engine_crash_reports: {
         Row: {
           id: string;
@@ -1209,6 +1246,44 @@ export interface Database {
           {
             foreignKeyName: 'chat_messages_sender_id_fkey';
             columns: ['sender_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      message_receipts: {
+        Row: {
+          id: string;
+          message_id: string;
+          user_id: string;
+          status: string;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          user_id: string;
+          status: string;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: string;
+          read_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'message_receipts_message_id_fkey';
+            columns: ['message_id'];
+            isOneToOne: false;
+            referencedRelation: 'chat_messages';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'message_receipts_user_id_fkey';
+            columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'users';
             referencedColumns: ['id'];
@@ -2282,6 +2357,13 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_corrector_score: {
+        Args: { p_user_id: string };
+        Returns: {
+          average_score: number | null;
+          total_ratings: number;
+        }[];
+      };
       transfer_audio_room_tip: {
         Args: {
           p_room_id: string;
@@ -2310,7 +2392,7 @@ export interface Database {
           earned_coins: number;
         }[];
       };
-      claim_daily_checkin_reward: {
+      claim_daily_checkin: {
         Args: {
           p_user_id: string;
           p_reward: number;
@@ -2323,6 +2405,10 @@ export interface Database {
       };
       increment_xp: {
         Args: { user_id: string; amount: number };
+        Returns: void;
+      };
+      record_developer_api_usage: {
+        Args: { p_user_id: string; p_latency_ms: number };
         Returns: void;
       };
       search_nearby_users: {

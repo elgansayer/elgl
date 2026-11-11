@@ -77,6 +77,27 @@
     </div>
   }
 
+  @if (showOfflineStatus()) {
+    <div
+      class="mt-2 flex flex-col gap-1 ps-3 pe-3 pt-1.5 pb-1.5 bg-warning/10 rounded-card border border-warning/30 text-xs text-text-primary"
+      role="status"
+      data-testid="chat-offline-status"
+    >
+      @if (!isOnline()) {
+        <p class="flex items-center gap-1.5" data-testid="chat-offline-warning">
+          <span aria-hidden="true">📡</span>
+          <span>{{ 'chatRoom.offlineWarning' | t }}</span>
+        </p>
+      }
+      @if (queuedCount() > 0) {
+        <p class="flex items-center gap-1.5" data-testid="chat-queued-count">
+          <span aria-hidden="true">🕒</span>
+          <span>{{ 'chatRoom.queuedMessages' | t: { count: queuedCount() } }}</span>
+        </p>
+      }
+    </div>
+  }
+
   @if (pendingUnlock()) {
     <div class="flex-1 flex flex-col items-center justify-center gap-3 text-center">
       <span class="text-4xl" aria-hidden="true">🔒</span>
@@ -223,84 +244,11 @@
                     {{ msg.created_at | date: 'shortTime' }}
                   </span>
                   @if (isOwnMessage(msg) && (msg.delivery_status || msg.is_read)) {
-                    <span class="inline-flex items-center flex-shrink-0">
-                      @if (
-                        msg.delivery_status === 'sent' || (!msg.delivery_status && msg.is_read)
-                      ) {
-                        <svg
-                          class="w-3.5 h-3.5 text-text-muted"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          [attr.aria-label]="'chatRoom.deliveryStatusSent' | t"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      }
-                      @if (msg.delivery_status === 'delivered') {
-                        <svg
-                          class="w-3.5 h-3.5 text-text-muted"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          [attr.aria-label]="'chatRoom.deliveryStatusDelivered' | t"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        <svg
-                          class="w-3.5 h-3.5 -ms-2 text-text-muted"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      }
-                      @if (msg.delivery_status === 'read') {
-                        <svg
-                          class="w-3.5 h-3.5 text-secondary-ink"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          [attr.aria-label]="'chatRoom.deliveryStatusRead' | t"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        <svg
-                          class="w-3.5 h-3.5 -ms-2 text-secondary-ink"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      }
-                    </span>
+                    <app-read-receipt
+                      [messageId]="msg.id"
+                      [deliveryStatus]="msg.delivery_status || (msg.is_read ? 'read' : 'sent')"
+                      [isGroup]="participants().length > 1"
+                    />
                   }
                 </p>
                 @if (msg.reply_to_id) {

@@ -224,4 +224,75 @@ describe('AudioRoomsStore host tips', () => {
       }),
     );
   });
+
+  describe('speaker activity and audio equalizer updates', () => {
+    beforeEach(() => {
+      store.stageParticipants.set([
+        {
+          user_id: 'user-123456',
+          display_name: 'Alice',
+          avatar_url: null,
+          isSpeaking: false,
+          isMuted: false,
+          isHost: true,
+          isCoHost: false,
+        },
+        {
+          user_id: 'user-789012',
+          display_name: 'Bob',
+          avatar_url: null,
+          isSpeaking: false,
+          isMuted: false,
+          isHost: false,
+          isCoHost: true,
+        },
+      ]);
+    });
+
+    it('marks speaker active when identity matches exact user_id', () => {
+      store.updateSpeakerActivity(['user-123456']);
+      const participants = store.stageParticipants();
+
+      expect(participants[0].isSpeaking).toBe(true);
+      expect(participants[1].isSpeaking).toBe(false);
+    });
+
+    it('marks speaker active when LiveKit identity includes display name and user_id suffix', () => {
+      store.updateSpeakerActivity(['Bob_user-7']);
+      const participants = store.stageParticipants();
+
+      expect(participants[0].isSpeaking).toBe(false);
+      expect(participants[1].isSpeaking).toBe(true);
+    });
+
+    it('clears active speaking state when identity is absent from updated active list', () => {
+      store.updateSpeakerActivity(['user-123456']);
+      expect(store.stageParticipants()[0].isSpeaking).toBe(true);
+
+      store.updateSpeakerActivity([]);
+      expect(store.stageParticipants()[0].isSpeaking).toBe(false);
+    });
+
+    it('updates speaking state from Centrifugo speaker_speaking realtime events', () => {
+      const handleRealtime = (
+        store as unknown as { handleCentrifugoMessage: (data: unknown) => void }
+      ).handleCentrifugoMessage.bind(store);
+
+      handleRealtime({
+        type: 'speaker_speaking',
+        target_user_id: 'user-789012',
+        is_speaking: true,
+      });
+
+      expect(store.stageParticipants()[1].isSpeaking).toBe(true);
+
+      handleRealtime({
+        type: 'speaker_speaking',
+        target_user_id: 'user-789012',
+        is_speaking: false,
+      });
+
+      expect(store.stageParticipants()[1].isSpeaking).toBe(false);
+    });
+  });
 });

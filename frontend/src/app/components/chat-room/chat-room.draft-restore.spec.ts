@@ -95,6 +95,7 @@ describe('ChatRoomComponent draft restore and persistence', () => {
         {
           provide: ChatService,
           useValue: {
+            queuedCount: signal(0),
             getRooms,
             getGroupMembers: vi.fn().mockResolvedValue([]),
             getMessages,

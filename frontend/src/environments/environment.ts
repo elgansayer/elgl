@@ -9,9 +9,6 @@ export const environment = {
   apiUrl: 'http://127.0.0.1:3000/api',
   centrifugoUrl: 'ws://localhost:8000/connection/websocket',
   liveKitUrl: 'ws://localhost:7880',
-  turnServerUrl: 'turn:turn.example.com:3478',
-  turnUsername: 'guest',
-  turnPassword: 'somepassword',
   firebase: {
     apiKey: 'YOUR_API_KEY',
     authDomain: 'YOUR_AUTH_DOMAIN',
