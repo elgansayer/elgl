@@ -20,7 +20,7 @@ import { UserQuickActionsComponent } from '../user-quick-actions/user-quick-acti
     <div class="flex h-full flex-col overflow-y-auto bg-surface-500 text-text-primary">
       <div class="sticky top-0 z-10 flex items-center gap-4 border-b border-surface-100 bg-surface-500/90 p-4 backdrop-blur">
         <button hlmBtn type="button" variant="ghost" size="icon-touch" (click)="goBack()" [attr.aria-label]="'common.back' | t">
-          <span class="text-xl" aria-hidden="true">←</span>
+          <span class="text-xl inline-block rtl:rotate-180" aria-hidden="true">←</span>
         </button>
         <h1 class="text-lg font-bold">{{ titleKey() | t }}</h1>
       </div>
@@ -47,7 +47,7 @@ import { UserQuickActionsComponent } from '../user-quick-actions/user-quick-acti
                     @if (user.native_languages?.length || user.target_languages?.length) {
                       <p class="truncate text-xs text-text-secondary">
                         {{ (user.native_languages || []).join(', ') | uppercase }}
-                        @if (user.target_languages?.length) { → {{ (user.target_languages || []).join(', ') | uppercase }} }
+                        @if (user.target_languages?.length) { <span aria-hidden="true" class="inline-block rtl:rotate-180">→</span> {{ (user.target_languages || []).join(', ') | uppercase }} }
                       </p>
                     }
                   </div>

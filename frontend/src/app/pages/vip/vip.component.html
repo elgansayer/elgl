@@ -36,7 +36,7 @@
             [customClass]="plan.isPopular ? 'ring-2 ring-primary relative' : ''"
           >
             @if (plan.isPopular) {
-              <div class="absolute -top-3 start-1/2 -translate-x-1/2">
+              <div class="absolute inset-x-0 -top-3 mx-auto w-fit">
                 <app-pill colour="primary" size="sm" [label]="'vip.mostPopular' | t" />
               </div>
             }

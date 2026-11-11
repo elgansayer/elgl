@@ -1,7 +1,7 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
     <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
-      <span class="text-xl" aria-hidden="true">←</span>
+      <span class="text-xl inline-block rtl:rotate-180" aria-hidden="true">←</span>
     </button>
     <h1 class="app-header-title">{{ 'dataStorage.pageTitle' | t }}</h1>
     <div class="w-10" aria-hidden="true"></div>

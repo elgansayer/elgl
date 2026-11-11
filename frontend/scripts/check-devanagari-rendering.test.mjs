@@ -26,8 +26,8 @@ test('document language and direction remain locale-owned and theme-independent'
 
   assert.ok(method, 'Expected I18nService.applyDocumentRtlAndLocale() to remain present');
   assert.match(method, /document\.documentElement\.lang\s*=\s*lang/);
-  assert.match(method, /\['ar', 'he', 'fa', 'ur'\]\.includes\(lang\.toLowerCase\(\)\)/);
-  assert.match(method, /document\.documentElement\.dir\s*=\s*isRtlLang\s*\?\s*'rtl'\s*:\s*'ltr'/);
+  assert.match(method, /const direction = resolveTextDirection\(lang\)/);
+  assert.match(method, /document\.documentElement\.dir\s*=\s*direction/);
   assert.doesNotMatch(method, /classList|dark|theme/i);
 });
 

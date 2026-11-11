@@ -87,4 +87,17 @@ describe('Tailwind logical layout contract', () => {
     expect(rtlCheck).toContain('tailwind.config.js');
     expect(lintCheck).toContain('check:rtl-logical');
   });
+
+  it('runs the whole-tree RTL audit beside the physical utility check', () => {
+    const packageJson = JSON.parse(readFrontendFile('package.json')) as {
+      scripts?: Record<string, string>;
+    };
+    const scripts = packageJson.scripts ?? {};
+
+    expect(scripts['check:rtl-audit']).toBe('node scripts/check-rtl-audit.mjs');
+    expect(scripts['test:rtl-audit']).toBe('node --test scripts/check-rtl-audit.test.mjs');
+    expect(scripts['lint:check']).toContain('check:rtl-logical && npm run check:rtl-audit');
+    expect(scripts['lint']).toContain('check:rtl-logical && npm run check:rtl-audit');
+    expect(scripts['pretest']).toContain('npm run test:rtl-audit');
+  });
 });

@@ -35,6 +35,7 @@
         alt="{{ 'avatar.preview' | t }}"
         (load)="onImageLoad($event)"
       />
+      <!-- rtl-physical-ok: the crop box is placed in image pixels measured from the left edge, and the picture never mirrors -->
       <div
         class="absolute border-2 border-white pointer-events-none"
         [style.left.px]="cropX()"

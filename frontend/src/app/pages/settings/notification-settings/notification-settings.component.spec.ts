@@ -186,4 +186,26 @@ describe('NotificationSettingsComponent', () => {
       expect(control.getAttribute('aria-checked')).toMatch(/true|false/);
     }
   });
+
+  it('positions each switch knob with direction-neutral inline-start margins', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const switches = Array.from(element.querySelectorAll<HTMLElement>('[role="switch"]'));
+    const states = switches.map((control) => control.getAttribute('aria-checked'));
+
+    expect(switches.length).toBe(8);
+    // The fixture preferences exercise both the checked and the unchecked knob position.
+    expect(states).toContain('true');
+    expect(states).toContain('false');
+    for (const control of switches) {
+      const knob = control.querySelector('span');
+      const checked = control.getAttribute('aria-checked') === 'true';
+
+      expect(knob?.classList.contains('ms-6')).toBe(checked);
+      expect(knob?.classList.contains('ms-1')).toBe(!checked);
+      // translate-x-* is a physical offset: in RTL it would push the knob off the track.
+      expect(knob?.className).not.toMatch(/translate-x/);
+    }
+  });
 });

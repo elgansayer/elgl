@@ -15,9 +15,11 @@ Application UI must use CSS logical directions rather than physical left/right s
 
 The canonical `frontend` static-analysis path runs `npm run check:rtl-logical`. That guard scans both application sources and `tailwind.config.js`. It rejects physical Tailwind utilities such as `pl-*`, `pr-*`, `ml-*`, `mr-*`, `left-*`, and `right-*`, as well as physical CSS declarations including `margin-left`, `margin-right`, `padding-left`, and `padding-right` outside test fixtures.
 
+`npm run check:rtl-audit` complements it for the families that regex cannot see: `text-left`, `rounded-l`, `float-left`, `translate-x-*` and `start-1/2` centring, physical style bindings and stylesheet declarations, and arrow glyphs or directional Lucide icons without an `rtl:` mirror. Its rules, the `rtl-physical-ok` opt-out and the audit findings are in `docs/rtl-logical-properties-architecture.md`.
+
 ## Verification
 
-`frontend/src/app/tailwind-logical.contract.spec.ts` protects the installation/configuration boundary by asserting that Tailwind and its PostCSS integration remain installed, global styles continue to load Tailwind and the project config, inline safe-area utilities remain logical and RTL-aware, the Angular source globs remain configured, and `lint:check` continues to run the logical-direction guard.
+`frontend/src/app/tailwind-logical.contract.spec.ts` protects the installation/configuration boundary by asserting that Tailwind and its PostCSS integration remain installed, global styles continue to load Tailwind and the project config, inline safe-area utilities remain logical and RTL-aware, the Angular source globs remain configured, and `lint:check` continues to run the logical-direction guard and the whole-tree RTL audit.
 
 Normal pull-request CI remains authoritative for frontend unit tests, static analysis, production build, RTL checks, design-system governance, and visual contracts.
 

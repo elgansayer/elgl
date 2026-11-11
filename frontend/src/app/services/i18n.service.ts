@@ -1,7 +1,9 @@
+import { Directionality } from '@angular/cdk/bidi';
 import { DOCUMENT } from '@angular/common';
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { resolveTextDirection } from './text-direction';
 
 export interface LanguageInfo {
   code: string;
@@ -17,10 +19,7 @@ export interface LanguageInfo {
 export class I18nService {
   readonly currentLang = signal<string>('en-GB');
 
-  readonly direction = computed(() => {
-    const lang = this.currentLang().toLowerCase();
-    return ['ar', 'he', 'fa', 'ur'].includes(lang) ? 'rtl' : 'ltr';
-  });
+  readonly direction = computed(() => resolveTextDirection(this.currentLang()));
 
   readonly availableLanguages: LanguageInfo[] = [
     {
@@ -44,7 +43,7 @@ export class I18nService {
     { code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵', isRtl: false },
     { code: 'zh', name: 'Mandarin Chinese', nativeName: '中文 (简体)', flag: '🇨🇳', isRtl: false },
     { code: 'he', name: 'Hebrew', nativeName: 'עברית', flag: '🇮🇱', isRtl: true },
-    { code: 'fa', name: 'Persian', nativeName: 'פארסי / فارسی', flag: '🇮🇷', isRtl: true },
+    { code: 'fa', name: 'Persian', nativeName: 'فارسی', flag: '🇮🇷', isRtl: true },
     { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺', isRtl: false },
     { code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹', isRtl: false },
     { code: 'ko', name: 'Korean', nativeName: '한국어', flag: '🇰🇷', isRtl: false },
@@ -2725,14 +2724,23 @@ export class I18nService {
 
   private readonly authService = inject(AuthService);
   private readonly document = inject(DOCUMENT);
+  private readonly directionality = inject(Directionality);
 
   private applyDocumentRtlAndLocale(lang: string): void {
     const document = this.document;
     if (!document?.documentElement) return;
 
+    const direction = resolveTextDirection(lang);
     document.documentElement.lang = lang;
-    const isRtlLang = ['ar', 'he', 'fa', 'ur'].includes(lang.toLowerCase());
-    document.documentElement.dir = isRtlLang ? 'rtl' : 'ltr';
+    document.documentElement.dir = direction;
+
+    // The CDK reads <html dir> once, when Directionality is first created, so a
+    // runtime language switch would leave Spartan Brain tabs, radio groups,
+    // sliders and every overlay laid out for the previous direction.
+    if (this.directionality.value !== direction) {
+      this.directionality.valueSignal.set(direction);
+      this.directionality.change.emit(direction);
+    }
   }
 
   async setLanguage(langCode: string): Promise<void> {

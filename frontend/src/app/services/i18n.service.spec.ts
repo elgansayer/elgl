@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nService } from './i18n.service';
 import { AuthService } from './auth.service';
+import { resolveTextDirection } from './text-direction';
 import { TranslatePipe } from './translate.pipe';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -165,6 +166,25 @@ describe('I18nService', () => {
       expect(enGB?.isRtl).toBe(false);
     });
 
+    it('should keep every isRtl flag aligned with the resolved layout direction', () => {
+      for (const lang of service.availableLanguages) {
+        expect(lang.isRtl, lang.code).toBe(resolveTextDirection(lang.code) === 'rtl');
+      }
+    });
+
+    it('should not mix Hebrew and Arabic script inside one native language name', () => {
+      for (const lang of service.availableLanguages) {
+        const mixedScripts =
+          /\p{Script=Hebrew}/u.test(lang.nativeName) && /\p{Script=Arabic}/u.test(lang.nativeName);
+        expect(mixedScripts, `${lang.code}: ${lang.nativeName}`).toBe(false);
+      }
+    });
+
+    it('should name Persian in Arabic script only', () => {
+      const persian = service.availableLanguages.find((lang) => lang.code === 'fa');
+      expect(persian?.nativeName).toBe('فارسی');
+    });
+
     it('should have unique language codes', () => {
       const codes = service.availableLanguages.map((lang) => lang.code);
       expect(new Set(codes).size).toBe(codes.length);
@@ -266,6 +286,24 @@ describe('I18nService', () => {
         expect(document.documentElement.dir).toBe('rtl');
       }
     }
+  });
+
+  it.each(['ar-SA', 'he-IL', 'fa-IR', 'ur-PK', 'ar_EG'])(
+    'should lay out the region-tagged locale %s as RTL',
+    async (code) => {
+      localStorage.setItem(`hellotalk_dict_${code}`, JSON.stringify({}));
+      await service.setLanguage(code);
+      expect(service.direction()).toBe('rtl');
+      expect(document.documentElement.dir).toBe('rtl');
+      expect(document.documentElement.lang).toBe(code);
+    },
+  );
+
+  it('should keep a region-tagged LTR locale as LTR', async () => {
+    localStorage.setItem('hellotalk_dict_fr-FR', JSON.stringify({}));
+    await service.setLanguage('fr-FR');
+    expect(service.direction()).toBe('ltr');
+    expect(document.documentElement.dir).toBe('ltr');
   });
 
   it('should reuse cached translation dictionary from localStorage when available', async () => {

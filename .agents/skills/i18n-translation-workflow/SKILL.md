@@ -69,6 +69,10 @@ Hebrew, and Persian:
 | `left-`, `right-` | `start-`, `end-` |
 | `border-l`, `border-r` | `border-s`, `border-e` |
 | `text-left`, `text-right` | `text-start`, `text-end` |
+| `rounded-l-*`, `rounded-r-*`, `rounded-tl-*`, `rounded-br-*` | `rounded-s-*`, `rounded-e-*`, `rounded-ss-*`, `rounded-ee-*` |
+| `float-left`, `float-right`, `scroll-ml-*`, `scroll-pr-*` | `float-start`, `float-end`, `scroll-ms-*`, `scroll-pe-*` |
+| `translate-x-*` to move a switch knob | resting offset with `ms-*` or `me-*` (no transform) |
+| `start-1/2 -translate-x-1/2` to centre | `inset-x-0 mx-auto w-fit` |
 
 Prefer `gap-*` over `space-*` too - `space-*` is direction-sensitive in ways that don't always mirror correctly.
 
@@ -76,9 +80,32 @@ Changing `I18nService.currentLang` to an RTL language (`ar`, `he`, `fa`, `ur` ar
 `availableLanguages`) flips `document` directionality (`dir="rtl"`) - verify any new component still reads
 correctly mirrored.
 
+### Document direction
+
+`resolveTextDirection()` (`frontend/src/app/services/text-direction.ts`) is the only place that maps a language
+tag to `ltr` or `rtl`. It reads the primary subtag, so `ar-SA` and `he-IL` are RTL. `I18nService` uses it for
+`direction()` and for `<html dir>`, and it pushes the result into the CDK `Directionality` service, which would
+otherwise keep the direction it read at start-up and leave Spartan Brain tabs, sliders and overlays un-mirrored
+after a runtime language switch. To add an RTL interface language, add its subtag there and flag its
+`availableLanguages` entry `isRtl: true`; a spec fails when the two disagree. Never write another
+`['ar', 'he', ...]` list.
+
+### Directional glyphs, icons, keys and gestures
+
+- Back, forward, previous, next and disclosure arrows (`←`, `→`, `lucideArrowLeft`, `lucideChevronRight`) mirror
+  with `rtl:rotate-180`. A `span` needs `inline-block` for the transform to apply. Angle quotes mirror by
+  themselves; play, pause and other media controls never mirror.
+- Handlers that turn ArrowLeft, ArrowRight or a horizontal swipe into next or previous read
+  `I18nService.direction()`: next is ArrowLeft and a rightward drag in RTL.
+- A switch knob rests with `ms-1` (off) or `ms-6` (on) instead of a `translate-x-*` offset.
+- Coordinates that are physical by design (an image crop box, a canvas) opt out with `rtl-physical-ok` and a reason.
+- Full audit findings and the gate rules: `docs/rtl-logical-properties-architecture.md`.
+
 ## Auditing for Violations
 
-`npm run check:rtl-logical` (frontend) fails the build on any physical-direction utility - run it, alongside the
-frontend completion gate, before marking i18n/RTL-touching work complete. There is no automated "no raw text in
+`npm run check:rtl-logical` (frontend) fails the build on any physical-direction utility, and
+`npm run check:rtl-audit` fails on the families that regex cannot see (`text-left`, `rounded-l`, `float-left`,
+`translate-x-*`, `start-1/2` centring, physical style bindings and stylesheet declarations, and arrows without an
+`rtl:` mirror) - run both, alongside the frontend completion gate, before marking i18n/RTL-touching work complete. There is no automated "no raw text in
 templates" check yet, so manually scan new/changed `*.html`/`*.ts` files for literal user-facing strings that
 aren't inside a translation key, an `aria-label` bound to a translated value, a log message, or a code comment.

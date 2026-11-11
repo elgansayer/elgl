@@ -70,7 +70,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             [disabled]="page() <= 1"
             (click)="prevPage()"
           >
-            &larr;
+            <span class="inline-block rtl:rotate-180">&larr;</span>
           </button>
           <span class="text-sm">{{ page() }} / {{ totalPages() }}</span>
           <button
@@ -79,7 +79,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             [disabled]="(articles.value()?.items?.length ?? 0) < 10"
             (click)="nextPage()"
           >
-            &rarr;
+            <span class="inline-block rtl:rotate-180">&rarr;</span>
           </button>
         </div>
       } @else {

@@ -194,7 +194,7 @@
       "claudeDesignPath": "screens/discovery.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6140-global-search-relay-tokens-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1715-discovery-matchmaking-completion-2026-10-30",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6140-global-search-relay-tokens-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1715-discovery-matchmaking-completion-2026-10-30; issue-2041-rtl-logical-audit-2026-11-11 (recommended-for-you previous and next arrows mirror in RTL via rtl:rotate-180; the LTR visual contract is unchanged)",
       "requiredStates": [
         "light",
         "dark",
@@ -235,7 +235,7 @@
       "claudeDesignPath": "screens/settings.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23; issue-1463-presence-privacy-toggles-2026-08-26; issue-402-vip-accent-entitlement-2026-08-20; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); pr-9586-chat-settings-save-reliability-2026-10-23 (save-failed role=alert state, toggles disabled while saving; preview reconciliation pending #9467); issue-1736-single-owner-ui-language-2026-10-30 (Appearance language picker replaced by a navigation row to /settings/language; the language radio group re-syncs after a rolled-back switch and a persistent polite status announces the applied language; destination pages are not depicted in the preview)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23; issue-1463-presence-privacy-toggles-2026-08-26; issue-402-vip-accent-entitlement-2026-08-20; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); pr-9586-chat-settings-save-reliability-2026-10-23 (save-failed role=alert state, toggles disabled while saving; preview reconciliation pending #9467); issue-1736-single-owner-ui-language-2026-10-30 (Appearance language picker replaced by a navigation row to /settings/language; the language radio group re-syncs after a rolled-back switch and a persistent polite status announces the applied language; destination pages are not depicted in the preview); issue-2041-rtl-logical-audit-2026-11-11 (back and disclosure arrows mirror in RTL; chat and notification switch knobs rest at the inline start or end with margin-inline-start instead of a physical translate-x; the LTR visual contract is unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -254,7 +254,7 @@
       "claudeDesignPath": "screens/monetisation.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-2041-rtl-logical-audit-2026-11-11 (escrow, escrow detail and subscription back arrows mirror in RTL; the VIP most-popular badge centres with inset-x-0 mx-auto instead of start-1/2 plus translate-x; the LTR visual contract is unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -269,7 +269,7 @@
       "claudeDesignPath": "screens/moderation.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1058-admin-user-management-fail-closed-2026-08-22; admin-users-resource-error-state-guard-2026-08-22; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1058-admin-user-management-fail-closed-2026-08-22; admin-users-resource-error-state-guard-2026-08-22; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-2041-rtl-logical-audit-2026-11-11 (block management and admin blocks arrows mirror in RTL; the LTR visual contract is unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -284,7 +284,7 @@
       "claudeDesignPath": "screens/calls.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-2041-rtl-logical-audit-2026-11-11 (the caller to receiver arrow in call logs mirrors in RTL; the LTR visual contract is unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -343,7 +343,7 @@
       "claudeDesignPath": "screens/more.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1478-localised-page-states (translation keys preserve the existing en-GB loading and error presentation); issue-1805-dynamic-legal-route (canonical and alias routes share the existing legal viewer, loading, error and retry presentation, so the visual contract is unchanged)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1478-localised-page-states (translation keys preserve the existing en-GB loading and error presentation); issue-1805-dynamic-legal-route (canonical and alias routes share the existing legal viewer, loading, error and retry presentation, so the visual contract is unchanged); issue-2041-rtl-logical-audit-2026-11-11 (help centre pagination arrows mirror in RTL; the LTR visual contract is unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -522,7 +522,7 @@
       "claudeDesignPath": "features/profile-identity.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1760-favourites-bookmarking (safe navigation and correction visual diff binding refinements preserve the existing favourites review UI; the profile-identity visual contract is unchanged); issue-1195-favourites-merge (favourites component formatting and safe navigation preserve the existing review UI; the profile-identity visual contract is unchanged); issue-1780-render-visual-charts (reactive chart signal options and screen-reader accessible fallback markup preserve the existing stats visual presentation; the profile-identity visual contract is unchanged); issue-1788-stats-audit (screen-reader accessible fallback list and reactive chart signals preserve existing stats visual presentation; visual contract is unchanged); issue-1842-profile-audio-unavailable-state-2026-11-03",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1760-favourites-bookmarking (safe navigation and correction visual diff binding refinements preserve the existing favourites review UI; the profile-identity visual contract is unchanged); issue-1195-favourites-merge (favourites component formatting and safe navigation preserve the existing review UI; the profile-identity visual contract is unchanged); issue-1780-render-visual-charts (reactive chart signal options and screen-reader accessible fallback markup preserve the existing stats visual presentation; the profile-identity visual contract is unchanged); issue-1788-stats-audit (screen-reader accessible fallback list and reactive chart signals preserve existing stats visual presentation; visual contract is unchanged); issue-1842-profile-audio-unavailable-state-2026-11-03; issue-2041-rtl-logical-audit-2026-11-11 (follow list and visitor log arrows mirror in RTL and the avatar crop box is documented as intentionally physical image pixels; the LTR visual contract is unchanged)",
       "requiredStates": ["light", "dark", "empty", "loading", "error", "390px", "rtl"]
     },
     {
@@ -563,7 +563,7 @@
       "claudeDesignPath": "features/discovery-community.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged); issue-1663-notification-inbox-tab-reconciliation (per-tab notification unread reconciliation and decrement logic only; discovery and community visual contract is unchanged); issue-1789-liked-by-runtime-hardening (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual states; the visual contract is unchanged); issue-1788-liked-by-audit (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual presentation; visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged); issue-1663-notification-inbox-tab-reconciliation (per-tab notification unread reconciliation and decrement logic only; discovery and community visual contract is unchanged); issue-1789-liked-by-runtime-hardening (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual states; the visual contract is unchanged); issue-1788-liked-by-audit (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual presentation; visual contract is unchanged); issue-2041-rtl-logical-audit-2026-11-11 (lightbox chevrons, arrow keys and swipe direction mirror in RTL and its indicator strip centres with inset-x-0 mx-auto; events calendar, liked-by, notifications inbox and discovery card arrows mirror in RTL; the LTR visual contract is unchanged)",
       "requiredStates": [
         "light",
         "dark",
@@ -612,7 +612,7 @@
       "claudeDesignPath": "features/learning.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1792-flashcard-review-interactions (in-flight save disabling, accessibility attributes, and audio lifecycle cleanup preserve the existing review layout; the visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1792-flashcard-review-interactions (in-flight save disabling, accessibility attributes, and audio lifecycle cleanup preserve the existing review layout; the visual contract is unchanged); issue-2041-rtl-logical-audit-2026-11-11 (flashcard deck and reading engine back arrows mirror in RTL and reading engine tab arrow keys swap in RTL; the LTR visual contract is unchanged)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",
@@ -691,7 +691,7 @@
       "claudeDesignPath": "features/settings-system.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1478-localised-viewer-copy (translation keys and RTL-safe vertical gaps preserve the existing en-GB visual contract); issue-1736-single-owner-ui-language-2026-10-30 (language selectors apply changes through UiLanguagePreferenceService: failure role=alert state, options disabled while a change is pending, aria-current on the active language; specimens updated)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1478-localised-viewer-copy (translation keys and RTL-safe vertical gaps preserve the existing en-GB visual contract); issue-1736-single-owner-ui-language-2026-10-30 (language selectors apply changes through UiLanguagePreferenceService: failure role=alert state, options disabled while a change is pending, aria-current on the active language; specimens updated); issue-2041-rtl-logical-audit-2026-11-11 (the GDPR back arrow mirrors in RTL; the LTR visual contract is unchanged)",
       "requiredStates": [
         "light",
         "dark",
@@ -723,7 +723,7 @@
       "claudeDesignPath": "features/admin-console.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-2041-rtl-logical-audit-2026-11-11 (the user detail back arrow mirrors in RTL; the LTR visual contract is unchanged)",
       "requiredStates": ["light", "dark", "empty", "loading", "error", "wide", "rtl"]
     },
     {

@@ -264,7 +264,7 @@ const DECK_ICONS = [
                   (click)="activeView.set('list')"
                   class="rounded-app border border-surface-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-text-secondary"
                 >
-                  ← {{ 'deck.backBtn' | t }}
+                  <span aria-hidden="true" class="inline-block rtl:rotate-180">←</span> {{ 'deck.backBtn' | t }}
                 </button>
                 <button
                   hlmBtn

@@ -262,6 +262,19 @@ describe('RecommendedForYouCarouselComponent', () => {
     );
   });
 
+  it('mirrors the previous and next arrow glyphs in RTL', () => {
+    const arrows = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('.recommended-control > span[aria-hidden="true"]'),
+    );
+
+    expect(arrows.map((arrow) => arrow.textContent)).toEqual(['←', '→']);
+    for (const arrow of arrows) {
+      // Arrow glyphs are not Bidi_Mirrored, so each one flips itself under an RTL document.
+      expect(arrow.classList.contains('rtl:rotate-180')).toBe(true);
+      expect(arrow.classList.contains('inline-block')).toBe(true);
+    }
+  });
+
   it('shows an empty state when there are no eligible recommendations', async () => {
     getRecommendations.mockResolvedValueOnce([]);
     await component.load();

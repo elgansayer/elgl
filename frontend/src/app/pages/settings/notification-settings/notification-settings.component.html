@@ -70,9 +70,9 @@
               (click)="toggle(cat.key, ch)"
             >
               <span
-                class="inline-block h-4 w-4 transform rounded-full bg-on-fill transition-transform"
-                [class.translate-x-6]="toggleValue(cat.key, ch)"
-                [class.translate-x-1]="!toggleValue(cat.key, ch)"
+                class="inline-block h-4 w-4 rounded-full bg-on-fill transition-[margin-inline-start]"
+                [class.ms-6]="toggleValue(cat.key, ch)"
+                [class.ms-1]="!toggleValue(cat.key, ch)"
               ></span>
             </button>
           </div>

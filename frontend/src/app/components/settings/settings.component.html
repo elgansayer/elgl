@@ -1,7 +1,7 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
     <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
-      <span class="text-xl">←</span>
+      <span class="text-xl inline-block rtl:rotate-180">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.title' | t }}</h1>
     <div class="w-10"></div>
@@ -36,7 +36,7 @@
             [attr.aria-label]="'settings.mySubscription' | t"
           >
             <span>{{ 'settings.mySubscription' | t }}</span>
-            <span class="text-text-secondary" aria-hidden="true">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180" aria-hidden="true">→</span>
           </button>
         </div>
       </section>
@@ -57,7 +57,7 @@
                 'settings.appearanceSection' | t
               }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
         </div>
       </section>
@@ -80,7 +80,7 @@
                 'chat_settings.title' | t
               }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
           <a
             routerLink="/settings/message-filters"
@@ -93,7 +93,7 @@
                 'settings.messageFiltersSection' | t
               }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
         </div>
       </section>
@@ -113,7 +113,7 @@
                 'settings.languageSelectLabel' | t
               }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
         </div>
       </section>
@@ -133,7 +133,7 @@
               <span class="text-xl">🔒</span>
               <span class="text-sm font-medium text-text-primary">{{ 'privacy.title' | t }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
         </div>
       </section>
@@ -157,7 +157,7 @@
                 'settings.messageFilter.title' | t
               }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
 
           <label
@@ -371,7 +371,7 @@
                 'settings.notificationsSection' | t
               }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
         </div>
       </section>
@@ -485,7 +485,7 @@
                 </span>
               }
             </div>
-            <span class="text-text-secondary">&rarr;</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">&rarr;</span>
           </a>
         </div>
       </section>
@@ -513,7 +513,7 @@
                 </p>
               </div>
             </div>
-            <span class="text-text-secondary">&rarr;</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">&rarr;</span>
           </a>
 
           <div class="ps-4 pe-4 pt-4 pb-4 space-y-4">
@@ -548,7 +548,7 @@
                 'settings.termsOfService' | t
               }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
           <a
             routerLink="/privacy"
@@ -560,7 +560,7 @@
                 'settings.privacyPolicy' | t
               }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
           <a
             routerLink="/support"
@@ -570,7 +570,7 @@
               <span class="text-xl">ℹ️</span>
               <span class="text-sm font-medium text-text-primary">{{ 'helpAbout.title' | t }}</span>
             </div>
-            <span class="text-text-secondary">→</span>
+            <span class="text-text-secondary inline-block rtl:rotate-180">→</span>
           </a>
         </div>
       </section>

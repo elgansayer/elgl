@@ -26,7 +26,7 @@ import { DiscoveryService } from '../../services/discovery.service';
           </h3>
           <p class="text-text-secondary text-xs sm:text-sm truncate">
             {{ profile().native_languages?.join(', ') ?? '' | sanitiseHtml }}
-            →
+            <span aria-hidden="true" class="inline-block rtl:rotate-180">→</span>
             {{ profile().target_languages?.join(', ') ?? '' | sanitiseHtml }}
           </p>
         </div>
@@ -69,7 +69,7 @@ import { DiscoveryService } from '../../services/discovery.service';
       <!-- Mobile-optimised tap area hint -->
       <div class="mt-3 flex items-center justify-between sm:hidden">
         <span class="text-[10px] text-text-muted">{{ 'discovery.tapToView' | t }}</span>
-        <span class="text-accent-400 text-sm" aria-hidden="true">→</span>
+        <span class="text-accent-400 text-sm inline-block rtl:rotate-180" aria-hidden="true">→</span>
       </div>
     </article>
   `,

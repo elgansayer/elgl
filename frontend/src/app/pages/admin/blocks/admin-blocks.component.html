@@ -52,7 +52,7 @@
               </p>
               @if (user.native_language || user.target_languages?.length) {
                 <p class="text-sm text-text-secondary">
-                  {{ user.native_language ?? '' }} →
+                  {{ user.native_language ?? '' }} <span aria-hidden="true" class="inline-block rtl:rotate-180">→</span>
                   @if (user.target_languages?.length) {
                     <span> · {{ user.target_languages.join(', ') }}</span>
                   }

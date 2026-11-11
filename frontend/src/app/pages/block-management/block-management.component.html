@@ -1,7 +1,7 @@
 <div class="app-screen bg-surface-50 min-h-dvh">
   <header class="app-header">
     <button hlmBtn type="button" class="app-button-icon" (click)="goBack()" [attr.aria-label]="'common.back' | t">
-      <span class="text-xl" aria-hidden="true">&larr;</span>
+      <span class="text-xl inline-block rtl:rotate-180" aria-hidden="true">&larr;</span>
     </button>
     <h1 class="app-header-title">{{ 'safety.blockManagement.title' | t }}</h1>
     <div class="w-10" aria-hidden="true"></div>
@@ -81,7 +81,7 @@
                       }
                       @if (hasTargetLanguages(user)) {
                         @if (user.native_language) {
-                          <span class="ms-1" aria-hidden="true">→</span>
+                          <span class="ms-1 inline-block rtl:rotate-180" aria-hidden="true">→</span>
                         }
                         <span>{{ getTargetLanguagesText(user) }}</span>
                       }

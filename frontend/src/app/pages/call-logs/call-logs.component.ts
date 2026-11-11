@@ -67,7 +67,7 @@ import { AppEmptyStateComponent } from '../../components/primitives/empty-state/
             <li class="flex items-center gap-3 p-3 rounded-xl bg-surface">
               <div class="flex-1 min-w-0">
                 <p class="truncate font-semibold">
-                  {{ log.caller_name }} → {{ log.receiver_name }}
+                  {{ log.caller_name }} <span aria-hidden="true" class="inline-block rtl:rotate-180">→</span> {{ log.receiver_name }}
                 </p>
                 <p class="text-sm text-surface-400">
                   {{ 'call_logs.' + log.call_type | t }}

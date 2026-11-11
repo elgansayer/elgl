@@ -151,10 +151,10 @@ Do not fix Arabic layouts with `text-right`, `float: right`, `margin-left`, `rig
 
 ## Controls, overlays and icons
 
-- Spartan controls inherit the surrounding direction. Feature code must not add separate Arabic keyboard logic.
+- Spartan controls inherit the surrounding direction. Feature code must not add separate Arabic keyboard logic. `I18nService` keeps the CDK `Directionality` service in step with `<html dir>`, including after a runtime language switch, so Spartan Brain tabs, sliders and overlays mirror immediately. Hand-rolled tablists, galleries and carousels that map ArrowLeft, ArrowRight or a swipe to next and previous read `I18nService.direction()` instead.
 - Menus, comboboxes, selects, popovers and dialogs align through their shared semantic start/end primitive contracts.
 - Focus order follows DOM/task order, not manually reversed visual order.
-- Directional icons such as Back/Next may mirror through the existing RTL-aware icon contract when the icon communicates spatial/progression direction.
+- Directional icons such as Back/Next mirror with `rtl:rotate-180` when the icon communicates spatial/progression direction (`inline-block` on a `span`). `npm run check:rtl-audit` enforces it for arrow glyphs and directional Lucide icons; see `rtl-logical-properties-architecture.md`.
 - Brand marks, play/pause controls, status icons and non-directional illustrations must not be mirrored solely because the UI is RTL.
 - Touch targets, loading, disabled and error semantics are identical in LTR and RTL.
 

@@ -7,7 +7,7 @@
       class="app-button-icon"
       [attr.aria-label]="'common.back' | t"
     >
-      <span class="text-xl" aria-hidden="true">←</span>
+      <span class="text-xl inline-block rtl:rotate-180" aria-hidden="true">←</span>
     </button>
     <h1 class="app-header-title">{{ 'privacy.hub.title' | t }}</h1>
     <div class="w-10"></div>
@@ -187,7 +187,7 @@
               {{ blockedCount() }}
             </span>
           }
-          <span class="text-text-secondary text-sm" aria-hidden="true">→</span>
+          <span class="text-text-secondary text-sm inline-block rtl:rotate-180" aria-hidden="true">→</span>
         </a>
       }
     </div>

@@ -20,7 +20,7 @@ import { I18nService } from '../../services/i18n.service';
           (click)="goBack()"
           [attr.aria-label]="'common.back' | t"
         >
-          <span class="text-xl" aria-hidden="true">&larr;</span>
+          <span class="text-xl inline-block rtl:rotate-180" aria-hidden="true">&larr;</span>
         </button>
         <h1 class="app-header-title">{{ 'gdpr.title' | t }}</h1>
         <div class="w-10"></div>

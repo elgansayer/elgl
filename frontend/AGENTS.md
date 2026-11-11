@@ -110,7 +110,7 @@ All component state, derived state, and prop passing uses signals:
 - **Responsive device support:** Mobile-first, but tablet and desktop must be fully supported with deliberate responsive compositions (sidebars, multi-pane layouts, grid adaptations) rather than simply stretching the mobile layout.
 - **Discovery UX parity:** The discovery surface follows a "Find partners" model, not a "Nearby"-first model - prioritise partner intent, filter controls, and profile quality over distance framing. Filter controls use compact controls only (segmented buttons, selects, toggles, chips, controlled lists), never free-text inputs; language filters must be list-driven and searchable.
 - **VIP and monetisation copy:** Ensure any price shown in UI is formatted properly.
-- **Completion gate for frontend changes:** before marking frontend work complete, run `npm run check:control-flow`, `npm run build`, `npm run test -- --watch=false`, `npm run check:rtl-logical`, `npm run lint` if present, and the root `npm run check:design-sync` when a mapped visual contract changed.
+- **Completion gate for frontend changes:** before marking frontend work complete, run `npm run check:control-flow`, `npm run build`, `npm run test -- --watch=false`, `npm run check:rtl-logical`, `npm run check:rtl-audit`, `npm run lint` if present, and the root `npm run check:design-sync` when a mapped visual contract changed.
 
 ## State Management
 

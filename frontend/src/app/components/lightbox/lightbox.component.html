@@ -111,7 +111,7 @@
             viewBox="0 0 24 24"
             stroke-width="2"
             stroke="currentColor"
-            class="h-6 w-6"
+            class="h-6 w-6 rtl:rotate-180"
             aria-hidden="true"
           >
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -135,7 +135,7 @@
             viewBox="0 0 24 24"
             stroke-width="2"
             stroke="currentColor"
-            class="h-6 w-6"
+            class="h-6 w-6 rtl:rotate-180"
             aria-hidden="true"
           >
             <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -144,7 +144,7 @@
       }
 
       <div
-        class="absolute bottom-4 start-1/2 z-[110] flex max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap justify-center gap-1 rounded-full bg-black/40 p-1"
+        class="absolute inset-x-0 bottom-4 z-[110] mx-auto flex w-fit max-w-[calc(100vw-2rem)] flex-wrap justify-center gap-1 rounded-full bg-black/40 p-1"
         role="group"
         [attr.aria-label]="
           'lightbox.imageAlt' | t: { current: currentIndex() + 1, total: images().length }

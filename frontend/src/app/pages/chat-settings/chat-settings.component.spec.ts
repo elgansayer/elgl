@@ -108,6 +108,26 @@ describe('ChatSettingsComponent', () => {
     expect(switches[0].getAttribute('aria-checked')).toBe('true');
   });
 
+  it('should position each switch knob with direction-neutral inline-start margins', () => {
+    mockService.autoTranslate.set(true);
+    mockService.loaded.set(true);
+    fixture.detectChanges();
+    const knobs = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('[role="switch"] > span'),
+    );
+
+    expect(knobs.length).toBe(3);
+    // Checked: resting at the inline-end. Unchecked: resting at the inline-start.
+    expect(knobs[0].classList.contains('ms-6')).toBe(true);
+    expect(knobs[0].classList.contains('ms-1')).toBe(false);
+    expect(knobs[1].classList.contains('ms-1')).toBe(true);
+    expect(knobs[1].classList.contains('ms-6')).toBe(false);
+    for (const knob of knobs) {
+      // translate-x-* is a physical offset: in RTL it would push the knob off the track.
+      expect(knob.className).not.toMatch(/translate-x/);
+    }
+  });
+
   it('should toggle autoTranslate on click', () => {
     mockService.loaded.set(true);
     fixture.detectChanges();

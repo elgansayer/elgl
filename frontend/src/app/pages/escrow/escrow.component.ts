@@ -37,7 +37,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
           [attr.aria-label]="'common.back' | t"
           class="flex h-9 w-9 items-center justify-center rounded-full bg-surface-100 text-text-primary hover:bg-surface-50"
         >
-          <span aria-hidden="true">←</span>
+          <span aria-hidden="true" class="inline-block rtl:rotate-180">←</span>
         </button>
         <div>
           <h1 class="app-section-title">{{ 'escrow.title' | t }}</h1>

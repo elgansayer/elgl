@@ -23,7 +23,7 @@ import { UiLanguagePreferenceService } from '../../services/ui-language-preferen
             (click)="goBack()"
             [attr.aria-label]="'common.back' | t"
           >
-            <span class="text-xl" aria-hidden="true">←</span>
+            <span class="text-xl inline-block rtl:rotate-180" aria-hidden="true">←</span>
           </button>
           <h1 id="language-settings-title" class="min-w-0 text-xl font-bold text-text-primary">
             {{ 'languageSettings.title' | t }}

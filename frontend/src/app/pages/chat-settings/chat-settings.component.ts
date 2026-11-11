@@ -106,8 +106,8 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
           >
             <span
               class="inline-block h-5 w-5 rounded-full bg-on-fill shadow transition-all"
-              [class.translate-x-6]="autoTranslate()"
-              [class.translate-x-1]="!autoTranslate()"
+              [class.ms-6]="autoTranslate()"
+              [class.ms-1]="!autoTranslate()"
             ></span>
           </button>
         </div>
@@ -133,8 +133,8 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
           >
             <span
               class="inline-block h-5 w-5 rounded-full bg-on-fill shadow transition-all"
-              [class.translate-x-6]="readReceipts()"
-              [class.translate-x-1]="!readReceipts()"
+              [class.ms-6]="readReceipts()"
+              [class.ms-1]="!readReceipts()"
             ></span>
           </button>
         </div>
@@ -160,8 +160,8 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
           >
             <span
               class="inline-block h-5 w-5 rounded-full bg-on-fill shadow transition-all"
-              [class.translate-x-6]="enterToSend()"
-              [class.translate-x-1]="!enterToSend()"
+              [class.ms-6]="enterToSend()"
+              [class.ms-1]="!enterToSend()"
             ></span>
           </button>
         </div>

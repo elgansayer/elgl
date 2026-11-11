@@ -106,7 +106,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                     @if (hasLanguagePair(user)) {
                       <div class="mt-0.5 text-xs font-medium text-text-secondary">
                         {{ user.native_languages?.[0] | uppercase }}
-                        <span aria-hidden="true"> → </span>
+                        <span aria-hidden="true" class="inline-block rtl:rotate-180">→</span>
                         {{ user.target_languages[0] | uppercase }}
                       </div>
                     }

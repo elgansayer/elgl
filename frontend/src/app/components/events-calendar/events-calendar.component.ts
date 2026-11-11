@@ -158,7 +158,7 @@ const CALENDAR_EVENT_LIMIT = 100;
                         [routerLink]="['/events', ev.id]"
                         class="inline-block mt-2 text-sm text-primary-ink hover:text-primary-ink/80 transition-colors"
                       >
-                        {{ 'events.calendar.viewDetails' | t }} &rarr;
+                        {{ 'events.calendar.viewDetails' | t }} <span aria-hidden="true" class="inline-block rtl:rotate-180">&rarr;</span>
                       </a>
                     </div>
                   </app-card>

@@ -1,6 +1,7 @@
-import { Component, computed, input, linkedSignal, output, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
+import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -14,6 +15,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class LightboxComponent {
   private readonly SWIPE_THRESHOLD_PX = 48;
   private readonly HORIZONTAL_INTENT_RATIO = 1.2;
+  private readonly i18n = inject(I18nService);
+
+  /**
+   * The previous control sits at the inline-start edge and the next control at the
+   * inline-end edge, so in RTL the next image lies towards the left. Arrow keys and
+   * swipes mirror with it.
+   */
+  private readonly isRtl = computed(() => this.i18n.direction() === 'rtl');
 
   readonly images = input.required<string[]>();
   readonly initialIndex = input<number>(0);
@@ -34,13 +43,16 @@ export class LightboxComponent {
   handleKeyDown(event: KeyboardEvent): void {
     if (event.defaultPrevented) return;
 
-    if (event.key === 'ArrowRight' && this.hasNext()) {
+    const nextKey = this.isRtl() ? 'ArrowLeft' : 'ArrowRight';
+    const previousKey = this.isRtl() ? 'ArrowRight' : 'ArrowLeft';
+
+    if (event.key === nextKey && this.hasNext()) {
       event.preventDefault();
       this.next();
       return;
     }
 
-    if (event.key === 'ArrowLeft' && this.hasPrevious()) {
+    if (event.key === previousKey && this.hasPrevious()) {
       event.preventDefault();
       this.prev();
       return;
@@ -108,7 +120,10 @@ export class LightboxComponent {
     if (!isHorizontalSwipe) return;
 
     event.preventDefault();
-    if (deltaX < 0) {
+    // Dragging the picture towards the inline-start edge reveals the next one:
+    // leftwards in LTR, rightwards in RTL.
+    const revealsNext = this.isRtl() ? deltaX > 0 : deltaX < 0;
+    if (revealsNext) {
       this.next();
     } else {
       this.prev();

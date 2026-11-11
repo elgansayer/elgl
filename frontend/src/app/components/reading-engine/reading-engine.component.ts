@@ -108,7 +108,7 @@ type TabId = (typeof TAB_IDS)[number];
               [ariaLabel]="'readingEngine.backToList' | t"
               customClass="text-xs font-bold flex items-center gap-1.5"
             >
-              <span aria-hidden="true">&larr;</span>
+              <span aria-hidden="true" class="inline-block rtl:rotate-180">&larr;</span>
               {{ 'readingEngine.backToList' | t }}
             </app-button-secondary>
 
@@ -505,8 +505,10 @@ export class ReadingEngineComponent {
 
     if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
       event.preventDefault();
+      // The tabs run along the inline axis, so the arrow keys swap in RTL layouts.
+      const forwardKey = this.i18n.direction() === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
       const targetIdx =
-        event.key === 'ArrowRight'
+        event.key === forwardKey
           ? (idx + 1) % this.tabIds.length
           : (idx - 1 + this.tabIds.length) % this.tabIds.length;
       this.activeTab.set(this.tabIds[targetIdx]);

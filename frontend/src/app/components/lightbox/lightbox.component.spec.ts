@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
@@ -28,6 +31,7 @@ describe('LightboxComponent', () => {
   };
 
   beforeEach(async () => {
+    mockI18nService.direction.set('ltr');
     await TestBed.configureTestingModule({
       imports: [LightboxComponent, TranslatePipe],
       providers: [{ provide: I18nService, useValue: mockI18nService }],
@@ -164,6 +168,50 @@ describe('LightboxComponent', () => {
     expect(component.currentIndex()).toBe(0);
   });
 
+  it('mirrors the arrow keys in RTL layouts', () => {
+    mockI18nService.direction.set('rtl');
+    setup(['a', 'b', 'c'], 1);
+
+    // Next sits at the inline-end edge, which is on the physical left in RTL.
+    const left = new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true });
+    component.handleKeyDown(left);
+    expect(left.defaultPrevented).toBe(true);
+    expect(component.currentIndex()).toBe(2);
+
+    const right = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+    component.handleKeyDown(right);
+    expect(right.defaultPrevented).toBe(true);
+    expect(component.currentIndex()).toBe(1);
+  });
+
+  it('does not consume mirrored arrow keys that cannot move past gallery bounds in RTL', () => {
+    mockI18nService.direction.set('rtl');
+    setup(['a', 'b', 'c'], 0);
+
+    // ArrowRight means previous in RTL, and there is nothing before the first image.
+    const right = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+    component.handleKeyDown(right);
+    expect(right.defaultPrevented).toBe(false);
+    expect(component.currentIndex()).toBe(0);
+
+    component.goTo(2);
+    // ArrowLeft means next in RTL, and there is nothing after the last image.
+    const left = new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true });
+    component.handleKeyDown(left);
+    expect(left.defaultPrevented).toBe(false);
+    expect(component.currentIndex()).toBe(2);
+  });
+
+  it('keeps Home and End independent of the layout direction', () => {
+    mockI18nService.direction.set('rtl');
+    setup(['a', 'b', 'c'], 1);
+
+    component.handleKeyDown(new KeyboardEvent('keydown', { key: 'End', cancelable: true }));
+    expect(component.currentIndex()).toBe(2);
+    component.handleKeyDown(new KeyboardEvent('keydown', { key: 'Home', cancelable: true }));
+    expect(component.currentIndex()).toBe(0);
+  });
+
   it('does not consume keyboard navigation that cannot move past gallery bounds', () => {
     setup(['a', 'b'], 0);
 
@@ -221,6 +269,22 @@ describe('LightboxComponent', () => {
     pointerDown(120, 100, 2);
     const rightPreventDefault = pointerUp(240, 96, 2);
     expect(rightPreventDefault).toHaveBeenCalledTimes(1);
+    expect(component.currentIndex()).toBe(1);
+  });
+
+  it('mirrors swipe direction in RTL layouts', () => {
+    mockI18nService.direction.set('rtl');
+    setup(['a', 'b', 'c'], 1);
+
+    // Dragging rightwards moves the picture towards the inline-start edge: next in RTL.
+    pointerDown(120, 100);
+    const rightwardsPreventDefault = pointerUp(240, 104);
+    expect(rightwardsPreventDefault).toHaveBeenCalledTimes(1);
+    expect(component.currentIndex()).toBe(2);
+
+    pointerDown(240, 100, 2);
+    const leftwardsPreventDefault = pointerUp(120, 96, 2);
+    expect(leftwardsPreventDefault).toHaveBeenCalledTimes(1);
     expect(component.currentIndex()).toBe(1);
   });
 
@@ -310,5 +374,26 @@ describe('LightboxComponent', () => {
 
     expect(nextEvent.stopPropagation).toHaveBeenCalledTimes(1);
     expect(indicatorEvent.stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
+  describe('right-to-left template contract', () => {
+    const template = readFileSync(
+      resolve(fileURLToPath(import.meta.url), '..', 'lightbox.component.html'),
+      'utf-8',
+    );
+
+    it('mirrors the previous and next chevrons in RTL', () => {
+      // The close and image-failure icons are symmetric; only the two chevrons are directional.
+      expect(template.match(/<svg[^>]*rtl:rotate-180/g)?.length).toBe(2);
+      expect(template.match(/rtl:rotate-180/g)?.length).toBe(2);
+    });
+
+    it('centres the indicator strip without a physical translate offset', () => {
+      expect(template).toContain('inset-x-0');
+      expect(template).toContain('mx-auto');
+      expect(template).toContain('w-fit');
+      expect(template).not.toMatch(/translate-x/);
+      expect(template).not.toContain('start-1/2');
+    });
   });
 });

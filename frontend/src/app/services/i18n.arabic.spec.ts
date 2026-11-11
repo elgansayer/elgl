@@ -1,3 +1,4 @@
+import { Directionality } from '@angular/cdk/bidi';
 import { DOCUMENT } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -52,6 +53,31 @@ describe('I18nService Arabic rendering contract', () => {
     expect(testDocument.documentElement.dir).toBe('rtl');
     const arabic = service.availableLanguages.find((language) => language.code === 'ar');
     expect(arabic).toMatchObject({ nativeName: 'العربية', isRtl: true });
+  });
+
+  it('keeps the CDK Directionality service in step with runtime language changes', async () => {
+    localStorage.setItem('hellotalk_dict_ar', JSON.stringify({}));
+    localStorage.setItem('hellotalk_dict_ur', JSON.stringify({}));
+    localStorage.setItem('hellotalk_dict_en-GB', JSON.stringify({}));
+    const directionality = TestBed.inject(Directionality);
+    const emitted = vi.spyOn(directionality.change, 'emit');
+    expect(directionality.value).toBe('ltr');
+
+    await service.setLanguage('ar');
+    expect(directionality.value).toBe('rtl');
+    expect(directionality.valueSignal()).toBe('rtl');
+    expect(emitted).toHaveBeenCalledTimes(1);
+    expect(emitted).toHaveBeenLastCalledWith('rtl');
+
+    // Moving between two RTL languages is not a direction change.
+    await service.setLanguage('ur');
+    expect(directionality.value).toBe('rtl');
+    expect(emitted).toHaveBeenCalledTimes(1);
+
+    await service.setLanguage('en-GB');
+    expect(directionality.value).toBe('ltr');
+    expect(emitted).toHaveBeenCalledTimes(2);
+    expect(emitted).toHaveBeenLastCalledWith('ltr');
   });
 
   it('restores LTR document semantics when the UI leaves an Arabic locale', async () => {
