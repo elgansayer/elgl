@@ -43,6 +43,22 @@ export const chatRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'groups/:groupId',
+    loadComponent: () =>
+      import('../pages/group-profile/group-profile.component').then(
+        (m) => m.GroupProfileComponent,
+      ),
+    title: 'Group - HelloTalk',
+  },
+  {
+    path: 'community/groups/:groupId',
+    loadComponent: () =>
+      import('../pages/group-profile/group-profile.component').then(
+        (m) => m.GroupProfileComponent,
+      ),
+    title: 'Group - HelloTalk',
+  },
+  {
     path: 'communities',
     redirectTo: 'chat/groups',
     pathMatch: 'full',

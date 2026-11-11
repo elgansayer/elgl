@@ -11,6 +11,7 @@ import {
   type CommunityRow,
 } from '../supabase/supabase.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
+import { GroupChatService } from '../chat/group-chat.service';
 import { InterestsService } from '../interests/interests.service';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 
@@ -102,6 +103,7 @@ export class GroupsService {
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
     private readonly interestsService: InterestsService,
+    private readonly groupChatService: GroupChatService,
   ) {}
 
   async isAdmin(userId: string, groupId: string): Promise<boolean> {
@@ -629,6 +631,78 @@ export class GroupsService {
     }
 
     return { success: true };
+  }
+
+  /**
+   * Returns the chat room linked to a community group, creating it on first use.
+   * Membership is checked against group_members before the chat room is opened.
+   */
+  async getOrCreateGroupChat(
+    userId: string,
+    groupId: string,
+  ): Promise<{ roomId: string }> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: membership, error: membershipError } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (membershipError) {
+      throw new NotFoundException('Failed to verify group membership');
+    }
+    if (!membership) {
+      throw new ForbiddenException('Group membership is required');
+    }
+
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('id, name, chat_room_id')
+      .eq('id', groupId)
+      .single();
+    if (groupError || !group) {
+      throw new NotFoundException('Group not found');
+    }
+    if (group.chat_room_id) {
+      return { roomId: group.chat_room_id };
+    }
+
+    const members = await this.getGroupMembers(groupId);
+    const memberIds = members
+      .map((member) => member.user_id)
+      .filter((memberId) => memberId !== userId);
+    if (memberIds.length === 0) {
+      throw new BadRequestException(
+        'Group chat requires at least one other member',
+      );
+    }
+    if (memberIds.length > 18) {
+      throw new BadRequestException(
+        'Group is too large for a single chat room',
+      );
+    }
+
+    const room = await this.groupChatService.create(userId, {
+      name: group.name,
+      memberIds,
+    });
+
+    const { error: linkError } = await supabase
+      .from('groups')
+      .update({ chat_room_id: room.id })
+      .eq('id', groupId)
+      .is('chat_room_id', null);
+    if (linkError) {
+      throw new BadRequestException('Failed to link group chat');
+    }
+
+    const { data: linked } = await supabase
+      .from('groups')
+      .select('chat_room_id')
+      .eq('id', groupId)
+      .single();
+    return { roomId: linked?.chat_room_id ?? room.id };
   }
 
   async getGroupResources(groupId: string): Promise<GroupResource[]> {

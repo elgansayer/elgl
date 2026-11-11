@@ -424,6 +424,7 @@ export type GroupsRow = {
   can_edit_info: boolean | null;
   description: string | null;
   rules: string | null;
+  chat_room_id: string | null;
   created_at: string;
 };
 
@@ -793,6 +794,12 @@ export interface Database {
           category: string | null;
           date_time: string;
           location: string | null;
+          venue_type: string | null;
+          timezone: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          ticket_price_gbp: number | null;
+          ticket_price_usd: number | null;
           language_pair: string | null;
           max_participants: number | null;
           host_id: string;
@@ -806,6 +813,12 @@ export interface Database {
           category?: string | null;
           date_time: string;
           location?: string | null;
+          venue_type?: string | null;
+          timezone?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          ticket_price_gbp?: number | null;
+          ticket_price_usd?: number | null;
           language_pair?: string | null;
           max_participants?: number | null;
           host_id: string;
@@ -819,6 +832,12 @@ export interface Database {
           category?: string | null;
           date_time?: string;
           location?: string | null;
+          venue_type?: string | null;
+          timezone?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          ticket_price_gbp?: number | null;
+          ticket_price_usd?: number | null;
           language_pair?: string | null;
           max_participants?: number | null;
           host_id?: string;
