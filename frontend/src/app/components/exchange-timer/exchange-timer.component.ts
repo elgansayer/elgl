@@ -50,7 +50,7 @@ import { ExchangeTimerService } from '../../services/exchange-timer.service';
             hlmBtn
             type="button"
             variant="secondary"
-            size="sm"
+            size="touch"
             class="mt-2 w-full"
             [attr.aria-label]="'video_call.exchange_end_turn_aria' | t"
             (click)="endTurn()"
