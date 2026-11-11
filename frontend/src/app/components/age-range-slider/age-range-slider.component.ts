@@ -12,7 +12,11 @@ export interface AgeRange {
   selector: 'app-age-range-slider',
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
-    <div class="flex flex-col" role="group" [attr.aria-label]="'settings.messageFilters.ageRange' | t">
+    <div
+      class="flex flex-col"
+      role="group"
+      [attr.aria-label]="'settings.messageFilters.ageRange' | t"
+    >
       <span class="text-sm text-text-secondary pb-1" id="age-range-label">
         {{ 'settings.messageFilters.ageRange' | t }}
         <span class="ps-1">({{ minAge() }} - {{ maxAge() }})</span>
@@ -28,7 +32,7 @@ export interface AgeRange {
           (input)="onMinChange($event)"
           step="1"
           class="absolute inset-0 w-full h-full z-10 appearance-none bg-transparent cursor-pointer"
-          aria-label="{{ 'settings.messageFilters.ageMin' | t }}"
+          [attr.aria-label]="'settings.messageFilters.ageMin' | t"
           aria-valuemin="{{ minLimit() }}"
           aria-valuemax="{{ maxLimit() }}"
           aria-valuenow="{{ minAge() }}"
@@ -45,7 +49,7 @@ export interface AgeRange {
           (input)="onMaxChange($event)"
           step="1"
           class="absolute inset-0 w-full h-full z-20 appearance-none bg-transparent cursor-pointer"
-          aria-label="{{ 'settings.messageFilters.ageMax' | t }}"
+          [attr.aria-label]="'settings.messageFilters.ageMax' | t"
           aria-valuemin="{{ minLimit() }}"
           aria-valuemax="{{ maxLimit() }}"
           aria-valuenow="{{ maxAge() }}"
@@ -53,7 +57,10 @@ export interface AgeRange {
           [style.zIndex]="maxAge() > minAge() ? 20 : 10"
         />
         <!-- visual bar -->
-        <div class="absolute bottom-1 w-full h-2 bg-surface-200 rounded-full pointer-events-none" aria-hidden="true">
+        <div
+          class="absolute bottom-1 w-full h-2 bg-surface-200 rounded-full pointer-events-none"
+          aria-hidden="true"
+        >
           <div
             class="h-full bg-primary rounded-full pointer-events-none"
             [style.inset-inline-start.%]="minPercent()"
@@ -110,11 +117,11 @@ export class AgeRangeSliderComponent {
   protected minAge = signal(18);
   protected maxAge = signal(100);
 
-  protected minPercent = computed(() =>
-    ((this.minAge() - this.minLimit()) / (this.maxLimit() - this.minLimit())) * 100,
+  protected minPercent = computed(
+    () => ((this.minAge() - this.minLimit()) / (this.maxLimit() - this.minLimit())) * 100,
   );
-  protected maxPercent = computed(() =>
-    ((this.maxAge() - this.minLimit()) / (this.maxLimit() - this.minLimit())) * 100,
+  protected maxPercent = computed(
+    () => ((this.maxAge() - this.minLimit()) / (this.maxLimit() - this.minLimit())) * 100,
   );
   protected barWidth = computed(() => this.maxPercent() - this.minPercent());
 

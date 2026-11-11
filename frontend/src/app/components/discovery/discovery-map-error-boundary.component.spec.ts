@@ -20,10 +20,7 @@ describe('DiscoveryMapErrorBoundaryComponent', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [DiscoveryMapErrorBoundaryComponent],
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     });
 
     httpTesting = TestBed.inject(HttpTestingController);
@@ -48,7 +45,7 @@ describe('DiscoveryMapErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h2')?.textContent).toContain('discoveryMapErrorBoundary.title');
+    expect(compiled.querySelector('h2')?.textContent).toContain('Discovery Map Crashed');
     expect(compiled.textContent).toContain('Discovery map rendering crash');
 
     flushErrorRequest(httpTesting);
@@ -120,7 +117,7 @@ describe('DiscoveryMapErrorBoundaryComponent', () => {
 
     expect(component.reportedMessage()).toBe(true);
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('discoveryMapErrorBoundary.reportedMessage');
+    expect(compiled.textContent).toContain('Crash report sent. Thank you for your help!');
 
     // Verify error sent to the global error handler via analytics endpoint
     const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
@@ -195,8 +192,8 @@ describe('DiscoveryMapErrorBoundaryComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const buttons = compiled.querySelectorAll('button');
-    const reportButton = Array.from(buttons).find(
-      (btn) => btn.textContent?.includes('discoveryMapErrorBoundary.report'),
+    const reportButton = Array.from(buttons).find((btn) =>
+      btn.textContent?.includes('Report Crash'),
     );
     expect(reportButton).toBeDefined();
 
