@@ -236,6 +236,21 @@ export class LivekitService {
     return this._muted;
   }
 
+  /** Apply an explicit mute state, used to enforce exchange speaking turns. */
+  async setMuted(muted: boolean): Promise<boolean> {
+    if (this._localAudioTrack) {
+      if (muted) {
+        await this._localAudioTrack.mute();
+      } else {
+        await this._localAudioTrack.unmute();
+      }
+      this._muted = this._localAudioTrack.isMuted;
+    } else {
+      this._muted = muted;
+    }
+    return this._muted;
+  }
+
   /** Toggle the speakerphone (loudspeaker) state and return the new state. */
   toggleSpeakerphone(): boolean {
     this._speakerphone = !this._speakerphone;
