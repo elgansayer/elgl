@@ -53,6 +53,10 @@ The existing one-column mobile layout expands to two columns at the established 
 
 A stats failure emits a sanitized NestJS error log containing the aggregate stage (`query_execution`, `call_logs`, `chat_messages`, `moment_comments`, `moments`, result limit, or malformed count) and optionally a short provider error code. This is sufficient to distinguish source outages and data-integrity failures without exposing account data.
 
+## Performance report
+
+The My Stats screen also hosts the performance report (`GET /api/stats/me/report`, `PerformanceReportComponent`): the same activity measures over a rolling 7 or 30 day window, compared with the window before it, plus the badges unlocked in the window. It follows the same authentication, `private, no-store` and fail-closed rules as the dashboard. See `docs/performance-reports.md` for the contract, bounds, failure handling and rollout.
+
 ## Verification
 
 Focused automated coverage verifies:

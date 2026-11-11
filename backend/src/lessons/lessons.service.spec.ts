@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, type TestingModule } from '@nestjs/testing';
 import type { Mock } from 'vitest';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -63,9 +64,11 @@ const lesson: LessonRecord = {
 describe('LessonsService progress', () => {
   let service: LessonsService;
   let supabase: { from: Mock };
+  let emit: Mock;
 
   beforeEach(async () => {
     supabase = { from: vi.fn() };
+    emit = vi.fn();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LessonsService,
@@ -73,6 +76,7 @@ describe('LessonsService progress', () => {
           provide: SupabaseService,
           useValue: { getClient: vi.fn().mockReturnValue(supabase) },
         },
+        { provide: EventEmitter2, useValue: { emit } },
       ],
     }).compile();
 
@@ -122,6 +126,7 @@ describe('LessonsService progress', () => {
     await expect(
       service.saveLessonProgress('user-1', lesson.id, 1, false),
     ).resolves.toMatchObject({ segment_index: 1, completed: false });
+    expect(emit).not.toHaveBeenCalled();
     expect(progressQuery.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         user_id: 'user-1',
@@ -182,5 +187,28 @@ describe('LessonsService progress', () => {
     await expect(
       service.saveLessonProgress('user-1', lesson.id, 2, true),
     ).resolves.toMatchObject({ segment_index: 2, completed: true });
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(emit).toHaveBeenCalledWith('achievements.evaluate', {
+      userId: 'user-1',
+      sources: ['lessons'],
+    });
+  });
+
+  it('does not request badge evaluation when the progress write fails', async () => {
+    const lessonQuery = createQueryChain();
+    lessonQuery._setResolveData({ data: lesson, error: null });
+    const progressQuery = createQueryChain();
+    progressQuery._setResolveData({
+      data: null,
+      error: { message: 'write failed' },
+    });
+    supabase.from.mockImplementation((table: string) =>
+      table === 'lessons' ? lessonQuery : progressQuery,
+    );
+
+    await expect(
+      service.saveLessonProgress('user-1', lesson.id, 2, true),
+    ).rejects.toMatchObject({ message: 'write failed' });
+    expect(emit).not.toHaveBeenCalled();
   });
 });

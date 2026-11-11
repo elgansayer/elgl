@@ -204,9 +204,14 @@ describe('MomentsService', () => {
         data: savedMoment,
         error: null,
       });
+      const emitSpy = vi.spyOn(eventEmitter, 'emit');
 
       const result = await service.createMoment('user-1', dto);
 
+      expect(emitSpy).toHaveBeenCalledWith('achievements.evaluate', {
+        userId: 'user-1',
+        sources: ['moments'],
+      });
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('moments');
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
         user_id: 'user-1',
@@ -238,9 +243,14 @@ describe('MomentsService', () => {
         data: null,
         error: { message: 'Insert failure' },
       });
+      const emitSpy = vi.spyOn(eventEmitter, 'emit');
 
       await expect(service.createMoment('user-1', dto)).rejects.toThrow(
         'Failed to create moment: Insert failure',
+      );
+      expect(emitSpy).not.toHaveBeenCalledWith(
+        'achievements.evaluate',
+        expect.anything(),
       );
     });
   });
@@ -578,6 +588,63 @@ describe('MomentsService', () => {
       expect(result.author?.display_name).toBe('Serious Learner');
     });
 
+    it.each([
+      ['a correction', { original: 'colour', corrected: 'color' }, true],
+      ['a plain comment', null, false],
+    ])(
+      'requests corrections badge evaluation only for %s',
+      async (_label, correctionPayload, expectsEvent) => {
+        const dto = {
+          text_content: 'Nice post',
+          ...(correctionPayload
+            ? { correction_payload: correctionPayload }
+            : {}),
+        };
+        mockSupabaseClient.from = vi
+          .fn()
+          .mockImplementation((table: string) => {
+            if (table === 'moment_comments') {
+              return {
+                insert: vi.fn().mockReturnThis(),
+                select: vi.fn().mockReturnThis(),
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'c-1', moment_id: 'm-1', user_id: 'user-1' },
+                  error: null,
+                }),
+              };
+            }
+            if (table === 'moments') {
+              return {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                single: vi
+                  .fn()
+                  .mockResolvedValue({ data: { comments_count: 3 } }),
+                update: vi.fn().mockReturnThis(),
+              };
+            }
+            return mockQueryBuilder;
+          });
+        const emitSpy = vi.spyOn(eventEmitter, 'emit');
+
+        await service.addComment('user-1', 'm-1', dto);
+
+        const evaluationCalls = emitSpy.mock.calls.filter(
+          ([event]) => event === 'achievements.evaluate',
+        );
+        expect(evaluationCalls).toEqual(
+          expectsEvent
+            ? [
+                [
+                  'achievements.evaluate',
+                  { userId: 'user-1', sources: ['corrections'] },
+                ],
+              ]
+            : [],
+        );
+      },
+    );
+
     it('should return comments list with populated authors', async () => {
       const comments = [{ id: 'c-1', user_id: 'u-1', text_content: 'Hi' }];
       mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
@@ -778,6 +845,8 @@ describe('MomentsService', () => {
         error: null,
       });
 
+      const emitSpy = vi.spyOn(eventEmitter, 'emit');
+
       const result = await service.createStory('user-1', {
         text_content: 'Hello',
       });
@@ -785,6 +854,10 @@ describe('MomentsService', () => {
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
         expect.objectContaining({ user_id: 'user-1', is_ephemeral: true }),
       );
+      expect(emitSpy).toHaveBeenCalledWith('achievements.evaluate', {
+        userId: 'user-1',
+        sources: ['moments'],
+      });
       expect(result.id).toBe('story-1');
       expect(result.author).toEqual({
         id: 'user-1',
@@ -871,8 +944,14 @@ describe('MomentsService', () => {
         data: { id: 'q-1', user_id: 'user-1', ...dto },
         error: null,
       });
+      const emitSpy = vi.spyOn(eventEmitter, 'emit');
 
       const result = await service.createLanguageQuestion('user-1', dto);
+
+      expect(emitSpy).toHaveBeenCalledWith('achievements.evaluate', {
+        userId: 'user-1',
+        sources: ['moments'],
+      });
 
       expect(xpService.awardXpForActivity).toHaveBeenCalledWith(
         'user-1',

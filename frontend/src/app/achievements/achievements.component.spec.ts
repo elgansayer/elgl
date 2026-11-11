@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AchievementsComponent } from './achievements.component';
+import { I18nService } from '../services/i18n.service';
 import { TranslatePipe } from '../services/translate.pipe';
 
 interface FullAchievementDto {
@@ -80,6 +81,45 @@ describe('AchievementsComponent', () => {
     expect(progressBars.length).toBe(2);
     expect(progressBars[1].getAttribute('aria-valuenow')).toBe('40');
     expect(progressBars[1].getAttribute('aria-valuemax')).toBe('100');
+  });
+
+  it('should show catalogue badges in the interface language and keep unknown badges readable', async () => {
+    TestBed.inject(I18nService).translations.update((dictionary) => ({
+      ...dictionary,
+      'achievements.badge.first_lesson.name': 'Première leçon',
+      'achievements.badge.first_lesson.description': 'Terminez votre première leçon.',
+    }));
+    fixture.detectChanges();
+    httpTesting.expectOne('http://127.0.0.1:3000/api/achievements/full/user-123').flush([
+      {
+        code: 'first_lesson',
+        name: 'First Lesson',
+        description: 'Complete your first lesson.',
+        current: 1,
+        required: 1,
+        earned: true,
+      },
+      {
+        code: 'server_only_badge',
+        name: 'Server Only Badge',
+        description: 'Only the server knows this one.',
+        current: 0,
+        required: 3,
+        earned: false,
+      },
+    ]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const text: string = fixture.nativeElement.textContent;
+    expect(text).toContain('Première leçon');
+    expect(text).toContain('Terminez votre première leçon.');
+    expect(text).not.toContain('First Lesson');
+    expect(text).toContain('Server Only Badge');
+    expect(text).toContain('Only the server knows this one.');
+    expect(
+      fixture.nativeElement.querySelectorAll('[role="progressbar"]')[0].getAttribute('aria-label'),
+    ).toBe('Première leçon');
   });
 
   it('should show an empty state when no achievements are defined', async () => {

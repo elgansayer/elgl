@@ -2,8 +2,10 @@ import { Component, inject, input, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { I18nService } from '../services/i18n.service';
 import { TranslatePipe } from '../services/translate.pipe';
 import { AppCardComponent } from '../components/primitives/card/card.component';
+import { achievementDescription, achievementName } from './achievement-copy';
 
 interface FullAchievementDto {
   code: string;
@@ -49,13 +51,13 @@ interface FullAchievementDto {
                   }}</span>
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="truncate text-sm font-medium text-text-primary">{{ ach.name }}</p>
-                  <p class="truncate text-xs text-text-secondary">{{ ach.description }}</p>
+                  <p class="truncate text-sm font-medium text-text-primary">{{ badgeName(ach) }}</p>
+                  <p class="truncate text-xs text-text-secondary">{{ badgeDescription(ach) }}</p>
                   <div class="mt-1.5">
                     <div
                       class="h-1.5 w-full overflow-hidden rounded-pill bg-surface-100"
                       role="progressbar"
-                      [attr.aria-label]="ach.name"
+                      [attr.aria-label]="badgeName(ach)"
                       [attr.aria-valuemin]="0"
                       [attr.aria-valuemax]="ach.required || ach.current"
                       [attr.aria-valuenow]="ach.current"
@@ -83,6 +85,7 @@ interface FullAchievementDto {
 })
 export class AchievementsComponent {
   private readonly http = inject(HttpClient);
+  private readonly i18n = inject(I18nService);
 
   readonly userId = input.required<string>();
 
@@ -97,6 +100,14 @@ export class AchievementsComponent {
     },
     defaultValue: [],
   });
+
+  badgeName(ach: FullAchievementDto): string {
+    return achievementName(this.i18n, ach);
+  }
+
+  badgeDescription(ach: FullAchievementDto): string {
+    return achievementDescription(this.i18n, ach);
+  }
 
   progressPercent(ach: FullAchievementDto): number {
     if (!ach.required) {

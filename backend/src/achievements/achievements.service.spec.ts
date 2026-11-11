@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AchievementsService } from './achievements.service';
+import { AchievementsService, MILESTONES } from './achievements.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 function makeBuilder(response: unknown) {
@@ -9,7 +9,11 @@ function makeBuilder(response: unknown) {
   for (const method of [
     'select',
     'eq',
+    'not',
+    'gte',
+    'lt',
     'order',
+    'limit',
     'single',
     'returns',
     'upsert',
@@ -77,36 +81,40 @@ describe('AchievementsService', () => {
       await service.onModuleInit();
 
       expect(builders['achievements'].upsert).toHaveBeenCalledWith(
-        [
-          {
-            code: 'first_message',
-            name: 'First Message',
-            description: 'Send your first message in a chat.',
-          },
-          {
-            code: '100_messages',
-            name: '100 Messages',
-            description: 'Send 100 messages in chats.',
-          },
-          {
-            code: '500_messages',
-            name: '500 Messages',
-            description: 'Send 500 messages in chats.',
-          },
-          {
-            code: '7_day_streak',
-            name: '7-Day Streak',
-            description: 'Keep a 7‑day study streak.',
-          },
-          {
-            code: '30_day_streak',
-            name: '30-Day Streak',
-            description: 'Keep a 30‑day study streak.',
-          },
-        ],
+        MILESTONES.map(({ code, name, description }) => ({
+          code,
+          name,
+          description,
+        })),
         { onConflict: 'code' },
       );
       expect(logSpy).toHaveBeenCalledWith('achievements.seed_complete');
+    });
+
+    it('keeps the unlock thresholds and progress sources stable', () => {
+      expect(
+        MILESTONES.map(({ code, source, required }) => [
+          code,
+          source,
+          required,
+        ]),
+      ).toEqual([
+        ['first_message', 'messages', 1],
+        ['100_messages', 'messages', 100],
+        ['500_messages', 'messages', 500],
+        ['7_day_streak', 'streak', 7],
+        ['30_day_streak', 'streak', 30],
+        ['first_correction', 'corrections', 1],
+        ['25_corrections', 'corrections', 25],
+        ['100_corrections', 'corrections', 100],
+        ['first_moment', 'moments', 1],
+        ['10_moments', 'moments', 10],
+        ['first_lesson', 'lessons', 1],
+        ['10_lessons', 'lessons', 10],
+      ]);
+      expect(new Set(MILESTONES.map(({ code }) => code)).size).toBe(
+        MILESTONES.length,
+      );
     });
 
     it('reports a sanitized degraded state when seeding fails', async () => {
@@ -212,6 +220,96 @@ describe('AchievementsService', () => {
         service.getUserAchievements('user-1'),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
       expect(errorSpy).toHaveBeenCalledWith('achievements.earned_read_failed');
+    });
+  });
+
+  describe('getUnlockedBetween', () => {
+    const start = new Date('2026-11-03T00:00:00.000Z');
+    const end = new Date('2026-11-10T00:00:00.000Z');
+
+    it('returns the caller badges unlocked in the window, newest first and bounded', async () => {
+      builders['user_achievements'] = makeBuilder({
+        data: [
+          {
+            unlocked_at: '2026-11-09T10:00:00.000Z',
+            achievements: {
+              code: 'first_moment',
+              name: 'First Moment',
+              description: null,
+            },
+          },
+          {
+            unlocked_at: null,
+            achievements: {
+              code: 'first_lesson',
+              name: 'First Lesson',
+              description: 'd',
+            },
+          },
+          { unlocked_at: '2026-11-08T10:00:00.000Z', achievements: null },
+        ],
+        error: null,
+      });
+
+      await expect(
+        service.getUnlockedBetween('user-1', start, end),
+      ).resolves.toEqual([
+        {
+          code: 'first_moment',
+          name: 'First Moment',
+          description: '',
+          unlocked_at: '2026-11-09T10:00:00.000Z',
+        },
+      ]);
+
+      const builder = builders['user_achievements'];
+      expect(builder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(builder.gte).toHaveBeenCalledWith(
+        'unlocked_at',
+        '2026-11-03T00:00:00.000Z',
+      );
+      expect(builder.lt).toHaveBeenCalledWith(
+        'unlocked_at',
+        '2026-11-10T00:00:00.000Z',
+      );
+      expect(builder.order).toHaveBeenCalledWith('unlocked_at', {
+        ascending: false,
+      });
+      expect(builder.limit).toHaveBeenCalledWith(50);
+    });
+
+    it('returns an empty list when nothing was unlocked', async () => {
+      builders['user_achievements'] = makeBuilder({ data: null, error: null });
+
+      await expect(
+        service.getUnlockedBetween('user-1', start, end),
+      ).resolves.toEqual([]);
+    });
+
+    it('fails closed with a sanitized log when the earned store is unavailable', async () => {
+      builders['user_achievements'] = makeBuilder({
+        data: null,
+        error: { message: 'provider secret' },
+      });
+
+      await expect(
+        service.getUnlockedBetween('private-user-id', start, end),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        'achievements.unlocked_read_failed',
+      );
+      const logs = errorSpy.mock.calls.flat().join(' ');
+      expect(logs).not.toContain('private-user-id');
+      expect(logs).not.toContain('provider secret');
+    });
+
+    it('fails closed when the query throws', async () => {
+      builders['user_achievements'] = undefined;
+
+      await expect(
+        service.getUnlockedBetween('user-1', start, end),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
   });
 
@@ -360,6 +458,77 @@ describe('AchievementsService', () => {
       ]);
     });
 
+    it('reports corrections, moments and lessons progress from their own sources', async () => {
+      builders['achievements'] = makeBuilder({
+        data: [
+          { code: '25_corrections', name: '25 Corrections', description: 'c' },
+          { code: '10_moments', name: '10 Moments', description: 'm' },
+          { code: 'first_lesson', name: 'First Lesson', description: 'l' },
+        ],
+        error: null,
+      });
+      builders['user_achievements'] = makeBuilder({
+        data: [{ achievements: { code: 'first_lesson' } }],
+        error: null,
+      });
+      builders['moment_comments'] = makeBuilder({ count: 12, error: null });
+      builders['moments'] = makeBuilder({ count: 4, error: null });
+      builders['lesson_progress'] = makeBuilder({ count: 3, error: null });
+
+      await expect(service.getFullAchievements('user-1')).resolves.toEqual([
+        {
+          code: '25_corrections',
+          name: '25 Corrections',
+          description: 'c',
+          current: 12,
+          required: 25,
+          earned: false,
+        },
+        {
+          code: '10_moments',
+          name: '10 Moments',
+          description: 'm',
+          current: 4,
+          required: 10,
+          earned: false,
+        },
+        {
+          code: 'first_lesson',
+          name: 'First Lesson',
+          description: 'l',
+          current: 3,
+          required: 1,
+          earned: true,
+        },
+      ]);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_messages');
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('users');
+    });
+
+    it('keeps a catalogue row without a milestone definition visible without progress queries', async () => {
+      builders['achievements'] = makeBuilder({
+        data: [{ code: 'legacy_badge', name: 'Legacy', description: null }],
+        error: null,
+      });
+      builders['user_achievements'] = makeBuilder({
+        data: [{ achievements: { code: 'legacy_badge' } }],
+        error: null,
+      });
+
+      await expect(service.getFullAchievements('user-1')).resolves.toEqual([
+        {
+          code: 'legacy_badge',
+          name: 'Legacy',
+          description: '',
+          current: 0,
+          required: 0,
+          earned: true,
+        },
+      ]);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_messages');
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('moments');
+    });
+
     it('returns an empty array only when the catalogue is genuinely empty', async () => {
       builders['achievements'] = makeBuilder({ data: null, error: null });
 
@@ -397,6 +566,12 @@ describe('AchievementsService', () => {
   });
 
   describe('evaluateAchievements', () => {
+    beforeEach(() => {
+      builders['moment_comments'] = makeBuilder({ count: 0, error: null });
+      builders['moments'] = makeBuilder({ count: 0, error: null });
+      builders['lesson_progress'] = makeBuilder({ count: 0, error: null });
+    });
+
     it('awards every due milestone once thresholds are met', async () => {
       builders['chat_messages'] = makeBuilder({ count: 100, error: null });
       builders['users'] = makeBuilder({
@@ -487,6 +662,138 @@ describe('AchievementsService', () => {
         'achievements.award_batch_failed count=1',
       );
     });
+
+    it('awards corrections, moments and lessons badges from persisted counts', async () => {
+      builders['chat_messages'] = makeBuilder({ count: 0, error: null });
+      builders['users'] = makeBuilder({
+        data: { study_streak_days: 0 },
+        error: null,
+      });
+      builders['user_achievements'] = makeBuilder({ data: [], error: null });
+      builders['moment_comments'] = makeBuilder({ count: 25, error: null });
+      builders['moments'] = makeBuilder({ count: 10, error: null });
+      builders['lesson_progress'] = makeBuilder({ count: 1, error: null });
+      const awardSpy = vi
+        .spyOn(service, 'awardAchievement')
+        .mockResolvedValue(undefined);
+
+      await service.evaluateAchievements('user-1');
+
+      expect(awardSpy.mock.calls.map(([, code]) => code).sort()).toEqual(
+        [
+          '10_moments',
+          '25_corrections',
+          'first_correction',
+          'first_lesson',
+          'first_moment',
+        ].sort(),
+      );
+    });
+
+    it('counts only corrections and only completed lessons', async () => {
+      builders['user_achievements'] = makeBuilder({ data: [], error: null });
+      vi.spyOn(service, 'awardAchievement').mockResolvedValue(undefined);
+
+      await service.evaluateAchievements('user-1', ['corrections', 'lessons']);
+
+      expect(builders['moment_comments'].eq).toHaveBeenCalledWith(
+        'user_id',
+        'user-1',
+      );
+      expect(builders['moment_comments'].not).toHaveBeenCalledWith(
+        'correction_payload',
+        'is',
+        null,
+      );
+      expect(builders['lesson_progress'].eq).toHaveBeenCalledWith(
+        'user_id',
+        'user-1',
+      );
+      expect(builders['lesson_progress'].eq).toHaveBeenCalledWith(
+        'completed',
+        true,
+      );
+    });
+
+    it('only queries the requested sources', async () => {
+      builders['user_achievements'] = makeBuilder({ data: [], error: null });
+      vi.spyOn(service, 'awardAchievement').mockResolvedValue(undefined);
+
+      await service.evaluateAchievements('user-1', ['moments']);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('moments');
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_messages');
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('users');
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith(
+        'moment_comments',
+      );
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith(
+        'lesson_progress',
+      );
+    });
+
+    it.each([
+      [
+        'corrections',
+        'moment_comments',
+        'achievements.correction_count_failed',
+      ],
+      ['moments', 'moments', 'achievements.moment_count_failed'],
+      ['lessons', 'lesson_progress', 'achievements.lesson_count_failed'],
+    ] as const)(
+      'fails closed with a sanitized log when the %s source is unavailable',
+      async (source, table, logLine) => {
+        builders['user_achievements'] = makeBuilder({ data: [], error: null });
+        builders[table] = makeBuilder({
+          count: null,
+          error: { message: 'provider secret' },
+        });
+        const awardSpy = vi
+          .spyOn(service, 'awardAchievement')
+          .mockResolvedValue(undefined);
+
+        await expect(
+          service.evaluateAchievements('private-user-id', [source]),
+        ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+        expect(awardSpy).not.toHaveBeenCalled();
+        expect(errorSpy).toHaveBeenCalledWith(logLine);
+        const logs = errorSpy.mock.calls.flat().join(' ');
+        expect(logs).not.toContain('private-user-id');
+        expect(logs).not.toContain('provider secret');
+      },
+    );
+
+    it('lets concurrent evaluations race safely through the unique upsert', async () => {
+      builders['achievements'] = makeBuilder({
+        data: { id: 'ach-1' },
+        error: null,
+      });
+      builders['user_achievements'] = makeBuilder({ data: [], error: null });
+      builders['moments'] = makeBuilder({ count: 1, error: null });
+
+      await Promise.all([
+        service.evaluateAchievements('user-1', ['moments']),
+        service.evaluateAchievements('user-1', ['moments']),
+      ]);
+
+      const upserts = builders['user_achievements'].upsert.mock.calls;
+      expect(upserts).toHaveLength(2);
+      for (const [row, options] of upserts) {
+        expect(row).toEqual({ user_id: 'user-1', achievement_id: 'ach-1' });
+        expect(options).toEqual({ onConflict: 'user_id,achievement_id' });
+      }
+    });
+
+    it('fails closed when a progress query throws synchronously', async () => {
+      builders['user_achievements'] = makeBuilder({ data: [], error: null });
+      builders['moments'] = undefined;
+
+      await expect(
+        service.evaluateAchievements('user-1', ['moments']),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(errorSpy).toHaveBeenCalledWith('achievements.moment_count_failed');
+    });
   });
 
   describe('event integration', () => {
@@ -497,9 +804,17 @@ describe('AchievementsService', () => {
 
       await service.handleMessageSent({ userId: 'user-1' });
       await service.handleEvaluationEvent({ userId: 'user-2' });
+      await service.handleEvaluationEvent({
+        userId: 'user-3',
+        sources: ['moments'],
+      });
 
-      expect(evaluateSpy).toHaveBeenNthCalledWith(1, 'user-1');
-      expect(evaluateSpy).toHaveBeenNthCalledWith(2, 'user-2');
+      expect(evaluateSpy).toHaveBeenNthCalledWith(1, 'user-1', [
+        'messages',
+        'streak',
+      ]);
+      expect(evaluateSpy).toHaveBeenNthCalledWith(2, 'user-2', undefined);
+      expect(evaluateSpy).toHaveBeenNthCalledWith(3, 'user-3', ['moments']);
     });
 
     it('contains background evaluation failures so the source action still succeeds', async () => {

@@ -245,6 +245,32 @@ describe('MyStatsComponent', () => {
     expect(pieData.datasets[0].data).toEqual([0, 0, 0]);
   });
 
+  it('places the performance report below the summary across both grid columns', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockStatsResponse),
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const report = fixture.nativeElement.querySelector('app-performance-report');
+    expect(report).toBeTruthy();
+    expect(report.classList.contains('md:col-span-2')).toBe(true);
+    expect(report.previousElementSibling?.getAttribute('aria-labelledby')).toBe(
+      'stats-summary-heading',
+    );
+  });
+
+  it('does not render the performance report while the dashboard is unavailable', async () => {
+    mockFetch.mockRejectedValue(new Error('Network error'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-performance-report')).toBeNull();
+  });
+
   it('shows an accessible loading state while fetching', () => {
     mockFetch.mockReturnValue(new Promise(() => {}));
     fixture.detectChanges();

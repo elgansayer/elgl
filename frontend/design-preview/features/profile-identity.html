@@ -1208,13 +1208,84 @@
             <div class="card"><strong>96</strong><span class="muted">Corrections made</span></div>
             <div class="card"><strong>23</strong><span class="muted">Moments posted</span></div>
           </div>
+          <span class="state-label">Performance report</span>
+          <div class="card stack">
+            <div class="row" style="justify-content: space-between">
+              <span class="title">Performance report</span>
+              <div class="chip-wrap" role="group" aria-label="Report period">
+                <button type="button" class="btn" style="min-height: 44px" aria-pressed="true">
+                  Last 7 days
+                </button>
+                <button
+                  type="button"
+                  class="btn secondary-btn"
+                  style="min-height: 44px"
+                  aria-pressed="false"
+                >
+                  Last 30 days
+                </button>
+              </div>
+            </div>
+            <span class="muted">Compared with the 7 days before</span>
+            <div class="stat-tiles" style="grid-template-columns: repeat(2, 1fr)">
+              <div class="card">
+                <strong>2.5</strong><span class="muted">Study hours</span>
+                <span class="muted"
+                  ><span aria-hidden="true">↑</span> Up 1 on the previous period</span
+                >
+              </div>
+              <div class="card">
+                <strong>12</strong><span class="muted">Messages sent</span>
+                <span class="muted"
+                  ><span aria-hidden="true">↑</span> Up 7 on the previous period</span
+                >
+              </div>
+              <div class="card">
+                <strong>3</strong><span class="muted">Corrections made</span>
+                <span class="muted"
+                  ><span aria-hidden="true">↓</span> Down 3 on the previous period</span
+                >
+              </div>
+              <div class="card">
+                <strong>2</strong><span class="muted">Moments posted</span>
+                <span class="muted"
+                  ><span aria-hidden="true">-</span> No change on the previous period</span
+                >
+              </div>
+              <div class="card">
+                <strong>0</strong><span class="muted">Lessons completed</span>
+                <span class="muted"
+                  ><span aria-hidden="true">-</span> No change on the previous period</span
+                >
+              </div>
+              <div class="card">
+                <strong>4</strong><span class="muted">Current study streak (days)</span>
+              </div>
+            </div>
+            <span class="title">Badges unlocked</span>
+            <div class="list">
+              <div class="row">
+                <div class="grow">
+                  <div class="title">First Moment</div>
+                  <div class="muted">Share your first Moment.</div>
+                </div>
+                <span class="muted">Unlocked Nov 9, 2026</span>
+              </div>
+            </div>
+            <span class="muted"
+              >No new badges in this period. Keep practising to unlock the next one.</span
+            >
+          </div>
           <span class="state-label">Error</span>
           <div class="alert error" role="alert">
             Could not load your stats.
             <button type="button" class="btn secondary-btn" style="min-height: 32px">Retry</button>
           </div>
         </div>
-        <footer>States shown: charts (with text list fallback) · summary · loading/error</footer>
+        <footer>
+          States shown: charts (with text list fallback) · summary · performance report (7 or 30
+          days, worded trends, unlocked badges, empty badges) · loading/error
+        </footer>
       </section>
 
       <!-- 16 -->

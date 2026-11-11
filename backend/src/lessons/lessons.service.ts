@@ -3,7 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  ACHIEVEMENTS_EVALUATE_EVENT,
+  type AchievementsEvaluatePayload,
+} from '../achievements/achievements.events';
 import { SupabaseService, type LessonRow } from '../supabase/supabase.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
@@ -31,7 +36,10 @@ export interface LessonProgressRecord {
 
 @Injectable()
 export class LessonsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async listLessons(): Promise<LessonRecord[]> {
     const supabase = this.supabaseService.getClient();
@@ -119,7 +127,16 @@ export class LessonsService {
 
     if (error) throw error;
     if (!data) throw new Error('Lesson progress write returned no row');
-    return this.normaliseProgress(data, lessonId);
+    const progress = this.normaliseProgress(data, lessonId);
+    if (completed) {
+      // Best-effort badge evaluation; it reads the persisted completed count.
+      const payload: AchievementsEvaluatePayload = {
+        userId,
+        sources: ['lessons'],
+      };
+      this.eventEmitter.emit(ACHIEVEMENTS_EVALUATE_EVENT, payload);
+    }
+    return progress;
   }
 
   async createLesson(dto: CreateLessonDto): Promise<LessonRecord> {

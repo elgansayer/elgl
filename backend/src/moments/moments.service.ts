@@ -5,6 +5,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  ACHIEVEMENTS_EVALUATE_EVENT,
+  AchievementsEvaluatePayload,
+  MilestoneSource,
+} from '../achievements/achievements.events';
 import { MetricsService } from '../metrics/metrics.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
@@ -121,6 +126,16 @@ export class MomentsService {
     private readonly metricsService: MetricsService,
   ) {}
 
+  // Badge evaluation is best-effort and reads persisted counts, so the event
+  // only names the progress source that just changed.
+  private requestAchievementEvaluation(
+    userId: string,
+    source: MilestoneSource,
+  ): void {
+    const payload: AchievementsEvaluatePayload = { userId, sources: [source] };
+    this.eventEmitter.emit(ACHIEVEMENTS_EVALUATE_EVENT, payload);
+  }
+
   private inferMediaType(dto: CreateStoryDto): string {
     if (dto.media_type) {
       return dto.media_type;
@@ -190,6 +205,8 @@ export class MomentsService {
       );
     }
 
+    this.requestAchievementEvaluation(userId, 'moments');
+
     const profile = await this.usersService.getProfile(userId);
 
     return {
@@ -256,6 +273,7 @@ export class MomentsService {
     void this.xpService.awardXpForActivity(userId, 'create_moment');
     // Award quest progress for posting a Moment
     void this.questsService.incrementProgress(userId, 'post_moment', 1);
+    this.requestAchievementEvaluation(userId, 'moments');
     // Asynchronous fan-out via Redis timeline queue
     void this.timelineWorker.fanOutMoment(moment.id, userId);
 
@@ -308,6 +326,7 @@ export class MomentsService {
     moment.total_answers_count = 0;
     void this.xpService.awardXpForActivity(userId, 'create_moment');
     void this.questsService.incrementProgress(userId, 'post_moment', 1);
+    this.requestAchievementEvaluation(userId, 'moments');
     const profile = await this.usersService.getProfile(userId);
     moment.author = {
       id: profile?.id ?? userId,
@@ -1093,6 +1112,7 @@ export class MomentsService {
     // Award quest progress when the comment contains a correction payload
     if (dto.correction_payload) {
       void this.questsService.incrementProgress(userId, 'correct_moments', 1);
+      this.requestAchievementEvaluation(userId, 'corrections');
     }
 
     const result = await supabase

@@ -1448,6 +1448,32 @@ export class I18nService {
     'achievements.earnedLabel': 'Earned',
     'achievements.lockedLabel': 'Locked',
     'achievements.progressLabel': '{{current}} / {{required}}',
+    // Badge copy, keyed by the server achievement catalogue code
+    'achievements.badge.first_message.name': 'First Message',
+    'achievements.badge.first_message.description': 'Send your first message in a chat.',
+    'achievements.badge.100_messages.name': '100 Messages',
+    'achievements.badge.100_messages.description': 'Send 100 messages in chats.',
+    'achievements.badge.500_messages.name': '500 Messages',
+    'achievements.badge.500_messages.description': 'Send 500 messages in chats.',
+    'achievements.badge.7_day_streak.name': '7-Day Streak',
+    'achievements.badge.7_day_streak.description': 'Keep a 7-day study streak.',
+    'achievements.badge.30_day_streak.name': '30-Day Streak',
+    'achievements.badge.30_day_streak.description': 'Keep a 30-day study streak.',
+    'achievements.badge.first_correction.name': 'First Correction',
+    'achievements.badge.first_correction.description':
+      'Correct a language partner in a Moment comment.',
+    'achievements.badge.25_corrections.name': '25 Corrections',
+    'achievements.badge.25_corrections.description': 'Make 25 corrections in Moment comments.',
+    'achievements.badge.100_corrections.name': '100 Corrections',
+    'achievements.badge.100_corrections.description': 'Make 100 corrections in Moment comments.',
+    'achievements.badge.first_moment.name': 'First Moment',
+    'achievements.badge.first_moment.description': 'Share your first Moment.',
+    'achievements.badge.10_moments.name': '10 Moments',
+    'achievements.badge.10_moments.description': 'Share 10 Moments.',
+    'achievements.badge.first_lesson.name': 'First Lesson',
+    'achievements.badge.first_lesson.description': 'Complete your first lesson.',
+    'achievements.badge.10_lessons.name': '10 Lessons',
+    'achievements.badge.10_lessons.description': 'Complete 10 lessons.',
 
     // Profile Component & Visitor Logs
     'profile.title': 'Your Language Profile',
@@ -2699,6 +2725,29 @@ export class I18nService {
     'stats.dayAbbr.thu': 'Thu',
     'stats.dayAbbr.fri': 'Fri',
     'stats.dayAbbr.sat': 'Sat',
+
+    // Performance report
+    'stats.report.title': 'Performance report',
+    'stats.report.periodLabel': 'Report period',
+    'stats.report.period.week': 'Last 7 days',
+    'stats.report.period.month': 'Last 30 days',
+    'stats.report.comparison.week': 'Compared with the 7 days before',
+    'stats.report.comparison.month': 'Compared with the 30 days before',
+    'stats.report.loading': 'Loading your report...',
+    'stats.report.error': 'Failed to load your report. Please try again.',
+    'stats.report.metric.study_hours': 'Study hours',
+    'stats.report.metric.messages_sent': 'Messages sent',
+    'stats.report.metric.corrections_made': 'Corrections made',
+    'stats.report.metric.moments_posted': 'Moments posted',
+    'stats.report.metric.lessons_completed': 'Lessons completed',
+    'stats.report.streak': 'Current study streak (days)',
+    'stats.report.trend.up': 'Up {{change}} on the previous period',
+    'stats.report.trend.down': 'Down {{change}} on the previous period',
+    'stats.report.trend.same': 'No change on the previous period',
+    'stats.report.badgesTitle': 'Badges unlocked',
+    'stats.report.badgesEmpty':
+      'No new badges in this period. Keep practising to unlock the next one.',
+    'stats.report.unlockedOn': 'Unlocked {{date}}',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

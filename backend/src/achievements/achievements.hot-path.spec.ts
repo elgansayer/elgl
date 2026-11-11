@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AchievementsService } from './achievements.service';
+import { AchievementsService, MILESTONES } from './achievements.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 function makeBuilder(response: unknown) {
@@ -7,6 +7,7 @@ function makeBuilder(response: unknown) {
   for (const method of [
     'select',
     'eq',
+    'not',
     'order',
     'single',
     'returns',
@@ -69,7 +70,7 @@ describe('AchievementsService hot-path evaluation', () => {
       .spyOn(service, 'awardAchievement')
       .mockResolvedValue(undefined);
 
-    await service.evaluateAchievements('user-1');
+    await service.evaluateAchievements('user-1', ['messages', 'streak']);
 
     expect(builders['chat_messages'].select).not.toHaveBeenCalled();
     expect(builders['users'].select).toHaveBeenCalledWith('study_streak_days');
@@ -93,7 +94,7 @@ describe('AchievementsService hot-path evaluation', () => {
       .spyOn(service, 'awardAchievement')
       .mockResolvedValue(undefined);
 
-    await service.evaluateAchievements('user-1');
+    await service.evaluateAchievements('user-1', ['messages', 'streak']);
 
     expect(builders['chat_messages'].select).toHaveBeenCalled();
     expect(builders['users'].select).not.toHaveBeenCalled();
@@ -104,13 +105,7 @@ describe('AchievementsService hot-path evaluation', () => {
 
   it('uses only the bounded earned-state query when every milestone is already earned', async () => {
     builders['user_achievements'] = makeBuilder({
-      data: [
-        { achievements: { code: 'first_message' } },
-        { achievements: { code: '100_messages' } },
-        { achievements: { code: '500_messages' } },
-        { achievements: { code: '7_day_streak' } },
-        { achievements: { code: '30_day_streak' } },
-      ],
+      data: MILESTONES.map(({ code }) => ({ achievements: { code } })),
       error: null,
     });
     const awardSpy = vi
@@ -122,5 +117,29 @@ describe('AchievementsService hot-path evaluation', () => {
     expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
     expect(mockSupabaseClient.from).toHaveBeenCalledWith('user_achievements');
     expect(awardSpy).not.toHaveBeenCalled();
+  });
+
+  it('reads only the source named by the triggering event', async () => {
+    builders['user_achievements'] = makeBuilder({ data: [], error: null });
+    builders['moments'] = makeBuilder({ count: 1, error: null });
+    const awardSpy = vi
+      .spyOn(service, 'awardAchievement')
+      .mockResolvedValue(undefined);
+
+    await service.evaluateAchievements('user-1', ['moments']);
+
+    expect(mockSupabaseClient.from.mock.calls.map(([table]) => table)).toEqual([
+      'user_achievements',
+      'moments',
+    ]);
+    expect(awardSpy).toHaveBeenCalledTimes(1);
+    expect(awardSpy).toHaveBeenCalledWith('user-1', 'first_moment');
+  });
+
+  it('does no work when the event names no known source', async () => {
+    await service.evaluateAchievements('user-1', []);
+    await service.evaluateAchievements('user-1', ['unknown' as never]);
+
+    expect(mockSupabaseClient.from).not.toHaveBeenCalled();
   });
 });

@@ -6,6 +6,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
+import { PerformanceReportComponent } from './performance-report.component';
 
 type DayName = 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat';
 const DAY_NAMES: readonly DayName[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -73,7 +74,7 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
 
 @Component({
   selector: 'app-my-stats',
-  imports: [HlmButton, NgChartsModule, TranslatePipe],
+  imports: [HlmButton, NgChartsModule, PerformanceReportComponent, TranslatePipe],
   template: `
     <main
       class="mx-auto max-w-4xl space-y-6 p-4"
@@ -190,6 +191,8 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
               </div>
             </dl>
           </section>
+
+          <app-performance-report class="md:col-span-2" />
         </div>
       }
     </main>

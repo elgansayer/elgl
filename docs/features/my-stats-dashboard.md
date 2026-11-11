@@ -72,3 +72,7 @@ Canonical repository CI remains authoritative for merge readiness.
 ## Rollout and rollback
 
 This completion change does not alter the API, database schema, route, or production calculation. Rollback is a normal revert of the documentation/test commit. The production dashboard implementation remains unchanged.
+
+## Performance report
+
+Below the summary cards, the screen shows the performance report served by `GET /stats/me/report`. It compares the latest 7 or 30 days with the equally long period before, words each trend ("Up 7 on the previous period"), and lists the badges unlocked in the period. The period switch is a labelled pair of toggle buttons; the report has its own loading, error and Retry states, so a failure there does not hide the dashboard. See `docs/performance-reports.md`.
