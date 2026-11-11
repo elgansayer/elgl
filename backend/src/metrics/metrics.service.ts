@@ -124,6 +124,12 @@ export class MetricsService {
   readonly linkPreviewFailures: Counter<string>;
   readonly linkPreviewFetchDuration: Histogram<string>;
 
+  // Class replay (adaptive HLS/DASH) metrics
+  readonly classReplayCreated: Counter<string>;
+  readonly classReplayTransitions: Counter<string>;
+  readonly classReplayProcessingDuration: Histogram<string>;
+  readonly classReplayPurged: Counter<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -716,6 +722,36 @@ export class MetricsService {
       registers: [this.register],
       buckets: [0.1, 0.25, 0.5, 1, 2, 4, 6, 8, 10],
     });
+
+    // --- Class replay (adaptive HLS/DASH) Metrics ---
+
+    this.classReplayCreated = new Counter({
+      name: 'hellotalk_class_replay_created_total',
+      help: 'Total class replays registered by source',
+      labelNames: ['source'],
+      registers: [this.register],
+    });
+
+    this.classReplayTransitions = new Counter({
+      name: 'hellotalk_class_replay_transitions_total',
+      help: 'Total class replay state transitions by resulting status',
+      labelNames: ['status'],
+      registers: [this.register],
+    });
+
+    this.classReplayProcessingDuration = new Histogram({
+      name: 'hellotalk_class_replay_processing_duration_seconds',
+      help: 'Duration of one class replay processing attempt by outcome',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60, 120],
+    });
+
+    this.classReplayPurged = new Counter({
+      name: 'hellotalk_class_replay_purged_total',
+      help: 'Total expired class replay records deleted by retention',
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -1156,6 +1192,29 @@ export class MetricsService {
         details.durationSeconds,
       );
     }
+  }
+
+  // --- Class replay (adaptive HLS/DASH) metric helpers ---
+
+  recordClassReplayCreated(source: 'manual' | 'archive'): void {
+    this.classReplayCreated.inc({ source });
+  }
+
+  recordClassReplayTransition(
+    status: 'pending' | 'processing' | 'ready' | 'failed',
+  ): void {
+    this.classReplayTransitions.inc({ status });
+  }
+
+  recordClassReplayProcessing(
+    outcome: 'success' | 'failure',
+    durationSeconds: number,
+  ): void {
+    this.classReplayProcessingDuration.observe({ outcome }, durationSeconds);
+  }
+
+  recordClassReplayPurged(): void {
+    this.classReplayPurged.inc();
   }
 
   setModerationQueueSize(count: number): void {

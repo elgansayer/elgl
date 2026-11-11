@@ -94,7 +94,12 @@ describe('CloudflareStreamService', () => {
             uid: 'video-123',
             readyToStream: true,
             status: { state: 'ready' },
-            playback: { hls: 'https://stream.example/video-123/manifest.m3u8' },
+            playback: {
+              hls: 'https://stream.example/video-123/manifest.m3u8',
+              dash: 'https://stream.example/video-123/manifest.mpd',
+            },
+            thumbnail: 'https://stream.example/video-123/thumb.jpg',
+            duration: 90,
           },
         ]),
       )
@@ -117,6 +122,9 @@ describe('CloudflareStreamService', () => {
     expect(recording).toEqual({
       videoId: 'video-123',
       playbackUrl: 'https://stream.example/video-123/manifest.m3u8',
+      dashUrl: 'https://stream.example/video-123/manifest.mpd',
+      thumbnailUrl: 'https://stream.example/video-123/thumb.jpg',
+      durationSeconds: 90,
       audioDownloadUrl: 'https://stream.example/video-123/audio.m4a',
     });
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -134,6 +142,109 @@ describe('CloudflareStreamService', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.cloudflare.com/client/v4/accounts/account-123/stream/live_inputs/input-123',
       expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('copies a recording for on-the-fly adaptive transcoding', async () => {
+    fetchMock.mockResolvedValue(apiResponse({ uid: 'video-456' }));
+
+    const videoId = await service.copyVideoFromUrl(
+      'https://media.example.com/class.mp4',
+      { name: 'Travel class', roomId: 'room-1' },
+    );
+
+    expect(videoId).toBe('video-456');
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      'https://api.cloudflare.com/client/v4/accounts/account-123/stream/copy',
+    );
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      url: 'https://media.example.com/class.mp4',
+      meta: { name: 'Travel class', roomId: 'room-1' },
+      requireSignedURLs: false,
+    });
+  });
+
+  it('rejects non-HTTPS or private source recordings before copying', async () => {
+    await expect(
+      service.copyVideoFromUrl('http://media.example.com/class.mp4', {
+        name: 'Travel class',
+      }),
+    ).rejects.toThrow('must use HTTPS');
+    await expect(
+      service.copyVideoFromUrl('https://127.0.0.1/class.mp4', {
+        name: 'Travel class',
+      }),
+    ).rejects.toThrow('must be publicly reachable');
+    await expect(
+      service.copyVideoFromUrl('https://[::ffff:127.0.0.1]/class.mp4', {
+        name: 'Travel class',
+      }),
+    ).rejects.toThrow('must be publicly reachable');
+    await expect(
+      service.copyVideoFromUrl('https://[::ffff:10.0.0.1]/class.mp4', {
+        name: 'Travel class',
+      }),
+    ).rejects.toThrow('must be publicly reachable');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('returns adaptive playback sources and readiness state', async () => {
+    fetchMock.mockResolvedValue(
+      apiResponse({
+        uid: 'video-456',
+        readyToStream: true,
+        status: { state: 'ready' },
+        playback: {
+          hls: 'https://stream.example/video-456/manifest.m3u8',
+          dash: 'https://stream.example/video-456/manifest.mpd',
+        },
+        thumbnail: 'https://stream.example/video-456/thumb.jpg',
+        duration: 120,
+      }),
+    );
+
+    await expect(service.getVideoPlayback('video-456')).resolves.toEqual({
+      videoId: 'video-456',
+      ready: true,
+      state: 'ready',
+      hlsUrl: 'https://stream.example/video-456/manifest.m3u8',
+      dashUrl: 'https://stream.example/video-456/manifest.mpd',
+      thumbnailUrl: 'https://stream.example/video-456/thumb.jpg',
+      durationSeconds: 120,
+    });
+  });
+
+  it('deletes a replay provider recording', async () => {
+    fetchMock.mockResolvedValue(apiResponse({}));
+
+    await service.deleteVideo('video-456');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.cloudflare.com/client/v4/accounts/account-123/stream/video-456',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('waits for the progressive MP4 derivative', async () => {
+    fetchMock
+      .mockResolvedValueOnce(apiResponse({}))
+      .mockResolvedValueOnce(
+        apiResponse({
+          default: { status: 'inprogress', url: '' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        apiResponse({
+          default: {
+            status: 'ready',
+            url: 'https://stream.example/video-456/download.mp4',
+          },
+        }),
+      );
+
+    await expect(service.waitForDefaultDownload('video-456')).resolves.toBe(
+      'https://stream.example/video-456/download.mp4',
     );
   });
 

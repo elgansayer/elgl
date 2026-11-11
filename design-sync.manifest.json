@@ -472,13 +472,14 @@
         "frontend/src/app/components/classrooms-marketplace",
         "frontend/src/app/components/video-classroom-error-boundary",
         "frontend/src/app/components/instant-video-recorder",
-        "frontend/src/app/components/audio-room-archive"
+        "frontend/src/app/components/audio-room-archive",
+        "frontend/src/app/components/class-replays"
       ],
       "previewPaths": ["frontend/design-preview/features/calls-live.html"],
       "claudeDesignPath": "features/calls-live.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1195-e2ee-personal-messages (e2ee secured badge is conditionally rendered on connected calls; call controls and visual contract are unchanged); issue-1777-live-chat-overlay (additive Centrifugo listener and reduced-motion support for live chat overlay; visual contract is unchanged); issue-1788-raise-hand-approve-speaker (consolidated approve speaker modal into standalone component matching existing preview specimen and added decline/dismiss stage handlers; visual contract is unchanged); issue-1840-quick-polls (accessible poll dialogs, explicit numeric result cues, voting actions and reconnect recovery); issue-1828-bookmark-feedback (the existing Favourite action now reports success or failure through the shared translated toast; the message action menu and message layout are unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1195-e2ee-personal-messages (e2ee secured badge is conditionally rendered on connected calls; call controls and visual contract are unchanged); issue-1777-live-chat-overlay (additive Centrifugo listener and reduced-motion support for live chat overlay; visual contract is unchanged); issue-1788-raise-hand-approve-speaker (consolidated approve speaker modal into standalone component matching existing preview specimen and added decline/dismiss stage handlers; visual contract is unchanged); issue-1840-quick-polls (accessible poll dialogs, explicit numeric result cues, voting actions and reconnect recovery); issue-1828-bookmark-feedback (the existing Favourite action now reports success or failure through the shared translated toast; the message action menu and message layout are unchanged); issue-2043-class-replays (adaptive HLS/DASH class replay list, player and explicit pending, failed and playback-error states)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",

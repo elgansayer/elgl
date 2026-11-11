@@ -804,6 +804,45 @@ export class I18nService {
     'videoRoom.speakerOptionAria': 'Invite {{id}} as co-host',
     'videoRoom.connectingToRoom': 'Connecting to room...',
 
+    // Class Replays (adaptive HLS/DASH)
+    'classReplays.title': 'Class replays',
+    'classReplays.subtitle': 'Rewatch recorded lessons with adaptive video quality.',
+    'classReplays.backToClassrooms': 'Back to video classrooms',
+    'classReplays.openLink': 'Class replays',
+    'classReplays.refresh': 'Refresh',
+    'classReplays.listLabel': 'Available class replays',
+    'classReplays.videoLabel': 'Class replay video',
+    'classReplays.recordedAt': 'Recorded {{date}}',
+    'classReplays.duration': '{{duration}} long',
+    'classReplays.expiresAt': 'Available until {{date}}',
+    'classReplays.loadErrorTitle': 'Class replays could not be loaded',
+    'classReplays.loadErrorDescription':
+      'We could not load your class replays. Check your connection and try again.',
+    'classReplays.retryLoad': 'Try again',
+    'classReplays.emptyTitle': 'No class replays yet',
+    'classReplays.emptyDescription':
+      'Replays appear here after a recorded class has finished processing.',
+    'classReplays.selectTitle': 'Choose a replay',
+    'classReplays.selectDescription': 'Select a class from the list to start watching.',
+    'classReplays.status.pending': 'Preparing',
+    'classReplays.status.processing': 'Transcoding',
+    'classReplays.status.ready': 'Ready',
+    'classReplays.status.failed': 'Unavailable',
+    'classReplays.playbackLoading': 'Preparing playback',
+    'classReplays.playbackErrorTitle': 'Playback is unavailable',
+    'classReplays.playbackErrorDescription':
+      'The replay could not be prepared. Try reloading it in a moment.',
+    'classReplays.retryPlayback': 'Reload playback',
+    'classReplays.retryProcessing': 'Retry processing',
+    'classReplays.retrying': 'Retrying',
+    'classReplays.retryFailed': 'The replay could not be retried. Please try again.',
+    'classReplays.notReady':
+      'This replay is still being prepared. It will appear automatically when it is ready.',
+    'classReplays.failedHint':
+      'The host can retry processing, or you can ask them to publish the recording again.',
+    'classReplays.noSourcesTitle': 'This replay has no playable source',
+    'classReplays.noSourcesDescription': 'The recording finished without a usable video stream.',
+
     // Video Classrooms Marketplace
     'classroomsMarketplace.title': '🏫 Video Classrooms',
     'classroomsMarketplace.subtitle':

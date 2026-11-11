@@ -11,6 +11,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { NlpService } from '../nlp/nlp.service';
 import { ChatLlmService } from '../chat/chat-llm.service';
+import { ClassReplaysService } from '../class-replays/class-replays.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import {
   AudioRoomArchiveListItem,
@@ -72,6 +73,7 @@ export class AudioRoomArchivesService {
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly transcriptEgress: TranscriptEgressService,
+    private readonly classReplaysService: ClassReplaysService,
     private readonly chatLlmService: ChatLlmService,
     private readonly nlpService: NlpService,
   ) {
@@ -109,9 +111,13 @@ export class AudioRoomArchivesService {
 
     if (room.is_active) {
       try {
-        recordingUrl =
-          (await this.transcriptEgress.stopEgress(room.room_name)) ??
-          recordingUrl;
+        const recording = await this.transcriptEgress.stopEgressWithRecording(
+          room.room_name,
+        );
+        if (recording) {
+          recordingUrl = recording.audioDownloadUrl;
+          await this.registerClassReplay(room, hostId, recording);
+        }
       } catch {
         this.logger.warn(
           `Recording finalisation failed for audio room ${room.id}`,
@@ -322,6 +328,32 @@ export class AudioRoomArchivesService {
 
   async assertCanAccess(userId: string, roomId: string): Promise<void> {
     await this.getAccessibleRoom(userId, roomId);
+  }
+
+  private async registerClassReplay(
+    room: ArchiveRoomRow,
+    hostId: string,
+    recording: Awaited<
+      ReturnType<TranscriptEgressService['stopEgressWithRecording']>
+    >,
+  ): Promise<void> {
+    if (!recording) return;
+    try {
+      await this.classReplaysService.ingestProviderRecording({
+        hostId,
+        roomId: room.id,
+        title: room.title,
+        providerVideoId: recording.videoId,
+        hlsUrl: recording.playbackUrl,
+        dashUrl: recording.dashUrl,
+        thumbnailUrl: recording.thumbnailUrl,
+        durationSeconds: recording.durationSeconds,
+      });
+    } catch {
+      this.logger.warn(
+        `Class replay registration failed for audio room ${room.id}`,
+      );
+    }
   }
 
   private async getAccessibleRoom(

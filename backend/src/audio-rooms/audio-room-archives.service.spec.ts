@@ -8,6 +8,7 @@ import { NlpService } from '../nlp/nlp.service';
 import { ChatLlmService } from '../chat/chat-llm.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { AudioRoomArchivesService } from './audio-room-archives.service';
+import { ClassReplaysService } from '../class-replays/class-replays.service';
 
 interface QueryBuilderMock {
   select: ReturnType<typeof vi.fn>;
@@ -136,7 +137,21 @@ describe('AudioRoomArchivesService', () => {
           provide: TranscriptEgressService,
           useValue: {
             stopEgress: vi.fn().mockResolvedValue(room.recording_url),
+            stopEgressWithRecording: vi.fn().mockResolvedValue({
+              videoId: 'video-1',
+              playbackUrl: 'https://media.example.test/replay.m3u8',
+              dashUrl: 'https://media.example.test/replay.mpd',
+              thumbnailUrl: null,
+              durationSeconds: 60,
+              audioDownloadUrl: room.recording_url,
+            }),
             generateTranscriptFromAudioUrl: vi.fn().mockResolvedValue(''),
+          },
+        },
+        {
+          provide: ClassReplaysService,
+          useValue: {
+            ingestProviderRecording: vi.fn().mockResolvedValue(null),
           },
         },
         {

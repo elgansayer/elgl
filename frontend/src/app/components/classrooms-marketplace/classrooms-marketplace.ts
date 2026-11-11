@@ -15,6 +15,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { JoyrideModule } from 'ngx-joyride';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-classrooms-marketplace',
@@ -25,6 +26,7 @@ import { JoyrideModule } from 'ngx-joyride';
     AppSkeletonLoaderComponent,
     AppEmptyStateComponent,
     JoyrideModule,
+    RouterLink,
   ],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],

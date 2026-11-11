@@ -7,9 +7,10 @@ import { DataScrubbingService } from './data-scrubbing.service';
 import { PrivacyArchiveCron } from './privacy-archive.cron';
 import { DataRetentionService } from './data-retention.service';
 import { PrivacyLifecycleService } from './privacy-lifecycle.service';
+import { ClassReplaysModule } from '../class-replays/class-replays.module';
 
 @Module({
-  imports: [SupabaseModule, SafetyModule],
+  imports: [SupabaseModule, SafetyModule, ClassReplaysModule],
   controllers: [PrivacyController],
   providers: [
     PrivacyService,

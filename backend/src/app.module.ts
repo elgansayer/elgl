@@ -30,6 +30,7 @@ import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { InterestsModule } from './interests/interests.module';
 import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
+import { ClassReplaysModule } from './class-replays/class-replays.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
 import { BlocksModule } from './blocks/blocks.module';
@@ -130,6 +131,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     InterestsModule,
     FavouritesModule,
     VideoCallsModule,
+    ClassReplaysModule,
     LeaderboardModule,
     StreakModule,
     BlocksModule,

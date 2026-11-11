@@ -1,0 +1,229 @@
+<div class="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
+  <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div class="space-y-1">
+      <a
+        routerLink="/live/video"
+        class="inline-flex items-center rounded text-sm font-semibold text-primary-text underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        {{ 'classReplays.backToClassrooms' | t }}
+      </a>
+      <h1 class="text-2xl font-black text-text-primary">
+        {{ 'classReplays.title' | t }}
+      </h1>
+      <p class="text-sm text-text-secondary">{{ 'classReplays.subtitle' | t }}</p>
+    </div>
+    <button
+      hlmBtn
+      type="button"
+      (click)="refresh()"
+      class="inline-flex items-center justify-center rounded-full border border-surface-600 bg-surface-200 px-4 py-2 text-sm font-bold text-text-primary transition-colors hover:border-primary/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      {{ 'classReplays.refresh' | t }}
+    </button>
+  </header>
+
+  @if (replaysResource.isLoading()) {
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]" aria-busy="true">
+      <div class="space-y-2">
+        @for (item of [1, 2, 3]; track item) {
+          <div class="h-20 animate-pulse rounded-2xl bg-surface-300"></div>
+        }
+      </div>
+      <div class="min-h-64 animate-pulse rounded-2xl bg-surface-300"></div>
+    </div>
+  } @else if (replaysResource.error()) {
+    <div
+      role="alert"
+      class="rounded-2xl border border-danger/40 bg-danger/10 p-4 text-sm text-text-primary"
+    >
+      <p class="font-bold">{{ 'classReplays.loadErrorTitle' | t }}</p>
+      <p class="mt-1 text-text-secondary">
+        {{ 'classReplays.loadErrorDescription' | t }}
+      </p>
+      <button
+        hlmBtn
+        type="button"
+        (click)="refresh()"
+        class="mt-3 rounded-full bg-primary px-4 py-2 text-xs font-bold text-on-fill hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        {{ 'classReplays.retryLoad' | t }}
+      </button>
+    </div>
+  } @else if (!hasReplays()) {
+    <div class="rounded-2xl border border-surface-600 bg-surface-200 p-8 text-center">
+      <h2 class="mt-3 text-lg font-bold text-text-primary">
+        {{ 'classReplays.emptyTitle' | t }}
+      </h2>
+      <p class="mx-auto mt-1 max-w-md text-sm text-text-secondary">
+        {{ 'classReplays.emptyDescription' | t }}
+      </p>
+    </div>
+  } @else {
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+      <section aria-labelledby="class-replays-list-heading">
+        <h2 id="class-replays-list-heading" class="sr-only">
+          {{ 'classReplays.listLabel' | t }}
+        </h2>
+        <ul class="space-y-2">
+          @for (replay of replays(); track replay.id) {
+            <li>
+              <button
+                hlmBtn
+                type="button"
+                (click)="selectReplay(replay)"
+                [attr.aria-pressed]="selectedId() === replay.id"
+                class="w-full rounded-2xl border border-surface-600 bg-surface-200 p-4 text-start transition-colors hover:border-primary/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                [class.border-primary]="selectedId() === replay.id"
+                [class.bg-surface-300]="selectedId() === replay.id"
+              >
+                <span class="flex flex-wrap items-start justify-between gap-2">
+                  <span class="font-bold text-text-primary">{{ replay.title }}</span>
+                  <span
+                    class="rounded-full bg-surface-400 px-2 py-0.5 text-[11px] font-bold text-text-secondary"
+                    [class.text-success]="replay.status === 'ready'"
+                    [class.text-warning]="
+                      replay.status === 'pending' || replay.status === 'processing'
+                    "
+                    [class.text-danger]="replay.status === 'failed'"
+                  >
+                    {{ statusKey(replay) | t }}
+                  </span>
+                </span>
+                <span class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-secondary">
+                  <span>{{
+                    'classReplays.recordedAt' | t: { date: formatDate(replay.created_at) }
+                  }}</span>
+                  @if (replay.duration_seconds !== null) {
+                    <span>{{
+                      'classReplays.duration'
+                        | t: { duration: formatDuration(replay.duration_seconds) }
+                    }}</span>
+                  }
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section
+        aria-live="polite"
+        class="rounded-2xl border border-surface-600 bg-surface-200 p-4 sm:p-5"
+      >
+        @if (selectedReplay(); as selected) {
+          <div class="space-y-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 class="text-lg font-black text-text-primary">{{ selected.title }}</h2>
+                <p class="mt-1 text-xs text-text-secondary">
+                  {{ 'classReplays.recordedAt' | t: { date: formatDate(selected.created_at) } }}
+                </p>
+              </div>
+              @if (canRetrySelected()) {
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="retrySelected()"
+                  [disabled]="retrying()"
+                  class="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-bold text-on-fill hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {{ (retrying() ? 'classReplays.retrying' : 'classReplays.retryProcessing') | t }}
+                </button>
+              }
+            </div>
+
+            @if (retryFailed()) {
+              <p role="alert" class="text-sm font-semibold text-danger">
+                {{ 'classReplays.retryFailed' | t }}
+              </p>
+            }
+
+            @if (selected.description) {
+              <p class="text-sm text-text-secondary">{{ selected.description }}</p>
+            }
+
+            @if (selected.status !== 'ready') {
+              <div class="rounded-xl border border-surface-600 bg-surface-300 p-4">
+                <p class="font-bold text-text-primary">{{ statusKey(selected) | t }}</p>
+                @if (selected.status === 'failed') {
+                  <p class="mt-1 text-sm text-text-secondary">
+                    {{ 'classReplays.failedHint' | t }}
+                  </p>
+                } @else {
+                  <p class="mt-1 text-sm text-text-secondary">
+                    {{ 'classReplays.notReady' | t }}
+                  </p>
+                }
+              </div>
+            } @else if (playbackResource.isLoading()) {
+              <div class="min-h-64 animate-pulse rounded-xl bg-surface-300" aria-busy="true">
+                <span class="sr-only">{{ 'classReplays.playbackLoading' | t }}</span>
+              </div>
+            } @else if (playbackResource.error()) {
+              <div role="alert" class="rounded-xl border border-danger/40 bg-danger/10 p-4 text-sm">
+                <p class="font-bold text-text-primary">
+                  {{ 'classReplays.playbackErrorTitle' | t }}
+                </p>
+                <p class="mt-1 text-text-secondary">
+                  {{ 'classReplays.playbackErrorDescription' | t }}
+                </p>
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="refresh()"
+                  class="mt-3 rounded-full bg-primary px-4 py-2 text-xs font-bold text-on-fill hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {{ 'classReplays.retryPlayback' | t }}
+                </button>
+              </div>
+            } @else if (playback(); as source) {
+              @if (hasPlaybackSource(source)) {
+                <video
+                  class="aspect-video w-full rounded-xl bg-surface-900"
+                  controls
+                  preload="metadata"
+                  playsinline
+                  [attr.aria-label]="'classReplays.videoLabel' | t"
+                  [poster]="source.thumbnail_url ?? ''"
+                >
+                  @if (source.hls_url) {
+                    <source [src]="source.hls_url" type="application/x-mpegURL" />
+                  }
+                  @if (source.dash_url) {
+                    <source [src]="source.dash_url" type="application/dash+xml" />
+                  }
+                  @if (source.download_url) {
+                    <source [src]="source.download_url" type="video/mp4" />
+                  }
+                </video>
+                @if (source.expires_at) {
+                  <p class="text-xs text-text-secondary">
+                    {{ 'classReplays.expiresAt' | t: { date: formatDate(source.expires_at) } }}
+                  </p>
+                }
+              } @else {
+                <div class="rounded-xl border border-surface-600 bg-surface-300 p-4">
+                  <p class="font-bold text-text-primary">
+                    {{ 'classReplays.noSourcesTitle' | t }}
+                  </p>
+                  <p class="mt-1 text-sm text-text-secondary">
+                    {{ 'classReplays.noSourcesDescription' | t }}
+                  </p>
+                </div>
+              }
+            }
+          </div>
+        } @else {
+          <div class="flex min-h-64 flex-col items-center justify-center text-center">
+            <h2 class="mt-3 text-lg font-bold text-text-primary">
+              {{ 'classReplays.selectTitle' | t }}
+            </h2>
+            <p class="mt-1 max-w-sm text-sm text-text-secondary">
+              {{ 'classReplays.selectDescription' | t }}
+            </p>
+          </div>
+        }
+      </section>
+    </div>
+  }
+</div>

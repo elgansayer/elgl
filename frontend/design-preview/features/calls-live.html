@@ -1900,6 +1900,83 @@
         </footer>
       </section>
 
+      <section class="specimen" data-component="components/class-replays">
+        <header>
+          <h2>Class replays</h2>
+          <code>components/class-replays</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <div class="grow">
+              <h3 class="display" style="margin: 0">Class replays</h3>
+              <p class="muted" style="margin: 2px 0 0">
+                Rewatch recorded lessons with adaptive video quality.
+              </p>
+            </div>
+            <button class="btn">Refresh</button>
+          </div>
+          <div class="row" style="align-items: flex-start; gap: 12px; flex-wrap: wrap">
+            <div class="stack grow" style="min-width: 220px">
+              <button class="card stack" aria-pressed="true">
+                <div class="row" style="justify-content: space-between">
+                  <span class="title">Travel phrases</span>
+                  <span class="badge success">Ready</span>
+                </div>
+                <span class="muted">Recorded 11 Nov 2026 · 2:05 long</span>
+              </button>
+              <button class="card stack" aria-pressed="false">
+                <div class="row" style="justify-content: space-between">
+                  <span class="title">Ordering food</span>
+                  <span class="badge warn">Transcoding</span>
+                </div>
+                <span class="muted">Recorded 11 Nov 2026</span>
+              </button>
+              <button class="card stack" aria-pressed="false">
+                <div class="row" style="justify-content: space-between">
+                  <span class="title">Greetings practice</span>
+                  <span class="badge danger">Unavailable</span>
+                </div>
+                <span class="muted">The host can retry processing.</span>
+              </button>
+            </div>
+            <div class="card stack grow" style="min-height: 220px; min-width: 260px">
+              <div class="row" style="justify-content: space-between">
+                <span class="title">Travel phrases</span>
+                <span class="badge success">Ready</span>
+              </div>
+              <div
+                class="thumb"
+                style="border-radius: 12px; min-height: 150px"
+                aria-label="Class replay video"
+              >
+                ▶<span class="watch">HLS · DASH · MP4 fallback</span>
+              </div>
+              <span class="muted">Available until 9 Feb 2027</span>
+            </div>
+          </div>
+          <span class="state-label">Loading · empty · not ready · playback error · no source</span>
+          <div class="card stack">
+            <div class="skeleton pulse" style="height: 64px"></div>
+            <div class="skeleton pulse" style="width: 65%"></div>
+          </div>
+          <div class="alert error stack" style="text-align: center">
+            ⚠<b>Playback is unavailable</b
+            ><span>The replay could not be prepared. Try reloading it in a moment.</span
+            ><button class="btn">Reload playback</button>
+          </div>
+          <div class="card" style="text-align: center">
+            <div class="title">No class replays yet</div>
+            <p class="muted" style="margin: 0">
+              Replays appear here after a recorded class has finished processing.
+            </p>
+          </div>
+        </div>
+        <footer>
+          States: list · selected player · pending · transcoding · ready · failed · playback error ·
+          empty. Status is always named in text, never communicated by colour alone.
+        </footer>
+      </section>
+
       <section class="specimen" data-component="components/video-classroom-error-boundary">
         <header>
           <h2>Video classroom error boundary</h2>

@@ -14,7 +14,25 @@ export interface CloudflareLiveInput {
 export interface CloudflareStreamRecording {
   videoId: string;
   playbackUrl: string | null;
+  dashUrl: string | null;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
   audioDownloadUrl: string;
+}
+
+export interface CloudflareVideoPlayback {
+  videoId: string;
+  ready: boolean;
+  state: string;
+  hlsUrl: string | null;
+  dashUrl: string | null;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
+}
+
+export interface CloudflareVideoCopyMetadata {
+  name: string;
+  roomId?: string;
 }
 
 interface CloudflareApiEnvelope<T> {
@@ -37,6 +55,8 @@ interface CloudflareVideoResult {
   readyToStream?: boolean;
   status?: { state?: string };
   playback?: { hls?: string; dash?: string };
+  thumbnail?: string;
+  duration?: number;
 }
 
 interface CloudflareDownloadResult {
@@ -144,6 +164,10 @@ export class CloudflareStreamService {
         return {
           videoId: recording.uid,
           playbackUrl: recording.playback?.hls ?? null,
+          dashUrl: recording.playback?.dash ?? null,
+          thumbnailUrl: recording.thumbnail ?? null,
+          durationSeconds:
+            typeof recording.duration === 'number' ? recording.duration : null,
           audioDownloadUrl,
         };
       }
@@ -166,13 +190,96 @@ export class CloudflareStreamService {
     );
   }
 
+  /**
+   * Copies an existing recording into Cloudflare Stream. Cloudflare performs
+   * the on-the-fly HLS/DASH transcoding; the returned identifier is the durable
+   * identity callers poll with `getVideoPlayback`.
+   */
+  async copyVideoFromUrl(
+    sourceUrl: string,
+    metadata: CloudflareVideoCopyMetadata,
+  ): Promise<string> {
+    assertSafeHttpsUrl(sourceUrl, 'source URL');
+    const result = await this.request<CloudflareVideoResult>(
+      '/stream/copy',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          url: sourceUrl,
+          meta: {
+            name: metadata.name.slice(0, 200),
+            roomId: metadata.roomId?.slice(0, 200),
+          },
+          requireSignedURLs: false,
+          allowedOrigins: this.allowedOrigins,
+          thumbnailTimestampPct: 0.1,
+        }),
+      },
+      isCloudflareVideoResult,
+    );
+    return result.uid;
+  }
+
+  async getVideoPlayback(videoId: string): Promise<CloudflareVideoPlayback> {
+    this.validateIdentifier(videoId, 'video ID');
+    const result = await this.request<CloudflareVideoResult>(
+      `/stream/${encodeURIComponent(videoId)}`,
+      { method: 'GET' },
+      isCloudflareVideoResult,
+    );
+    const state = result.status?.state ?? (result.readyToStream ? 'ready' : '');
+    return {
+      videoId: result.uid,
+      ready: result.readyToStream === true || state.toLowerCase() === 'ready',
+      state: state || 'unknown',
+      hlsUrl: result.playback?.hls ?? null,
+      dashUrl: result.playback?.dash ?? null,
+      thumbnailUrl: result.thumbnail ?? null,
+      durationSeconds:
+        typeof result.duration === 'number' ? result.duration : null,
+    };
+  }
+
+  async deleteVideo(videoId: string): Promise<void> {
+    this.validateIdentifier(videoId, 'video ID');
+    await this.request<unknown>(
+      `/stream/${encodeURIComponent(videoId)}`,
+      { method: 'DELETE' },
+      (val: unknown): val is unknown => true,
+    );
+  }
+
+  /**
+   * Creates and waits for the progressive MP4 derivative used when a browser
+   * cannot play adaptive HLS/DASH natively. Failures are surfaced to the caller
+   * so a replay is never advertised as playable without a working source.
+   */
+  async waitForDefaultDownload(
+    videoId: string,
+    timeoutMs = this.recordingTimeoutMs,
+  ): Promise<string> {
+    return this.createAndWaitForDownload(
+      videoId,
+      'default',
+      Date.now() + timeoutMs,
+    );
+  }
+
   private async createAndWaitForAudioDownload(
     videoId: string,
     deadline: number,
   ): Promise<string> {
+    return this.createAndWaitForDownload(videoId, 'audio', deadline);
+  }
+
+  private async createAndWaitForDownload(
+    videoId: string,
+    kind: 'audio' | 'default',
+    deadline: number,
+  ): Promise<string> {
     this.validateIdentifier(videoId, 'video ID');
     await this.request<CloudflareDownloadsResult>(
-      `/stream/${encodeURIComponent(videoId)}/downloads/audio`,
+      `/stream/${encodeURIComponent(videoId)}/downloads/${kind}`,
       { method: 'POST' },
       isCloudflareDownloadsResult,
     );
@@ -184,16 +291,16 @@ export class CloudflareStreamService {
         { method: 'GET' },
         isCloudflareDownloadsResult,
       );
-      const audio = downloads.audio;
-      if (audio?.status.toLowerCase() === 'ready' && audio.url) {
-        return audio.url;
+      const download = downloads[kind];
+      if (download?.status.toLowerCase() === 'ready' && download.url) {
+        return download.url;
       }
-      lastStatus = audio?.status ?? 'not-found';
+      lastStatus = download?.status ?? 'not-found';
       await delay(this.pollIntervalMs);
     }
 
     throw new Error(
-      `Cloudflare Stream audio download did not become ready before timeout (last state: ${lastStatus})`,
+      `Cloudflare Stream ${kind} download did not become ready before timeout (last state: ${lastStatus})`,
     );
   }
 
@@ -294,6 +401,93 @@ export class CloudflareStreamService {
       throw new Error(`Cloudflare Stream ${label} is invalid`);
     }
   }
+}
+
+function assertSafeHttpsUrl(value: string, label: string): void {
+  if (value.length === 0 || value.length > 2048) {
+    throw new Error(`Cloudflare Stream ${label} is invalid`);
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`Cloudflare Stream ${label} is invalid`);
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new Error(`Cloudflare Stream ${label} must use HTTPS`);
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error(`Cloudflare Stream ${label} must not contain credentials`);
+  }
+
+  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host === 'metadata.google.internal' ||
+    isPrivateIpLiteral(host)
+  ) {
+    throw new Error(`Cloudflare Stream ${label} must be publicly reachable`);
+  }
+}
+
+function isPrivateIpLiteral(host: string): boolean {
+  if (host.includes(':')) {
+    if (
+      host === '::1' ||
+      host === '::' ||
+      host.startsWith('fe80:') ||
+      host.startsWith('fc') ||
+      host.startsWith('fd')
+    ) {
+      return true;
+    }
+
+    // WHATWG URL normalises IPv4-mapped IPv6 literals to their hex form
+    // (::ffff:127.0.0.1 becomes ::ffff:7f00:1), which would otherwise bypass
+    // the IPv4 range checks below.
+    const mappedIpv4 = ipv4FromMappedIpv6(host);
+    return mappedIpv4 !== null && isPrivateIpv4(mappedIpv4);
+  }
+
+  return isPrivateIpv4(host);
+}
+
+function ipv4FromMappedIpv6(host: string): string | null {
+  const prefix = '::ffff:';
+  if (!host.startsWith(prefix)) return null;
+
+  const suffix = host.slice(prefix.length);
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(suffix)) return suffix;
+
+  const hextets = suffix.split(':');
+  if (hextets.length !== 2) return null;
+  if (!hextets.every((hextet) => /^[0-9a-f]{1,4}$/.test(hextet))) return null;
+
+  const high = Number.parseInt(hextets[0], 16);
+  const low = Number.parseInt(hextets[1], 16);
+  return [high >> 8, high & 0xff, low >> 8, low & 0xff].join('.');
+}
+
+function isPrivateIpv4(host: string): boolean {
+  const octets = host.split('.');
+  if (octets.length !== 4) return false;
+  if (!octets.every((octet) => /^\d{1,3}$/.test(octet))) return false;
+
+  const [first, second] = octets.map((octet) => Number(octet));
+  if (first > 255 || second > 255) return false;
+  return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    (first === 100 && second >= 64 && second <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    first >= 224
+  );
 }
 
 function joinRtmpsUrl(baseUrl: string, streamKey: string): string {

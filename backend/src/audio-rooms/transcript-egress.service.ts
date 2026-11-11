@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { EgressClient, StreamOutput, StreamProtocol } from 'livekit-server-sdk';
-import { CloudflareStreamService } from '../cloudflare-stream/cloudflare-stream.service';
+import {
+  CloudflareStreamRecording,
+  CloudflareStreamService,
+} from '../cloudflare-stream/cloudflare-stream.service';
 
 const DEFAULT_TRANSCRIPTION_TIMEOUT_MS = 10 * 60 * 1000;
 const PROVIDER_REQUEST_TIMEOUT_MS = 30_000;
@@ -122,6 +125,18 @@ export class TranscriptEgressService {
    * recording, and returns an M4A download URL suitable for transcription.
    */
   async stopEgress(roomName: string): Promise<string | null> {
+    const recording = await this.stopEgressWithRecording(roomName);
+    return recording?.audioDownloadUrl ?? null;
+  }
+
+  /**
+   * Stops egress and returns the provider recording identity plus every
+   * playback derivative, so callers can publish an adaptive class replay
+   * without copying the media again.
+   */
+  async stopEgressWithRecording(
+    roomName: string,
+  ): Promise<CloudflareStreamRecording | null> {
     const active = this.activeRecordings.get(roomName);
     if (!active) {
       this.logger.warn({ roomName }, 'No active room recording was found');
@@ -143,7 +158,7 @@ export class TranscriptEgressService {
         },
         'Cloudflare Stream room recording completed',
       );
-      return recording.audioDownloadUrl;
+      return recording;
     } catch (error: unknown) {
       this.logger.warn(
         {

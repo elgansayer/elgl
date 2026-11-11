@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataRetentionService } from './data-retention.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { ClassReplaysService } from '../class-replays/class-replays.service';
 
 describe('DataRetentionService', () => {
   let service: DataRetentionService;
@@ -45,6 +46,12 @@ describe('DataRetentionService', () => {
         {
           provide: EventEmitter2,
           useValue: mockEventEmitter,
+        },
+        {
+          provide: ClassReplaysService,
+          useValue: {
+            deleteReplaysForUser: vi.fn().mockResolvedValue(undefined),
+          },
         },
       ],
     }).compile();

@@ -168,6 +168,31 @@ type AudioRoomTipRow = {
   created_at?: string;
 };
 
+export type ClassReplayRow = {
+  id: string;
+  host_id: string;
+  room_id: string | null;
+  title: string;
+  description: string | null;
+  status: 'pending' | 'processing' | 'ready' | 'failed';
+  provider: string;
+  provider_video_id: string | null;
+  source_url: string | null;
+  hls_url: string | null;
+  dash_url: string | null;
+  download_url: string | null;
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
+  failure_code: string | null;
+  attempts: number;
+  next_attempt_at: string | null;
+  last_attempt_at: string | null;
+  ready_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type CallLogRow = {
   id: string;
   caller_id: string;
@@ -863,6 +888,12 @@ export interface Database {
         Row: AudioRoomTipRow;
         Insert: Partial<AudioRoomTipRow>;
         Update: Partial<AudioRoomTipRow>;
+        Relationships: [];
+      };
+      class_replays: {
+        Row: ClassReplayRow;
+        Insert: Partial<ClassReplayRow>;
+        Update: Partial<ClassReplayRow>;
         Relationships: [];
       };
       call_logs: {

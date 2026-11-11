@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
+import { ClassReplaysService } from '../class-replays/class-replays.service';
 
 /**
  * Scheduled data-retention enforcement for GDPR compliance.
@@ -23,6 +24,7 @@ export class DataRetentionService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly classReplaysService: ClassReplaysService,
   ) {}
 
   /**
@@ -428,6 +430,17 @@ export class DataRetentionService {
 
     // Moments content first: a failure here throws so the user is retried.
     await this.eraseMomentsData(userId);
+
+    // Provider-backed replays must be erased with their account, including the
+    // transcoded media object rather than only the database row.
+    try {
+      await this.classReplaysService.deleteReplaysForUser(userId);
+    } catch {
+      this.logger.error(
+        `Class replay erasure failed for user ${userId}; account is retried`,
+      );
+      throw new Error('Class replay erasure failed');
+    }
 
     const tasks = [
       // Chat / social content

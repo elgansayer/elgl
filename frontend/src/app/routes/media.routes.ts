@@ -25,6 +25,19 @@ export const mediaRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'live/replays',
+    loadComponent: () =>
+      import('../components/class-replays/class-replays.component').then(
+        (m) => m.ClassReplaysComponent,
+      ),
+    title: 'Class Replays - HelloTalk',
+  },
+  {
+    path: 'replays',
+    redirectTo: 'live/replays',
+    pathMatch: 'full',
+  },
+  {
     path: 'live/events',
     loadComponent: () =>
       import('../components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),

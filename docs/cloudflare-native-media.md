@@ -87,6 +87,57 @@ Responsibilities after migration:
 
 The full persisted asset state machine, byte verification and durable derivatives remain tracked by #7468.
 
+### Class replay adaptive transcoding
+
+Path: `backend/src/class-replays/`
+
+Class replays reuse Cloudflare Stream's on-the-fly transcoder rather than a
+second media pipeline. LiveKit room records are already ingested into Stream;
+finalising an archived classroom registers that provider video as a replay.
+Backfills can supply an HTTPS source recording, which is copied into Stream
+once.
+
+Behaviour:
+
+- only the classroom host or co-host may register a replay;
+- only the host, co-host, stage speakers and recorded participants may list or
+  play it;
+- `GET /api/class-replays/:id/playback` returns HLS, DASH and a progressive MP4
+  fallback only after the worker verifies the provider is ready;
+- pending, processing and failed replays return explicit state, never an empty
+  player or a synthetic URL;
+- provider identities and the private ingest source are never returned to
+  Angular;
+- a bounded cron worker polls pending transcodes, recovers interrupted jobs,
+  applies exponential retry backoff and fails closed after the configured
+  attempt limit;
+- ready replays expire after `CLASS_REPLAY_RETENTION_DAYS` and the retention
+  cron deletes both the provider video and the metadata row;
+- structured logs include the replay id and classified failure code only, never
+  source URLs, playback tokens or provider credentials.
+
+Configuration:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CLASS_REPLAY_MAX_ATTEMPTS` | 5 | Terminal retry threshold |
+| `CLASS_REPLAY_RETENTION_DAYS` | 90 | Ready replay lifetime |
+| `CLASS_REPLAY_POLL_INTERVAL_SECONDS` | 30 | Provider poll cadence |
+| `CLASS_REPLAY_PROCESSING_STALE_MS` | 600000 | Interrupted worker recovery window |
+| `CLASS_REPLAY_DOWNLOAD_TIMEOUT_MS` | 60000 | Progressive fallback timeout |
+| `CLASS_REPLAY_WORKER_BATCH` | 5 | Maximum replays processed per tick |
+
+Rollout and rollback:
+
+1. Apply `20261111080000_class_replays.sql` before deploying the backend version.
+2. The migration is additive and safe to replay; old application versions ignore
+   the new table.
+3. Deploy the backend, then the Angular route.
+4. Rollback the application without dropping the table; existing replays stop
+   being served but no classroom data is lost.
+5. If provider transcoding is unavailable, the worker leaves replays pending and
+   retries with backoff rather than exposing a broken player.
+
 ## Secrets and separation
 
 Use distinct secrets:
