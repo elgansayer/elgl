@@ -4,6 +4,7 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +12,15 @@ import { createHash } from 'node:crypto';
 import { Language } from 'node-nlp';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
+import { MetricsService } from '../metrics/metrics.service';
+import {
+  PiiOperation,
+  PiiProvider,
+  PiiTelemetry,
+  ProtectedText,
+  protectForProvider,
+  restoreFromProvider,
+} from '../privacy/pii-redaction';
 import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
@@ -48,11 +58,44 @@ export class NlpService {
   /** Interpolation tokens such as {{count}} that the web client substitutes by exact name. */
   private static readonly UI_PLACEHOLDER_PATTERN = /\{\{[^{}]+\}\}/g;
 
+  private readonly piiTelemetry: PiiTelemetry;
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
     private readonly llmProxyService: LlmProxyService,
-  ) {}
+    @Optional() metricsService?: MetricsService,
+  ) {
+    this.piiTelemetry = {
+      debug: (message) => this.logger.debug(message),
+      warn: (message) => this.logger.warn(message),
+      metrics: metricsService,
+    };
+  }
+
+  /** Masks PII so the original values never reach DeepL or Azure. */
+  private protect(
+    text: string,
+    provider: PiiProvider,
+    operation: PiiOperation,
+  ): ProtectedText {
+    return protectForProvider(text, { provider, operation }, this.piiTelemetry);
+  }
+
+  /** Puts original values back into provider output, or null if a redaction token was damaged. */
+  private restore(
+    sensitive: ProtectedText,
+    providerText: string,
+    provider: PiiProvider,
+    operation: PiiOperation,
+  ): string | null {
+    return restoreFromProvider(
+      sensitive,
+      providerText,
+      { provider, operation },
+      this.piiTelemetry,
+    );
+  }
 
   /** Creates an AbortSignal that fires after the given timeout in milliseconds. */
   private static createTimeoutSignal(ms: number): AbortSignal {
@@ -220,6 +263,19 @@ export class NlpService {
 
     // Try DeepL first, fall back to local NLP.js-based transliteration
     if (deepLKey) {
+      const sensitive = this.protect(cleanWord, 'deepl', 'translate');
+      if (sensitive.nothingToTranslate) {
+        // Only sensitive spans remain, so there is nothing for DeepL to translate.
+        return {
+          original_text: cleanWord,
+          translated_text: cleanWord,
+          detected_language: detected,
+          transliteration: cleanWord,
+          definition: `Translation of "${cleanWord}" in ${dto.target_language}`,
+          pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(cleanWord)}&tl=${dto.target_language}`,
+        };
+      }
+
       try {
         const res = await NlpService.fetchWithTimeout(
           'https://api-free.deepl.com/v2/translate',
@@ -230,7 +286,7 @@ export class NlpService {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              text: [cleanWord],
+              text: [sensitive.text],
               target_lang: dto.target_language.toUpperCase(),
               source_lang: detected.toUpperCase(),
               tag_handling: 'xml',
@@ -240,8 +296,12 @@ export class NlpService {
 
         if (res.ok) {
           const payload: unknown = await res.json();
-          const translatedText = NlpService.readDeepLTranslation(payload);
-          if (translatedText) {
+          // The provider text still carries placeholders and is what the reverse look-up sends.
+          const providerText = NlpService.readDeepLTranslation(payload);
+          const translatedText = providerText
+            ? this.restore(sensitive, providerText, 'deepl', 'translate')
+            : null;
+          if (providerText && translatedText) {
             // Generate transliteration via reverse look-up from DeepL
             let transliteration = translatedText;
             try {
@@ -254,7 +314,7 @@ export class NlpService {
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
-                    text: [translatedText],
+                    text: [providerText],
                     target_lang: 'EN',
                     source_lang: dto.target_language.toUpperCase(),
                   }),
@@ -263,9 +323,13 @@ export class NlpService {
               if (translitRes.ok) {
                 const transliterationPayload: unknown =
                   await translitRes.json();
+                const reverseText = NlpService.readDeepLTranslation(
+                  transliterationPayload,
+                );
                 transliteration =
-                  NlpService.readDeepLTranslation(transliterationPayload) ??
-                  transliteration;
+                  (reverseText
+                    ? this.restore(sensitive, reverseText, 'deepl', 'translate')
+                    : null) ?? transliteration;
               }
             } catch {
               // Keep the translated text as transliteration fallback
@@ -310,8 +374,13 @@ export class NlpService {
     const orig = dto.text.trim();
 
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
+    // Azure only ever receives placeholders for sensitive spans. When nothing else
+    // is left there is nothing to check, so the local fallback below answers.
+    const sensitive = azureKey
+      ? this.protect(orig, 'azure', 'grammar_check')
+      : null;
 
-    if (azureKey) {
+    if (azureKey && sensitive && !sensitive.nothingToTranslate) {
       try {
         // Use Azure AI Translator's grammar checking via the "breakSentence" and "translate" endpoints
         // First, detect the language
@@ -323,7 +392,7 @@ export class NlpService {
               'Ocp-Apim-Subscription-Key': azureKey,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify([{ Text: orig }]),
+            body: JSON.stringify([{ Text: sensitive.text }]),
           },
         );
 
@@ -341,14 +410,28 @@ export class NlpService {
                 'Ocp-Apim-Subscription-Key': azureKey,
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify([{ Text: orig }]),
+              body: JSON.stringify([{ Text: sensitive.text }]),
             },
           );
 
           if (dictRes.ok) {
             const dictionaryPayload: unknown = await dictRes.json();
-            const correctedText =
-              NlpService.readAzureDictionaryTarget(dictionaryPayload) ?? orig;
+            const providerCorrected =
+              NlpService.readAzureDictionaryTarget(dictionaryPayload);
+            let correctedText = orig;
+            let correctedForProvider = sensitive.text;
+            if (providerCorrected !== null) {
+              const restored = this.restore(
+                sensitive,
+                providerCorrected,
+                'azure',
+                'grammar_check',
+              );
+              if (restored !== null) {
+                correctedText = restored;
+                correctedForProvider = providerCorrected;
+              }
+            }
             const errorsFound = orig === correctedText ? 0 : 1;
 
             // Generate explanation using Azure's translation
@@ -364,16 +447,24 @@ export class NlpService {
                   },
                   body: JSON.stringify([
                     {
-                      Text: `Grammar correction: "${orig}" → "${correctedText}"`,
+                      Text: `Grammar correction: "${sensitive.text}" → "${correctedForProvider}"`,
                     },
                   ]),
                 },
               );
               if (explainRes.ok) {
                 const explanationPayload: unknown = await explainRes.json();
+                const providerExplanation =
+                  NlpService.readAzureExplanation(explanationPayload);
                 explanation =
-                  NlpService.readAzureExplanation(explanationPayload) ??
-                  'Corrected via Azure AI';
+                  (providerExplanation
+                    ? this.restore(
+                        sensitive,
+                        providerExplanation,
+                        'azure',
+                        'grammar_check',
+                      )
+                    : null) ?? 'Corrected via Azure AI';
               }
             } catch {
               explanation = 'Corrected via Azure AI';
@@ -1056,9 +1147,14 @@ export class NlpService {
 
     let translatedText = cleanWord;
     const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
+    // Providers only ever receive placeholders for sensitive spans. When nothing else
+    // is left there is nothing to translate or correct, so no provider is called.
+    const deepLSensitive = deepLKey
+      ? this.protect(cleanWord, 'deepl', 'translate_and_correct')
+      : null;
 
     // Translate the original text via DeepL if available, else graceful degradation
-    if (deepLKey) {
+    if (deepLKey && deepLSensitive && !deepLSensitive.nothingToTranslate) {
       try {
         const res = await NlpService.fetchWithTimeout(
           'https://api-free.deepl.com/v2/translate',
@@ -1069,7 +1165,7 @@ export class NlpService {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              text: [cleanWord],
+              text: [deepLSensitive.text],
               target_lang: dto.target_language.toUpperCase(),
               source_lang: detected.toUpperCase(),
               tag_handling: 'xml',
@@ -1079,8 +1175,16 @@ export class NlpService {
 
         if (res.ok) {
           const payload: unknown = await res.json();
+          const providerText = NlpService.readDeepLTranslation(payload);
           translatedText =
-            NlpService.readDeepLTranslation(payload) ?? translatedText;
+            (providerText
+              ? this.restore(
+                  deepLSensitive,
+                  providerText,
+                  'deepl',
+                  'translate_and_correct',
+                )
+              : null) ?? translatedText;
         }
       } catch {
         // Fallback to source text on network failure
@@ -1090,9 +1194,12 @@ export class NlpService {
     let correctedText = cleanWord;
     let explanation = '';
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
+    const azureSensitive = azureKey
+      ? this.protect(cleanWord, 'azure', 'translate_and_correct')
+      : null;
 
     // Obtain grammar-style correction via Azure if configured
-    if (azureKey) {
+    if (azureKey && azureSensitive && !azureSensitive.nothingToTranslate) {
       try {
         const detectRes = await NlpService.fetchWithTimeout(
           'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
@@ -1102,7 +1209,7 @@ export class NlpService {
               'Ocp-Apim-Subscription-Key': azureKey,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify([{ Text: cleanWord }]),
+            body: JSON.stringify([{ Text: azureSensitive.text }]),
           },
         );
         if (detectRes.ok) {
@@ -1118,14 +1225,26 @@ export class NlpService {
                 'Ocp-Apim-Subscription-Key': azureKey,
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify([{ Text: cleanWord }]),
+              body: JSON.stringify([{ Text: azureSensitive.text }]),
             },
           );
+          let correctedForProvider = azureSensitive.text;
           if (dictRes.ok) {
             const dictionaryPayload: unknown = await dictRes.json();
-            correctedText =
-              NlpService.readAzureDictionaryTarget(dictionaryPayload) ??
-              cleanWord;
+            const providerCorrected =
+              NlpService.readAzureDictionaryTarget(dictionaryPayload);
+            const restored = providerCorrected
+              ? this.restore(
+                  azureSensitive,
+                  providerCorrected,
+                  'azure',
+                  'translate_and_correct',
+                )
+              : null;
+            if (providerCorrected && restored !== null) {
+              correctedText = restored;
+              correctedForProvider = providerCorrected;
+            }
           }
 
           const explainRes = await NlpService.fetchWithTimeout(
@@ -1138,16 +1257,24 @@ export class NlpService {
               },
               body: JSON.stringify([
                 {
-                  Text: `Grammar correction: "${cleanWord}" → "${correctedText}"`,
+                  Text: `Grammar correction: "${azureSensitive.text}" → "${correctedForProvider}"`,
                 },
               ]),
             },
           );
           if (explainRes.ok) {
             const explanationPayload: unknown = await explainRes.json();
+            const providerExplanation =
+              NlpService.readAzureExplanation(explanationPayload);
             explanation =
-              NlpService.readAzureExplanation(explanationPayload) ??
-              'Corrected via Azure AI';
+              (providerExplanation
+                ? this.restore(
+                    azureSensitive,
+                    providerExplanation,
+                    'azure',
+                    'translate_and_correct',
+                  )
+                : null) ?? 'Corrected via Azure AI';
           }
         }
       } catch {
