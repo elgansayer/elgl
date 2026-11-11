@@ -1,6 +1,8 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
+import { MetricsService } from '../metrics/metrics.service';
 import { TranslationService } from './translation.service';
 
 describe('TranslationService', () => {
@@ -17,6 +19,7 @@ describe('TranslationService', () => {
 
   const mockLogger = {
     warn: vi.fn(),
+    debug: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -341,6 +344,233 @@ describe('TranslationService', () => {
       });
 
       expect(service.translate).toHaveBeenCalledTimes(2);
+    });
+  });
+  describe('PII scrubbing before DeepL', () => {
+    const email = 'john.doe@example.com';
+    const placeholderPattern = /PII[A-Z]{8}\d+Z/;
+
+    function placeholderOf(text: string): string {
+      const match = placeholderPattern.exec(text);
+      if (!match) throw new Error('The provider request has no placeholder');
+      return match[0];
+    }
+
+    function bodyOf(init: RequestInit): string {
+      return typeof init.body === 'string' ? init.body : '';
+    }
+
+    function jsonResponse(payload: unknown): {
+      ok: boolean;
+      json: () => Promise<unknown>;
+    } {
+      return { ok: true, json: () => Promise.resolve(payload) };
+    }
+
+    /** Raw request body of the nth call, as DeepL receives it. */
+    function sentBody(callIndex = 0): string {
+      const [, init] = (global.fetch as Mock).mock.calls[callIndex] as [
+        string,
+        RequestInit,
+      ];
+      return bodyOf(init);
+    }
+
+    /** The decoded `text` form field of the nth DeepL request. */
+    function sentText(callIndex = 0): string {
+      return new URLSearchParams(sentBody(callIndex)).get('text') ?? '';
+    }
+
+    /** Mimics DeepL: translates the words and leaves placeholders intact. */
+    function deeplKeepingPlaceholders(
+      translate: (placeholder: string) => string,
+    ): Mock {
+      return vi.fn((_url: string, init: RequestInit) => {
+        const sent = new URLSearchParams(bodyOf(init)).get('text') ?? '';
+        return Promise.resolve(
+          jsonResponse({
+            translations: [
+              {
+                detected_source_language: 'EN',
+                text: translate(placeholderOf(sent)),
+              },
+            ],
+          }),
+        );
+      });
+    }
+
+    it('never sends an email address and restores it in the translation', async () => {
+      global.fetch = deeplKeepingPlaceholders(
+        (placeholder) => `Contáctame en ${placeholder} mañana`,
+      );
+
+      const result = await service.translate(
+        `Contact me at ${email} tomorrow`,
+        'en',
+        'es',
+      );
+
+      expect(result).toBe(`Contáctame en ${email} mañana`);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(sentBody()).not.toContain('john');
+      expect(sentBody()).not.toContain('example.com');
+      expect(sentText()).toMatch(/^Contact me at PII[A-Z]{8}0Z tomorrow$/);
+    });
+
+    it('masks several kinds of PII in one message', async () => {
+      global.fetch = vi.fn((_url: string, init: RequestInit) =>
+        Promise.resolve(
+          jsonResponse({
+            translations: [
+              { text: new URLSearchParams(bodyOf(init)).get('text') },
+            ],
+          }),
+        ),
+      );
+      const message =
+        'Call +44 7700 900123, card 4111 1111 1111 1111, see https://example.com/me';
+
+      const result = await service.translate(message, 'en', 'es');
+
+      expect(result).toBe(message);
+      for (const sensitive of ['7700', '4111', 'https://', 'example.com']) {
+        expect(sentBody()).not.toContain(sensitive);
+      }
+    });
+
+    it('returns the source text and does not cache when DeepL damages a placeholder', async () => {
+      global.fetch = vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ translations: [{ text: 'Contáctame mañana' }] }),
+        );
+      const message = `Contact me at ${email} tomorrow`;
+
+      expect(await service.translate(message, 'en', 'es')).toBe(message);
+      expect(await service.translate(message, 'en', 'es')).toBe(message);
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'pii_placeholder_mismatch provider=deepl operation=translate redactions=1',
+      );
+    });
+
+    it('does not call DeepL when only sensitive data would be sent', async () => {
+      global.fetch = vi.fn();
+
+      expect(await service.translate(email, 'en', 'es')).toBe(email);
+      expect(await service.detectLanguage(email)).toBe('en');
+
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('detects the language from the masked text only', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce(
+        jsonResponse({
+          translations: [{ detected_source_language: 'ES', text: 'x' }],
+        }),
+      );
+
+      const language = await service.detectLanguage(
+        `Mi correo es ${email} gracias`,
+      );
+
+      expect(language).toBe('es');
+      expect(sentBody()).not.toContain('john');
+      expect(sentText()).toMatch(/^Mi correo es PII[A-Z]{8}0Z gracias$/);
+    });
+
+    it('masks both the detection and the translation request', async () => {
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          jsonResponse({
+            translations: [{ detected_source_language: 'EN', text: 'x' }],
+          }),
+        )
+        .mockImplementationOnce(
+          deeplKeepingPlaceholders((placeholder) => `Hola ${placeholder}`),
+        );
+
+      const result = await service.translateWithDetection(`Hi ${email}`, 'es');
+
+      expect(result).toEqual({
+        translatedText: `Hola ${email}`,
+        detectedLanguage: 'en',
+      });
+      expect(sentBody(0)).not.toContain('john');
+      expect(sentBody(1)).not.toContain('john');
+    });
+
+    it('leaves text without sensitive data exactly as before', async () => {
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          jsonResponse({ translations: [{ text: 'Hola mundo' }] }),
+        );
+
+      await service.translate('Hello world', 'en', 'es');
+
+      expect(sentText()).toBe('Hello world');
+      expect(mockLogger.debug).not.toHaveBeenCalled();
+    });
+
+    it('receives the metrics service from the Nest container', async () => {
+      const metrics = {
+        recordPiiScrub: vi.fn(),
+        recordPiiRedactions: vi.fn(),
+      };
+      const module = await Test.createTestingModule({
+        providers: [
+          TranslationService,
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: 'PinoLogger:TranslationService', useValue: mockLogger },
+          { provide: MetricsService, useValue: metrics },
+        ],
+      }).compile();
+      global.fetch = deeplKeepingPlaceholders(
+        (placeholder) => `Hola ${placeholder}`,
+      );
+
+      await module.get(TranslationService).translate(`Hi ${email}`, 'en', 'es');
+
+      expect(metrics.recordPiiScrub).toHaveBeenCalledWith(
+        'deepl',
+        'translate',
+        'redacted',
+      );
+    });
+
+    it('records value-free metrics and logs', async () => {
+      const metrics = {
+        recordPiiScrub: vi.fn(),
+        recordPiiRedactions: vi.fn(),
+      };
+      const instrumented = new TranslationService(
+        configService,
+        logger,
+        metrics as unknown as MetricsService,
+      );
+      global.fetch = deeplKeepingPlaceholders(
+        (placeholder) => `Hola ${placeholder}`,
+      );
+
+      await instrumented.translate(`Hi ${email}`, 'en', 'es');
+
+      expect(metrics.recordPiiScrub).toHaveBeenCalledWith(
+        'deepl',
+        'translate',
+        'redacted',
+      );
+      expect(metrics.recordPiiRedactions).toHaveBeenCalledWith(
+        'deepl',
+        'translate',
+        'email',
+        1,
+      );
+      expect(JSON.stringify(mockLogger.debug.mock.calls)).not.toContain('john');
+      expect(JSON.stringify(mockLogger.warn.mock.calls)).not.toContain('john');
     });
   });
 });

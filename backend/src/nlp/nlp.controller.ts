@@ -70,6 +70,9 @@ export class NlpController {
   /**
    * User translation is routed through DeepL with Azure Translator fallback.
    * The router also adds Azure transliteration when the target script supports it.
+   * Sensitive spans (emails, phone numbers, cards and similar) are masked before
+   * either provider is called and restored afterwards; see
+   * docs/pii-scrubbing-translation-providers.md.
    */
   @Post('translate')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
