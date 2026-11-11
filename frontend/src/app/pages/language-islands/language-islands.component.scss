@@ -1,0 +1,59 @@
+.island-map {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border-radius: 16px;
+  border: 1px solid rgb(var(--surface-100-rgb));
+  background:
+    radial-gradient(
+      circle at 30% 40%,
+      rgb(var(--color-primary-rgb) / 0.28) 0 14%,
+      transparent 15%
+    ),
+    radial-gradient(
+      circle at 70% 55%,
+      rgb(var(--color-secondary-rgb) / 0.3) 0 18%,
+      transparent 19%
+    ),
+    radial-gradient(
+      circle at 50% 80%,
+      rgb(var(--color-primary-rgb) / 0.18) 0 9%,
+      transparent 10%
+    ),
+    rgb(var(--surface-300-rgb));
+}
+
+.map-pin {
+  position: absolute;
+  min-height: 44px;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--surface-100-rgb));
+  background: rgb(var(--surface-200-rgb));
+  color: rgb(var(--text-primary-rgb));
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  transition:
+    transform var(--app-motion-fast) var(--app-ease-standard),
+    background-color var(--app-motion-fast) var(--app-ease-standard);
+}
+
+.map-pin:hover {
+  transform: scale(1.08);
+}
+
+.map-pin.map-pin-active {
+  border-color: rgb(var(--color-primary-rgb));
+  background: rgb(var(--color-primary-rgb));
+  color: rgb(var(--on-fill-rgb));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pin {
+    transition: none;
+  }
+
+  .map-pin:hover {
+    transform: none;
+  }
+}

@@ -168,6 +168,13 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - `receiver_balance_after` (Nullable Integer balance snapshot)
 - `created_at` (Timestamp with time zone, default `now()`)
 
+### Tables: `language_islands` and `language_island_members`
+
+- `language_islands`: `id`, `name`, `description`, `language_pair`, `host_id` (referencing `users.id`), `max_members`, `is_active`, `created_at`, `updated_at`
+- `language_island_members`: composite key (`island_id`, `user_id`), `role` (`host` or `member`), `joined_at`
+- Indexed for active lists by language pair and creation time, host lookups, and per-user memberships.
+- Both tables are accessed through the NestJS API with service-role credentials. Direct browser access is revoked.
+
 ### Table: `blocks` & `reports` (Trust and Safety)
 
 - `blocks`: `id`, `blocker_id`, `blocked_id`, `created_at`

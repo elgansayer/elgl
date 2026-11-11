@@ -1,0 +1,167 @@
+<main
+  class="mx-auto max-w-4xl space-y-6 p-4 sm:p-6"
+  aria-labelledby="language-islands-title"
+>
+  <header class="space-y-1">
+    <h1 id="language-islands-title" class="text-2xl font-black text-text-primary">
+      {{ 'languageIslands.title' | t }}
+    </h1>
+    <p class="text-sm text-text-secondary">
+      {{ 'languageIslands.subtitle' | t }}
+    </p>
+  </header>
+
+  @if (islands().length > 0 && !islandsResource.error()) {
+    <section
+      class="island-map"
+      role="region"
+      [attr.aria-label]="'languageIslands.mapAriaLabel' | t"
+    >
+      @for (island of islands(); track island.id; let index = $index) {
+        <button
+          hlmBtn
+          type="button"
+          size="touch"
+          class="map-pin"
+          [style.inset-block-start]="pinPosition(index)"
+          [style.inset-inline-start]="pinPosition(index + 2)"
+          [class.map-pin-active]="selectedLanguage() === primaryLanguage(island.language_pair)"
+          (click)="selectLanguage(primaryLanguage(island.language_pair))"
+          [attr.aria-label]="
+            'languageIslands.mapPinLabel'
+              | t: { name: island.name, count: island.member_count ?? 0 }
+          "
+        >
+          <span aria-hidden="true">{{ getFlag(island.language_pair) }}</span>
+          <span>{{ island.member_count ?? 0 }}</span>
+        </button>
+      }
+    </section>
+
+    <div
+      class="flex flex-wrap items-center gap-2"
+      role="toolbar"
+      [attr.aria-label]="'languageIslands.filterLabel' | t"
+    >
+      <button
+        hlmBtn
+        type="button"
+        size="touch"
+        class="rounded-pill px-3 py-1.5 text-xs font-bold transition-colors"
+        [class.bg-primary]="selectedLanguage() === 'all'"
+        [class.text-on-fill]="selectedLanguage() === 'all'"
+        [class.bg-surface-200]="selectedLanguage() !== 'all'"
+        [class.text-text-secondary]="selectedLanguage() !== 'all'"
+        [class.border]="selectedLanguage() !== 'all'"
+        [class.border-surface-100]="selectedLanguage() !== 'all'"
+        (click)="selectLanguage('all')"
+      >
+        {{ 'languageIslands.filterAll' | t }}
+      </button>
+      @for (language of languageFilters(); track language.code) {
+        <button
+          hlmBtn
+          type="button"
+          size="touch"
+          class="rounded-pill px-3 py-1.5 text-xs font-bold transition-colors"
+          [class.bg-primary]="selectedLanguage() === language.code"
+          [class.text-on-fill]="selectedLanguage() === language.code"
+          [class.bg-surface-200]="selectedLanguage() !== language.code"
+          [class.text-text-secondary]="selectedLanguage() !== language.code"
+          [class.border]="selectedLanguage() !== language.code"
+          [class.border-surface-100]="selectedLanguage() !== language.code"
+          (click)="selectLanguage(language.code)"
+        >
+          <span aria-hidden="true">{{ getFlag(language.code) }}</span>
+          {{ language.label }}
+        </button>
+      }
+    </div>
+  }
+
+  @if (statusMessage(); as islandName) {
+    <div
+      class="rounded-card border border-success/30 bg-success/10 p-3 text-sm font-bold text-success"
+      role="status"
+    >
+      {{ 'languageIslands.joinSuccess' | t: { name: islandName } }}
+    </div>
+  }
+
+  @if (actionFailed()) {
+    <div
+      class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm font-bold text-danger-ink"
+      role="alert"
+    >
+      {{ 'languageIslands.actionError' | t }}
+    </div>
+  }
+
+  @if (islandsResource.isLoading() && islands().length === 0) {
+    <div class="py-12 text-center text-sm text-text-muted" role="status">
+      {{ 'languageIslands.loading' | t }}
+    </div>
+  } @else if (islandsResource.error()) {
+    <div class="rounded-card border border-danger/30 bg-danger/10 p-4 text-center" role="alert">
+      <p class="text-sm font-bold text-danger-ink">{{ 'languageIslands.error' | t }}</p>
+      <button
+        hlmBtn
+        type="button"
+        size="touch"
+        class="retry-button mt-2"
+        (click)="retry()"
+      >
+        {{ 'languageIslands.retry' | t }}
+      </button>
+    </div>
+  } @else if (islands().length === 0) {
+    <app-empty-state
+      icon="🏝️"
+      [title]="'languageIslands.empty' | t"
+      [description]="'languageIslands.emptyDescription' | t"
+    />
+  } @else if (filteredIslands().length === 0) {
+    <div class="rounded-card bg-surface-200 p-8 text-center text-sm text-text-muted" role="status">
+      {{ 'languageIslands.noMatches' | t }}
+    </div>
+  } @else {
+    <div class="space-y-3" role="list" [attr.aria-label]="'languageIslands.title' | t">
+      @for (island of filteredIslands(); track island.id) {
+        <article
+          class="flex items-start justify-between gap-3 rounded-card border border-surface-100 bg-surface-200 p-4"
+          role="listitem"
+        >
+          <div class="flex min-w-0 items-start gap-3">
+            <div
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-100 text-xl"
+              aria-hidden="true"
+            >
+              {{ getFlag(island.language_pair) }}
+            </div>
+            <div class="min-w-0 space-y-0.5">
+              <h2 class="truncate text-sm font-bold text-text-primary">{{ island.name }}</h2>
+              <p class="text-xs text-text-muted">
+                {{ 'languageIslands.practisingNow' | t: { count: island.member_count ?? 0 } }}
+              </p>
+              @if (island.description) {
+                <p class="break-words text-xs text-text-secondary">{{ island.description }}</p>
+              }
+            </div>
+          </div>
+
+          <button
+            hlmBtn
+            type="button"
+            size="touch"
+            [variant]="isJoined(island.id) ? 'secondary' : 'default'"
+            [disabled]="busyIslandId() === island.id"
+            [attr.aria-busy]="busyIslandId() === island.id ? 'true' : null"
+            (click)="toggleMembership(island)"
+          >
+            {{ (isJoined(island.id) ? 'languageIslands.leave' : 'languageIslands.enter') | t }}
+          </button>
+        </article>
+      }
+    </div>
+  }
+</main>

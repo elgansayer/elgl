@@ -2294,24 +2294,27 @@
           <code>pages/language-islands</code>
         </header>
         <div class="body">
-          <span class="state-label">Runtime today</span>
-          <div class="card"><code>languageIslands.title</code></div>
-          <span class="state-label">Proposed design</span>
+          <span class="state-label">Loaded · map, filters and membership</span>
           <h3 class="display" style="margin: 0">Language Islands</h3>
           <p class="secondary" style="margin: 0">
             Drop into an always-on space where only one language is spoken.
           </p>
           <div class="island-map" aria-hidden="true">
-            <span style="inset-block-start: 30%; inset-inline-start: 20%">🇯🇵 128</span
-            ><span style="inset-block-start: 48%; inset-inline-start: 62%">🇪🇸 204</span
-            ><span style="inset-block-start: 74%; inset-inline-start: 42%">🇸🇦 57</span>
+            <span style="inset-block-start: 18%; inset-inline-start: 42%">🇯🇵 128</span
+            ><span style="inset-block-start: 42%; inset-inline-start: 66%">🇪🇸 204</span
+            ><span style="inset-block-start: 66%; inset-inline-start: 30%">🇸🇦 57</span>
+          </div>
+          <div class="row" style="flex-wrap: wrap; gap: 6px">
+            <span class="chip">All islands</span><span class="chip">🇯🇵 Japanese</span
+            ><span class="chip">🇪🇸 Spanish</span><span class="chip">🇸🇦 Arabic</span>
           </div>
           <div class="list">
             <div class="row">
               <span aria-hidden="true">🇯🇵</span>
               <div class="grow">
                 <div class="title">Japanese Island</div>
-                <div class="muted">128 practising now · beginner-friendly</div>
+                <div class="muted">128 practising now</div>
+                <div class="muted">Beginner-friendly conversation practice</div>
               </div>
               <button class="btn tide sm" type="button">Enter</button>
             </div>
@@ -2321,15 +2324,32 @@
                 <div class="title">Spanish Island</div>
                 <div class="muted">204 practising now</div>
               </div>
-              <button class="btn tide sm" type="button">Enter</button>
+              <button class="btn secondary-btn sm" type="button">Leave</button>
             </div>
+          </div>
+          <div class="card" role="status">
+            <span class="title">Entered Japanese Island</span>
+            <span class="muted">Membership changes confirm here and refresh the member count.</span>
+          </div>
+          <span class="state-label">Loading · empty · filtered-empty · error</span>
+          <div class="card muted" role="status">Loading language islands...</div>
+          <div class="card" style="text-align: center">
+            <div class="title">No language islands available right now.</div>
+            <div class="muted">New islands appear here as the community opens them.</div>
+          </div>
+          <div class="card" style="text-align: center">
+            <div class="muted">No islands match this language yet.</div>
+          </div>
+          <div class="card" role="alert" style="text-align: center">
+            <div class="title">Could not load language islands.</div>
+            <button class="btn secondary-btn sm" type="button">Retry</button>
           </div>
         </div>
         <footer>
-          <span class="gap-note"
-            >Stub page: renders only a raw i18n key (missing in every dictionary).</span
-          >
-          Proposed design shown for design-first follow-up.
+          States: loading · loaded map/filters/membership · joined confirmation · empty ·
+          filtered-empty · load error with retry · join/leave failure alert. Member counts and
+          language pairs come from the language-islands API; flags and language names derive from the
+          shared language catalogue and Intl.DisplayNames.
         </footer>
       </section>
 

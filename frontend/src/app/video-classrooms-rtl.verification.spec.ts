@@ -30,7 +30,6 @@ const VIDEO_CLASSROOMS_PATHS = [
   'src/app/components/classrooms-marketplace',
   // Audio room components (part of the classroom ecosystem)
   'src/app/components/audio-room',
-  'src/app/components/audio-stage',
   'src/app/audio-rooms',
   // VoIP call components
   'src/app/components/voip-call',

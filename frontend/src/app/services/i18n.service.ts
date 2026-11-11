@@ -2567,6 +2567,28 @@ export class I18nService {
     'settings.changeLanguage': 'Change language',
     'common.selected': 'Selected',
 
+    // Language Islands
+    'languageIslands.title': 'Language Islands',
+    'languageIslands.subtitle':
+      'Drop into an always-on space where only one language is spoken.',
+    'languageIslands.filterAll': 'All islands',
+    'languageIslands.filterLabel': 'Language filters',
+    'languageIslands.practisingNow': '{{count}} practising now',
+    'languageIslands.enter': 'Enter',
+    'languageIslands.leave': 'Leave',
+    'languageIslands.joinSuccess': 'Entered {{name}}',
+    'languageIslands.loading': 'Loading language islands...',
+    'languageIslands.error': 'Could not load language islands.',
+    'languageIslands.retry': 'Retry',
+    'languageIslands.empty': 'No language islands available right now.',
+    'languageIslands.emptyDescription':
+      'New islands appear here as the community opens them.',
+    'languageIslands.noMatches': 'No islands match this language yet.',
+    'languageIslands.actionError':
+      'Could not update your island membership. Please try again.',
+    'languageIslands.mapAriaLabel': 'Language islands map',
+    'languageIslands.mapPinLabel': '{{name}}: {{count}} practising now',
+
     // Help & About
     'helpAbout.title': 'Help & About',
     'support.title': 'Support Centre',
