@@ -597,10 +597,14 @@ describe('UsersService', () => {
 
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({ age: 28 });
       expect(mockQueryBuilder.single).not.toHaveBeenCalled();
+    });
+
     it('should surface a profile reload failure after an update', async () => {
       const dto = { display_name: 'Error Name' };
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
+        error: { message: 'Database check violation' },
+      });
 
       await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
         InternalServerErrorException,
@@ -612,6 +616,7 @@ describe('UsersService', () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
         error: null,
+      });
 
       await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
         NotFoundException,
