@@ -2,20 +2,20 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PrivacyComponent } from './privacy.component';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LegalDocumentViewerComponent } from '../../components/legal-document-viewer/legal-document-viewer.component';
-import { LegalService, LegalDocument } from '../../services/legal.service';
-import { Component, input } from '@angular/core';
+import { LegalService, LegalDocument, LegalSection } from '../../services/legal.service';
+import { I18nService } from '../../services/i18n.service';
+import { Component, input, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 @Component({
   selector: 'app-legal-document-viewer',
   template: '<div></div>',
-  standalone: true,
 })
 class MockLegalDocumentViewerComponent {
   readonly title = input.required<string>();
   readonly lastUpdated = input.required<Date | string>();
-  readonly sections = input.required<any[]>();
+  readonly sections = input.required<LegalSection[]>();
 }
 
 const PRIVACY_DOCUMENT: LegalDocument = {
@@ -32,7 +32,26 @@ describe('PrivacyComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [PrivacyComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), LegalService],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        LegalService,
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) => {
+              const dict: Record<string, string> = {
+                'legal.loadingPrivacy': 'Loading Privacy Policy...',
+                'legal.privacyPolicy': 'Privacy Policy',
+                'legal.errorPrivacy': 'We could not load the Privacy Policy. Please try again.',
+                'legal.retry': 'Try again',
+              };
+              return dict[key] ?? key;
+            },
+            currentLang: signal('en-GB'),
+          },
+        },
+      ],
     })
       .overrideComponent(PrivacyComponent, {
         remove: { imports: [LegalDocumentViewerComponent] },
@@ -78,6 +97,7 @@ describe('PrivacyComponent', () => {
     const loading = fixture.nativeElement.querySelector('[data-testid="privacy-loading"]');
     expect(loading).toBeTruthy();
     expect(loading.getAttribute('aria-busy')).toBe('true');
+    expect(loading.textContent).toContain('Loading Privacy Policy...');
     expect(fixture.nativeElement.querySelector('[role="status"]')).toBeTruthy();
   });
 
@@ -91,12 +111,15 @@ describe('PrivacyComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
+    const alert = fixture.nativeElement.querySelector('[role="alert"]');
+    expect(alert).toBeTruthy();
+    expect(alert.textContent).toContain('We could not load the Privacy Policy. Please try again.');
     const retryButton = fixture.nativeElement.querySelector(
       '[data-testid="privacy-retry"]',
     ) as HTMLButtonElement;
     expect(retryButton).toBeTruthy();
     expect(retryButton.type).toBe('button');
+    expect(retryButton.textContent?.trim()).toBe('Try again');
 
     retryButton.click();
     fixture.detectChanges();
