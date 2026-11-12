@@ -42,6 +42,11 @@ export function collectCypressSetupFailures({ pkg, lockfile, config, exists }) {
   if (!pkg?.scripts?.e2e?.includes('cypress run')) {
     failures.push('e2e must execute cypress run');
   }
+  // Verification sandboxes may bind the deployment Cypress cache read-only;
+  // dropping the wrapper would fail binary verification with EROFS again.
+  if (!pkg?.scripts?.e2e?.includes('scripts/cypress-e2e.mjs')) {
+    failures.push('e2e must run through the writable-cache wrapper scripts/cypress-e2e.mjs');
+  }
   if (!pkg?.scripts?.['e2e:ci']?.includes('start-server-and-test')) {
     failures.push('e2e:ci must wait for the Angular app before Cypress');
   }

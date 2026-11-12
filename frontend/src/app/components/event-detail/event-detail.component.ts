@@ -28,7 +28,7 @@ const MAP_ZOOM_DELTA = 0.01;
   template: `
     <main class="mx-auto w-full max-w-2xl p-4" aria-labelledby="event-detail-title">
       @if (isLoading()) {
-        <p role="status" class="py-8 text-center text-text-secondary">{{ 'loading' | t }}</p>
+        <p role="status" class="py-8 text-center text-text-secondary">{{ 'common.loading' | t }}</p>
       } @else if (error()) {
         <div role="alert" class="flex flex-col items-start gap-3 rounded-card bg-surface-300 p-4">
           <p class="text-danger-ink">{{ 'common.error_generic' | t }}</p>

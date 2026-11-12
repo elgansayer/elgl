@@ -35,6 +35,7 @@ describe('standalone route lazy-loading contract', () => {
       'moments',
       'live/events',
       'settings',
+      'settings/help-about',
       'chat',
     ];
 

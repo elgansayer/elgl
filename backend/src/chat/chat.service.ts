@@ -455,6 +455,35 @@ export class ChatService {
   }
 
   /**
+   * Stores a resolved preview on the message it describes, so history reads,
+   * reconnects, offline recipients and members who join later render the same
+   * card as live recipients, with no viewer-triggered scrape.
+   *
+   * Best effort, like the scrape itself: the message is already saved, so a
+   * storage failure only costs the persisted card. The warning carries the
+   * opaque message id for correlation and never the URL or the preview.
+   */
+  protected async persistLinkPreview(
+    messageId: string,
+    preview: LinkPreview,
+  ): Promise<void> {
+    let persisted: boolean;
+    try {
+      const { error } = await this.supabaseService
+        .getClient()
+        .from('chat_messages')
+        .update({ link_preview: preview })
+        .eq('id', messageId);
+      persisted = !error;
+    } catch {
+      persisted = false;
+    }
+    if (!persisted) {
+      this.logger.warn(`chat.link_preview_persist_failed message=${messageId}`);
+    }
+  }
+
+  /**
    * Looks up a message previously persisted under a client-generated id.
    *
    * Returns the stored message when it belongs to the same sender and room, so
@@ -625,6 +654,9 @@ export class ChatService {
       !dto.is_encrypted && dto.message_type === 'text'
         ? await this.resolveLinkPreview(dto.text_content)
         : null;
+    if (linkPreview) {
+      await this.persistLinkPreview(savedMessage.id, linkPreview);
+    }
 
     // ---------- Auto‑generate explanation for correction if missing ----------
     let messageForPublish: ChatMessage = linkPreview
@@ -1798,6 +1830,15 @@ export class ChatService {
       throw new ForbiddenException('You are not a member of this room');
     }
 
+    // The preview describes the first URL of the edited text. It is resolved
+    // before the write so the text and its card are stored in one statement:
+    // concurrent edits cannot interleave into a card that describes different
+    // text, and a removed or unresolvable link clears the previous card instead
+    // of leaving it in history.
+    const linkPreview = dto.is_encrypted
+      ? null
+      : await this.resolveLinkPreview(dto.text_content);
+
     const updatePayload: Partial<ChatMessageRow> = {
       text_content: dto.text_content,
       is_edited: true,
@@ -1808,6 +1849,11 @@ export class ChatService {
     }
     if (dto.encrypted_payload !== undefined) {
       updatePayload.encrypted_payload = dto.encrypted_payload;
+    }
+    // Only touch the column when there is a card to store or clear, so edits of
+    // link-free messages never depend on it.
+    if (linkPreview || originalMsg.link_preview) {
+      updatePayload.link_preview = linkPreview;
     }
 
     const { data: updatedMsg, error: updateErr } = await supabase
@@ -1832,13 +1878,10 @@ export class ChatService {
       );
     }
 
-    // The preview describes the first URL of the edited text. Realtime clients
-    // merge this event over their local copy of the message, so the field is
-    // always published explicitly: `null` clears a card whose link was removed
-    // or failed to resolve, instead of leaving the previous preview on screen.
-    const linkPreview = dto.is_encrypted
-      ? null
-      : await this.resolveLinkPreview(dto.text_content);
+    // Realtime clients merge this event over their local copy of the message,
+    // so the field is always published explicitly: `null` clears a card whose
+    // link was removed or failed to resolve, instead of leaving the previous
+    // preview on screen.
     const editedMessage: ChatMessage = {
       ...updatedMsg,
       link_preview: linkPreview,
@@ -2182,6 +2225,8 @@ export class ChatService {
           status_reply_payload: originalMsg.status_reply_payload ?? null,
           is_view_once: false, // Never preserve view-once on forward
           is_forwarded: true,
+          // Stored with the copy so it renders from history in every target room.
+          ...(forwardedPreview ? { link_preview: forwardedPreview } : {}),
         };
 
         const insertResponse = await supabase

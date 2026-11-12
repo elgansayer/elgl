@@ -132,6 +132,7 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - `sender_id` (UUID, Foreign Key referencing `users.id`)
 - `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`, `'system'`)
 - `content_json` (JSONB, structure varies depending on `payload_type`)
+- `link_preview` (JSONB, nullable: the bounded OpenGraph card `{ url, title, description, image, siteName }` of the first URL in a plaintext text message, at most 16 KiB and never set on an encrypted message. Replaced or cleared by an edit in the same statement as the new text and deleted with the row)
 - `is_read` (Boolean, default `false`)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
 
@@ -231,7 +232,7 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 ### JSON Message Payloads
 
 - **Text:** `{ "type": "text", "content": "Hello world", "replyToId": null }`
-- **Text link preview:** a text publication may carry `"link_preview": { "url", "title", "description", "image", "siteName" }`, the bounded OpenGraph metadata of the first URL in the text. An edit always includes the field and publishes `null` when the new text has no previewable link, because clients merge edit events over their local copy of the message. Previews are realtime-only (not stored with the message); see `docs/rich-link-previews.md`.
+- **Text link preview:** a text publication may carry `"link_preview": { "url", "title", "description", "image", "siteName" }`, the bounded OpenGraph metadata of the first URL in the text. An edit always includes the field and publishes `null` when the new text has no previewable link, because clients merge edit events over their local copy of the message. The preview is also stored on the message (`chat_messages.link_preview`) before the publication is sent, so message history, reconnecting clients, offline recipients and later joiners receive the same card without any viewer-triggered scrape; see `docs/rich-link-previews.md`.
 - **Correction:** `{ "type": "correction", "original": "I goes to school", "fixed": "I go to school", "notes": "Subject-verb agreement" }`
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`
