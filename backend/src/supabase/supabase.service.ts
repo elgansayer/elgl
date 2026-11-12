@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
+import type { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 
 export type UsersRow = {
   id: string;
@@ -702,6 +703,8 @@ export type ChatMessageRow = {
   deleted_for_user_ids?: string[] | null;
   is_encrypted?: boolean;
   encrypted_payload?: string | null;
+  /** Bounded OpenGraph card of the first URL in a plaintext text message. */
+  link_preview?: LinkPreview | null;
 };
 
 type BlockRow = {
