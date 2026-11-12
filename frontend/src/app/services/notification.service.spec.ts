@@ -78,6 +78,31 @@ describe('NotificationService', () => {
     await expect(promise).rejects.toThrow('Invalid unread count response');
   });
 
+  it('parses authoritative unread counts for each notification navigation tab', async () => {
+    const promise = service.getUnreadCount();
+    const request = http.expectOne(`${environment.apiUrl}/notifications/unread-count`);
+    request.flush({
+      unreadCount: 6,
+      byTab: { moments: 3, discovery: 2, profile: 1 },
+    });
+
+    await expect(promise).resolves.toEqual({
+      unreadCount: 6,
+      byTab: { moments: 3, discovery: 2, profile: 1 },
+    });
+  });
+
+  it('rejects a malformed per-tab count', async () => {
+    const promise = service.getUnreadCount();
+    const request = http.expectOne(`${environment.apiUrl}/notifications/unread-count`);
+    request.flush({
+      unreadCount: 6,
+      byTab: { moments: 3, discovery: -1, profile: 1 },
+    });
+
+    await expect(promise).rejects.toThrow('Invalid unread count response');
+  });
+
   it('propagates read mutation failures for retryable UI feedback', async () => {
     const id = 'd0aa8e62-d334-4d0f-8450-ecb998ed3bf5';
     const promise = service.markAsRead(id);

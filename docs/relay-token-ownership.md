@@ -20,16 +20,17 @@ The sources of truth are:
 
 ## Product colour roles
 
-| Relay role | Owner | Spartan mapping rule |
-| --- | --- | --- |
-| `surface-*` | Relay | Background, card, popover, border, input and muted aliases map to an appropriate Relay surface. |
-| `primary` / Ember | Relay + per-user ThemeService override | Spartan `--primary`, `--ring` and primary sidebar aliases use `--colour-primary-rgb`. |
-| `secondary` / Tide | Relay | Tide remains the partner/product colour. Spartan `--secondary` is an affordance role and intentionally maps to a neutral Relay surface, not Tide. |
-| `danger` | Relay | Spartan `--destructive` maps to `--colour-danger-rgb`. |
-| `success`, `warning`, `vip` | Relay | Product semantics remain Relay-owned and are not replaced by generic Spartan palette values. |
-| `accent` | Relay | Spartan `--accent` maps directly to `--colour-accent-rgb`. |
-| `on-fill` | Relay | Foregrounds on saturated fills map to `--on-fill-rgb`; hardcoded white is not an acceptable substitute. |
-| `text-*` | Relay | Spartan foreground aliases map to Relay text roles. |
+| Relay role                                   | Owner                                  | Spartan mapping rule                                                                                                                              |
+| -------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `surface-*`                                  | Relay                                  | Background, card, popover, border, input and muted aliases map to an appropriate Relay surface.                                                   |
+| `primary` / Ember                            | Relay + per-user ThemeService override | Spartan `--primary`, `--ring` and primary sidebar aliases use `--color-primary-rgb`.                                                              |
+| `secondary` / Tide                           | Relay                                  | Tide remains the partner/product colour. Spartan `--secondary` is an affordance role and intentionally maps to a neutral Relay surface, not Tide. |
+| `danger`                                     | Relay                                  | Spartan `--destructive` maps to `--color-danger-rgb`.                                                                                             |
+| `primary-ink`, `secondary-ink`, `danger-ink` | Relay                                  | AA-safe semantic foregrounds map to the corresponding `--color-*-text-rgb` roles.                                                                 |
+| `success`, `warning`, `vip`                  | Relay                                  | Product semantics remain Relay-owned and are not replaced by generic Spartan palette values.                                                      |
+| `accent`                                     | Relay                                  | Spartan `--accent` maps directly to `--color-accent-rgb`.                                                                                         |
+| `on-fill`                                    | Relay                                  | Foregrounds on saturated fills map to `--on-fill-rgb`; hardcoded white is not an acceptable substitute.                                           |
+| `text-*`                                     | Relay                                  | Spartan foreground aliases map to Relay text roles.                                                                                               |
 
 ## Theme ownership
 
@@ -37,7 +38,7 @@ Light and dark values are independently authored in Relay's `:root` and `.dark` 
 
 Do not duplicate the Spartan alias block under `.dark`. Doing so creates a second theme authority and makes future Relay changes incomplete by default.
 
-`primary` is additionally runtime-mutable through the existing theme service. Any Spartan or Relay component that represents the user's primary accent must therefore resolve through `--colour-primary-rgb`, never through a copied hex, static RGB value or generated Spartan default.
+`primary` is additionally runtime-mutable through the existing theme service. Any Spartan or Relay component that represents the user's primary accent must therefore resolve through `--color-primary-rgb`, never through a copied hex, static RGB value or generated Spartan default. Foreground use resolves through `--color-primary-text-rgb`, which the service derives for AA contrast in light mode and synchronises with the active primary in dark mode.
 
 ## Allowed literal colours
 
@@ -79,9 +80,9 @@ The gate is intentionally structural rather than screenshot-based. Visual regres
 Correct:
 
 ```scss
---primary: rgb(var(--colour-primary-rgb));
+--primary: rgb(var(--color-primary-rgb));
 --primary-foreground: rgb(var(--on-fill-rgb));
---destructive: rgb(var(--colour-danger-rgb));
+--destructive: rgb(var(--color-danger-rgb));
 ```
 
 Incorrect:
@@ -92,4 +93,4 @@ Incorrect:
 --destructive: rgb(220 38 38);
 ```
 
-Correct feature styling uses Relay/Tailwind semantics such as `bg-primary`, `text-on-fill`, `bg-surface-200`, `text-text-secondary` or a shared primitive that already owns those choices. Feature surfaces should not know or reproduce the underlying RGB values.
+Correct feature styling uses Relay/Tailwind semantics such as `bg-primary`, `text-primary-ink`, `text-danger-ink`, `text-on-fill`, `bg-surface-200`, `text-text-secondary` or a shared primitive that already owns those choices. Feature surfaces should not know or reproduce the underlying RGB values.

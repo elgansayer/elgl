@@ -6,6 +6,7 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 
 vi.mock('../mock-data', () => ({
   MOCK_USERS: [],
@@ -375,89 +376,6 @@ describe('DiscoveryService', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // calculateDailyRecommendations
-  // ---------------------------------------------------------------------------
-  describe('calculateDailyRecommendations', () => {
-    it('should store daily recommendations for matching users via pipeline', async () => {
-      const allUsers = [
-        { id: 'u1', native_languages: ['en'], target_languages: ['ja'] },
-      ];
-      mockQueryBuilder.limit
-        .mockResolvedValueOnce({ data: allUsers, error: null })
-        .mockResolvedValueOnce({ data: [{ id: 'u2' }], error: null });
-
-      await service.calculateDailyRecommendations();
-
-      expect(mockQueryBuilder.is).toHaveBeenCalledTimes(2);
-      expect(mockQueryBuilder.is).toHaveBeenNthCalledWith(
-        1,
-        'scheduled_for_deletion_at',
-        null,
-      );
-      expect(mockQueryBuilder.is).toHaveBeenNthCalledWith(
-        2,
-        'scheduled_for_deletion_at',
-        null,
-      );
-      expect(mockPipelineSet).toHaveBeenCalledWith(
-        'daily_recommendations:u1',
-        '["u2"]',
-        'EX',
-        86400,
-      );
-      expect(mockPipelineExec).toHaveBeenCalled();
-    });
-
-    it('should skip users with empty native_languages', async () => {
-      const allUsers = [
-        { id: 'u1', native_languages: [], target_languages: ['ja'] },
-      ];
-      mockQueryBuilder.limit.mockResolvedValueOnce({
-        data: allUsers,
-        error: null,
-      });
-
-      await service.calculateDailyRecommendations();
-
-      expect(mockQueryBuilder.limit).toHaveBeenCalledTimes(1);
-      expect(mockPipelineSet).not.toHaveBeenCalled();
-    });
-
-    it('should filter out blocked users from recommendations', async () => {
-      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['u2']);
-      const allUsers = [
-        { id: 'u1', native_languages: ['en'], target_languages: ['ja'] },
-      ];
-      mockQueryBuilder.limit
-        .mockResolvedValueOnce({ data: allUsers, error: null })
-        .mockResolvedValueOnce({
-          data: [{ id: 'u2' }, { id: 'u3' }],
-          error: null,
-        });
-
-      await service.calculateDailyRecommendations();
-
-      expect(mockPipelineSet).toHaveBeenCalledWith(
-        'daily_recommendations:u1',
-        '["u3"]',
-        'EX',
-        86400,
-      );
-    });
-
-    it('should handle fetch error gracefully', async () => {
-      mockQueryBuilder.limit.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'DB failure' },
-      });
-
-      await service.calculateDailyRecommendations();
-
-      expect(mockPipelineSet).not.toHaveBeenCalled();
-    });
-  });
-
-  // ---------------------------------------------------------------------------
   // searchPartners
   // ---------------------------------------------------------------------------
   describe('searchPartners', () => {
@@ -624,14 +542,23 @@ describe('DiscoveryService', () => {
       expect(result.map((u) => u.id)).toEqual(['ok-1']);
     });
 
-    it('should return empty array when standard query returns error', async () => {
+    it('should preserve a successful empty standard query', async () => {
+      stubLimitResponse([]);
+
+      await expect(service.searchPartners('user-1', null, {})).resolves.toEqual(
+        [],
+      );
+    });
+
+    it('should reject when the standard query returns an error', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,
         error: { message: 'Query error' },
       });
 
-      const result = await service.searchPartners('user-1', null, {});
-      expect(result).toHaveLength(0);
+      await expect(service.searchPartners('user-1', null, {})).rejects.toThrow(
+        'Partner discovery is temporarily unavailable',
+      );
     });
 
     // -- PostGIS RPC path ---------------------------------------------------
@@ -663,9 +590,77 @@ describe('DiscoveryService', () => {
           filter_audio_intro: false,
         },
       );
-      expect(result).toEqual(
-        nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })),
+      expect(result).toEqual([
+        {
+          id: 'nearby-1',
+          display_name: 'Nearby User',
+          distance_metres: undefined,
+          is_vip: false,
+          is_partner_of_week: false,
+        },
+      ]);
+    });
+
+    it('masks private presence and VIP state in nearby RPC results', async () => {
+      stubRpcResponse([
+        {
+          id: 'private-nearby',
+          is_vip: true,
+          vip_tier: 'consumer',
+          last_active_at: '2026-11-03T01:00:00.000Z',
+        },
+      ]);
+      stubLimitResponse([
+        {
+          id: 'private-nearby',
+          privacy_hide_online_status: true,
+          privacy_hide_vip_status: true,
+        },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
+
+      expect(result).toEqual([
+        {
+          id: 'private-nearby',
+          is_vip: false,
+          is_partner_of_week: false,
+        },
+      ]);
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        'id, privacy_hide_online_status, privacy_hide_vip_status',
       );
+    });
+
+    it('fails closed when nearby privacy state cannot be hydrated', async () => {
+      stubRpcResponse([
+        {
+          id: 'nearby-1',
+          is_vip: true,
+          vip_tier: 'consumer',
+          last_active_at: '2026-11-03T01:00:00.000Z',
+        },
+      ]);
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST500' },
+      });
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
+
+      expect(result).toEqual([
+        {
+          id: 'nearby-1',
+          is_vip: false,
+          is_partner_of_week: false,
+        },
+      ]);
     });
 
     it('should use default radius_metres 50000 when not provided', async () => {
@@ -680,6 +675,85 @@ describe('DiscoveryService', () => {
         'search_nearby_users',
         expect.objectContaining({ radius_m: 50000 }),
       );
+    });
+
+    it('should apply radius filters relative to the authenticated profile location', async () => {
+      stubRpcResponse([{ id: 'p1', distance_metres: 8_000 }]);
+
+      await service.searchPartners(
+        'user-1',
+        { is_vip: true, location: 'POINT(-0.1278 51.5074)' },
+        { radius_metres: 25_000 },
+      );
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({
+          search_lat: 51.5074,
+          search_lon: -0.1278,
+          radius_m: 25_000,
+        }),
+      );
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(100);
+    });
+
+    it('should reject a saved-location radius filter for a non-VIP caller', async () => {
+      await expect(
+        service.searchPartners(
+          'user-1',
+          { is_vip: false, location: 'POINT(-0.1278 51.5074)' },
+          { radius_metres: 25_000 },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
+    });
+
+    it('should preserve global discovery for a non-VIP caller with a saved location', async () => {
+      stubLimitResponse([{ id: 'p1' }]);
+
+      await service.searchPartners(
+        'user-1',
+        { is_vip: false, location: 'POINT(-0.1278 51.5074)' },
+        {},
+      );
+
+      expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
+    });
+
+    it('should reject a radius filter when no spatial origin is available', async () => {
+      await expect(
+        service.searchPartners(
+          'user-1',
+          { is_vip: true, location: undefined },
+          { radius_metres: 25_000 },
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
+    });
+
+    it('should preserve missing-origin validation through the degradation boundary', async () => {
+      await expect(
+        service.searchPartnersWithDegradation(
+          'user-1',
+          { is_vip: true, location: undefined },
+          { radius_metres: 25_000 },
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should preserve saved-location authorisation through the degradation boundary', async () => {
+      await expect(
+        service.searchPartnersWithDegradation(
+          'user-1',
+          { is_vip: false, location: 'POINT(-0.1278 51.5074)' },
+          { radius_metres: 25_000 },
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should map RPC distance field when distance_metres is missing', async () => {
@@ -1016,21 +1090,22 @@ describe('DiscoveryService', () => {
       expect(result.map((u) => u.id)).toEqual(['p1', 'p2']);
     });
 
-    // -- RPC fallback chain --------------------------------------------------
-    it('should fall back to standard query when RPC returns error', async () => {
+    // -- RPC failure ---------------------------------------------------------
+    it('should reject instead of returning non-spatial users when RPC returns an error', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
         data: null,
         error: { message: 'PostGIS not ready' },
       });
       stubLimitResponse([{ id: 'fallback-1' }]);
 
-      const result = await service.searchPartners('user-1', null, {
-        latitude: 35.6895,
-        longitude: 139.6917,
-      });
-
-      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
-      expect(result.map((u) => u.id)).toEqual(['fallback-1']);
+      await expect(
+        service.searchPartners('user-1', null, {
+          latitude: 35.6895,
+          longitude: 139.6917,
+          radius_metres: 1_000,
+        }),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
     });
 
     it('should preserve an empty successful RPC result', async () => {
@@ -1046,7 +1121,7 @@ describe('DiscoveryService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should apply extra filters on RPC fallback results (level, age)', async () => {
+    it('should not return filter-matching non-spatial rows when the radius query fails', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
         data: null,
         error: { message: 'PostGIS unavailable' },
@@ -1057,32 +1132,31 @@ describe('DiscoveryService', () => {
         { id: 'fb3', proficiency_level: 'B2', age: 18 },
       ]);
 
-      const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-        level: 'B2',
-        age_min: 20,
-      });
-
-      expect(result.map((u) => u.id)).toEqual(['fb1']);
+      await expect(
+        service.searchPartners('user-1', null, {
+          latitude: 1,
+          longitude: 2,
+          radius_metres: 25_000,
+          level: 'B2',
+          age_min: 20,
+        }),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
     });
 
-    it('should return empty when both RPC and fallback query fail', async () => {
+    it('should reject when the RPC returns no data', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
         data: null,
         error: { message: 'RPC failure' },
       });
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'DB error' },
-      });
 
-      const result = await service.searchPartners('user-1', null, {
-        latitude: 35.6895,
-        longitude: 139.6917,
-      });
-
-      expect(result).toHaveLength(0);
+      await expect(
+        service.searchPartners('user-1', null, {
+          latitude: 35.6895,
+          longitude: 139.6917,
+        }),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
     });
 
     // -- Advanced post-DB filtering -------------------------------------------
@@ -1182,6 +1256,100 @@ describe('DiscoveryService', () => {
       ]);
     });
 
+    it('best_match: boosts active Pro members without exposing tier-specific metadata or reasons', async () => {
+      const partners = [
+        {
+          id: 'consumer-user',
+          is_vip: true,
+          vip_tier: 'consumer',
+          correction_ratio: 0,
+        },
+        {
+          id: 'pro-user',
+          is_vip: true,
+          vip_tier: 'pro',
+          correction_ratio: 0,
+        },
+      ];
+      stubLimitResponse(partners);
+
+      const result = await service.searchPartners('user-1', null, {
+        sort: 'best_match',
+      });
+
+      expect(result.map((user) => user.id)).toEqual([
+        'pro-user',
+        'consumer-user',
+      ]);
+      expect(result[0]).toMatchObject({
+        match_reasons: expect.arrayContaining(['vip_priority']),
+      });
+      expect(result[1]).toMatchObject({
+        match_reasons: expect.arrayContaining(['vip_priority']),
+      });
+      expect(result[0].match_reasons).not.toContain('pro_visibility_boost');
+      expect(result[0]).not.toHaveProperty('vip_tier');
+      expect(result[1]).not.toHaveProperty('vip_tier');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        expect.stringContaining('is_vip, vip_tier'),
+      );
+    });
+
+    it('best_match: hydrates bounded tier data for nearby Pro members before ranking', async () => {
+      const privacyBuilder = createMockQueryBuilder();
+      privacyBuilder.limit.mockResolvedValue({
+        data: [
+          {
+            id: 'consumer-nearby',
+            privacy_hide_online_status: false,
+            privacy_hide_vip_status: false,
+          },
+          {
+            id: 'pro-nearby',
+            privacy_hide_online_status: false,
+            privacy_hide_vip_status: false,
+          },
+        ],
+        error: null,
+      });
+      const tierBuilder = createMockQueryBuilder();
+      tierBuilder.limit.mockResolvedValue({
+        data: [
+          { id: 'consumer-nearby', vip_tier: 'consumer' },
+          { id: 'pro-nearby', vip_tier: 'pro' },
+        ],
+        error: null,
+      });
+      mockSupabaseClient.from
+        .mockReturnValueOnce(mockQueryBuilder)
+        .mockReturnValueOnce(privacyBuilder)
+        .mockReturnValueOnce(tierBuilder);
+      stubRpcResponse([
+        { id: 'consumer-nearby', is_vip: true, correction_ratio: 0 },
+        { id: 'pro-nearby', is_vip: true, correction_ratio: 0 },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        sort: 'best_match',
+      });
+
+      expect(tierBuilder.select).toHaveBeenCalledWith('id, vip_tier');
+      expect(tierBuilder.in).toHaveBeenCalledWith('id', [
+        'consumer-nearby',
+        'pro-nearby',
+      ]);
+      expect(tierBuilder.limit).toHaveBeenCalledWith(2);
+      expect(result.map((user) => user.id)).toEqual([
+        'pro-nearby',
+        'consumer-nearby',
+      ]);
+      expect(result[0].match_reasons).toContain('vip_priority');
+      expect(result[0].match_reasons).not.toContain('pro_visibility_boost');
+      expect(result[0]).not.toHaveProperty('vip_tier');
+    });
+
     it('online_now: orders by most recent last_active_at first', async () => {
       const partners = [
         { id: 'a', last_active_at: '2026-07-01T00:00:00.000Z' },
@@ -1195,6 +1363,44 @@ describe('DiscoveryService', () => {
       });
 
       expect(result.map((u) => u.id)).toEqual(['b', 'a', 'c']);
+    });
+
+    it('does not reveal hidden presence or VIP state through ranking signals', async () => {
+      const hidden = {
+        id: 'hidden-state',
+        is_vip: true,
+        vip_tier: 'pro',
+        last_active_at: '2026-11-03T01:00:00.000Z',
+        privacy_hide_online_status: true,
+        privacy_hide_vip_status: true,
+      };
+      const publicMember = {
+        id: 'public-state',
+        is_vip: false,
+        last_active_at: '2026-10-01T01:00:00.000Z',
+        privacy_hide_online_status: false,
+        privacy_hide_vip_status: false,
+      };
+      stubLimitResponse([hidden, publicMember]);
+
+      const bestMatch = await service.searchPartners('user-1', null, {
+        sort: 'best_match',
+      });
+      stubLimitResponse([hidden, publicMember]);
+      const onlineNow = await service.searchPartners('user-1', null, {
+        sort: 'online_now',
+      });
+
+      expect(
+        bestMatch.find((user) => user.id === 'hidden-state')?.match_reasons,
+      ).not.toContain('active_recently');
+      expect(
+        bestMatch.find((user) => user.id === 'hidden-state')?.match_reasons,
+      ).not.toContain('vip_priority');
+      expect(onlineNow.map((user) => user.id)).toEqual([
+        'public-state',
+        'hidden-state',
+      ]);
     });
 
     it('newest: orders by most recently created first', async () => {
@@ -1448,17 +1654,17 @@ describe('DiscoveryService', () => {
       );
     });
 
-    it('should fallback to mock data when query errors', async () => {
+    it('should report unavailability instead of fabricating matches when the query errors', async () => {
       mockQueryBuilder.range = vi.fn().mockResolvedValue({
         data: null,
         error: { message: 'fail' },
       });
 
-      const result = await service.findByLanguagePair('user-1', {
-        native_language: 'EN',
-      });
-
-      expect(result).toEqual([]);
+      await expect(
+        service.findByLanguagePair('user-1', {
+          native_language: 'EN',
+        }),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
     });
 
     it('should apply sort=newest ordering', async () => {
@@ -1594,10 +1800,7 @@ describe('DiscoveryService', () => {
       });
     });
 
-    it('should fall back to mock data when breaker degrades and search returns empty', async () => {
-      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
-        'fake-1',
-      ]);
+    it('should preserve degraded empty results without fabricating partners', async () => {
       mockDegradationService.executeWithBreaker.mockImplementationOnce(
         (
           _svc: string,
@@ -1612,10 +1815,6 @@ describe('DiscoveryService', () => {
         },
       );
 
-      // The fallbackFn sets marker.fallbackSource = 'basic_query' and returns []
-      // Since result is empty [], the method should try mock data
-      // Mock searchByCountryCity to verify mockData is used
-      // The mock data path calls getMockDiscoveryData which uses MOCK_USERS
       const result = await service.searchPartnersWithDegradation(
         'user-1',
         null,
@@ -1623,18 +1822,15 @@ describe('DiscoveryService', () => {
       );
 
       expect(result.marker.degraded).toBe(true);
-      expect(result.marker.fallbackSource).toBe('mock');
-      expect(result.marker.reason).toContain('circuit open');
-      expect(Array.isArray(result.data)).toBe(true);
-      expect(result.data.map((candidate) => candidate.id)).not.toContain(
-        'fake-1',
-      );
+      expect(result.marker.fallbackSource).toBe('basic_query');
+      expect(result.marker.reason).toBe('circuit open');
+      expect(result.data).toEqual([]);
       expect(
         mockDegradationService.recordDegradationEvent,
       ).toHaveBeenCalledWith(
         '/discovery/partners',
         'circuit open',
-        'mock',
+        'basic_query',
         'user-1',
       );
     });
@@ -1672,33 +1868,20 @@ describe('DiscoveryService', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should catch thrown errors and fall back to mock data', async () => {
-      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
-        'fake-1',
-      ]);
+    it('should surface unexpected degradation failures as unavailable', async () => {
       mockDegradationService.executeWithBreaker.mockRejectedValueOnce(
         new Error('supabase down'),
       );
 
-      const result = await service.searchPartnersWithDegradation(
-        'user-1',
-        null,
-        {},
-      );
-
-      expect(result.marker.degraded).toBe(true);
-      expect(result.marker.fallbackSource).toBe('mock');
-      expect(result.marker.reason).toBe('supabase down');
-      expect(Array.isArray(result.data)).toBe(true);
-      expect(result.data.map((candidate) => candidate.id)).not.toContain(
-        'fake-1',
-      );
+      await expect(
+        service.searchPartnersWithDegradation('user-1', null, {}),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
       expect(
         mockDegradationService.recordDegradationEvent,
       ).toHaveBeenCalledWith(
         '/discovery/partners',
         'supabase down',
-        'mock',
+        'basic_query',
         'user-1',
       );
     });
@@ -1708,15 +1891,9 @@ describe('DiscoveryService', () => {
         'string error',
       );
 
-      const result = await service.searchPartnersWithDegradation(
-        'user-1',
-        null,
-        {},
-      );
-
-      expect(result.marker.degraded).toBe(true);
-      expect(result.marker.fallbackSource).toBe('mock');
-      expect(result.marker.reason).toBe('string error');
+      await expect(
+        service.searchPartnersWithDegradation('user-1', null, {}),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
     });
 
     it('should pass RPC proximity search through degradation layer', async () => {
@@ -1731,9 +1908,15 @@ describe('DiscoveryService', () => {
 
       expect(result.marker.degraded).toBe(false);
       expect(result.marker.fallbackSource).toBe('none');
-      expect(result.data).toEqual(
-        nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })),
-      );
+      expect(result.data).toEqual([
+        {
+          id: 'nearby-1',
+          display_name: 'Nearby',
+          distance_metres: undefined,
+          is_vip: false,
+          is_partner_of_week: false,
+        },
+      ]);
       expect(mockSupabaseClient.rpc).toHaveBeenCalled();
     });
   });

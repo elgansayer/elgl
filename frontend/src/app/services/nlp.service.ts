@@ -36,6 +36,8 @@ export class NlpRequestError extends Error {
   }
 }
 
+/** Mirrors the 4,000 character limit the backend applies to each sentence. */
+const MAX_EXPLAIN_SOURCE_LENGTH = 4000;
 const MAX_SIMPLIFY_SOURCE_LENGTH = 4000;
 const MAX_SIMPLIFY_RESULT_LENGTH = 8000;
 
@@ -51,6 +53,15 @@ export class NlpService {
     const corrected = request.corrected.trim();
     if (!original || !corrected) {
       throw new NlpRequestError('empty', 'Both original and corrected text are required.');
+    }
+    if (
+      original.length > MAX_EXPLAIN_SOURCE_LENGTH ||
+      corrected.length > MAX_EXPLAIN_SOURCE_LENGTH
+    ) {
+      throw new NlpRequestError(
+        'request',
+        `Text to explain must be ${MAX_EXPLAIN_SOURCE_LENGTH} characters or fewer.`,
+      );
     }
 
     const token = this.requireAccessToken();

@@ -14,6 +14,12 @@ This document describes the frontend unread-count contract implemented by `Unrea
 
 Producers update counts through `set`, `increment`, or `decrement`. Navigation components read them through `tabCount` and render compact badge text through `badgeText`. Existing chat/notification helper methods remain supported for mixed-version callers.
 
+The authenticated chat count endpoint remains the source of truth for Chat. The authenticated notification count endpoint preserves its existing `unreadCount` field and also returns bounded per-tab counts for Moments, Discovery, and Profile. It performs four fixed indexed count queries in parallel, not a collection scan or per-notification query. Chat-backed `mention_chat` inbox rows remain in `unreadCount` for inbox actions but are excluded from notification tab counts because the corresponding messages are already owned by Chat.
+
+After durable chat messages or notification rows create unread activity, the backend emits an internal `unread.counts_changed` event. A single listener publishes `{ "type": "unread_counts_changed", "source": "chat" | "notifications" }` to the recipient's authenticated `user_{id}` channel. The Angular app treats that payload as an invalidation signal, coalesces repeated events by source while a refresh is active, and serialises authoritative refreshes through the existing REST APIs. It does not trust client-supplied absolute counts or retain private event content.
+
+Each refresh captures a service snapshot. `reconcile` applies the authoritative response without overwriting an increment or persisted read that completed while the request was in flight. Conflicting local increase and decrease transitions preserve the final locally observed value until the next serialised authoritative refresh. Opening a chat decrements Chat only after the read receipt succeeds. Notification read and mark-all actions update their owning tabs only after persistence succeeds. Read mutations are not echoed to the initiating client through the personal channel, avoiding a refresh plus local-decrement race.
+
 All incoming count values are normalised before entering UI state. Negative, non-finite, and invalid values become zero, fractional values are floored, and individual plus aggregate counts saturate at `Number.MAX_SAFE_INTEGER`. Visible badges display `99+` above 99 without discarding the full underlying count used for accessibility and arithmetic.
 
 ## Navigation and accessibility
@@ -54,13 +60,18 @@ Focused checks live in:
 
 - `frontend/src/app/services/unread-counter.service.spec.ts`
 - `frontend/src/app/app-navigation-tabs.contract.spec.ts`
+- `frontend/src/app/app.component.spec.ts`
+- `frontend/src/app/components/chat-room/chat-room.component.spec.ts`
+- `frontend/src/app/components/notifications-inbox/notifications-inbox.component.spec.ts`
+- `backend/src/notifications/notifications-inbox.service.spec.ts`
+- `backend/src/chat/listeners/personal-unread.listener.spec.ts`
 
-The service suite covers normalisation, saturation, compact presentation, lifecycle operations, and browser badge failure behaviour. The navigation contract verifies that all five tabs remain wired to the shared service in both mobile and desktop navigation, retain accessibility semantics, and do not regress to unrelated audio-room co-host controls.
+The focused suites cover normalisation, concurrent reconciliation, compact presentation, browser badge failure behaviour, authenticated grouped counts, persistence-before-invalidation ordering, realtime delivery failure, read transitions, and both navigation surfaces.
 
 Run the focused frontend tests with the repository's normal Vitest command, and use the full frontend lint/build/test CI jobs as the merge gate.
 
 ## Rollout and rollback
 
-This change has no API, database, persistence, or migration impact and is safe for mixed frontend/backend versions. Deploy it as a normal frontend release.
+This change extends the existing notification unread response without removing `unreadCount`. It has no schema or migration impact. Deploy the backend before or with the frontend so the personal invalidation event and per-tab response are available together. Existing notification retention and deletion rules are unchanged.
 
-Rollback is code-only: revert the unread-counter/navigation commits. No stored data requires cleanup or migration.
+Rollback is code-only: revert the response extension, event publisher, and frontend consumer together. Persisted messages and notifications remain authoritative and require no cleanup.

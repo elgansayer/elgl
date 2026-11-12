@@ -1,4 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import {
+  buildConversationPrompt,
+  requireScreenedReply,
+} from '../llm-guard/prompt-guard';
+import type { UntrustedJson } from '../llm-guard/untrusted-text';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
@@ -21,6 +26,17 @@ export interface Scenario {
 const DAILY_AI_LIMIT_FREE = 10;
 const REDIS_KEY_PREFIX = 'daily_ai_usage:';
 const REDIS_TTL_SECONDS = 86400; // 24 hours
+const MAX_AI_REPLY_CHARS = 4_000;
+
+const DEFAULT_TUTOR_INSTRUCTIONS = [
+  'You are a personalized, expert language tutor helping a learner practise their target language. Stay in character as a supportive and knowledgeable tutor.',
+  'Comprehensible Input: Use natural, conversational language slightly above their level (i+1) to challenge them without overwhelming them. Ensure vocabulary is varied but accessible.',
+  'Active Production: Ask engaging, open-ended questions related to their interests to prompt them to speak and produce language. Avoid yes/no questions.',
+  'Retrieval Practice & Spaced Repetition: Deliberately reuse recently learned vocabulary in different contexts to reinforce learning.',
+  'Meaningful Feedback: If the user makes a grammatical or vocabulary error, gently and naturally rephrase their sentence correctly in your response before answering. Provide a brief, encouraging note on the correction if it is a major error.',
+  'Be encouraging, warm, and supportive.',
+  'Keep replies 1-3 sentences.',
+];
 
 @Injectable()
 export class AiConversationService {
@@ -289,16 +305,20 @@ The user's role: Someone practising casual English.
       );
     }
 
-    let systemPrompt = scenario?.systemPrompt;
+    let instructions: string[];
+    let context: Record<string, UntrustedJson | undefined> | undefined;
 
-    if (!systemPrompt) {
+    if (scenario?.systemPrompt) {
+      instructions = [scenario.systemPrompt];
+    } else {
       const [flashcards, streak] = await Promise.all([
         this.flashcardsService
           .getFlashcards(userId, undefined, 10)
           .catch(() => []),
         this.studyStreakService.getStreak(userId).catch(() => 0),
       ]);
-      systemPrompt = this.getDefaultSystemPrompt(
+      instructions = DEFAULT_TUTOR_INSTRUCTIONS;
+      context = this.buildLearnerContext(
         profile,
         flashcards,
         streak,
@@ -307,18 +327,17 @@ The user's role: Someone practising casual English.
     }
     const scenarioName = scenario?.name ?? 'free conversation';
 
-    const messages: {
-      role: 'system' | 'user' | 'assistant';
-      content: string;
-    }[] = [
-      { role: 'system', content: systemPrompt },
-      ...(conversationHistory ?? []),
-      { role: 'user', content: userMessage },
-    ];
+    const messages = buildConversationPrompt({
+      tool: 'ai_conversation',
+      instructions,
+      context,
+      history: conversationHistory,
+      message: userMessage,
+    });
 
     try {
       const result = await this.llmProxy.chatCompletion(messages);
-      return result.trim() || this.getFallbackReply(userMessage, scenarioId);
+      return requireScreenedReply(result, { maxLength: MAX_AI_REPLY_CHARS });
     } catch (err) {
       this.logger.warn(
         `LLM call failed for scenario=${scenarioName}, falling back to local replies.`,
@@ -328,58 +347,31 @@ The user's role: Someone practising casual English.
     }
   }
 
-  private getDefaultSystemPrompt(
+  private buildLearnerContext(
     profile: UserProfile | null,
     flashcards: Flashcard[],
     streak: number,
-    learnerKnowledge: LearnerKnowledgeProfile | null = null,
-  ): string {
-    const targetLanguages = profile?.target_languages?.join(', ') || 'English';
-    const interests = profile?.interests?.join(', ') || 'various topics';
+    learnerKnowledge: LearnerKnowledgeProfile | null,
+  ): Record<string, UntrustedJson | undefined> {
     const level =
       learnerKnowledge?.overallProficiency?.level ||
       profile?.proficiency_level ||
       'beginner/intermediate';
 
-    let flashcardContext = '';
-    if (flashcards && flashcards.length > 0) {
-      const words = flashcards.map((f) => f.word_token).join(', ');
-      flashcardContext = `\n- The user has recently been studying these words/phrases: ${words}. Try to naturally incorporate some of these into the conversation and ask the user to use them in a sentence to reinforce active production and learning.`;
-    }
+    const strugglingItems = learnerKnowledge?.knowledgeItems
+      ? Array.from(learnerKnowledge.knowledgeItems.values())
+          .filter((item) => item.status === 'struggling')
+          .map((item) => item.id.replace('vocab:', ''))
+      : [];
 
-    let knowledgeContext = '';
-    if (learnerKnowledge && learnerKnowledge.knowledgeItems) {
-      const strugglingItems = Array.from(
-        learnerKnowledge.knowledgeItems.values(),
-      )
-        .filter((item) => item.status === 'struggling')
-        .map((item) => item.id.replace('vocab:', ''))
-        .join(', ');
-
-      if (strugglingItems) {
-        knowledgeContext = `\n- The user has been struggling with the following concepts or vocabulary: ${strugglingItems}. Provide extra support or subtle corrections if they make mistakes related to these.`;
-      }
-    }
-
-    let streakContext = '';
-    if (streak > 3) {
-      streakContext = `\n- The user is on a ${streak}-day study streak! Acknowledge their dedication if appropriate.`;
-    }
-
-    return `You are a personalized, expert language tutor helping a learner practice ${targetLanguages}. Stay in character as a supportive and knowledgeable tutor.
-
-The user's profile:
-- Target language(s): ${targetLanguages}
-- Proficiency level: ${level}
-- Interests: ${interests}${streakContext}${flashcardContext}${knowledgeContext}
-
-Your instructions:
-- Comprehensible Input: Use natural, conversational language slightly above their ${level} level (i+1) to challenge them without overwhelming them. Ensure vocabulary is varied but accessible.
-- Active Production: Ask engaging, open-ended questions related to their interests to prompt them to speak and produce language. Avoid yes/no questions.
-- Retrieval Practice & Spaced Repetition: Deliberately reuse recently learned material (vocabulary listed above) in different contexts to reinforce learning.
-- Meaningful Feedback: If the user makes a grammatical or vocabulary error, gently and naturally rephrase their sentence correctly in your response before answering. Provide a brief, encouraging note on the correction if it's a major error.
-- Be encouraging, warm, and supportive.
-- Keep replies 1-3 sentences.`;
+    return {
+      target_languages: profile?.target_languages ?? [],
+      proficiency_level: level,
+      interests: profile?.interests ?? [],
+      recent_vocabulary: (flashcards ?? []).map((card) => card.word_token),
+      struggling_vocabulary: strugglingItems,
+      study_streak_days: streak,
+    };
   }
 
   private getFallbackReply(userMessage: string, scenarioId?: string): string {

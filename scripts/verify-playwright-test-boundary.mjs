@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,6 +22,11 @@ const IGNORED_SCAN_PATHS = new Set([
 ]);
 
 const PLAYWRIGHT_TEST_FILE_PATTERN = /\.(?:spec|test)\.[cm]?[jt]sx?$/;
+// Playwright discovers specs from disk, not from the git index. Listing untracked files that Git
+// does not ignore lets the check reject a spec written during a QA run before it is committed.
+// Untracked output makes the listing unbounded, so the buffer is far above the 1 MiB default.
+const WORKING_TREE_LISTING = ['ls-files', '-z', '--cached', '--others', '--exclude-standard'];
+const WORKING_TREE_LISTING_MAX_BYTES = 64 * 1024 * 1024;
 const RUNNER_GLOBAL_REPLACEMENTS = new Map([
   ['describe', 'test.describe'],
   ['it', 'test'],
@@ -827,10 +832,11 @@ export function shouldReadTrackedFile(path) {
   );
 }
 
-function readTrackedFiles(repoRoot) {
-  const output = execFileSync('git', ['ls-files', '-z'], {
+function readWorkingTreeFiles(repoRoot) {
+  const output = execFileSync('git', WORKING_TREE_LISTING, {
     cwd: repoRoot,
     encoding: 'utf8',
+    maxBuffer: WORKING_TREE_LISTING_MAX_BYTES,
   });
 
   const files = {};
@@ -842,7 +848,13 @@ function readTrackedFiles(repoRoot) {
     if (!shouldReadTrackedFile(path)) {
       continue;
     }
-    files[path] = readFileSync(resolve(repoRoot, path), 'utf8');
+    const absolutePath = resolve(repoRoot, path);
+    // The index keeps listing a file deleted from disk until the deletion is staged. Playwright
+    // cannot discover it, so there is nothing to check.
+    if (!statSync(absolutePath, { throwIfNoEntry: false })?.isFile()) {
+      continue;
+    }
+    files[path] = readFileSync(absolutePath, 'utf8');
   }
   return files;
 }
@@ -850,7 +862,7 @@ function readTrackedFiles(repoRoot) {
 function main() {
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   const repoRoot = resolve(scriptDir, '..');
-  const files = readTrackedFiles(repoRoot);
+  const files = readWorkingTreeFiles(repoRoot);
   const violations = analysePlaywrightBoundary({
     files,
     e2ePackageJson: readFileSync(resolve(repoRoot, 'e2e/package.json'), 'utf8'),

@@ -2,7 +2,7 @@
   <div class="flex items-center justify-between gap-2 border-b border-surface-100 pb-2.5">
     <div class="flex items-center gap-3">
       <div
-        class="h-10 w-10 rounded-card bg-primary/10 text-primary flex items-center justify-center"
+        class="h-10 w-10 rounded-card bg-primary/10 text-primary-ink flex items-center justify-center"
       >
         💬
       </div>
@@ -54,6 +54,49 @@
       </app-button-secondary>
     </div>
   </div>
+
+  @if (isE2eeRoom()) {
+    <div
+      class="mt-2 flex items-center justify-center gap-1.5 ps-3 pe-3 pt-1.5 pb-1.5 bg-surface-200/60 rounded-card border border-surface-200 text-xs text-text-muted select-none"
+      role="status"
+    >
+      <svg
+        class="w-3.5 h-3.5 text-success shrink-0"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      <span>{{ 'chatRoom.e2eeBanner' | t }}</span>
+    </div>
+  }
+
+  @if (showOfflineStatus()) {
+    <div
+      class="mt-2 flex flex-col gap-1 ps-3 pe-3 pt-1.5 pb-1.5 bg-warning/10 rounded-card border border-warning/30 text-xs text-text-primary"
+      role="status"
+      data-testid="chat-offline-status"
+    >
+      @if (!isOnline()) {
+        <p class="flex items-center gap-1.5" data-testid="chat-offline-warning">
+          <span aria-hidden="true">📡</span>
+          <span>{{ 'chatRoom.offlineWarning' | t }}</span>
+        </p>
+      }
+      @if (queuedCount() > 0) {
+        <p class="flex items-center gap-1.5" data-testid="chat-queued-count">
+          <span aria-hidden="true">🕒</span>
+          <span>{{ 'chatRoom.queuedMessages' | t: { count: queuedCount() } }}</span>
+        </p>
+      }
+    </div>
+  }
 
   @if (pendingUnlock()) {
     <div class="flex-1 flex flex-col items-center justify-center gap-3 text-center">
@@ -112,7 +155,7 @@
           />
           <app-button-secondary
             (clicked)="removeMember()"
-            customClass="ps-3 pe-3 pt-2 pb-2 text-xs text-danger"
+            customClass="ps-3 pe-3 pt-2 pb-2 text-xs text-danger-ink"
             [ariaLabel]="'chatRoom.removeMemberBtn' | t"
           >
             {{ 'chatRoom.removeMemberBtn' | t }}
@@ -142,7 +185,7 @@
       }
 
       @for (msg of filteredMessages(); track msg.id) {
-        @if (msg.message_type === 'system' && msg.system_event) {
+        @if (msg.message_type === 'system') {
           <app-chat-system-bubble
             [eventType]="msg.system_event?.type ?? ''"
             [params]="msg.system_event ?? {}"
@@ -152,6 +195,8 @@
             [messageId]="msg.id"
             [messageContent]="msg.text_content ?? ''"
             [messageType]="msg.message_type"
+            [correctionOriginal]="msg.correction_payload?.original ?? null"
+            [correctionCorrected]="msg.correction_payload?.corrected ?? null"
             [senderId]="msg.sender_id"
             [roomId]="roomId"
             [isBlocked]="blockedUserIds().includes(msg.sender_id)"
@@ -174,104 +219,36 @@
             >
               <div
                 [class]="
-                  'relative max-w-[80%] ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
-                  (isOwnMessage(msg)
-                    ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-on-fill'
-                    : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary')
+                  'relative max-w-[80%] text-sm transition-colors ' +
+                  (msg.message_type === 'gift'
+                    ? 'bg-transparent shadow-none'
+                    : 'ps-3 pe-3 pt-2.5 pb-2.5 shadow-sm ' +
+                      (isOwnMessage(msg)
+                        ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-on-fill'
+                        : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary'))
                 "
                 [class.ring-2]="highlightedMessageId() === msg.id"
                 [class.ring-warning]="highlightedMessageId() === msg.id"
               >
-                <span
-                  class="chat-bubble-tail"
-                  [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
-                  [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
-                  aria-hidden="true"
-                ></span>
+                @if (msg.message_type !== 'gift') {
+                  <span
+                    class="chat-bubble-tail"
+                    [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
+                    [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
+                    aria-hidden="true"
+                  ></span>
+                }
                 <p class="mb-1 text-[11px] opacity-70 flex items-center gap-1">
                   <span>
                     {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
                     {{ msg.created_at | date: 'shortTime' }}
                   </span>
                   @if (isOwnMessage(msg) && (msg.delivery_status || msg.is_read)) {
-                    <span class="inline-flex items-center flex-shrink-0">
-                      @if (
-                        msg.delivery_status === 'sent' || (!msg.delivery_status && msg.is_read)
-                      ) {
-                        <svg
-                          class="w-3.5 h-3.5 text-text-muted"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          [attr.aria-label]="'chatRoom.deliveryStatusSent' | t"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      }
-                      @if (msg.delivery_status === 'delivered') {
-                        <svg
-                          class="w-3.5 h-3.5 text-text-muted"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          [attr.aria-label]="'chatRoom.deliveryStatusDelivered' | t"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        <svg
-                          class="w-3.5 h-3.5 -ms-2 text-text-muted"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      }
-                      @if (msg.delivery_status === 'read') {
-                        <svg
-                          class="w-3.5 h-3.5 text-secondary"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          [attr.aria-label]="'chatRoom.deliveryStatusRead' | t"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        <svg
-                          class="w-3.5 h-3.5 -ms-2 text-secondary"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      }
-                    </span>
+                    <app-read-receipt
+                      [messageId]="msg.id"
+                      [deliveryStatus]="msg.delivery_status || (msg.is_read ? 'read' : 'sent')"
+                      [isGroup]="participants().length > 1"
+                    />
                   }
                 </p>
                 @if (msg.reply_to_id) {
@@ -300,6 +277,7 @@
                 @if (msg.message_type === 'text' && msg.text_content) {
                   <app-tokenised-text
                     [text]="msg.text_content ?? ''"
+                    [language]="partnerLanguage() || 'en'"
                     (wordClicked)="onWordClicked($event)"
                   ></app-tokenised-text>
                   @if (transliterations()[msg.id]) {
@@ -308,7 +286,7 @@
                     </p>
                   }
                   @if (showTranslation()[msg.id] && translations()[msg.id]) {
-                    <p class="mt-1 text-[10px] text-primary italic">
+                    <p class="mt-1 text-[10px] text-primary-ink italic">
                       {{ translations()[msg.id] }}
                     </p>
                   }
@@ -321,6 +299,9 @@
                       [siteName]="lp.siteName"
                     ></app-link-preview-card>
                   }
+                }
+                @if (msg.message_type === 'gift') {
+                  <app-gift-animation [giftPayload]="msg.gift_payload ?? null" />
                 }
                 @if (msg.message_type === 'correction' && msg.correction_payload) {
                   <app-visual-diff
@@ -341,7 +322,7 @@
                   <img
                     loading="lazy"
                     [src]="msg.media_url ?? ''"
-                    alt="doodle"
+                    [alt]="'chatRoom.doodleImageAlt' | t"
                     class="max-h-52 rounded-xl border border-surface-100"
                   />
                 }
@@ -436,12 +417,24 @@
     }
 
     @if (showDoodleModal()) {
-      <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-        <app-doodle-pad
-          (doodleSaved)="onDoodleSaved($event)"
-          (cancelled)="showDoodleModal.set(false)"
-        ></app-doodle-pad>
-      </div>
+      <hlm-dialog
+        state="open"
+        [aria-label]="'doodle.title' | t"
+        [aria-labelledby]="null"
+        [aria-describedby]="null"
+        (closed)="showDoodleModal.set(false)"
+      >
+        <hlm-dialog-content
+          *hlmDialogPortal
+          [showCloseButton]="false"
+          class="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-transparent p-0 ring-0 sm:max-w-[min(42rem,calc(100%-2rem))]"
+        >
+          <app-doodle-pad
+            (doodleSaved)="onDoodleSaved($event)"
+            (cancelled)="showDoodleModal.set(false)"
+          ></app-doodle-pad>
+        </hlm-dialog-content>
+      </hlm-dialog>
     }
     @if (showVoiceModal()) {
       <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
@@ -472,7 +465,7 @@
       <div class="mb-2 flex flex-wrap items-center gap-2">
         <app-button-secondary
           (clicked)="showDoodleModal.set(true)"
-          customClass="bg-secondary/20 text-secondary ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          customClass="bg-secondary/20 text-secondary-ink ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
           [ariaLabel]="'chatRoom.doodleBtn' | t"
         >
           {{ 'chatRoom.doodleBtn' | t }}

@@ -44,13 +44,23 @@ export const authRoutes: Routes = [
   },
   {
     path: 'terms',
-    loadComponent: () => import('../pages/legal/terms.component').then((m) => m.TermsComponent),
+    loadComponent: () =>
+      import('../pages/legal/dynamic-legal.component').then((m) => m.DynamicLegalComponent),
+    data: { type: 'terms' },
     title: 'Terms of Service - HelloTalk',
   },
   {
     path: 'privacy',
-    loadComponent: () => import('../pages/legal/privacy.component').then((m) => m.PrivacyComponent),
+    loadComponent: () =>
+      import('../pages/legal/dynamic-legal.component').then((m) => m.DynamicLegalComponent),
+    data: { type: 'privacy' },
     title: 'Privacy Policy - HelloTalk',
+  },
+  {
+    path: 'legal/:type',
+    loadComponent: () =>
+      import('../pages/legal/dynamic-legal.component').then((m) => m.DynamicLegalComponent),
+    title: 'Legal - HelloTalk',
   },
   {
     path: 'support',

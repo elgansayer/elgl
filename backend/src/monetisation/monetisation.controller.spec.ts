@@ -6,6 +6,8 @@ import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { VipGuard } from './guards/vip.guard';
+import { DeveloperApiKeyGuard } from './guards/developer-api-key.guard';
+import { DeveloperApiUsageInterceptor } from './interceptors/developer-api-usage.interceptor';
 import { BadRequestException } from '@nestjs/common';
 
 describe('MonetisationController', () => {
@@ -21,9 +23,8 @@ describe('MonetisationController', () => {
           provide: MonetisationService,
           useValue: {
             handleStripeWebhook: vi.fn(),
-            handleAppleNotification: vi.fn(),
-            handleGoogleNotification: vi.fn(),
             generateApiKey: vi.fn(),
+            revokeApiKey: vi.fn(),
             getDeveloperAnalytics: vi.fn(),
             getDiagnosticLogs: vi.fn(),
             createDiagnosticLog: vi.fn(),
@@ -48,6 +49,13 @@ describe('MonetisationController', () => {
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(VipGuard)
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(DeveloperApiKeyGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideInterceptor(DeveloperApiUsageInterceptor)
+      .useValue({
+        intercept: (_context: unknown, next: { handle: () => unknown }) =>
+          next.handle(),
+      })
       .compile();
 
     controller = module.get<MonetisationController>(MonetisationController);
@@ -90,38 +98,6 @@ describe('MonetisationController', () => {
     });
   });
 
-  describe('handleAppleWebhook', () => {
-    it('should pass webhook payload to service', async () => {
-      const payload = { notificationType: 'test' };
-      const response = { received: true, status: 'processed' };
-      (monetisationService.handleAppleNotification as Mock).mockResolvedValue(
-        response,
-      );
-
-      const result = await controller.handleAppleWebhook(payload);
-      expect(monetisationService.handleAppleNotification).toHaveBeenCalledWith(
-        payload,
-      );
-      expect(result).toEqual(response);
-    });
-  });
-
-  describe('handleGoogleWebhook', () => {
-    it('should pass webhook payload to service', async () => {
-      const payload = { version: '1.0' };
-      const response = { received: true, status: 'processed' };
-      (monetisationService.handleGoogleNotification as Mock).mockResolvedValue(
-        response,
-      );
-
-      const result = await controller.handleGoogleWebhook(payload);
-      expect(monetisationService.handleGoogleNotification).toHaveBeenCalledWith(
-        payload,
-      );
-      expect(result).toEqual(response);
-    });
-  });
-
   describe('generateApiKey', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.generateApiKey(null);
@@ -139,6 +115,24 @@ describe('MonetisationController', () => {
 
       const result = await controller.generateApiKey({ id: 'user-1' } as any);
       expect(monetisationService.generateApiKey).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('revokeApiKey', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.revokeApiKey(null);
+      expect(result).toBeNull();
+      expect(monetisationService.revokeApiKey).not.toHaveBeenCalled();
+    });
+
+    it('should call service revokeApiKey when user is provided', async () => {
+      const response = { revoked: true, api_key: null };
+      (monetisationService.revokeApiKey as Mock).mockResolvedValue(response);
+
+      const result = await controller.revokeApiKey({ id: 'user-1' } as any);
+
+      expect(monetisationService.revokeApiKey).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(response);
     });
   });
@@ -563,10 +557,8 @@ describe('MonetisationController', () => {
 });
 
 describe('MonetisationController VIP upgrade lockdown (regression guard)', () => {
-  it('should never register a route path named "upgrade": VIP status must only change via verified payment webhooks', () => {
-    const routePaths = Object.getOwnPropertyNames(
-      MonetisationController.prototype,
-    )
+  const routePaths = (): unknown[] =>
+    Object.getOwnPropertyNames(MonetisationController.prototype)
       .filter((name) => name !== 'constructor')
       .map((name) =>
         Reflect.getMetadata(
@@ -577,9 +569,20 @@ describe('MonetisationController VIP upgrade lockdown (regression guard)', () =>
         ),
       );
 
-    expect(routePaths).not.toContain('upgrade');
+  it('should never register a route path named "upgrade": VIP status must only change via verified payment webhooks', () => {
+    expect(routePaths()).not.toContain('upgrade');
     expect(
       Object.getOwnPropertyNames(MonetisationController.prototype),
     ).not.toContain('upgrade');
+  });
+
+  it('leaves Apple and Google webhook paths exclusively to their verified controllers', () => {
+    expect(routePaths()).not.toContain('webhooks/apple');
+    expect(routePaths()).not.toContain('webhooks/google');
+    expect(
+      Object.getOwnPropertyNames(MonetisationController.prototype),
+    ).not.toEqual(
+      expect.arrayContaining(['handleAppleWebhook', 'handleGoogleWebhook']),
+    );
   });
 });

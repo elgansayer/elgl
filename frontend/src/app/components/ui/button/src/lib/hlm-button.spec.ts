@@ -18,4 +18,9 @@ describe('HlmButton product variants', () => {
     expect(classes).toContain('bg-destructive');
     expect(classes).toContain('text-primary-foreground');
   });
+
+  it('uses AA-safe foreground roles for text-only actions', () => {
+    expect(buttonVariants({ variant: 'link' })).toContain('text-primary-ink');
+    expect(buttonVariants({ variant: 'destructive' })).toContain('text-danger-ink');
+  });
 });

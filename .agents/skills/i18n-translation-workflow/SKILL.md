@@ -36,11 +36,13 @@ Use `{{placeholder}}` syntax for interpolated params inside the dictionary strin
 
 ## Procedure for Adding a New Key
 
-1. Add the English (`en-GB`, British spelling) string to `baseDictionary` in `frontend/src/app/services/i18n.service.ts`.
-2. Reference it from the template/component via `| t` or `i18n.translate(...)` - never inline the literal string anywhere else.
-3. If the string includes a price, ensure the price is formatted properly.
-4. If the string could reasonably need localisation nuance (pluralisation, gendered forms), note it as a follow-up rather than baking English-only logic into the key.
-5. For dynamically-fetched UI dictionaries in other locales, the backend `POST /nlp/translate-ui` endpoint (`NlpService#translateUi`) merges a Redis-cached per-locale dictionary over the caller-supplied English dictionary - new keys automatically flow through once added to `baseDictionary`, but non-English translations for that key won't exist until the backend dictionary/cache is updated too.
+1. Add the English (`en-GB`, British spelling) string to `baseDictionary` in `frontend/src/app/services/i18n.service.ts`. This is the single source of truth; never edit `frontend/public/assets/i18n/en-GB.json` by hand.
+2. Regenerate the English JSON mirror with `npm run generate:i18n-english`.
+3. Reference it from the template/component via `| t` or `i18n.translate(...)` - never inline the literal string anywhere else.
+4. If the string includes a price, ensure the price is formatted properly.
+5. If the string could reasonably need localisation nuance (pluralisation, gendered forms), note it as a follow-up rather than baking English-only logic into the key.
+6. Run `npm run check:i18n-coverage`. It fails when a key used in a template or `t()` call has no English value, resolves to copy derived from the key name, or when the mirror drifts from `baseDictionary`.
+7. For dynamically-fetched UI dictionaries in other locales, the backend `POST /nlp/translate-ui` endpoint (`NlpService#translateUi`) translates the caller-supplied English dictionary and caches each translation in Redis by locale and a SHA-256 hash of the English text (`ui_str:<locale>:<hash>`). New keys and reworded English strings therefore flow through automatically: an unseen string is translated on first use and a changed string is never served a stale translation. Keep `{{token}}` interpolation names stable; a translation that changes, drops or adds a token is discarded in favour of the English text. The request is bounded (see `translate-ui.dto.ts`) and each user is limited to ten requests per ten minutes. Interface-language pickers must call `UiLanguagePreferenceService.changeLanguage`, never `I18nService.setLanguage` directly (`ui-language-single-owner.contract.spec.ts` enforces this); see `docs/language-settings.md`.
 
 ## Dictionary Value Hygiene
 
@@ -50,7 +52,7 @@ Use `{{placeholder}}` syntax for interpolated params inside the dictionary strin
 - Do not put an emoji in a label when the template already draws an icon beside it (every `nav.*` label, `moments.readAloud`, `moments.stopReading`). The icon would show twice and the emoji would leak into the accessible name.
 - Never name infrastructure in end-user copy (Cloudflare, R2, LiveKit, Supabase, Centrifugo, Redis). Describe what the user is doing instead, for example `Uploading...`.
 - `frontend/src/app/services/i18n.service.spec.ts` (`dictionary value hygiene`) guards these rules.
-- A corrected English string reaches non-English users only when their cached copy refreshes: the browser keeps `hellotalk_dict_<locale>` and the backend keeps a 7-day `ui_dict:<locale>` Redis entry.
+- A corrected English string reaches non-English users only when their browser copy refreshes: the browser keeps `hellotalk_dict_<locale>`. The backend cache is addressed by the English text itself (`ui_str:<locale>:<hash>`, seven days), so it never serves a stale translation for reworded text. Legacy `ui_dict:<locale>` entries are no longer read and expire on their own.
 
 ## Word Tokenisation
 
@@ -62,12 +64,12 @@ tokens. Never use regex or space-splitting - it breaks for CJK, Thai, and other 
 Use Tailwind logical properties, never physical directions, so the interface natively mirrors for Arabic,
 Hebrew, and Persian:
 
-| Never (physical) | Use (logical) |
-| --- | --- |
-| `pl-`, `pr-` | `ps-`, `pe-` |
-| `ml-`, `mr-` | `ms-`, `me-` |
-| `left-`, `right-` | `start-`, `end-` |
-| `border-l`, `border-r` | `border-s`, `border-e` |
+| Never (physical)          | Use (logical)            |
+| ------------------------- | ------------------------ |
+| `pl-`, `pr-`              | `ps-`, `pe-`             |
+| `ml-`, `mr-`              | `ms-`, `me-`             |
+| `left-`, `right-`         | `start-`, `end-`         |
+| `border-l`, `border-r`    | `border-s`, `border-e`   |
 | `text-left`, `text-right` | `text-start`, `text-end` |
 
 Prefer `gap-*` over `space-*` too - `space-*` is direction-sensitive in ways that don't always mirror correctly.

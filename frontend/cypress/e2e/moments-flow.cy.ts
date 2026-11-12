@@ -195,7 +195,6 @@ describe('Moments Flow (Mocked)', () => {
       cy.wait('@createMoment').then(({ request: createRequest }) => {
         expect(createRequest.body).to.deep.equal({
           text_content: text,
-          media_urls: [],
           media_type: 'none',
           target_language: grammarRequest.body.language,
         });

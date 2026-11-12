@@ -58,13 +58,13 @@ function eligibleResponses(
 
 describe('ConversationStarterService', () => {
   let from: ReturnType<typeof vi.fn>;
-  let llm: { proxyMessage: ReturnType<typeof vi.fn> };
+  let llm: { chatCompletion: ReturnType<typeof vi.fn> };
   let safety: { getBlockedAndBlockerIds: ReturnType<typeof vi.fn> };
   let service: ConversationStarterService;
 
   beforeEach(() => {
     from = vi.fn();
-    llm = { proxyMessage: vi.fn() };
+    llm = { chatCompletion: vi.fn() };
     safety = { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) };
     service = new ConversationStarterService(
       { getClient: () => ({ from }) } as unknown as SupabaseService,
@@ -80,7 +80,7 @@ describe('ConversationStarterService', () => {
       service.getSuggestions(userId, partnerId),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(from).not.toHaveBeenCalled();
-    expect(llm.proxyMessage).not.toHaveBeenCalled();
+    expect(llm.chatCompletion).not.toHaveBeenCalled();
   });
 
   it('rejects arbitrary profile probing without a two-member direct room', async () => {
@@ -89,7 +89,7 @@ describe('ConversationStarterService', () => {
     await expect(
       service.getSuggestions(userId, partnerId),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(llm.proxyMessage).not.toHaveBeenCalled();
+    expect(llm.chatCompletion).not.toHaveBeenCalled();
   });
 
   it('rejects hidden partner profiles even when a direct room exists', async () => {
@@ -106,7 +106,7 @@ describe('ConversationStarterService', () => {
     await expect(
       service.getSuggestions(userId, partnerId),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(llm.proxyMessage).not.toHaveBeenCalled();
+    expect(llm.chatCompletion).not.toHaveBeenCalled();
   });
 
   it('returns three bounded suggestions and strips model list prefixes', async () => {
@@ -115,10 +115,9 @@ describe('ConversationStarterService', () => {
       { data: [{ tag: 'hiking' }], error: null },
     ];
     from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
-    llm.proxyMessage.mockResolvedValue({
-      response:
-        '1. What trail would you recommend?\n- What food do you enjoy cooking?\n* What are you learning this week?',
-    });
+    llm.chatCompletion.mockResolvedValue(
+      '1. What trail would you recommend?\n- What food do you enjoy cooking?\n* What are you learning this week?',
+    );
 
     const suggestions = await service.getSuggestions(userId, partnerId);
 
@@ -142,7 +141,7 @@ describe('ConversationStarterService', () => {
       { data: [{ tag: 'hiking' }], error: null },
     ];
     from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
-    llm.proxyMessage.mockRejectedValue(new Error('provider unavailable'));
+    llm.chatCompletion.mockRejectedValue(new Error('provider unavailable'));
 
     const suggestions = await service.getSuggestions(userId, partnerId);
 
@@ -158,15 +157,14 @@ describe('ConversationStarterService', () => {
       ...eligibleResponses(),
     ];
     from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
-    llm.proxyMessage.mockResolvedValue({
-      response:
-        'What are you studying?\nWhat made you smile today?\nWhat place would you recommend?',
-    });
+    llm.chatCompletion.mockResolvedValue(
+      'What are you studying?\nWhat made you smile today?\nWhat place would you recommend?',
+    );
 
     const first = await service.getSuggestions(userId, partnerId);
     const second = await service.getSuggestions(userId, partnerId);
 
     expect(second).toEqual(first);
-    expect(llm.proxyMessage).toHaveBeenCalledTimes(1);
+    expect(llm.chatCompletion).toHaveBeenCalledTimes(1);
   });
 });

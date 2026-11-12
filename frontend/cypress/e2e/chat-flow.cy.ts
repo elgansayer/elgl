@@ -26,6 +26,11 @@ describe('Chat Flow (Mocked)', () => {
       headers: { 'retry-after': '30' },
       body: { message: 'Centrifugo unavailable in the mocked E2E environment' },
     }).as('centrifugoUnavailable');
+    // This fixture exercises a room without an E2EE key.
+    cy.intercept('GET', `**/api/chat/rooms/${roomId}/e2ee-key`, {
+      statusCode: 422,
+      body: { message: 'This room does not support E2EE' },
+    }).as('roomEncryptionUnavailable');
     cy.intercept('GET', '**/api/chat/rooms/*/members', { body: [] }).as('getRoomMembers');
     cy.intercept('GET', '**/api/chat/groups/*/members', { body: [] }).as('getGroupMembers');
     cy.intercept('PATCH', '**/api/chat/messages/*/status', { statusCode: 204, body: {} }).as(

@@ -72,7 +72,7 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
             @if (disappearingMessagesSaving()) {
               <span class="text-text-secondary">{{ 'common.saving' | t }}</span>
             } @else if (disappearingMessagesError()) {
-              <span class="text-danger" role="alert">
+              <span class="text-danger-ink" role="alert">
                 Could not save the message lifetime. Your previous setting is still active.
               </span>
             } @else if (!settingsLoadError() && disappearingMessagesTtl() !== 'off') {
@@ -171,7 +171,7 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
           <button
             hlmBtn
             [disabled]="settingsLoadError() || settingSaving()"
-            class="text-primary text-sm underline decoration-primary min-h-11"
+            class="text-primary-ink text-sm underline decoration-primary min-h-11"
             (click)="resetToDefaults()"
           >
             {{ 'chat_settings.reset_defaults' | t }}

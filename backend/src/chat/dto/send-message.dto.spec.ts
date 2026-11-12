@@ -50,6 +50,33 @@ describe('SendMessageDto', () => {
     expect(hasError(errors, 'text_content')).toBe(true);
   });
 
+  it('requires a bounded authenticated envelope when marked encrypted', async () => {
+    const valid = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'Encrypted message',
+      is_encrypted: true,
+      encrypted_payload: 'e2ee:v1:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==',
+    });
+    const missing = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'Encrypted message',
+      is_encrypted: true,
+    });
+    const forgedFlag = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'Plaintext',
+      is_encrypted: false,
+      encrypted_payload: 'e2ee:v1:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==',
+    });
+
+    expect(valid).toHaveLength(0);
+    expect(hasError(missing, 'encrypted_payload')).toBe(true);
+    expect(hasError(forgedFlag, 'encrypted_payload')).toBe(true);
+  });
+
   it.each(['voice', 'doodle', 'sticker', 'view_once_media'])(
     'requires media_url for %s messages',
     async (messageType) => {
@@ -156,5 +183,41 @@ describe('SendMessageDto', () => {
 
     expect(hasError(errors, 'room_id')).toBe(true);
     expect(hasError(errors, 'reply_to_id')).toBe(true);
+  });
+
+  describe('client_message_id', () => {
+    const base = {
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'Queued while offline',
+    };
+
+    it('is optional so online sends keep their existing contract', async () => {
+      expect(await validateMessage(base)).toHaveLength(0);
+    });
+
+    it('accepts a version 4 UUID such as crypto.randomUUID produces', async () => {
+      const errors = await validateMessage({
+        ...base,
+        client_message_id: '4d83362d-829e-4a68-b7bd-941076fb71f3',
+      });
+
+      expect(errors).toHaveLength(0);
+    });
+
+    it.each([
+      ['an arbitrary string', 'queued-message-1'],
+      ['an empty string', ''],
+      ['a version 1 UUID', 'c232ab00-9414-11ec-b3c8-9f6bdeced846'],
+      ['a number', 42],
+      ['an object', { id: '4d83362d-829e-4a68-b7bd-941076fb71f3' }],
+    ])('rejects %s', async (_label, value) => {
+      const errors = await validateMessage({
+        ...base,
+        client_message_id: value,
+      });
+
+      expect(hasError(errors, 'client_message_id')).toBe(true);
+    });
   });
 });

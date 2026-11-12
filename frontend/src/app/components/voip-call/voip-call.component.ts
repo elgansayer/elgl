@@ -39,6 +39,21 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
             </div>
             <h2 class="text-xl font-semibold text-white">{{ displayName() }}</h2>
             <p class="text-text-muted text-sm mt-1">{{ callStatusText() }}</p>
+            @if (callState() === 'connected') {
+              <div
+                class="mt-2 inline-flex items-center gap-1.5 ps-2.5 pe-2.5 pt-0.5 pb-0.5 rounded-full bg-white/10 text-success text-xs font-medium"
+                role="status"
+              >
+                <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                <span>{{ 'calls.e2eeSecured' | t }}</span>
+              </div>
+            }
           </div>
 
           <!-- Call Timer (when connected) -->

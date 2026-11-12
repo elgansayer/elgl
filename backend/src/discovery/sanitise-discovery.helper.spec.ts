@@ -95,6 +95,40 @@ describe('sanitiseDiscoveryData', () => {
     expect(result[1].display_name).toBe('User2');
   });
 
+  it('masks member presence and VIP status when their privacy flags are enabled', () => {
+    const result = sanitiseDiscoveryData({
+      id: 'private-member',
+      is_vip: true,
+      vip_tier: 'consumer',
+      last_active_at: '2026-11-03T01:00:00.000Z',
+      privacy_hide_online_status: true,
+      privacy_hide_vip_status: true,
+    });
+
+    expect(result).toEqual({
+      id: 'private-member',
+      is_vip: false,
+    });
+  });
+
+  it('removes internal privacy flags while preserving public member state', () => {
+    const result = sanitiseDiscoveryData({
+      id: 'public-member',
+      is_vip: true,
+      vip_tier: 'consumer',
+      last_active_at: '2026-11-03T01:00:00.000Z',
+      privacy_hide_online_status: false,
+      privacy_hide_vip_status: false,
+    });
+
+    expect(result).toEqual({
+      id: 'public-member',
+      is_vip: true,
+      vip_tier: 'consumer',
+      last_active_at: '2026-11-03T01:00:00.000Z',
+    });
+  });
+
   it('should return primitives unchanged', () => {
     expect(sanitiseDiscoveryData(42)).toBe(42);
     expect(sanitiseDiscoveryData(true)).toBe(true);

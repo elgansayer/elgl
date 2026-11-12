@@ -19,7 +19,7 @@ import { AudioRoomArchivesService } from '../../services/audio-room-archives.ser
         </p>
       } @else if (archives.error()) {
         <div role="alert" class="rounded-app border border-danger/40 bg-surface-200 p-4">
-          <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+          <p class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
           <button hlmBtn type="button" class="mt-3" (click)="archives.reload()">
             {{ 'discovery.retrySearch' | t }}
           </button>
@@ -77,7 +77,7 @@ import { AudioRoomArchivesService } from '../../services/audio-room-archives.ser
             <p role="status" class="text-sm text-text-secondary">{{ 'common.loading' | t }}</p>
           } @else if (summary.error()) {
             <div role="alert" class="flex flex-wrap items-center gap-3">
-              <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+              <p class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
               <button hlmBtn type="button" (click)="summary.reload()">
                 {{ 'discovery.retrySearch' | t }}
               </button>
@@ -92,7 +92,7 @@ import { AudioRoomArchivesService } from '../../services/audio-room-archives.ser
               </div>
             } @else if (item.summary_status === 'failed') {
               <div role="alert" class="flex flex-wrap items-center gap-3">
-                <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+                <p class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
                 @if (item.can_retry) {
                   <button
                     hlmBtn

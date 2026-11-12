@@ -59,7 +59,7 @@ function parseLicenceManifest(value: unknown): ThirdPartyLicence[] {
           {{ 'common.loading' | t }}
         </p>
       } @else if (licencesResource.error()) {
-        <p class="text-sm text-danger" role="alert">
+        <p class="text-sm text-danger-ink" role="alert">
           {{ 'common.error_generic' | t }}
         </p>
       } @else if (licencesResource.value()?.length === 0) {

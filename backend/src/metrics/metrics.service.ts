@@ -10,6 +10,20 @@ import type {
   LinkPreviewFailureReason,
   LinkPreviewOutcome,
 } from '../link-preview/link-preview-diagnostics';
+import type {
+  PiiCategory,
+  PiiOperation,
+  PiiProvider,
+  PiiScrubOutcome,
+} from '../privacy/pii-redaction';
+
+/**
+ * How a run of the daily top-10 partner recommendation job ended: `partial`
+ * means the cache was refreshed but some language pairs failed, `skipped`
+ * means another replica held the single-flight lock.
+ */
+export type MatchmakingDailyJobOutcome =
+  'success' | 'partial' | 'failed' | 'skipped';
 
 @Injectable()
 export class MetricsService {
@@ -40,6 +54,9 @@ export class MetricsService {
   readonly tsDatingRiskScore: Histogram<string>;
   readonly tsReportsByCategory: Counter<string>;
   readonly tsModerationQueueLatency: Histogram<string>;
+
+  // LLM prompt-injection guard metrics
+  readonly llmPromptGuardEvents: Counter<string>;
 
   // LingQ Reading Engine metrics
   readonly readingEngineSessions: Counter<string>;
@@ -87,6 +104,12 @@ export class MetricsService {
   readonly matchmakingRequestDuration: Histogram<string>;
   readonly matchmakingDailyCacheMisses: Counter<string>;
   readonly matchmakingTierSuccessRate: Gauge<string>;
+  readonly matchmakingDailyJobRuns: Counter<string>;
+  readonly matchmakingDailyJobDuration: Histogram<string>;
+  readonly matchmakingDailyJobLearnersScanned: Counter<string>;
+  readonly matchmakingDailyJobSetsCached: Counter<string>;
+  readonly matchmakingDailyJobTruncated: Counter<string>;
+  readonly matchmakingDailyJobLastCompleted: Gauge<string>;
 
   // Moments For You feed metrics
   readonly momentsForYouRankingDuration: Histogram<string>;
@@ -109,6 +132,10 @@ export class MetricsService {
   readonly linkPreviewRequests: Counter<string>;
   readonly linkPreviewFailures: Counter<string>;
   readonly linkPreviewFetchDuration: Histogram<string>;
+
+  // PII scrubbing before text is sent to DeepL or Azure
+  readonly piiScrubOutcomes: Counter<string>;
+  readonly piiRedactions: Counter<string>;
 
   constructor() {
     this.register = new Registry();
@@ -290,6 +317,13 @@ export class MetricsService {
       labelNames: ['language'],
       registers: [this.register],
       buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
+    });
+
+    this.llmPromptGuardEvents = new Counter({
+      name: 'hellotalk_llm_prompt_guard_events_total',
+      help: 'LLM prompt guard findings by AI tool: injection signals, withheld third-party text, sanitised content, rejected requests and unguarded provider calls',
+      labelNames: ['tool', 'event'],
+      registers: [this.register],
     });
 
     this.readingEngineAiRequests = new Counter({
@@ -544,6 +578,45 @@ export class MetricsService {
       registers: [this.register],
     });
 
+    this.matchmakingDailyJobRuns = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_runs_total',
+      help: 'Daily top-10 partner recommendation job runs by outcome (success, partial, failed, skipped)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobDuration = new Histogram({
+      name: 'hellotalk_matchmaking_daily_job_duration_seconds',
+      help: 'Wall-clock duration of the daily top-10 partner recommendation job',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [1, 5, 15, 30, 60, 120, 300, 600, 1200, 1800, 3600],
+    });
+
+    this.matchmakingDailyJobLearnersScanned = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_learners_scanned_total',
+      help: 'Eligible learners read by the daily partner recommendation job',
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobSetsCached = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_sets_cached_total',
+      help: 'Per-learner top-10 recommendation sets written to the Redis cache by the daily job',
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobTruncated = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_truncated_total',
+      help: 'Daily partner recommendation runs that stopped at the per-run learner ceiling before every eligible learner was processed',
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobLastCompleted = new Gauge({
+      name: 'hellotalk_matchmaking_daily_job_last_completed_timestamp_seconds',
+      help: 'Unix time of the last daily partner recommendation run that refreshed the cache (success or partial), read from Redis so it survives restarts',
+      registers: [this.register],
+    });
+
     // --- Moments For You Metrics ---
 
     this.momentsForYouRankingDuration = new Histogram({
@@ -662,6 +735,20 @@ export class MetricsService {
       labelNames: ['outcome'],
       registers: [this.register],
       buckets: [0.1, 0.25, 0.5, 1, 2, 4, 6, 8, 10],
+    });
+
+    this.piiScrubOutcomes = new Counter({
+      name: 'hellotalk_pii_scrub_total',
+      help: 'Provider calls carrying user text by PII scrub outcome (clean, redacted, skipped, placeholder_mismatch)',
+      labelNames: ['provider', 'operation', 'outcome'],
+      registers: [this.register],
+    });
+
+    this.piiRedactions = new Counter({
+      name: 'hellotalk_pii_redactions_total',
+      help: 'PII spans replaced by placeholders before a provider call, by category',
+      labelNames: ['provider', 'operation', 'category'],
+      registers: [this.register],
     });
   }
 
@@ -790,6 +877,14 @@ export class MetricsService {
       { language },
       durationSeconds,
     );
+  }
+
+  /**
+   * Counts one prompt guard finding. `tool` and `event` come from closed sets
+   * in llm-guard, so label cardinality stays bounded; never pass user text.
+   */
+  recordLlmPromptGuardEvent(tool: string, event: string): void {
+    this.llmPromptGuardEvents.inc({ tool, event });
   }
 
   recordReadingEngineAiRequest(endpoint: string, status: string): void {
@@ -943,6 +1038,34 @@ export class MetricsService {
     this.matchmakingTierSuccessRate.set(rate);
   }
 
+  /**
+   * Records one finished run of the daily top-10 partner recommendation job.
+   * `skipped` means another replica held the single-flight lock.
+   */
+  recordMatchmakingDailyJobRun(run: {
+    outcome: MatchmakingDailyJobOutcome;
+    durationSeconds: number;
+    learnersScanned: number;
+    setsCached: number;
+    truncated: boolean;
+  }): void {
+    this.matchmakingDailyJobRuns.inc({ outcome: run.outcome });
+    this.matchmakingDailyJobDuration.observe(
+      { outcome: run.outcome },
+      run.durationSeconds,
+    );
+    this.matchmakingDailyJobLearnersScanned.inc(run.learnersScanned);
+    this.matchmakingDailyJobSetsCached.inc(run.setsCached);
+    if (run.truncated) {
+      this.matchmakingDailyJobTruncated.inc();
+    }
+  }
+
+  /** Publishes when the daily job last refreshed the cache (unix seconds). */
+  setMatchmakingDailyJobLastCompleted(epochSeconds: number): void {
+    this.matchmakingDailyJobLastCompleted.set(epochSeconds);
+  }
+
   // --- Moments For You metric helpers ---
 
   observeMomentsForYouRanking(
@@ -1075,6 +1198,29 @@ export class MetricsService {
         details.durationSeconds,
       );
     }
+  }
+
+  // --- PII scrubbing metric helpers ---
+
+  /**
+   * Records one provider call after PII scrubbing. Labels are closed enums, so no
+   * message text, value or user identifier is ever exported.
+   */
+  recordPiiScrub(
+    provider: PiiProvider,
+    operation: PiiOperation,
+    outcome: PiiScrubOutcome,
+  ): void {
+    this.piiScrubOutcomes.inc({ provider, operation, outcome });
+  }
+
+  recordPiiRedactions(
+    provider: PiiProvider,
+    operation: PiiOperation,
+    category: PiiCategory,
+    count: number,
+  ): void {
+    this.piiRedactions.inc({ provider, operation, category }, count);
   }
 
   setModerationQueueSize(count: number): void {

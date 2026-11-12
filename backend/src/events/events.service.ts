@@ -37,6 +37,12 @@ export interface EventWithHost {
   category: string | null;
   date_time: string;
   location: string | null;
+  venue_type: string | null;
+  timezone: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  ticket_price_gbp: number | null;
+  ticket_price_usd: number | null;
   language_pair: string | null;
   max_participants: number | null;
   host_id: string;
@@ -352,6 +358,12 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         category: string | null;
         date_time: string;
         location: string | null;
+        venue_type: string;
+        timezone: string;
+        latitude: number | null;
+        longitude: number | null;
+        ticket_price_gbp: number | null;
+        ticket_price_usd: number | null;
         language_pair: string | null;
         max_participants: number | null;
         host_id: string;
@@ -361,6 +373,12 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         category: dto.category ?? null,
         date_time: dto.date_time,
         location: dto.location ?? null,
+        venue_type: dto.venue_type,
+        timezone: dto.timezone,
+        latitude: dto.latitude ?? null,
+        longitude: dto.longitude ?? null,
+        ticket_price_gbp: dto.ticket_price_gbp ?? null,
+        ticket_price_usd: dto.ticket_price_usd ?? null,
         language_pair: dto.language_pair ?? null,
         max_participants: dto.max_participants ?? null,
         host_id: userId,

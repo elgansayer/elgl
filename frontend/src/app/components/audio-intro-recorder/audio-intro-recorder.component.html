@@ -14,8 +14,12 @@
         [src]="safeExistingAudioUrl()!"
         class="h-9 w-full max-w-xs rounded"
         [attr.aria-label]="'profile.audioIntroCardTitle' | t"
+        (error)="onExistingAudioError()"
       ></audio>
     </div>
+    @if (playbackUnavailable()) {
+      <p class="mb-3 text-xs text-danger-ink" role="alert">{{ 'audioPlayer.error' | t }}</p>
+    }
   }
 
   @if (!hasRecording() && !isRecording()) {
@@ -81,7 +85,7 @@
   </div>
 
   @if (recordError()) {
-    <p class="mt-3 text-xs text-danger" role="alert">
+    <p class="mt-3 text-xs text-danger-ink" role="alert">
       {{ recordError()! | t }}
     </p>
   }

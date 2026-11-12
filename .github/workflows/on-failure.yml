@@ -74,7 +74,7 @@ jobs:
           esac
 
   report-failure:
-    # Pull-request failures already belong to the Factory's PR repair state.
+    # Pull-request failures are repaired on the pull-request branch itself.
     # Creating a second issue for the same head would duplicate ownership and
     # ask an issue worktree based on main to repair code that exists only on the
     # pull-request branch.
@@ -133,12 +133,10 @@ jobs:
 
           echo "Created workflow incident: ${ISSUE_URL}"
 
-          # Keep the incident visible and high priority without claiming that a
-          # Factory worker has already leased it. The daemon adds factory-active
-          # only when it actually creates the isolated worktree.
+          # Keep the incident visible and high priority.
           gh issue edit "$ISSUE_URL" \
             --repo "$REPOSITORY" \
-            --add-label "priority:high,factory-ready" || true
+            --add-label "priority:high" || true
 
   resolve-recovery:
     # PR failures never create incidents above, so successful PR workflow runs

@@ -1,8 +1,9 @@
 import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ComponentRef } from '@angular/core';
+import { ComponentRef, signal } from '@angular/core';
 import { VideoCallComponent } from './video-call.component';
 import { LivekitService } from '../../services/livekit.service';
+import { ExchangeTimerService } from '../../services/exchange-timer.service';
 import { LocalTrackPublication, RemoteTrack, Track } from 'livekit-client';
 
 interface MockRoom {
@@ -28,9 +29,23 @@ describe('VideoCallComponent - screen sharing', () => {
       }),
     } as unknown as Mocked<LivekitService>;
 
+    const mockExchangeTimer = {
+      isActive: signal(false),
+      isMyTurn: signal(true),
+      canSpeak: signal(true),
+      currentSpeakerLanguage: signal<string | null>(null),
+      remainingSeconds: signal(0),
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn(),
+      advanceTurn: vi.fn().mockResolvedValue(true),
+    };
+
     await TestBed.configureTestingModule({
       imports: [VideoCallComponent],
-      providers: [{ provide: LivekitService, useValue: mockLivekitService }],
+      providers: [
+        { provide: LivekitService, useValue: mockLivekitService },
+        { provide: ExchangeTimerService, useValue: mockExchangeTimer },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VideoCallComponent);
@@ -110,6 +125,19 @@ describe('VideoCallComponent - screen sharing', () => {
 
     await component.togglePip();
     expect(component.isInPip()).toBe(false);
+  });
+
+  it('shows the encryption indicator only after the call connects', () => {
+    vi.spyOn(component, 'ngOnInit').mockResolvedValue();
+
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+
+    component.connectionState.set('connected');
+    fixture.detectChanges();
+
+    const indicator = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement | null;
+    expect(indicator?.textContent).toContain('Encrypted call');
   });
 
   it('starts screen sharing via LiveKit setScreenShareEnabled when not currently sharing', async () => {
@@ -223,9 +251,9 @@ describe('VideoCallComponent - screen sharing', () => {
       source: Track.Source.Microphone,
     } as unknown as RemoteTrack;
 
-    (
-      component as unknown as { onTrackSubscribed: (t: RemoteTrack) => void }
-    ).onTrackSubscribed(audioTrack);
+    (component as unknown as { onTrackSubscribed: (t: RemoteTrack) => void }).onTrackSubscribed(
+      audioTrack,
+    );
 
     expect(component.remoteCameraTrack()).toBeNull();
     expect(component.remoteScreenShareTrack()).toBeNull();

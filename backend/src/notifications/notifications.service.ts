@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from '../notification-preferences/dto/update-notification-preferences.dto';
 import { NotificationDto } from './dto/notification.dto';
+import { UnreadCountsChangedEvent } from './events/notification.events';
 
 type FirebaseAdmin = any;
 
@@ -30,9 +32,12 @@ type UpdatePreferencesInput = Partial<
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getPreferences(userId: string): Promise<LegacyNotificationPreferences> {
@@ -273,18 +278,40 @@ export class NotificationsService {
     message?: string,
     dispatchPush = true,
   ): Promise<void> {
-    if (recipientId === actorId) return;
+    // System alerts are platform-generated and have no human actor. The
+    // notifications.actor_id column is a required foreign key to users, so the
+    // alert is attributed to the recipient's own row and clients never render
+    // an actor for the system type. Every social type still rejects self-actions.
+    const isSystemAlert = type === 'system';
+    if (!isSystemAlert && recipientId === actorId) return;
+    const persistedActorId = isSystemAlert ? recipientId : actorId;
 
     try {
       const supabase = this.supabaseService.getClient();
-      await supabase.from('notifications').insert({
+      const { error } = await supabase.from('notifications').insert({
         recipient_id: recipientId,
-        actor_id: actorId,
+        actor_id: persistedActorId,
         type,
         entity_id: entityId,
         message,
         is_read: false,
       });
+      if (error) {
+        this.logger.warn(
+          { type },
+          'Notification persistence failed before unread invalidation',
+        );
+        return;
+      }
+
+      // Chat messages already invalidate the chat counter through the durable
+      // chat.message event, so their mirrored inbox row must not double count.
+      if (type !== 'mention_chat') {
+        this.eventEmitter.emit(
+          'unread.counts_changed',
+          new UnreadCountsChangedEvent(recipientId, 'notifications'),
+        );
+      }
 
       // Dispatch push alert as well
       const titleMap: Record<string, string> = {
@@ -337,7 +364,10 @@ export class NotificationsService {
           type,
           title: titleMap[type] || 'New Notification',
           body: bodyMap[type] || 'You have a new alert',
-          data: { actorId, entityId: entityId || '' },
+          data: {
+            actorId: isSystemAlert ? '' : actorId,
+            entityId: entityId || '',
+          },
           category: pushCategory,
         });
       }
@@ -346,204 +376,39 @@ export class NotificationsService {
     }
   }
 
-  async getNotifications(
+  /**
+   * Reports whether the recipient already has a notification for the same
+   * actor, type and entity. Used to keep toggle-style actions (like, unlike,
+   * like) from re-notifying. Fails open: a lookup failure must not suppress a
+   * genuine first notification.
+   */
+  async hasNotification(
     recipientId: string,
-    filterType?: string,
-  ): Promise<NotificationDto[]> {
-    const supabase = this.supabaseService.getClient();
-    let query = supabase
-      .from('notifications')
-      .select(
-        `
-        id,
-        recipient_id,
-        actor_id,
-        type,
-        entity_id,
-        message,
-        is_read,
-        created_at,
-        actor:actor_id (
-          id,
-          display_name,
-          avatar_url,
-          native_languages,
-          target_languages
-        )
-      `,
-      )
-      .eq('recipient_id', recipientId);
+    actorId: string,
+    type: NotificationDto['type'],
+    entityId?: string,
+  ): Promise<boolean> {
+    try {
+      let query = this.supabaseService
+        .getClient()
+        .from('notifications')
+        .select('id')
+        .eq('recipient_id', recipientId)
+        .eq('actor_id', actorId)
+        .eq('type', type);
+      query = entityId
+        ? query.eq('entity_id', entityId)
+        : query.is('entity_id', null);
 
-    if (filterType && filterType !== 'all') {
-      if (filterType === 'likes') {
-        query = query.in('type', ['like_profile', 'like_moment']);
-      } else if (filterType === 'comments') {
-        query = query.in('type', [
-          'comment_moment',
-          'reply_comment',
-          'mention_comment',
-        ]);
-      } else if (filterType === 'follows') {
-        query = query.eq('type', 'follow');
-      } else if (filterType === 'system') {
-        query = query.eq('type', 'system');
+      const { data, error } = await query.limit(1);
+      if (error) {
+        this.logger.warn({ type }, 'Notification duplicate lookup failed');
+        return false;
       }
+      return Array.isArray(data) && data.length > 0;
+    } catch {
+      this.logger.warn({ type }, 'Notification duplicate lookup failed');
+      return false;
     }
-
-    const { data, error } = await query
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (error || !data || data.length === 0) {
-      return this.getMockNotifications(recipientId, filterType);
-    }
-    return data as NotificationDto[];
-  }
-
-  async getUnreadCount(recipientId: string): Promise<{ unreadCount: number }> {
-    const supabase = this.supabaseService.getClient();
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('recipient_id', recipientId)
-      .eq('is_read', false);
-
-    if (error) {
-      return { unreadCount: 2 };
-    }
-    return { unreadCount: count ?? 0 };
-  }
-
-  async markAsRead(recipientId: string, notificationId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', notificationId)
-      .eq('recipient_id', recipientId);
-  }
-
-  async markAllAsRead(recipientId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('recipient_id', recipientId);
-  }
-
-  private getMockNotifications(
-    recipientId: string,
-    filterType?: string,
-  ): any[] {
-    const allMocks = [
-      {
-        id: 'notif-1',
-        recipient_id: recipientId,
-        actor_id: 'user-201',
-        type: 'follow',
-        is_read: false,
-        created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        actor: {
-          id: 'user-201',
-          display_name: 'Sofia Tanaka',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-201',
-          native_languages: ['ja'],
-          target_languages: ['en'],
-        },
-      },
-      {
-        id: 'notif-2',
-        recipient_id: recipientId,
-        actor_id: 'user-202',
-        type: 'like_profile',
-        is_read: false,
-        created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        actor: {
-          id: 'user-202',
-          display_name: 'Mateo Garcia',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-202',
-          native_languages: ['es'],
-          target_languages: ['en'],
-        },
-      },
-      {
-        id: 'notif-3',
-        recipient_id: recipientId,
-        actor_id: 'user-203',
-        type: 'comment_moment',
-        message: 'Great pronunciation in your voice clip!',
-        is_read: true,
-        created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-        actor: {
-          id: 'user-203',
-          display_name: 'Emma Watson',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-203',
-          native_languages: ['en'],
-          target_languages: ['fr'],
-        },
-      },
-      {
-        id: 'notif-4',
-        recipient_id: recipientId,
-        actor_id: 'user-204',
-        type: 'like_moment',
-        is_read: true,
-        created_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
-        actor: {
-          id: 'user-204',
-          display_name: 'Kenji Sato',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-204',
-          native_languages: ['ja'],
-          target_languages: ['es'],
-        },
-      },
-      {
-        id: 'notif-5',
-        recipient_id: recipientId,
-        actor_id: 'user-205',
-        type: 'profile_visit',
-        is_read: true,
-        created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-        actor: {
-          id: 'user-205',
-          display_name: 'Lucas Bernard',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-205',
-          native_languages: ['fr'],
-          target_languages: ['en'],
-        },
-      },
-      {
-        id: 'notif-6',
-        recipient_id: recipientId,
-        actor_id: 'admin-001',
-        type: 'system',
-        message:
-          'Welcome to HelloTalk! Your unified notifications area is ready.',
-        is_read: false,
-        created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        actor: {
-          id: 'admin-001',
-          display_name: 'HelloTalk Team',
-          avatar_url: 'https://i.pravatar.cc/150?u=admin-001',
-          native_languages: ['en'],
-          target_languages: [],
-        },
-      },
-    ];
-
-    if (!filterType || filterType === 'all') return allMocks;
-    if (filterType === 'likes')
-      return allMocks.filter(
-        (n) => n.type === 'like_profile' || n.type === 'like_moment',
-      );
-    if (filterType === 'comments')
-      return allMocks.filter(
-        (n) =>
-          n.type === 'comment_moment' ||
-          n.type === 'reply_comment' ||
-          n.type === 'mention_comment',
-      );
-    if (filterType === 'follows')
-      return allMocks.filter((n) => n.type === 'follow');
-    return allMocks;
   }
 }

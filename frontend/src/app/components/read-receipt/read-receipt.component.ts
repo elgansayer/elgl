@@ -1,22 +1,26 @@
 import { Component, input, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { ChatService, ReadReceiptUser, MessageReceiptStatus } from '../../services/chat.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-read-receipt',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, HlmButton, TranslatePipe],
   template: `
-    <div
-      class="inline-flex items-center relative"
-      role="status"
+    <button
+      hlmBtn
+      variant="ghost"
+      size="icon-touch"
+      type="button"
+      class="inline-flex items-center relative bg-transparent border-0 p-0 text-inherit hover:bg-transparent"
       [attr.aria-label]="ariaLabel()"
+      [attr.aria-expanded]="showDetail()"
+      aria-haspopup="true"
       (mouseenter)="showDetail.set(true)"
       (mouseleave)="showDetail.set(false)"
       (click)="toggleDetail()"
-      (keydown.enter)="toggleDetail()"
-      (keydown.space)="toggleDetail()"
     >
       <!-- Sending: muted clock icon -->
       @if (displayStatus() === 'sending') {
@@ -50,7 +54,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
       <!-- Read: double check in the Tide secondary tone -->
       @if (displayStatus() === 'read') {
-        <svg class="w-3 h-3 text-secondary" fill="currentColor" viewBox="0 0 16 16">
+        <svg class="w-3 h-3 text-secondary-ink" fill="currentColor" viewBox="0 0 16 16">
           <path
             d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"
           />
@@ -110,7 +114,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           }
         </div>
       }
-    </div>
+    </button>
   `,
   styles: [
     `
@@ -153,7 +157,7 @@ export class ReadReceiptComponent {
 
   hasGroupInfo(): boolean {
     const data = this.receiptData();
-    return data !== null && data.totalMembers > 2 && data.readBy.length > 0;
+    return data !== null && data.totalMembers > 1 && data.readBy.length > 0;
   }
 
   ariaLabel(): string {

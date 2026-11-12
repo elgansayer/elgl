@@ -57,6 +57,7 @@ const makeQueryChain = (): QueryChainMock => {
     'in',
     'overlaps',
     'contains',
+    'gt',
     'order',
     'limit',
     'single',
@@ -76,6 +77,13 @@ const makeQueryChain = (): QueryChainMock => {
   };
 
   return chain as QueryChainMock;
+};
+
+/** The terminal, empty learner page that ends the daily job's keyset scan. */
+const makeEmptyPage = (): QueryChainMock => {
+  const chain = makeQueryChain();
+  chain._setResolve([]);
+  return chain;
 };
 
 const recommendation = (id: string): RecommendedUserDto => ({
@@ -105,9 +113,10 @@ describe('RecommendationsService', () => {
     get: Mock;
     set: Mock;
     del: Mock;
+    eval: Mock;
     pipeline: Mock;
   };
-  let mockPipeline: { set: Mock; exec: Mock };
+  let mockPipeline: { set: Mock; del: Mock; exec: Mock };
   let mockFrom: Mock;
   let mockLogger: {
     info: Mock;
@@ -130,6 +139,7 @@ describe('RecommendationsService', () => {
   beforeEach(async () => {
     mockPipeline = {
       set: vi.fn().mockReturnThis(),
+      del: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -137,6 +147,7 @@ describe('RecommendationsService', () => {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
       del: vi.fn().mockResolvedValue(1),
+      eval: vi.fn().mockResolvedValue(1),
       pipeline: vi.fn().mockReturnValue(mockPipeline),
     };
 
@@ -272,7 +283,8 @@ describe('RecommendationsService', () => {
 
       mockFrom
         .mockReturnValueOnce(usersChain)
-        .mockReturnValueOnce(matchesChain);
+        .mockReturnValueOnce(matchesChain)
+        .mockReturnValueOnce(makeEmptyPage());
 
       await service.calculateDailyRecommendations();
 
@@ -334,7 +346,7 @@ describe('RecommendationsService', () => {
           target_languages: null,
         },
       ]);
-      mockFrom.mockReturnValueOnce(chain);
+      mockFrom.mockReturnValueOnce(chain).mockReturnValueOnce(makeEmptyPage());
 
       await service.calculateDailyRecommendations();
       expect(mockPipeline.set).not.toHaveBeenCalled();
@@ -1432,7 +1444,8 @@ describe('RecommendationsService', () => {
         .mockReturnValueOnce(usersChain)
         .mockReturnValueOnce(matchesForA)
         .mockReturnValueOnce(matchesForB)
-        .mockReturnValueOnce(matchesForC);
+        .mockReturnValueOnce(matchesForC)
+        .mockReturnValueOnce(makeEmptyPage());
 
       await service.calculateDailyRecommendations();
 
@@ -1447,6 +1460,9 @@ describe('RecommendationsService', () => {
       expect(firstCache[0].id).toBe('user-c');
       expect(mockPipeline.set.mock.calls[1][0]).toBe(
         'recommendations:daily:user-c',
+      );
+      expect(mockPipeline.del).toHaveBeenCalledWith(
+        'recommendations:daily:user-b',
       );
     });
 
@@ -1474,7 +1490,8 @@ describe('RecommendationsService', () => {
 
       mockFrom
         .mockReturnValueOnce(usersChain)
-        .mockReturnValueOnce(matchesChain);
+        .mockReturnValueOnce(matchesChain)
+        .mockReturnValueOnce(makeEmptyPage());
 
       await expect(
         service.calculateDailyRecommendations(),
@@ -1485,10 +1502,14 @@ describe('RecommendationsService', () => {
       expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
         expect.objectContaining({
           operation: 'calculateDailyRecommendations',
-          user_id: 'system',
+          error_message: 'Redis write failed',
           degraded_tier: 'none',
         }),
       );
+      // matchmaking_crash_reports.user_id is a UUID foreign key.
+      expect(
+        mockCrashReportService.reportCrash.mock.calls[0][0].user_id,
+      ).toBeUndefined();
     });
 
     it('should report Redis command errors returned by a pipeline', async () => {
@@ -1517,7 +1538,8 @@ describe('RecommendationsService', () => {
 
       mockFrom
         .mockReturnValueOnce(usersChain)
-        .mockReturnValueOnce(matchesChain);
+        .mockReturnValueOnce(matchesChain)
+        .mockReturnValueOnce(makeEmptyPage());
 
       await expect(
         service.calculateDailyRecommendations(),
@@ -1526,7 +1548,7 @@ describe('RecommendationsService', () => {
       expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
         expect.objectContaining({
           operation: 'calculateDailyRecommendations',
-          user_id: 'system',
+          error_message: 'Redis command failed',
           degraded_tier: 'none',
         }),
       );
@@ -1543,7 +1565,8 @@ describe('RecommendationsService', () => {
 
       mockFrom
         .mockReturnValueOnce(usersChain)
-        .mockReturnValueOnce(matchesChain);
+        .mockReturnValueOnce(matchesChain)
+        .mockReturnValueOnce(makeEmptyPage());
 
       await expect(
         service.calculateDailyRecommendations(),
@@ -1553,7 +1576,7 @@ describe('RecommendationsService', () => {
       expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
         expect.objectContaining({
           operation: 'calculateDailyRecommendations',
-          user_id: 'system',
+          error_message: 'Every language pair candidate query failed',
           degraded_tier: 'none',
         }),
       );
@@ -1730,10 +1753,13 @@ describe('RecommendationsService', () => {
       expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
         expect.objectContaining({
           operation: 'calculateDailyRecommendations',
-          user_id: 'system',
           degraded_tier: 'none',
+          context: expect.objectContaining({ runId: expect.any(String) }),
         }),
       );
+      expect(
+        mockCrashReportService.reportCrash.mock.calls[0][0].user_id,
+      ).toBeUndefined();
     });
 
     it('should report crash when daily Redis fails and live fallback also fails', async () => {

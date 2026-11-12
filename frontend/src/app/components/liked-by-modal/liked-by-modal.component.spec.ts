@@ -204,6 +204,12 @@ describe('LikedByModalComponent', () => {
     ) as HTMLAnchorElement[];
     expect(links).toHaveLength(2);
     expect(links[0].getAttribute('href')).toContain('/profile/user/user-1');
+    expect(links[0].textContent).toContain('EN');
+    expect(links[0].textContent).toContain('JA');
+    const avatars = Array.from(
+      document.body.querySelectorAll('a[role="listitem"] img'),
+    ) as HTMLImageElement[];
+    expect(avatars[0].getAttribute('src')).toBe('/assets/default-avatar.png');
     expect(component.hasLanguagePair(users[0])).toBe(true);
     expect(
       component.hasLanguagePair({

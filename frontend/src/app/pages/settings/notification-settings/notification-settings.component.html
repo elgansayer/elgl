@@ -9,7 +9,7 @@
   @if (loadError()) {
     <div
       role="alert"
-      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6"
+      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger-ink mb-6"
     >
       <p>{{ loadError() }}</p>
       <button hlmBtn type="button" variant="outline" class="mt-3 min-h-11" (click)="reload()">
@@ -21,7 +21,7 @@
   @if (error()) {
     <div
       role="alert"
-      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6"
+      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger-ink mb-6"
     >
       {{ error() }}
     </div>

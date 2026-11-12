@@ -44,7 +44,8 @@ Errors are also always converted to `private, no-store` as before.
 ## Failure behaviour
 
 - Offline: no mutation is attempted and the purchase buttons are disabled.
-- Insufficient coins: the existing backend economy exception contract rejects the request; ownership and balance remain unchanged.
+- Load failure: when the storefront request fails and no cached packs are available, the page shows a translated `role="alert"` message with a retry action instead of an empty store.
+- Insufficient coins: the purchase stays disabled, a translated shortfall hint appears beneath it, and the existing backend economy exception contract rejects any direct request; ownership and balance remain unchanged.
 - Unknown pack: the backend returns the existing not-found failure; no coins are deducted.
 - Duplicate/retried unlock: the atomic function returns the existing ownership and current balance without another deduction.
 - Concurrent unlock clicks: the UI serialises attempts; the database row lock remains the authoritative concurrency boundary for alternate or stale clients.

@@ -9,7 +9,6 @@ const required = [
   'DESIGN.md',
   'FEATURES_SPEC.md',
   'ui_architecture.md',
-  'docs/factory/README.md',
   'docs/architecture/REPOSITORY_SOURCES_OF_TRUTH.md',
 ];
 
@@ -33,9 +32,6 @@ for (const pattern of forbiddenReadmePatterns) {
 }
 
 for (const marker of [
-  'bounded OpenHands Factory',
-  'Codex subscription OAuth',
-  'OpenCode Go',
   'REPOSITORY_SOURCES_OF_TRUTH.md',
 ]) {
   if (!readme.includes(marker)) {

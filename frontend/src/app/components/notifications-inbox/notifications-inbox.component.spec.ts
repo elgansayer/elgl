@@ -39,7 +39,10 @@ const initialNotifications = [
 
 const mockNotificationService = {
   getNotifications: vi.fn().mockResolvedValue(initialNotifications.map((item) => ({ ...item }))),
-  getUnreadCount: vi.fn().mockResolvedValue(5),
+  getUnreadCount: vi.fn().mockResolvedValue({
+    unreadCount: 5,
+    byTab: { moments: 2, discovery: 2, profile: 1 },
+  }),
   markAllAsRead: vi.fn().mockResolvedValue(undefined),
   markAsRead: vi.fn().mockResolvedValue(undefined),
 };
@@ -50,8 +53,16 @@ const mockI18nService = {
 };
 
 const mockUnreadCounter = {
-  setNotificationUnread: vi.fn(),
-  decrementNotificationUnread: vi.fn(),
+  snapshot: vi.fn().mockReturnValue({
+    chat: 0,
+    moments: 0,
+    discovery: 0,
+    audioRooms: 0,
+    profile: 0,
+  }),
+  reconcile: vi.fn(),
+  set: vi.fn(),
+  decrement: vi.fn(),
 };
 
 describe('NotificationsInboxComponent', () => {
@@ -63,7 +74,10 @@ describe('NotificationsInboxComponent', () => {
     mockNotificationService.getNotifications.mockResolvedValue(
       initialNotifications.map((item) => ({ ...item })),
     );
-    mockNotificationService.getUnreadCount.mockResolvedValue(5);
+    mockNotificationService.getUnreadCount.mockResolvedValue({
+      unreadCount: 5,
+      byTab: { moments: 2, discovery: 2, profile: 1 },
+    });
     mockNotificationService.markAllAsRead.mockResolvedValue(undefined);
     mockNotificationService.markAsRead.mockResolvedValue(undefined);
 
@@ -91,7 +105,9 @@ describe('NotificationsInboxComponent', () => {
     expect(component.notifications().length).toBe(3);
     expect(component.unreadCount()).toBe(5);
     expect(mockNotificationService.getNotifications).toHaveBeenCalledWith('all', { limit: 20 });
-    expect(mockUnreadCounter.setNotificationUnread).toHaveBeenCalledWith(5);
+    expect(mockUnreadCounter.reconcile).toHaveBeenCalledWith('moments', 2, expect.any(Object));
+    expect(mockUnreadCounter.reconcile).toHaveBeenCalledWith('discovery', 2, expect.any(Object));
+    expect(mockUnreadCounter.reconcile).toHaveBeenCalledWith('profile', 1, expect.any(Object));
   });
 
   it('changes tab and resets pagination state', () => {
@@ -107,7 +123,9 @@ describe('NotificationsInboxComponent', () => {
     await component.markAllAsRead();
     expect(component.unreadCount()).toBe(0);
     expect(component.notifications().every((item) => item.is_read)).toBe(true);
-    expect(mockUnreadCounter.setNotificationUnread).toHaveBeenCalledWith(0);
+    expect(mockUnreadCounter.set).toHaveBeenCalledWith('moments', 0);
+    expect(mockUnreadCounter.set).toHaveBeenCalledWith('discovery', 0);
+    expect(mockUnreadCounter.set).toHaveBeenCalledWith('profile', 0);
   });
 
   it('keeps unread state and exposes an error when mark-all fails', async () => {
@@ -144,6 +162,13 @@ describe('NotificationsInboxComponent', () => {
     expect(component.actionError()).toBe(true);
   });
 
+  it('decrements the tab that owns a persisted notification after it is read', async () => {
+    component.onNotificationClick(component.notifications()[0]);
+    await fixture.whenStable();
+
+    expect(mockUnreadCounter.decrement).toHaveBeenCalledWith('moments');
+  });
+
   it('navigates chat notifications to the bounded entity route', () => {
     const router = TestBed.inject(Router);
     const notification = makeNotif({ type: 'mention_chat', entity_id: 'room-123', is_read: true });
@@ -158,6 +183,51 @@ describe('NotificationsInboxComponent', () => {
     expect(component.getBadgeIcon('system')).toBe('🔔');
     expect(component.getNotificationMessageKey('follow')).toBe('notifications.followedYou');
     expect(component.getNotificationMessageKey('system')).toBe('notifications.systemAlert');
+  });
+
+  describe('activity presentation', () => {
+    const rowContaining = (text: string): HTMLElement | undefined =>
+      Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('li')).find((item) =>
+        item.textContent?.includes(text),
+      );
+
+    it('presents a system alert as a platform message without any actor identity', () => {
+      component.additionalNotifications.set([
+        makeNotif({
+          id: '5c0b9a7e-2f3e-4a0e-9a63-0c6f6a8c1c11',
+          type: 'system',
+          actor_id: 'me',
+          message: 'Your plan was updated',
+          created_at: '2026-08-25T07:00:00.000Z',
+        }),
+      ]);
+      fixture.detectChanges();
+
+      const row = rowContaining('Your plan was updated');
+      expect(row).toBeDefined();
+      expect(row?.textContent).toContain('notifications.systemAlert');
+      expect(row?.textContent).toContain('🔔');
+      expect(row?.textContent).not.toContain('common.unknownUser');
+      expect(row?.textContent).not.toContain('?');
+      expect(row?.querySelector('img')).toBeNull();
+    });
+
+    it('keeps the actor name and activity text for social notifications', () => {
+      component.additionalNotifications.set([
+        makeNotif({
+          id: '8e1c6d52-6c0a-4a26-8f55-6f8d51a3c9a0',
+          type: 'follow',
+          actor: { id: 'u1', display_name: 'Sam' },
+          created_at: '2026-08-25T07:00:00.000Z',
+        }),
+      ]);
+      fixture.detectChanges();
+
+      const row = rowContaining('Sam');
+      expect(row).toBeDefined();
+      expect(row?.textContent).toContain('notifications.followedYou');
+      expect(row?.textContent).not.toContain('notifications.systemAlert');
+    });
   });
 
   it('navigates back', () => {

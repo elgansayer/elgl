@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../../services/chat.service';
+import { isGiftPayload, type ChatMessage } from '../../services/chat.service';
 
 export type DeliveryStatus = NonNullable<ChatMessage['delivery_status']>;
 
@@ -17,7 +17,7 @@ const DELIVERY_STATUS_RANK: Record<DeliveryStatus, number> = {
   read: 2,
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -47,7 +47,7 @@ function isSystemEvent(value: unknown): value is NonNullable<ChatMessage['system
   });
 }
 
-function isChatMessage(value: unknown): value is ChatMessage {
+export function isChatMessage(value: unknown): value is ChatMessage {
   if (!isRecord(value)) return false;
 
   const senderId = value['sender_id'];
@@ -68,6 +68,10 @@ function isChatMessage(value: unknown): value is ChatMessage {
   // payload instead of applying the non-system sender requirement.
   if (messageType === 'system') {
     return isSystemEvent(value['system_event']);
+  }
+
+  if (messageType === 'gift') {
+    return senderId.length > 0 && isGiftPayload(value['gift_payload']);
   }
 
   return senderId.length > 0;

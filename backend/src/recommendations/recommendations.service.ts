@@ -1,11 +1,20 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import type Redis from 'ioredis';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import type { MatchmakingDailyJobOutcome } from '../metrics/metrics.service';
 import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { withRetry } from '../common/retry';
+import { acquireRedisLock } from '../common/redis-lock';
+import type { RedisLock } from '../common/redis-lock';
+import {
+  DAILY_RECOMMENDATIONS_LAST_COMPLETED_KEY,
+  DAILY_RECOMMENDATIONS_LOCK_KEY,
+} from './daily-recommendations.keys';
 import { MOCK_USERS } from '../mock-data';
 import { SafetyService } from '../safety/safety.service';
 import { isActiveSeriousLearner } from '../discovery/serious-learner.policy';
@@ -104,14 +113,32 @@ function parseCachedRecommendation(value: unknown): RecommendedUserDto | null {
 
 const DAILY_REDIS_TTL = 86400;
 const DAILY_LIMIT = 10;
+/**
+ * Candidates fetched per language pair: one spare, so removing the learner
+ * from a pool that happens to contain them still leaves DAILY_LIMIT partners.
+ */
+const DAILY_CANDIDATE_POOL = DAILY_LIMIT + 1;
 const FALLBACK_LIMIT = 20;
 const GDPR_MATCHMAKING_FILTERS = {
   is_deleted: false,
   privacy_hide_from_search: false,
   is_deletion_pending: false,
 };
-const CRON_USERS_LIMIT = 5000;
+
+/** Scheduler registry name, so the job is individually addressable. */
+const DAILY_JOB_NAME = 'daily-partner-recommendations';
+/** Longer than DAILY_JOB_MAX_RUNTIME_MS, far shorter than the 24 hour cadence. */
+const DAILY_JOB_LOCK_TTL_SECONDS = 3600;
+/** Hard stop so the holder always finishes before its lock can expire. */
+const DAILY_JOB_MAX_RUNTIME_MS = 45 * 60 * 1000;
+/** Keyset page size; a PostgREST `max_rows` below it only means more pages. */
+const LEARNER_PAGE_SIZE = 1000;
+/** Per-run ceiling: 50 pages of 1000 = 50,000 learners. */
+const MAX_LEARNER_PAGES = 50;
+/** Concurrent candidate queries; one query serves every learner in a pair. */
+const PAIR_QUERY_BATCH = 20;
 const REDIS_PIPELINE_BATCH = 200;
+const MAX_LOGGED_PAIR_FAILURES = 10;
 
 interface UserRow {
   id: string;
@@ -126,6 +153,156 @@ interface UserRow {
   last_active_at?: string | null;
 }
 
+/** A learner reduced to the primary language exchange pair the job matches on. */
+interface DailyLearner {
+  id: string;
+  nativeLanguage: string;
+  targetLanguage: string;
+}
+
+interface LanguagePair {
+  key: string;
+  nativeLanguage: string;
+  targetLanguage: string;
+}
+
+interface LearnerBucket {
+  pair: LanguagePair;
+  learnerIds: string[];
+}
+
+interface LearnerPage {
+  /** Rows PostgREST returned, including rows without a usable language pair. */
+  rowCount: number;
+  /** Keyset cursor for the next page; null when the page was empty. */
+  lastId: string | null;
+  learners: DailyLearner[];
+}
+
+/** Ranked partners for one language pair, shared by every learner in it. */
+interface PairPool {
+  candidates: RecommendedUserDto[];
+  candidateIds: ReadonlySet<string>;
+  /** JSON of the first DAILY_LIMIT candidates, for learners outside the pool. */
+  sharedPayload: string;
+}
+
+interface DailyRunStats {
+  /** Correlates every log line, metric sample and crash report of one run. */
+  runId: string;
+  pagesScanned: number;
+  learnersScanned: number;
+  pairQueries: number;
+  failedPairQueries: number;
+  setsCached: number;
+  /** True when the run stopped at the learner or runtime ceiling. */
+  truncated: boolean;
+}
+
+function readStringArray(value: unknown): string[] | null {
+  return Array.isArray(value) &&
+    value.every((item): item is string => typeof item === 'string')
+    ? value
+    : null;
+}
+
+function readNullableString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function readNullableNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** PostgREST error codes are short identifiers; anything else may carry data. */
+function safeErrorCode(error: unknown): string {
+  if (!isRecord(error) || typeof error['code'] !== 'string') return 'unknown';
+  return /^[a-z0-9_-]{1,32}$/i.exec(error['code'])?.[0] ?? 'unknown';
+}
+
+function parseDailyLearner(row: unknown): DailyLearner | null {
+  if (!isRecord(row)) return null;
+  const id = row['id'];
+  const nativeLanguage = readStringArray(row['native_languages'])?.[0];
+  const targetLanguage = readStringArray(row['target_languages'])?.[0];
+  if (typeof id !== 'string' || id.length === 0) return null;
+  if (!nativeLanguage || !targetLanguage) return null;
+  return { id, nativeLanguage, targetLanguage };
+}
+
+function parseDailyCandidate(
+  row: unknown,
+  now: Date,
+): RecommendedUserDto | null {
+  if (!isRecord(row)) return null;
+  const id = row['id'];
+  if (typeof id !== 'string' || id.length === 0) return null;
+
+  const studyStreakDays = readNullableNumber(row['study_streak_days']);
+  return {
+    id,
+    displayName: readNullableString(row['display_name']),
+    avatarUrl: readNullableString(row['avatar_url']),
+    nativeLanguage: readStringArray(row['native_languages'])?.[0] ?? null,
+    targetLanguages: readStringArray(row['target_languages']),
+    sharedInterests: 0,
+    isSeriousLearner: isActiveSeriousLearner(
+      {
+        study_streak_days: studyStreakDays,
+        last_active_at: readNullableString(row['last_active_at']),
+      },
+      now,
+    ),
+    studyStreakDays,
+    correctionRatio: readNullableNumber(row['correction_ratio']),
+  };
+}
+
+/** Groups learners by exchange pair so each pair costs one candidate query. */
+function bucketLearnersByPair(
+  learners: readonly DailyLearner[],
+): Map<string, LearnerBucket> {
+  const buckets = new Map<string, LearnerBucket>();
+  for (const learner of learners) {
+    const key = JSON.stringify([
+      learner.targetLanguage,
+      learner.nativeLanguage,
+    ]);
+    const bucket = buckets.get(key) ?? {
+      pair: {
+        key,
+        nativeLanguage: learner.nativeLanguage,
+        targetLanguage: learner.targetLanguage,
+      },
+      learnerIds: [],
+    };
+    bucket.learnerIds.push(learner.id);
+    buckets.set(key, bucket);
+  }
+  return buckets;
+}
+
+function buildPairPool(candidates: RecommendedUserDto[]): PairPool | null {
+  if (candidates.length === 0) return null;
+  return {
+    candidates,
+    candidateIds: new Set(candidates.map((candidate) => candidate.id)),
+    sharedPayload: JSON.stringify(candidates.slice(0, DAILY_LIMIT)),
+  };
+}
+
+/**
+ * The cached top-10 for one learner: the pair's ranked partners without the
+ * learner themself. Returns null when nobody else qualifies.
+ */
+function dailyPayloadFor(pool: PairPool, learnerId: string): string | null {
+  if (!pool.candidateIds.has(learnerId)) return pool.sharedPayload;
+  const partners = pool.candidates
+    .filter((candidate) => candidate.id !== learnerId)
+    .slice(0, DAILY_LIMIT);
+  return partners.length > 0 ? JSON.stringify(partners) : null;
+}
+
 @Injectable()
 export class RecommendationsService {
   constructor(
@@ -138,187 +315,391 @@ export class RecommendationsService {
     private readonly crashReportService: MatchmakingCrashReportService,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  /**
+   * Nightly job: caches each eligible learner's top 10 language partners in
+   * Redis (`recommendations:daily:<userId>`, 24 hour TTL).
+   *
+   * - Single-flight: every replica fires at midnight, so a Redis lock lets
+   *   exactly one of them run; the others record a `skipped` run.
+   * - Bounded and complete: learners are read in keyset-paginated pages, and
+   *   one candidate query serves every learner sharing a language pair.
+   * - Resilient: a failing pair query only costs that pair its refresh; a
+   *   Redis or learner-scan failure fails the run. It never throws, so one
+   *   bad night cannot take down the scheduler.
+   * - Idempotent: re-running simply rewrites the same keys.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { name: DAILY_JOB_NAME })
   async calculateDailyRecommendations(): Promise<void> {
-    this.logger.info('Starting daily recommendation calculations...');
-    const supabase = this.supabaseService.getClient();
-    const redis = this.supabaseService.getRedisClient();
+    const startedAt = Date.now();
+    const stats: DailyRunStats = {
+      runId: randomUUID(),
+      pagesScanned: 0,
+      learnersScanned: 0,
+      pairQueries: 0,
+      failedPairQueries: 0,
+      setsCached: 0,
+      truncated: false,
+    };
+    let outcome: MatchmakingDailyJobOutcome = 'failed';
+    let lock: RedisLock | null = null;
+
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      lock = await acquireRedisLock(
+        redis,
+        DAILY_RECOMMENDATIONS_LOCK_KEY,
+        DAILY_JOB_LOCK_TTL_SECONDS,
+      );
+      if (lock === null) {
+        outcome = 'skipped';
+        return;
+      }
+
+      this.logger.info(
+        { runId: stats.runId },
+        'Starting daily recommendation calculations',
+      );
+      await this.cacheDailyRecommendations(redis, stats, startedAt);
+
+      if (
+        stats.pairQueries > 0 &&
+        stats.failedPairQueries === stats.pairQueries
+      ) {
+        throw new Error('Every language pair candidate query failed');
+      }
+
+      outcome = stats.failedPairQueries > 0 ? 'partial' : 'success';
+      await this.recordDailyCompletion(redis, stats.runId);
+      if (outcome === 'partial') {
+        await this.reportTierDegradation(
+          'calculateDailyRecommendations:partial',
+          null,
+          new Error(
+            `${stats.failedPairQueries} of ${stats.pairQueries} language pair candidate queries failed`,
+          ),
+          'language_exchange_live',
+          this.dailyRunContext(stats),
+        );
+      }
+    } catch (error: unknown) {
+      outcome = 'failed';
+      this.logger.error(
+        { runId: stats.runId, err: error },
+        'Error calculating daily recommendations',
+      );
+      await this.reportTierDegradation(
+        'calculateDailyRecommendations',
+        null,
+        error,
+        'none',
+        this.dailyRunContext(stats),
+      );
+    } finally {
+      await this.releaseDailyLock(lock, stats.runId);
+      this.finishDailyRun(outcome, stats, Date.now() - startedAt);
+    }
+  }
+
+  /** Pages through eligible learners and writes each one's cached top 10. */
+  private async cacheDailyRecommendations(
+    redis: Redis,
+    stats: DailyRunStats,
+    startedAt: number,
+  ): Promise<void> {
+    const now = new Date();
+    // One entry per language pair for the whole run, so pairs recurring on
+    // later pages are not queried again. null means the query succeeded but
+    // no partner currently qualifies.
+    const pools = new Map<string, PairPool | null>();
+    const failedPairKeys = new Set<string>();
 
     let pipeline = redis.pipeline();
     let pipelineOps = 0;
-    let totalCached = 0;
+    let pendingSets = 0;
 
     const flushPipeline = async (): Promise<void> => {
       if (pipelineOps > 0) {
         const pendingPipeline = pipeline;
+        const completedSets = pendingSets;
         pipeline = redis.pipeline();
         pipelineOps = 0;
+        pendingSets = 0;
 
         const results = await pendingPipeline.exec();
         const failedCommand = results?.find(([commandError]) => commandError);
         if (failedCommand?.[0]) {
           throw failedCommand[0];
         }
+        stats.setsCached += completedSets;
       }
     };
 
     try {
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('id, native_languages, target_languages')
-        .match(GDPR_MATCHMAKING_FILTERS)
-        .is('scheduled_for_deletion_at', null)
-        .not('target_languages', 'is', null)
-        .limit(CRON_USERS_LIMIT);
+      let afterId: string | null = null;
+      let exhausted = false;
 
-      if (error || !users) {
-        throw new Error(`Failed to fetch users: ${error?.message}`);
-      }
+      for (let index = 0; index < MAX_LEARNER_PAGES; index++) {
+        if (Date.now() - startedAt >= DAILY_JOB_MAX_RUNTIME_MS) break;
 
-      this.logger.info(
-        `Computing recommendations for ${users.length} users...`,
-      );
+        const page = await this.fetchLearnerPage(afterId);
+        if (page.lastId === null) {
+          exhausted = true;
+          break;
+        }
+        afterId = page.lastId;
+        stats.pagesScanned++;
+        stats.learnersScanned += page.rowCount;
 
-      // Collect unique language pairs to batch query, avoiding N+1 queries
-      const pairSet = new Set<string>();
-      const pairIndex = new Map<
-        string,
-        Array<{ userId: string; nativeLang: string; targetLang: string }>
-      >();
+        const buckets = bucketLearnersByPair(page.learners);
+        await this.loadPairPools(
+          Array.from(buckets.values(), (bucket) => bucket.pair),
+          pools,
+          failedPairKeys,
+          stats,
+          now,
+        );
 
-      for (const user of users) {
-        const nativeLangs = user['native_languages'] as string[] | null;
-        const targetLangs = user['target_languages'] as string[] | null;
-        if (!nativeLangs?.length || !targetLangs?.length) continue;
+        for (const bucket of buckets.values()) {
+          if (failedPairKeys.has(bucket.pair.key)) continue;
+          const pool = pools.get(bucket.pair.key);
 
-        const native = nativeLangs[0];
-        const target = targetLangs[0];
-        const key = `${target}:${native}`;
-        pairSet.add(key);
-        const bucket = pairIndex.get(key) ?? [];
-        bucket.push({
-          userId: user.id,
-          nativeLang: native,
-          targetLang: target,
-        });
-        pairIndex.set(key, bucket);
-      }
+          for (const learnerId of bucket.learnerIds) {
+            const key = `recommendations:daily:${learnerId}`;
+            const payload = pool ? dailyPayloadFor(pool, learnerId) : null;
 
-      // Batch-fetch matches for each unique language pair
-      const MAX_PAIR_BATCH = 20;
-      const pairs = Array.from(pairSet);
-      const batches: string[][] = [];
-      for (let i = 0; i < pairs.length; i += MAX_PAIR_BATCH) {
-        batches.push(pairs.slice(i, i + MAX_PAIR_BATCH));
-      }
-
-      for (const batchPairs of batches) {
-        const queries = batchPairs.map((pairKey) => {
-          const [targetCode, nativeCode] = pairKey.split(':');
-          return supabase
-            .from('users')
-            .select(
-              'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
-            )
-            .match(GDPR_MATCHMAKING_FILTERS)
-            .is('scheduled_for_deletion_at', null)
-            .overlaps('native_languages', [targetCode])
-            .overlaps('target_languages', [nativeCode])
-            .order('study_streak_days', { ascending: false })
-            .limit(DAILY_LIMIT);
-        });
-
-        const results = await Promise.all(queries);
-
-        for (let i = 0; i < batchPairs.length; i++) {
-          const pairKey = batchPairs[i];
-          const matchesData = results[i];
-          if (matchesData.error) {
-            throw new Error('Failed to fetch daily recommendation matches');
-          }
-          const matchRows = matchesData.data as UserRow[] | null;
-
-          if (!matchRows || matchRows.length === 0) {
-            continue;
-          }
-
-          const userEntries = pairIndex.get(pairKey) ?? [];
-
-          // O(1) matching & pre-serialization string manipulation optimization
-          // 1. Map rows to DTOs once per batch, instead of once per user
-          const dtos = matchRows.map((m) => ({
-            id: m.id,
-            displayName: m.display_name ?? null,
-            avatarUrl: m.avatar_url ?? null,
-            nativeLanguage: m.native_languages?.[0] ?? null,
-            targetLanguages: m.target_languages ?? null,
-            sharedInterests: 0,
-            isSeriousLearner: isActiveSeriousLearner(m),
-            studyStreakDays: m.study_streak_days ?? null,
-            correctionRatio: m.correction_ratio ?? null,
-          }));
-
-          // 2. Pre-serialize to individual JSON strings and build full array string
-          const jsonParts = dtos.map((dto) => JSON.stringify(dto));
-          const fullJsonStr = `[${jsonParts.join(',')}]`;
-
-          // 3. Pre-compute O(1) lookup table for matches
-          const matchIndices = new Map<string, number>();
-          for (let k = 0; k < dtos.length; k++) {
-            matchIndices.set(dtos[k].id, k);
-          }
-
-          for (const entry of userEntries) {
-            const matchIndex = matchIndices.get(entry.userId);
-            let jsonToCache: string | null = null;
-
-            if (matchIndex === undefined) {
-              if (jsonParts.length > 0) {
-                jsonToCache = fullJsonStr;
-              }
+            if (payload === null) {
+              pipeline.del(key);
             } else {
-              if (jsonParts.length > 1) {
-                const strToRemove = jsonParts[matchIndex];
-                if (matchIndex === 0) {
-                  jsonToCache = fullJsonStr.replace(`${strToRemove},`, '');
-                } else if (matchIndex === jsonParts.length - 1) {
-                  jsonToCache = fullJsonStr.replace(`,${strToRemove}`, '');
-                } else {
-                  jsonToCache = fullJsonStr.replace(`,${strToRemove},`, ',');
-                }
-              }
+              pipeline.set(key, payload, 'EX', DAILY_REDIS_TTL);
+              pendingSets++;
             }
-
-            if (jsonToCache !== null) {
-              pipeline.set(
-                `recommendations:daily:${entry.userId}`,
-                jsonToCache,
-                'EX',
-                DAILY_REDIS_TTL,
-              );
-              pipelineOps++;
-              totalCached++;
-
-              if (pipelineOps >= REDIS_PIPELINE_BATCH) {
-                await flushPipeline();
-              }
+            pipelineOps++;
+            if (pipelineOps >= REDIS_PIPELINE_BATCH) {
+              await flushPipeline();
             }
           }
         }
       }
 
+      stats.truncated = !exhausted;
       await flushPipeline();
-      this.logger.info(
-        `Successfully calculated and cached ${totalCached} daily recommendation sets.`,
+    } catch (error: unknown) {
+      // Keep the sets already computed for this page; the run still fails.
+      await flushPipeline().catch(() => undefined);
+      throw error;
+    }
+  }
+
+  /** Reads the next page of eligible learners, ordered by id (keyset cursor). */
+  private async fetchLearnerPage(afterId: string | null): Promise<LearnerPage> {
+    let query = this.supabaseService
+      .getClient()
+      .from('users')
+      .select('id, native_languages, target_languages')
+      .match(GDPR_MATCHMAKING_FILTERS)
+      .is('scheduled_for_deletion_at', null)
+      .not('target_languages', 'is', null);
+    if (afterId !== null) {
+      query = query.gt('id', afterId);
+    }
+
+    const { data, error } = await query
+      .order('id', { ascending: true })
+      .limit(LEARNER_PAGE_SIZE);
+
+    if (error || !Array.isArray(data)) {
+      throw new Error(`Failed to fetch learners (${safeErrorCode(error)})`);
+    }
+
+    const learners: DailyLearner[] = [];
+    let lastId: string | null = null;
+    for (const row of data) {
+      const learner = parseDailyLearner(row);
+      if (learner) learners.push(learner);
+      const rowId: unknown = isRecord(row) ? row['id'] : undefined;
+      if (typeof rowId === 'string' && rowId.length > 0) lastId = rowId;
+    }
+    if (data.length > 0 && lastId === null) {
+      throw new Error('Failed to fetch learners (unusable page)');
+    }
+
+    return { rowCount: data.length, lastId, learners };
+  }
+
+  /** Queries candidates for pairs not seen yet, isolating per-pair failures. */
+  private async loadPairPools(
+    pairs: readonly LanguagePair[],
+    pools: Map<string, PairPool | null>,
+    failedPairKeys: Set<string>,
+    stats: DailyRunStats,
+    now: Date,
+  ): Promise<void> {
+    const unseen = pairs.filter((pair) => !pools.has(pair.key));
+
+    for (let i = 0; i < unseen.length; i += PAIR_QUERY_BATCH) {
+      const batch = unseen.slice(i, i + PAIR_QUERY_BATCH);
+      stats.pairQueries += batch.length;
+
+      const settled = await Promise.all(
+        batch.map(async (pair) => {
+          try {
+            return { pair, pool: await this.fetchPairPool(pair, now) };
+          } catch (error: unknown) {
+            stats.failedPairQueries++;
+            if (stats.failedPairQueries <= MAX_LOGGED_PAIR_FAILURES) {
+              this.logger.warn(
+                {
+                  runId: stats.runId,
+                  nativeLanguage: pair.nativeLanguage,
+                  targetLanguage: pair.targetLanguage,
+                  err: error,
+                },
+                'Daily recommendation candidate query failed; keeping the previous cache for this language pair',
+              );
+            }
+            failedPairKeys.add(pair.key);
+            return { pair, pool: null };
+          }
+        }),
       );
-    } catch (error) {
-      await flushPipeline();
-      this.logger.error('Error calculating daily recommendations', error);
-      void this.reportTierDegradation(
-        'calculateDailyRecommendations',
-        'system',
-        error,
-        'none',
+
+      for (const { pair, pool } of settled) {
+        pools.set(pair.key, pool);
+      }
+    }
+  }
+
+  /**
+   * The ranked partners for one pair: native speakers of the learner's target
+   * language who are learning the learner's native language, strongest study
+   * streak first (id breaks ties so the list is stable between runs).
+   */
+  private async fetchPairPool(
+    pair: LanguagePair,
+    now: Date,
+  ): Promise<PairPool | null> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
+      )
+      .match(GDPR_MATCHMAKING_FILTERS)
+      .is('scheduled_for_deletion_at', null)
+      .overlaps('native_languages', [pair.targetLanguage])
+      .overlaps('target_languages', [pair.nativeLanguage])
+      .order('study_streak_days', { ascending: false })
+      .order('id', { ascending: true })
+      .limit(DAILY_CANDIDATE_POOL);
+
+    if (error || !Array.isArray(data)) {
+      throw new Error(
+        `Failed to fetch daily recommendation matches (${safeErrorCode(error)})`,
+      );
+    }
+
+    const candidates: RecommendedUserDto[] = [];
+    for (const row of data) {
+      const candidate = parseDailyCandidate(row, now);
+      if (candidate) candidates.push(candidate);
+    }
+    return buildPairPool(candidates);
+  }
+
+  private dailyRunContext(stats: DailyRunStats): Record<string, unknown> {
+    return {
+      runId: stats.runId,
+      pagesScanned: stats.pagesScanned,
+      learnersScanned: stats.learnersScanned,
+      pairQueries: stats.pairQueries,
+      failedPairQueries: stats.failedPairQueries,
+      setsCached: stats.setsCached,
+      truncated: stats.truncated,
+    };
+  }
+
+  /** Persists when the cache was last refreshed, for staleness monitoring. */
+  private async recordDailyCompletion(
+    redis: Redis,
+    runId: string,
+  ): Promise<void> {
+    try {
+      await redis.set(
+        DAILY_RECOMMENDATIONS_LAST_COMPLETED_KEY,
+        String(Math.floor(Date.now() / 1000)),
+      );
+    } catch {
+      this.logger.warn(
+        { runId },
+        'Could not record the daily recommendation completion time',
+      );
+    }
+  }
+
+  private async releaseDailyLock(
+    lock: RedisLock | null,
+    runId: string,
+  ): Promise<void> {
+    if (lock === null) return;
+    try {
+      if (!(await lock.release())) {
+        this.logger.warn(
+          { runId },
+          'Daily recommendation lock expired before the run finished',
+        );
+      }
+    } catch {
+      this.logger.warn(
+        { runId },
+        'Could not release the daily recommendation lock; it will expire on its own',
+      );
+    }
+  }
+
+  /** Emits the run summary and metrics; observability must never fail the job. */
+  private finishDailyRun(
+    outcome: MatchmakingDailyJobOutcome,
+    stats: DailyRunStats,
+    durationMs: number,
+  ): void {
+    const summary = {
+      ...this.dailyRunContext(stats),
+      outcome,
+      durationMs,
+    };
+    if (outcome === 'success' || outcome === 'skipped') {
+      this.logger.info(
+        summary,
+        outcome === 'skipped'
+          ? 'Daily recommendation calculation already running on another instance; skipped'
+          : 'Daily recommendation calculation finished',
+      );
+    } else {
+      this.logger.warn(summary, 'Daily recommendation calculation degraded');
+    }
+    if (stats.truncated) {
+      this.logger.warn(
+        {
+          runId: stats.runId,
+          maxLearners: MAX_LEARNER_PAGES * LEARNER_PAGE_SIZE,
+          maxRuntimeMs: DAILY_JOB_MAX_RUNTIME_MS,
+        },
+        'Daily recommendation run stopped at its ceiling; remaining learners use live computation',
+      );
+    }
+
+    try {
+      this.metricsService.recordMatchmakingDailyJobRun({
+        outcome,
+        durationSeconds: durationMs / 1000,
+        learnersScanned: stats.learnersScanned,
+        setsCached: stats.setsCached,
+        truncated: stats.truncated,
+      });
+    } catch {
+      this.logger.warn(
+        { runId: stats.runId },
+        'Could not record daily recommendation job metrics',
       );
     }
   }
@@ -579,9 +960,10 @@ export class RecommendationsService {
   /** Reports a tier degradation event to the crash reporting service without blocking the response. */
   private async reportTierDegradation(
     operation: string,
-    userId: string,
+    userId: string | null,
     error: unknown,
     degradedTier: string,
+    context?: Record<string, unknown>,
   ): Promise<void> {
     try {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -590,10 +972,13 @@ export class RecommendationsService {
 
       await this.crashReportService.reportCrash({
         operation,
-        user_id: userId,
+        // matchmaking_crash_reports.user_id is a UUID foreign key, so system
+        // level failures (scheduled jobs) must leave it unset.
+        user_id: userId ?? undefined,
         error_type: err.constructor.name,
         error_message: err.message,
         stack_trace: err.stack,
+        context,
         degraded_tier: degradedTier,
         circuit_breaker_open: circuitOpen,
       });

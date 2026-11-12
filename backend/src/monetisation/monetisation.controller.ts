@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Post,
   UseGuards,
+  UseInterceptors,
   Headers,
   Req,
   BadRequestException,
@@ -17,13 +19,14 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiHeader,
-  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RequireVip } from './decorators/require-vip.decorator';
 import { VipGuard } from './guards/vip.guard';
+import { DeveloperApiKeyGuard } from './guards/developer-api-key.guard';
+import { DeveloperApiUsageInterceptor } from './interceptors/developer-api-usage.interceptor';
 import {
   CreateDiagnosticLogDto,
   AppleReceiptValidationDto,
@@ -31,8 +34,6 @@ import {
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
-import { AppleNotificationDto } from './dto/apple-notification.dto';
-import { GoogleNotificationDto } from './dto/google-notification.dto';
 
 @ApiTags('Monetisation')
 @Controller('monetisation')
@@ -77,36 +78,6 @@ export class MonetisationController {
     );
   }
 
-  @Post('webhooks/apple')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Handle Apple App Store server notifications',
-    description:
-      'Receives Apple App Store server notifications (v2) for subscription events, refunds, and renewal status changes. Verifies JWS signatures before processing. Called exclusively by Apple servers.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Apple notification processed successfully',
-  })
-  async handleAppleWebhook(@Body() dto: AppleNotificationDto) {
-    return await this.monetisationService.handleAppleNotification(dto);
-  }
-
-  @Post('webhooks/google')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Handle Google Play Pub/Sub notifications',
-    description:
-      'Receives Google Play Real-time Developer Notifications (RTDN) via Pub/Sub for subscription events, refunds, and status changes. Verifies Pub/Sub message authenticity before processing. Called exclusively by Google servers.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Google notification processed successfully',
-  })
-  async handleGoogleWebhook(@Body() dto: GoogleNotificationDto) {
-    return await this.monetisationService.handleGoogleNotification(dto);
-  }
-
   @Post('generate-api-key')
   @UseGuards(SupabaseAuthGuard, VipGuard)
   @RequireVip('developer')
@@ -140,9 +111,40 @@ export class MonetisationController {
     return await this.monetisationService.generateApiKey(user.id);
   }
 
-  @Get('analytics')
+  @Delete('api-key')
   @UseGuards(SupabaseAuthGuard, VipGuard)
   @RequireVip('developer')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Revoke the current developer API key',
+    description:
+      'Immediately invalidates the active Developer Tier API key. The operation is idempotent: revoking when no key is active succeeds without changing state. Requires an authenticated Developer-tier session, not an API key.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'API key revoked',
+    schema: {
+      type: 'object',
+      properties: {
+        revoked: { type: 'boolean', example: true },
+        api_key: { type: 'string', nullable: true, example: null },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorised' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Developer-tier VIP required',
+  })
+  async revokeApiKey(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.revokeApiKey(user.id);
+  }
+
+  @Get('analytics')
+  @UseGuards(DeveloperApiKeyGuard, SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
+  @UseInterceptors(DeveloperApiUsageInterceptor)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get developer analytics dashboard data',
@@ -173,8 +175,9 @@ export class MonetisationController {
   }
 
   @Get('diagnostics/logs')
-  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @UseGuards(DeveloperApiKeyGuard, SupabaseAuthGuard, VipGuard)
   @RequireVip('developer')
+  @UseInterceptors(DeveloperApiUsageInterceptor)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get diagnostic logs',
@@ -209,8 +212,9 @@ export class MonetisationController {
   }
 
   @Post('diagnostics/logs')
-  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @UseGuards(DeveloperApiKeyGuard, SupabaseAuthGuard, VipGuard)
   @RequireVip('developer')
+  @UseInterceptors(DeveloperApiUsageInterceptor)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Create a diagnostic log entry',
@@ -327,9 +331,17 @@ export class MonetisationController {
     schema: {
       type: 'object',
       properties: {
-        restored: { type: 'boolean', example: true },
-        tier: { type: 'string', example: 'consumer_8_ukp_10_usd' },
-        expires_at: { type: 'string', example: '2026-09-07T12:00:00Z' },
+        received: { type: 'boolean', example: true },
+        status: {
+          type: 'string',
+          enum: ['restored', 'no_valid_subscription'],
+          example: 'restored',
+        },
+        tier: {
+          type: 'string',
+          nullable: true,
+          example: 'consumer_8_ukp_10_usd',
+        },
       },
     },
   })

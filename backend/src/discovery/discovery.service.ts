@@ -1,22 +1,25 @@
 import {
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
   Injectable,
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
-import { MOCK_USERS } from '../mock-data';
 import {
   DiscoveryDegradationService,
   DegradationMarker,
 } from './discovery-degradation.service';
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
+import { resolveVipMockLocation } from './vip-location-spoof.policy';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import {
   getSeriousLearnerActiveSince,
@@ -28,7 +31,7 @@ type DiscoveryUser = UserProfile & {
   distance?: number;
   distance_metres?: number;
   is_partner_of_week?: boolean;
-  proficiency_level?: string;
+  proficiency_level?: string | null;
   age?: number;
   gender?: string;
   country?: string;
@@ -45,6 +48,31 @@ type DiscoveryUser = UserProfile & {
   match_reasons?: string[];
   _matchScore?: number;
 };
+
+function parseStoredPoint(location: string | undefined): {
+  latitude: number;
+  longitude: number;
+} | null {
+  if (!location) return null;
+  const match = /^POINT\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)$/i.exec(
+    location,
+  );
+  if (!match) return null;
+
+  const longitude = Number(match[1]);
+  const latitude = Number(match[2]);
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return null;
+  }
+  return { latitude, longitude };
+}
 
 export interface DiscoveryResult<T = UserProfile[]> {
   data: T;
@@ -255,158 +283,6 @@ export class DiscoveryService {
     }
   }
 
-  // Daily calculation (existing functionality)
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async calculateDailyRecommendations() {
-    this.logger.info('Starting daily partner recommendations calculation...');
-    const supabase = this.supabaseService.getClient();
-    const redis = this.supabaseService.getRedisClient();
-
-    let pipeline = redis.pipeline();
-    let pipelineOps = 0;
-    let totalCached = 0;
-
-    const flushPipeline = async (): Promise<void> => {
-      if (pipelineOps > 0) {
-        await pipeline.exec();
-        pipeline = redis.pipeline();
-        pipelineOps = 0;
-      }
-    };
-
-    try {
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('id, native_languages, target_languages')
-        .eq('is_deletion_pending', false)
-        .is('scheduled_for_deletion_at', null)
-        .not('native_languages', 'is', null)
-        .not('target_languages', 'is', null)
-        .limit(1000);
-
-      if (error || !users) {
-        this.logger.error('Failed to fetch users for recommendations', error);
-        return;
-      }
-
-      const typedUsers = users as Array<{
-        id: string;
-        native_languages: string[];
-        target_languages: string[];
-      }>;
-
-      // Collect unique language pairs to batch query, avoiding N+1 queries
-      const pairSet = new Set<string>();
-      const pairIndex = new Map<
-        string,
-        Array<{ userId: string; nativeLang: string; targetLang: string }>
-      >();
-
-      for (const user of typedUsers) {
-        if (!user.native_languages?.length || !user.target_languages?.length) {
-          continue;
-        }
-        const native = user.native_languages[0];
-        const target = user.target_languages[0];
-        const key = `${target}:${native}`; // matches speak user's target natively AND are learning user's native
-        pairSet.add(key);
-        const bucket = pairIndex.get(key) ?? [];
-        bucket.push({
-          userId: user.id,
-          nativeLang: native,
-          targetLang: target,
-        });
-        pairIndex.set(key, bucket);
-      }
-
-      // Batch-fetch matches for each unique language pair (up to 20 queries in parallel)
-      const MAX_PAIR_BATCH = 20;
-      const pairs = Array.from(pairSet);
-      const batches: string[][] = [];
-      for (let i = 0; i < pairs.length; i += MAX_PAIR_BATCH) {
-        batches.push(pairs.slice(i, i + MAX_PAIR_BATCH));
-      }
-
-      for (const batchPairs of batches) {
-        const queries = batchPairs.map((pairKey) => {
-          const [targetCode, nativeCode] = pairKey.split(':');
-          return supabase
-            .from('users')
-            .select('id')
-            .eq('privacy_hide_from_search', false)
-            .eq('is_deletion_pending', false)
-            .is('scheduled_for_deletion_at', null)
-            .contains('native_languages', [targetCode])
-            .contains('target_languages', [nativeCode])
-            .order('study_streak_days', { ascending: false })
-            .limit(10);
-        });
-
-        const results = await Promise.all(queries);
-
-        for (let i = 0; i < batchPairs.length; i++) {
-          const pairKey = batchPairs[i];
-          const matchesData = results[i];
-          if (
-            matchesData.error ||
-            !matchesData.data ||
-            matchesData.data.length === 0
-          ) {
-            continue;
-          }
-
-          const userEntries = pairIndex.get(pairKey) ?? [];
-          const matchIds = (matchesData.data as Array<{ id: string }>).map(
-            (m) => m.id,
-          );
-
-          // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
-          // Promise.all batch map to drastically reduce network latency during recommendation generation.
-          // Expected impact: N sequential queries become 1 concurrent roundtrip block, reducing worst-case latency significantly.
-          const blockedIdsList = await Promise.all(
-            userEntries.map((entry) =>
-              this.safetyService.getBlockedAndBlockerIds(entry.userId),
-            ),
-          );
-
-          // Cache the same match list for every user in this pair bucket
-          for (let entryIdx = 0; entryIdx < userEntries.length; entryIdx++) {
-            const entry = userEntries[entryIdx];
-            const blockedIds = blockedIdsList[entryIdx];
-            let filtered = matchIds.filter((id) => id !== entry.userId);
-            if (blockedIds.length > 0) {
-              const blockedSet = new Set(blockedIds);
-              filtered = filtered.filter((id) => !blockedSet.has(id));
-            }
-            const topN = filtered.slice(0, 10);
-            if (topN.length > 0) {
-              pipeline.set(
-                `daily_recommendations:${entry.userId}`,
-                JSON.stringify(topN),
-                'EX',
-                86400,
-              );
-              pipelineOps++;
-              totalCached++;
-
-              if (pipelineOps >= 200) {
-                await flushPipeline();
-              }
-            }
-          }
-        }
-      }
-
-      await flushPipeline();
-      this.logger.info(
-        `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
-      );
-    } catch (err) {
-      await flushPipeline();
-      this.logger.error('Error calculating daily recommendations', err);
-    }
-  }
-
   // Expose only Partner of the Week IDs that remain discoverable now. The
   // weekly Redis ranking is intentionally revalidated on every read so a
   // privacy, account-deletion, or viewer block change cannot remain visible
@@ -481,30 +357,41 @@ export class DiscoveryService {
 
     let searchLat = query.latitude;
     let searchLon = query.longitude;
+    const hasBrowserCoordinates =
+      query.latitude !== undefined || query.longitude !== undefined;
 
-    // Apply VIP location spoofing – override query coordinates with the user’s mock location
+    // The standard discovery controls express a radius relative to the
+    // authenticated learner's saved location for VIP members. Browser
+    // coordinates remain available to the explicit Nearby flow.
+    if (
+      query.radius_metres !== undefined &&
+      !hasBrowserCoordinates &&
+      !_currentUserProfile?.is_vip
+    ) {
+      throw new ForbiddenException('Distance filtering requires VIP');
+    }
+    if (query.radius_metres !== undefined && !hasBrowserCoordinates) {
+      const storedPoint = parseStoredPoint(_currentUserProfile?.location);
+      searchLat = storedPoint?.latitude;
+      searchLon = storedPoint?.longitude;
+    }
+
+    // Apply VIP location spoofing: a VIP's stored mock_location replaces the
+    // request coordinates. VIP status and the stored point come from the
+    // server-loaded profile, never from the query, so a client cannot opt in.
     const profile = _currentUserProfile;
+    const mockLocation = resolveVipMockLocation(profile);
+    if (mockLocation.status === 'applied') {
+      searchLat = mockLocation.point.latitude;
+      searchLon = mockLocation.point.longitude;
+    } else if (mockLocation.status === 'invalid') {
+      // Log the value type only: the stored coordinates are personal data.
+      this.logger.warn(
+        { mockLocationType: typeof profile?.mock_location },
+        'Ignoring unusable VIP mock_location; using request coordinates',
+      );
+    }
     if (profile?.is_vip) {
-      const mock: unknown = profile.mock_location;
-      if (
-        mock &&
-        typeof mock === 'object' &&
-        'type' in mock &&
-        'coordinates' in mock
-      ) {
-        const mockObj = mock as { type: string; coordinates: unknown };
-        if (
-          mockObj.type === 'Point' &&
-          Array.isArray(mockObj.coordinates) &&
-          mockObj.coordinates.length === 2
-        ) {
-          const coords = mockObj.coordinates as [number, number];
-          if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-            searchLon = coords[0];
-            searchLat = coords[1];
-          }
-        }
-      }
       // Apply VIP country/city spoofing
       if (profile.mock_country) {
         query.country = profile.mock_country;
@@ -512,6 +399,15 @@ export class DiscoveryService {
       if (profile.mock_city) {
         query.city = profile.mock_city;
       }
+    }
+
+    if (
+      query.radius_metres !== undefined &&
+      (searchLat === undefined || searchLon === undefined)
+    ) {
+      throw new BadRequestException(
+        'A saved location or browser coordinates are required for distance filtering',
+      );
     }
 
     // Serious Learner mode must be resolved before the standard Supabase query
@@ -526,7 +422,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, interests, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, interests, bio_text, avatar_url, audio_intro_url, is_vip, vip_tier, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -562,7 +458,10 @@ export class DiscoveryService {
     }
 
     if (query.level) {
-      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+      queryBuilder = queryBuilder.eq(
+        'proficiency_level',
+        query.level.toUpperCase(),
+      );
     }
 
     if (_currentUserProfile?.is_vip && query.gender) {
@@ -623,14 +522,15 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
+      const ranked = this.sortUsers(
+        enriched,
+        query.sort,
+        searchLat,
+        searchLon,
+        _currentUserProfile,
+      );
       return sanitiseDiscoveryData(
-        this.sortUsers(
-          enriched,
-          query.sort,
-          searchLat,
-          searchLon,
-          _currentUserProfile,
-        ),
+        ranked.map((user) => this.withoutPrivateEntitlement(user)),
       );
     };
 
@@ -645,7 +545,7 @@ export class DiscoveryService {
           : null,
         filter_target: query.target_language || null,
         serious_only: seriousLearnerOnly,
-        filter_level: query.level || null,
+        filter_level: query.level ? query.level.toUpperCase() : null,
         filter_gender:
           _currentUserProfile?.is_vip && query.gender ? query.gender : null,
         filter_age_min: query.age_min ?? null,
@@ -661,51 +561,13 @@ export class DiscoveryService {
           {
             error: response.error?.message ?? 'PostGIS returned no data',
           },
-          'PostGIS partner search failed; using bounded non-spatial fallback',
+          'PostGIS partner search failed; radius filter unavailable',
         );
-        const fallbackRes = await queryBuilder.limit(50);
-        if (
-          fallbackRes.error ||
-          !fallbackRes.data ||
-          fallbackRes.data.length === 0
-        ) {
-          const mockData = this.getMockDiscoveryData(query, blockedIds);
-          const filtered = await this.filterByVoiceRoomActive(
-            mockData,
-            query.voice_room_active === true,
-          );
-          return enrich(filtered);
-        }
-        let fallbackResults: DiscoveryUser[] = (
-          fallbackRes.data as unknown as DiscoveryUser[]
-        ).map((item) => ({
-          ...item,
-          distance_metres: undefined,
-        }));
-        if (blockedIds.length > 0) {
-          const blockedSet = new Set(blockedIds);
-          fallbackResults = fallbackResults.filter(
-            (u) => !blockedSet.has(u.id),
-          );
-        }
-        if (query.level) {
-          fallbackResults = fallbackResults.filter(
-            (u) => u.proficiency_level === query.level,
-          );
-        }
-        if (query.age_min !== undefined) {
-          const ageMin = query.age_min;
-          fallbackResults = fallbackResults.filter((u) => u.age! >= ageMin);
-        }
-        if (query.age_max !== undefined) {
-          const ageMax = query.age_max;
-          fallbackResults = fallbackResults.filter((u) => u.age! <= ageMax);
-        }
-        const filtered = await this.filterByVoiceRoomActive(
-          fallbackResults,
-          query.voice_room_active === true,
+        // A non-spatial fallback cannot honour the requested radius. Returning
+        // those rows would silently turn the distance control into a no-op.
+        throw new ServiceUnavailableException(
+          'Partner discovery is temporarily unavailable',
         );
-        return enrich(filtered);
       }
 
       // An empty result is a successful spatial search. Falling back here
@@ -720,6 +582,8 @@ export class DiscoveryService {
         ...item,
         distance_metres: item.distance_metres ?? item.distance ?? undefined,
       }));
+      rpcResults = await this.hydrateDiscoveryPrivacy(rpcResults);
+      rpcResults = await this.hydrateVipTiers(rpcResults);
       if (blockedIds.length > 0) {
         const blockedSet = new Set(blockedIds);
         rpcResults = rpcResults.filter((u) => !blockedSet.has(u.id));
@@ -746,13 +610,13 @@ export class DiscoveryService {
     }
 
     const response = await queryBuilder.limit(50);
-    if (response.error || !response.data || response.data.length === 0) {
-      const mockData = this.getMockDiscoveryData(query, blockedIds);
-      const filtered = await this.filterByVoiceRoomActive(
-        mockData,
-        query.voice_room_active === true,
+    if (response.error || !response.data) {
+      throw new ServiceUnavailableException(
+        'Partner discovery is temporarily unavailable',
       );
-      return enrich(filtered);
+    }
+    if (response.data.length === 0) {
+      return enrich([]);
     }
     let results: DiscoveryUser[] = (
       response.data as unknown as DiscoveryUser[]
@@ -767,11 +631,11 @@ export class DiscoveryService {
     // When a proficiency level is requested, keep users that either have the
     // matching level or do not yet have a level recorded (fresh profiles).
     if (query.level) {
-      const requestedLevel = query.level;
+      const requestedLevel = query.level.toUpperCase();
       results = results.filter(
         (u) =>
           u.proficiency_level === undefined ||
-          u.proficiency_level === requestedLevel,
+          u.proficiency_level?.toUpperCase() === requestedLevel,
       );
     }
     const filtered = await this.filterByVoiceRoomActive(
@@ -818,41 +682,33 @@ export class DiscoveryService {
       );
 
       if (marker.degraded && result.length === 0) {
-        const mockData = this.getMockDiscoveryData(query, blockedIds);
         await this.degradationService.recordDegradationEvent(
           '/discovery/partners',
-          marker.reason ?? 'Search failed, using mock data',
-          'mock',
+          marker.reason ?? 'Partner search unavailable',
+          marker.fallbackSource ?? 'basic_query',
           currentUserId,
         );
-        return {
-          data: mockData,
-          marker: {
-            degraded: true,
-            reason: `${marker.reason ?? 'unknown'}; fell through to mock data`,
-            fallbackSource: 'mock',
-          },
-        };
       }
 
       return { data: result, marker };
     } catch (error: unknown) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() >= 400 &&
+        error.getStatus() < 500
+      ) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       await this.degradationService.recordDegradationEvent(
         '/discovery/partners',
         message,
-        'mock',
+        'basic_query',
         currentUserId,
       );
-      const mockData = this.getMockDiscoveryData(query, blockedIds);
-      return {
-        data: mockData,
-        marker: {
-          degraded: true,
-          reason: message,
-          fallbackSource: 'mock',
-        },
-      };
+      throw new ServiceUnavailableException(
+        'Partner discovery is temporarily unavailable',
+      );
     }
   }
 
@@ -889,7 +745,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -923,7 +779,10 @@ export class DiscoveryService {
     }
 
     if (query.level) {
-      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+      queryBuilder = queryBuilder.eq(
+        'proficiency_level',
+        query.level.toUpperCase(),
+      );
     }
 
     if (query.age_min !== undefined) {
@@ -973,7 +832,7 @@ export class DiscoveryService {
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
@@ -1019,7 +878,7 @@ export class DiscoveryService {
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -1077,7 +936,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
@@ -1103,7 +962,10 @@ export class DiscoveryService {
     }
 
     if (query.level) {
-      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+      queryBuilder = queryBuilder.eq(
+        'proficiency_level',
+        query.level.toUpperCase(),
+      );
     }
 
     const nativeLang = native_language;
@@ -1133,29 +995,9 @@ export class DiscoveryService {
 
     const response = await queryBuilder;
     if (response.error || !response.data) {
-      // Fallback to mock data if query fails
-      const mockSearch: Partial<SearchQueryDto> = {
-        native_languages: nativeLang,
-        target_language: targetLang,
-        serious_learner_only: undefined,
-        age_min: undefined,
-        age_max: undefined,
-        level: query.level,
-        interests: undefined,
-        latitude: undefined,
-        longitude: undefined,
-        radius_metres: undefined,
-        sort: sort,
-        voice_room_active: query.voice_room_active,
-        country: query.country,
-        city: query.city,
-      };
-      let mock = this.getMockDiscoveryData(mockSearch, blockedIds);
-      mock = await this.filterByVoiceRoomActive(
-        mock,
-        query.voice_room_active === true,
+      throw new ServiceUnavailableException(
+        'Partner discovery is temporarily unavailable',
       );
-      return sanitiseDiscoveryData(mock.slice(offset, offset + limit));
     }
 
     let results = response.data as unknown as DiscoveryUser[];
@@ -1222,74 +1064,6 @@ export class DiscoveryService {
       );
       return [];
     }
-  }
-
-  private getMockDiscoveryData(
-    query: SearchQueryDto,
-    blockedIds: string[] = [],
-  ): UserProfile[] {
-    let filtered = MOCK_USERS as unknown as DiscoveryUser[];
-
-    if (blockedIds.length > 0) {
-      const blockedSet = new Set(blockedIds);
-      filtered = filtered.filter((u) => !blockedSet.has(u.id));
-    }
-
-    if (query.native_languages) {
-      filtered = filtered.filter((u) =>
-        u.native_languages.includes(query.native_languages!),
-      );
-    }
-
-    if (query.target_language) {
-      filtered = filtered.filter((u) =>
-        u.target_languages.includes(query.target_language!),
-      );
-    }
-
-    if (query.serious_learner_only) {
-      filtered = filtered.filter((u) => isActiveSeriousLearner(u));
-    }
-
-    if (query.age_min !== undefined) {
-      const ageMin = query.age_min;
-      filtered = filtered.filter((u) => u.age! >= ageMin);
-    }
-    if (query.age_max !== undefined) {
-      const ageMax = query.age_max;
-      filtered = filtered.filter((u) => u.age! <= ageMax);
-    }
-
-    if (query.level) {
-      filtered = filtered.filter((u) => u.proficiency_level === query.level);
-    }
-
-    if (query.interests) {
-      filtered = filtered.filter((u) =>
-        u.interests?.includes(query.interests!),
-      );
-    }
-
-    if (query.has_audio_intro) {
-      filtered = filtered.filter(
-        (u) => u.audio_intro_url && u.audio_intro_url !== '',
-      );
-    }
-
-    if (query.country) {
-      const lowerCountry = query.country.toLowerCase();
-      filtered = filtered.filter((u) =>
-        (u.country ?? '').toLowerCase().includes(lowerCountry),
-      );
-    }
-    if (query.city) {
-      const lowerCity = query.city.toLowerCase();
-      filtered = filtered.filter((u) =>
-        (u.city ?? '').toLowerCase().includes(lowerCity),
-      );
-    }
-
-    return filtered.slice(0, 50);
   }
 
   private applyAdvancedFilters(
@@ -1417,7 +1191,7 @@ export class DiscoveryService {
     }
 
     // C. Timezone / Active Hours Overlap (proxy using recent activity)
-    if (candidate.last_active_at) {
+    if (!candidate.privacy_hide_online_status && candidate.last_active_at) {
       const activeTime = Date.parse(candidate.last_active_at);
       if (Number.isFinite(activeTime)) {
         const ageMs = Math.max(0, Date.now() - activeTime);
@@ -1429,7 +1203,124 @@ export class DiscoveryService {
       }
     }
 
+    if (!candidate.privacy_hide_vip_status && candidate.is_vip) {
+      const tier = candidate.vip_tier ?? '';
+      if (tier.startsWith('pro') || tier.startsWith('developer')) {
+        score += 30;
+      } else {
+        score += 15;
+      }
+      reasons.push('vip_priority');
+    }
+
     return { score, reasons };
+  }
+
+  private async hydrateVipTiers(
+    users: DiscoveryUser[],
+  ): Promise<DiscoveryUser[]> {
+    const vipIds = Array.from(
+      new Set(users.filter((user) => user.is_vip).map((user) => user.id)),
+    );
+    if (vipIds.length === 0) return users;
+
+    const response = await this.supabaseService
+      .getClient()
+      .from('users')
+      .select('id, vip_tier')
+      .in('id', vipIds)
+      .limit(vipIds.length);
+
+    if (response.error || !response.data) {
+      this.logger.warn(
+        { candidate_count: vipIds.length },
+        'VIP discovery tiers unavailable; continuing without paid visibility boosts',
+      );
+      return users;
+    }
+
+    const tiers = new Map<string, string>();
+    for (const row of response.data) {
+      if (typeof row.id === 'string' && typeof row.vip_tier === 'string') {
+        tiers.set(row.id, row.vip_tier);
+      }
+    }
+
+    return users.map((user) => ({
+      ...user,
+      vip_tier: tiers.get(user.id) ?? user.vip_tier,
+    }));
+  }
+
+  private async hydrateDiscoveryPrivacy(
+    users: DiscoveryUser[],
+  ): Promise<DiscoveryUser[]> {
+    if (users.length === 0) return users;
+
+    const response = await this.supabaseService
+      .getClient()
+      .from('users')
+      .select('id, privacy_hide_online_status, privacy_hide_vip_status')
+      .in(
+        'id',
+        users.slice(0, 100).map((user) => user.id),
+      )
+      .limit(100);
+
+    if (!response || response.error || !response.data) {
+      const errorCode =
+        response?.error?.code?.match(/^[a-z0-9_-]{1,32}$/i)?.[0] ?? 'unknown';
+      this.logger.warn(
+        { errorCode },
+        'Discovery privacy hydration failed; masking member state',
+      );
+      return users.map((user) =>
+        this.maskDiscoveryMemberState(user, true, true),
+      );
+    }
+
+    const privacyById = new Map(
+      response.data.map((row) => [
+        row.id,
+        {
+          hideOnline: row.privacy_hide_online_status === true,
+          hideVip: row.privacy_hide_vip_status === true,
+        },
+      ]),
+    );
+
+    return users.map((user) => {
+      const privacy = privacyById.get(user.id);
+      return this.maskDiscoveryMemberState(
+        user,
+        privacy?.hideOnline ?? true,
+        privacy?.hideVip ?? true,
+      );
+    });
+  }
+
+  private maskDiscoveryMemberState(
+    user: DiscoveryUser,
+    hideOnline: boolean,
+    hideVip: boolean,
+  ): DiscoveryUser {
+    const publicUser = { ...user };
+    if (hideOnline) {
+      Reflect.deleteProperty(publicUser, 'last_active_at');
+    }
+    if (hideVip) {
+      publicUser.is_vip = false;
+      Reflect.deleteProperty(publicUser, 'vip_tier');
+    }
+    return publicUser;
+  }
+
+  private withoutPrivateEntitlement<T extends Partial<UserProfile>>(
+    user: T,
+  ): T {
+    const publicUser = { ...user };
+    Reflect.deleteProperty(publicUser, 'vip_tier');
+    return publicUser;
   }
 
   private sortUsers(
@@ -1465,8 +1356,12 @@ export class DiscoveryService {
         });
       case 'online_now':
         return discoveryUsers.sort((a, b) => {
-          const aDate = a.last_active_at ?? '';
-          const bDate = b.last_active_at ?? '';
+          const aDate = a.privacy_hide_online_status
+            ? ''
+            : (a.last_active_at ?? '');
+          const bDate = b.privacy_hide_online_status
+            ? ''
+            : (b.last_active_at ?? '');
           return bDate.localeCompare(aDate);
         });
       case 'nearest':
@@ -1497,7 +1392,7 @@ export class DiscoveryService {
     let qb = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)

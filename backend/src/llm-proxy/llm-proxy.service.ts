@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ProviderPromptGate } from '../llm-guard/provider-prompt-gate';
+import { MetricsService } from '../metrics/metrics.service';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -12,23 +14,33 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 @Injectable()
 export class LlmProxyService {
-  constructor(private readonly configService: ConfigService) {}
+  private readonly promptGate: ProviderPromptGate;
 
-  async proxyMessage(
-    text: string,
-    signal?: AbortSignal,
-  ): Promise<{ response: string }> {
-    const response = await this.chatCompletion(
-      [{ role: 'user', content: text }],
-      signal,
+  constructor(
+    private readonly configService: ConfigService,
+    @Optional() metricsService?: MetricsService,
+  ) {
+    this.promptGate = new ProviderPromptGate(
+      'llm_proxy',
+      new Logger(LlmProxyService.name),
+      metricsService,
     );
-    return { response };
   }
 
+  /**
+   * Sends messages to the configured provider. Build them with
+   * buildDataPrompt or buildConversationPrompt from llm-guard: the messages
+   * are validated and cleaned here whatever the caller did, and a prompt that
+   * did not come from a builder is reported as `unguarded`. Throws
+   * PromptGuardError before any request is made when the messages are
+   * malformed or too large.
+   */
   async chatCompletion(
     messages: ChatMessage[],
     signal?: AbortSignal,
   ): Promise<string> {
+    const hardened = this.promptGate.harden(messages);
+
     const apiKey = this.configService.get<string>('LLM_API_KEY');
     const apiUrl = this.configService.get<string>(
       'LLM_API_URL',
@@ -38,7 +50,7 @@ export class LlmProxyService {
 
     const payload = {
       model,
-      messages,
+      messages: hardened.messages,
       max_tokens: 500,
     };
 

@@ -18,12 +18,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <span class="text-2xl font-bold text-text-muted">{{ 'common.loading' | t }}</span>
         } @else if (streakError()) {
           @if (fallbackStreak() > 0) {
-            <span class="text-2xl font-bold text-danger">
+            <span class="text-2xl font-bold text-danger-ink">
               {{ fallbackStreak() }}
               {{ (fallbackStreak() === 1 ? 'studyStreak.day' : 'studyStreak.days') | t }}
             </span>
           } @else {
-            <span class="text-2xl font-bold text-danger">{{ 'common.error' | t }}</span>
+            <span class="text-2xl font-bold text-danger-ink">{{ 'common.error' | t }}</span>
           }
         } @else {
           <span class="streak-value text-2xl font-bold text-accent"

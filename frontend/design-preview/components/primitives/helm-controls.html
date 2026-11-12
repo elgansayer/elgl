@@ -30,6 +30,9 @@
         --primary: 198 82 48;
         --secondary: 26 132 120;
         --danger: 217 58 58;
+        --primary-text: 178 74 43;
+        --secondary-text: 23 119 108;
+        --danger-text: 204 39 39;
         --success: 25 134 84;
         --warning: 161 108 9;
         --vip: 153 111 16;
@@ -59,6 +62,9 @@
         --primary: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
         --success: 52 211 153;
         --warning: 242 179 61;
         --vip: 232 184 75;
@@ -235,7 +241,7 @@
       }
       .btn.ghost {
         background: transparent;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .btn.vip {
         background: rgb(var(--vip));
@@ -285,7 +291,7 @@
       .field .error {
         font-weight: 400;
         font-size: 12px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .field.invalid input {
         border-color: rgb(var(--danger));
@@ -304,12 +310,12 @@
       .chip.on {
         background: rgb(var(--primary) / 0.14);
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .chip.tide {
         background: rgb(var(--secondary) / 0.14);
         border-color: rgb(var(--secondary));
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .badge {
         display: inline-flex;
@@ -399,7 +405,7 @@
         border: 1px solid;
       }
       .alert.error {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.5);
         background: rgb(var(--danger) / 0.08);
       }
@@ -464,6 +470,7 @@
       /* Spartan semantic tokens -> Relay (mirror of frontend/src/styles.scss :root mapping) */
       :root {
         --h-primary: var(--primary);
+        --h-primary-text: var(--primary-text);
         --h-primary-fg: var(--on-fill);
         --h-secondary: var(--surface-100);
         --h-secondary-fg: var(--text-primary);
@@ -472,6 +479,7 @@
         --h-accent: var(--accent);
         --h-accent-fg: var(--on-fill);
         --h-destructive: var(--danger);
+        --h-destructive-text: var(--danger-text);
         --h-border: var(--surface-100);
         --h-input: var(--surface-100);
         --h-ring: var(--primary);
@@ -574,7 +582,7 @@
       }
       .hb.v-destructive {
         background: rgb(var(--h-destructive) / 0.1);
-        color: rgb(var(--h-destructive));
+        color: rgb(var(--h-destructive-text));
       }
       html.dark .hb.v-destructive {
         background: rgb(var(--h-destructive) / 0.2);
@@ -591,7 +599,7 @@
       }
       .hb.v-link {
         background: transparent;
-        color: rgb(var(--h-primary));
+        color: rgb(var(--h-primary-text));
         text-underline-offset: 4px;
       }
       .hb.v-link.hover {
@@ -751,7 +759,7 @@
         flex: none;
         display: inline-grid;
         place-items: center;
-        color: rgb(var(--h-primary));
+        color: rgb(var(--h-primary-text));
         box-shadow: 0 1px 2px rgb(var(--shadow) / 0.05);
       }
       html.dark .hrd {
@@ -771,7 +779,7 @@
         font-size: 14px;
       }
       .opt.invalid {
-        color: rgb(var(--h-destructive));
+        color: rgb(var(--h-destructive-text));
       }
       .opt.invalid .hrd {
         border-color: rgb(var(--h-destructive));
@@ -1276,7 +1284,7 @@
             <span class="hcb ring" role="checkbox" aria-checked="false" tabindex="0"></span
             >Focus-visible
           </div>
-          <div class="opt invalid" style="color: rgb(var(--h-destructive))">
+          <div class="opt invalid" style="color: rgb(var(--h-destructive-text))">
             <span
               class="hcb invalid"
               role="checkbox"
@@ -1630,8 +1638,8 @@
           </div>
         </div>
         <footer>
-          Indicator: size-4 rounded-full border-input, text-primary dot. States: checked · unchecked
-          · focus-visible (ring-[3px]) · disabled · group invalid (text-destructive).
+          Indicator: size-4 rounded-full border-input, text-primary-ink dot. States: checked ·
+          unchecked · focus-visible (ring-[3px]) · disabled · group invalid (text-destructive).
         </footer>
       </section>
       <section class="specimen" data-component="components/ui/textarea">
@@ -1675,9 +1683,7 @@ I'm learning Japanese and can help with Spanish.</textarea>
             ><button class="btn secondary-btn" role="tab" aria-selected="false">Activity</button>
           </div>
         </div>
-        <footer>
-          States: selected · unselected · keyboard focus
-        </footer>
+        <footer>States: selected · unselected · keyboard focus</footer>
       </section>
     </main>
 

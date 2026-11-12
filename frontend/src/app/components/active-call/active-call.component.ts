@@ -1,6 +1,8 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
+  computed,
+  effect,
   input,
   output,
   inject,
@@ -11,16 +13,19 @@ import {
 import { TranslatePipe } from '../../services/translate.pipe';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
+import { ExchangeTimerService } from '../../services/exchange-timer.service';
+import { ExchangeTimerComponent } from '../exchange-timer/exchange-timer.component';
 
 @Component({
   selector: 'app-active-call',
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmButton, ExchangeTimerComponent, TranslatePipe],
   templateUrl: './active-call.component.html',
   styleUrls: ['./active-call.component.scss'],
 })
 export class ActiveCallComponent implements OnDestroy {
   private readonly livekitService = inject(LivekitService);
   private readonly authService = inject(AuthService);
+  readonly exchangeTimer = inject(ExchangeTimerService);
 
   /** The display name of the person you are calling. */
   readonly callerName = input.required<string>();
@@ -46,6 +51,14 @@ export class ActiveCallComponent implements OnDestroy {
 
   readonly callState = signal<'idle' | 'connecting' | 'connected' | 'ended'>('idle');
 
+  readonly isMutedNow = computed(
+    () =>
+      this.isMuted() ||
+      (this.exchangeTimer.isActive() && !this.exchangeTimer.isMyTurn()),
+  );
+
+  private enforcedMute = false;
+
   // ------------------------------------------------------------------- //
   //  Events emitted to the parent so it can act on them (e.g., call
   //  LiveKit API or Centrifugo signalling).
@@ -68,6 +81,20 @@ export class ActiveCallComponent implements OnDestroy {
     afterNextRender(() => {
       this.connectCall();
     });
+
+    effect(() => {
+      if (this.callState() !== 'connected') return;
+
+      const mustMute =
+        this.exchangeTimer.isActive() && !this.exchangeTimer.isMyTurn();
+      if (mustMute && !this.enforcedMute) {
+        this.enforcedMute = true;
+        void this.livekitService.setMuted(true);
+      } else if (!mustMute && this.enforcedMute) {
+        this.enforcedMute = false;
+        void this.livekitService.setMuted(false);
+      }
+    });
   }
 
   // ------------------------------------------------------------------- //
@@ -75,6 +102,7 @@ export class ActiveCallComponent implements OnDestroy {
   // ------------------------------------------------------------------- //
 
   onToggleMute(): void {
+    if (!this.exchangeTimer.canSpeak()) return;
     this.livekitService.toggleMute();
     this.muteToggle.emit();
   }
@@ -111,12 +139,14 @@ export class ActiveCallComponent implements OnDestroy {
       await this.livekitService.publishTracks();
 
       this.callState.set('connected');
+      void this.exchangeTimer.start(this.roomName());
     } catch {
       this.callState.set('ended');
     }
   }
 
   ngOnDestroy(): void {
+    this.exchangeTimer.stop();
     this.livekitService.leaveRoom();
   }
 }

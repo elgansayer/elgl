@@ -17,7 +17,11 @@ import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { DiscoveryService } from '../../services/discovery.service';
+import {
+  DiscoverySearchError,
+  DiscoverySearchFailureKind,
+  DiscoveryService,
+} from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
@@ -52,6 +56,7 @@ import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 const SEARCH_DEBOUNCE_MS = 300;
 const NEARBY_RADIUS_KM = 10;
 const NEARBY_COORDINATE_MAX_AGE_MS = 5 * 60 * 1000;
+const DEFAULT_AVATAR_URL = '/assets/default-avatar.png';
 
 type NearbyLocationStatus =
   | 'idle'
@@ -124,12 +129,36 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly isLoading = signal<boolean>(true);
   readonly searchError = signal<string | null>(null);
   readonly hasError = computed(() => this.searchError() !== null);
+  /** Why the last search failed, so an outage, a throttle and a bad filter read differently. */
+  readonly searchFailure = signal<DiscoverySearchFailureKind | null>(null);
+  readonly searchErrorDescriptionKey = computed(() => {
+    switch (this.searchFailure()) {
+      case 'unauthorised':
+        return 'discovery.searchErrorUnauthorised';
+      case 'rate_limited':
+        return 'discovery.searchErrorRateLimited';
+      case 'invalid_request':
+        return 'discovery.searchErrorInvalid';
+      default:
+        return 'discovery.searchErrorDescription';
+    }
+  });
+  /** Retrying an invalid filter set repeats the failure, so that state offers a reset instead. */
+  readonly searchErrorActionKey = computed(() =>
+    this.searchFailure() === 'invalid_request'
+      ? 'discovery.noResultsAction'
+      : 'discovery.searchErrorAction',
+  );
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
+  /** Target-language chips with a label that never falls back to a raw translation key. */
+  readonly targetLanguageChips = computed(() => {
+    this.i18n.translations();
+    return this.myTargetLangs().map((lang) => ({ ...lang, label: this.languageLabel(lang.code) }));
+  });
   readonly blockedUserIds = signal<string[]>([]);
   readonly primaryNativeLanguage = signal<string>('');
   readonly primaryTargetLanguage = signal<string>('');
 
-  readonly distanceBandsKm: readonly number[] = [10, 25, 50, 100, 250];
   readonly selectedDistanceKm = signal<number>(50);
   readonly selectedNativeLanguage = signal<string>('');
   readonly selectedTargetLanguage = signal<string>('');
@@ -234,20 +263,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
-  onSortChange(event: Event): void {
-    const select = event.target;
-    if (select instanceof HTMLSelectElement) {
-      this.setSort(select.value);
-    }
-  }
-
-  onGenderChange(event: Event): void {
-    const select = event.target;
-    if (select instanceof HTMLSelectElement) {
-      this.setGender(select.value);
-    }
-  }
-
   onAgeRangeChanged(range: AgeRange): void {
     this.ageRangeMin.set(range.min);
     this.ageRangeMax.set(range.max);
@@ -309,8 +324,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     } catch (error) {
       if (this.selectedFilter() !== 'nearby') return;
       this.nearbyCoordinates.set(null);
-      const code =
-        error instanceof BrowserGeolocationError ? error.code : ('position_unavailable' as const);
+      const code: NearbyLocationStatus =
+        error instanceof BrowserGeolocationError ? error.code : 'position_unavailable';
       this.nearbyLocationStatus.set(code);
       this.partners.set([]);
       this.isLoading.set(false);
@@ -330,6 +345,16 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   setInterest(interest: string): void {
     this.selectedInterests.set(this.selectedInterests() === interest ? '' : interest);
     void this.searchPartners();
+  }
+
+  useDefaultAvatar(event: Event): void {
+    const image = event.target;
+    if (
+      image instanceof HTMLImageElement &&
+      image.src !== new URL(DEFAULT_AVATAR_URL, image.baseURI).href
+    ) {
+      image.src = DEFAULT_AVATAR_URL;
+    }
   }
 
   toggleShowAllInterests(): void {
@@ -422,6 +447,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
     this.isLoading.set(true);
     this.searchError.set(null);
+    this.searchFailure.set(null);
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
@@ -433,7 +459,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
         {
           latitude: coordinates?.latitude,
           longitude: coordinates?.longitude,
-          radius_metres: this.selectedDistanceKm() * 1000,
+          radius_metres:
+            isNearby || isVip ? this.selectedDistanceKm() * 1000 : undefined,
           native_languages:
             strictLanguageGoals && strictCandidateNative
               ? strictCandidateNative
@@ -472,22 +499,23 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
       const mapped = filtered.map((partner) => ({
         ...partner,
-        nativeLangs: (partner.native_languages || ['EN']).map((code) => ({ code, level: 5 })),
-        targetLangs: (partner.target_languages?.length ? partner.target_languages : ['JA']).map(
-          (code) => ({
-            code,
-            level: 1,
-          }),
-        ),
+        nativeLangs: (partner.native_languages ?? []).map((code) => ({ code, level: 5 })),
+        targetLangs: (partner.target_languages ?? []).map((code) => ({ code, level: 1 })),
         formattedDistance: this.formatDistanceHelper(partner.distance_metres),
       }));
 
       this.partners.set(mapped);
-    } catch (e) {
+    } catch (error) {
       // Do not report failures from an intentionally superseded request.
       if (!signal.aborted) {
-        console.error('Partner search failed:', e);
+        const searchError =
+          error instanceof DiscoverySearchError ? error : new DiscoverySearchError('unavailable');
+        console.error('Partner search failed', {
+          kind: searchError.kind,
+          status: searchError.status,
+        });
         this.partners.set([]);
+        this.searchFailure.set(searchError.kind);
         this.searchError.set(this.i18n.translate('discovery.searchError'));
       }
     } finally {
@@ -512,17 +540,25 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
+  resolveSearchError(): void {
+    if (this.searchFailure() === 'invalid_request') {
+      this.resetFilters();
+      return;
+    }
+    this.retrySearch();
+  }
+
   toggleVoiceRoomActive(): void {
     this.voiceRoomActive.update((v) => !v);
     void this.searchPartners();
   }
 
   async toggleSeriousLearnerMode(): Promise<void> {
-    const saved = await this.seriousLearnerModeService.toggle();
-    if (!saved) {
-      this.searchError.set(this.i18n.translate('discovery.searchError'));
-      return;
-    }
+    if (this.seriousModeSaving()) return;
+
+    const next = !this.seriousLearnerMode();
+    const saved = await this.seriousLearnerModeService.setEnabled(next);
+    if (!saved) return;
 
     this.seriousLearnerRelaxed.set(false);
     if (this.seriousLearnerMode()) {
@@ -563,6 +599,22 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     }
     const roundedKm = Math.max(0.5, Math.round((metres / 1000) * 2) / 2);
     return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(roundedKm)} km`;
+  }
+
+  private languageLabel(code: string): string {
+    const normalisedCode = code.toLowerCase();
+    const key = `lang.${normalisedCode}`;
+    const translated = this.i18n.translate(key);
+    if (translated !== key) return translated;
+
+    try {
+      return (
+        new Intl.DisplayNames([this.i18n.currentLang()], { type: 'language' }).of(normalisedCode) ??
+        code.toUpperCase()
+      );
+    } catch {
+      return code.toUpperCase();
+    }
   }
 
   toggleAudioIntro(partnerId: string, audioIntroUrl: string | undefined, event: Event): void {

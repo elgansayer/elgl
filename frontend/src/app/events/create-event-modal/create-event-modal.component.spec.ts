@@ -58,6 +58,10 @@ describe('CreateEventModalComponent', () => {
       category: 'audio_room',
       location: '',
       max_participants: null,
+      latitude: null,
+      longitude: null,
+      ticket_price_gbp: null,
+      ticket_price_usd: null,
       description: '',
     });
     expect(component.eventForm.invalid).toBe(true);
@@ -140,6 +144,10 @@ describe('CreateEventModalComponent', () => {
       category: 'audio_room',
       location: '  Zoom  ',
       max_participants: 10,
+      latitude: 51.5074,
+      longitude: -0.1278,
+      ticket_price_gbp: 5,
+      ticket_price_usd: 6.5,
       description: '  Some description  ',
     });
 
@@ -154,6 +162,10 @@ describe('CreateEventModalComponent', () => {
       category: 'audio_room',
       location: 'Zoom',
       max_participants: 10,
+      latitude: 51.5074,
+      longitude: -0.1278,
+      ticket_price_gbp: 5,
+      ticket_price_usd: 6.5,
       description: 'Some description',
     });
     expect(createdSpy).toHaveBeenCalledTimes(1);
@@ -173,6 +185,10 @@ describe('CreateEventModalComponent', () => {
       category: 'in_person_meetup',
       location: 'Community Centre',
       max_participants: null,
+      latitude: null,
+      longitude: null,
+      ticket_price_gbp: null,
+      ticket_price_usd: null,
       description: 'Weekly conversation practice',
     });
 
@@ -214,6 +230,10 @@ describe('CreateEventModalComponent', () => {
       category: 'audio_room',
       location: 'Zoom',
       max_participants: null,
+      latitude: null,
+      longitude: null,
+      ticket_price_gbp: null,
+      ticket_price_usd: null,
       description: 'Some description',
     });
 
@@ -246,6 +266,10 @@ describe('CreateEventModalComponent', () => {
       category: 'learning_seminar',
       location: 'Zoom',
       max_participants: 5,
+      latitude: null,
+      longitude: null,
+      ticket_price_gbp: null,
+      ticket_price_usd: null,
       description: 'Will fail',
     });
 
