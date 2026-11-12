@@ -334,7 +334,10 @@ describe('CentrifugoService', () => {
     });
 
     it('should publish data successfully and return true when response ok', async () => {
-      fetchSpy.mockResolvedValue({ ok: true });
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ result: {} }),
+      });
       const result = await service.publish('chat:room-1', { text: 'Hello' });
       expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8000/api', {
         method: 'POST',
@@ -348,6 +351,19 @@ describe('CentrifugoService', () => {
         }),
       });
       expect(result).toBe(true);
+    });
+
+    it('should return false when Centrifugo rejects a command with HTTP 200', async () => {
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          error: { code: 102, message: 'unknown channel' },
+        }),
+      });
+
+      const result = await service.publish('chat:room-1', { text: 'Hello' });
+
+      expect(result).toBe(false);
     });
 
     it('should return false when fetch response is not ok', async () => {

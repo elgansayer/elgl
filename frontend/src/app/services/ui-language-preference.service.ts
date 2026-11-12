@@ -1,20 +1,34 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, WritableSignal } from '@angular/core';
 import { I18nService, LanguageInfo } from './i18n.service';
+import { LoggingService } from './logging.service';
 
 const LOCALE_STORAGE_KEY = 'hellotalk_locale';
 const DICTIONARY_STORAGE_PREFIX = 'hellotalk_dict_';
 const MAX_DICTIONARY_ENTRIES = 5_000;
 const MAX_TRANSLATION_KEY_LENGTH = 200;
 const MAX_TRANSLATION_VALUE_LENGTH = 10_000;
+const LOG_CONTEXT = 'UiLanguagePreferenceService';
+const LOCALE_LOG_PATTERN = /^[A-Za-z0-9-]{1,35}$/;
+
+/**
+ * Why a change was refused. Callers use it to choose feedback; it never carries
+ * provider output, dictionaries or user content.
+ */
+export type UiLanguageFailureReason = 'unsupported' | 'busy' | 'translation-unavailable';
 
 interface LanguageSnapshot {
   language: string;
   translations: Record<string, string>;
 }
 
+interface PendingChange {
+  code: string;
+  promise: Promise<void>;
+}
+
 export class UiLanguagePreferenceError extends Error {
-  constructor() {
+  constructor(readonly reason: UiLanguageFailureReason = 'translation-unavailable') {
     super('Unable to change interface language');
     this.name = 'UiLanguagePreferenceError';
   }
@@ -28,25 +42,56 @@ export class UiLanguagePreferenceError extends Error {
  * when a usable dictionary was actually loaded. This adapter provides that
  * fail-closed behaviour without coupling the UI-language choice to study
  * languages or profile matching preferences.
+ *
+ * Every interface-language picker must go through this service. A repository
+ * contract test rejects direct I18nService.setLanguage calls from UI code.
  */
 @Injectable({ providedIn: 'root' })
 export class UiLanguagePreferenceService {
   private readonly i18n = inject(I18nService);
   private readonly document = inject(DOCUMENT);
+  private readonly logging = inject(LoggingService);
 
   readonly currentLang: WritableSignal<string> = this.i18n.currentLang;
   readonly availableLanguages: readonly LanguageInfo[] = this.i18n.availableLanguages;
 
+  private pending: PendingChange | null = null;
+
+  /**
+   * Switches the interface language, or rejects with UiLanguagePreferenceError
+   * after restoring the previous locale, dictionary and document attributes.
+   *
+   * Changes are single-flight: a repeat request for the locale already being
+   * loaded shares that attempt, and a request for a different locale is refused
+   * as busy so two pickers can never interleave snapshots and rollbacks.
+   */
   async changeLanguage(rawCode: string): Promise<void> {
     const code = rawCode.trim();
     if (!this.isSupported(code)) {
-      throw new UiLanguagePreferenceError();
+      throw this.refuse(code, 'unsupported');
+    }
+
+    if (this.pending) {
+      if (this.pending.code === code) {
+        return this.pending.promise;
+      }
+      throw this.refuse(code, 'busy');
     }
 
     if (code === this.currentLang()) {
       return;
     }
 
+    const attempt = this.applyChange(code);
+    this.pending = { code, promise: attempt };
+    try {
+      await attempt;
+    } finally {
+      this.pending = null;
+    }
+  }
+
+  private async applyChange(code: string): Promise<void> {
     const snapshot: LanguageSnapshot = {
       language: this.currentLang(),
       translations: this.i18n.translations(),
@@ -61,8 +106,18 @@ export class UiLanguagePreferenceService {
       }
     } catch {
       this.restoreSnapshot(snapshot);
-      throw new UiLanguagePreferenceError();
+      throw this.refuse(code, 'translation-unavailable');
     }
+  }
+
+  private refuse(code: string, reason: UiLanguageFailureReason): UiLanguagePreferenceError {
+    // Only the locale code and a failure category are logged: never dictionaries,
+    // provider responses, tokens or user-authored content.
+    this.logging.warn('Interface language change refused', LOG_CONTEXT, {
+      locale: LOCALE_LOG_PATTERN.test(code) ? code : 'invalid',
+      reason,
+    });
+    return new UiLanguagePreferenceError(reason);
   }
 
   private isSupported(code: string): boolean {

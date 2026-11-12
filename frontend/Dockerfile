@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Development
-FROM node:22-alpine AS development
+FROM node:26-alpine AS development
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
@@ -27,6 +27,9 @@ RUN apk add --no-cache \
     'libexpat>=2.8.4-r0' \
     'libuuid>=2.42.3-r0'
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
+COPY runtime-config.js.template /opt/hellotalk/runtime-config.js.template
+COPY docker-entrypoint.d/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
+RUN chmod 755 /docker-entrypoint.d/40-runtime-config.sh
 # outputMode "server" names the client shell index.csr.html. This static image
 # serves the CSR shell, so install it as index.html (replacing nginx's default
 # welcome page) and fail the build if the shell is missing.

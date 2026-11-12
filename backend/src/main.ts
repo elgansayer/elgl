@@ -2,8 +2,8 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { json, urlencoded, Request, Response } from 'express';
 import helmet from 'helmet';
+import { API_GLOBAL_PREFIX, registerBodyParsers } from './config/body-parsers';
 import { isMockBackendEnabled } from './config/mock-backend-mode';
 import { getMockFixtureDiagnostics } from './mock/deterministic-fixtures';
 import { OpenApiFixtureFactoryRegistry } from './mock/openapi-fixture-factory';
@@ -11,7 +11,7 @@ import { OpenApiFixtureFactoryRegistry } from './mock/openapi-fixture-factory';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.use(helmet());
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix(API_GLOBAL_PREFIX);
 
   const mockBackendEnabled = isMockBackendEnabled();
   if (mockBackendEnabled) {
@@ -22,30 +22,8 @@ async function bootstrap() {
     );
   }
 
-  // Ensure raw body is preserved for Stripe webhook
-  app.use(
-    json({
-      verify: (
-        req: Request & { rawBody?: Buffer },
-        _res: Response,
-        buf: Buffer,
-      ) => {
-        req.rawBody = buf;
-      },
-    }),
-  );
-  app.use(
-    urlencoded({
-      extended: true,
-      verify: (
-        req: Request & { rawBody?: Buffer },
-        _res: Response,
-        buf: Buffer,
-      ) => {
-        req.rawBody = buf;
-      },
-    }),
-  );
+  // Raw bodies are preserved for payment webhook signatures; see registerBodyParsers.
+  registerBodyParsers(app);
 
   const frontendUrl = process.env.FRONTEND_URL;
   if (!frontendUrl) {

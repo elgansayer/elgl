@@ -69,7 +69,9 @@ export interface UserProfile {
   is_liked_by_me?: boolean;
   followers_count?: number;
   following_count?: number;
-  corrector_score?: number;
+  corrector_score?: number | null;
+  corrector_rating_count?: number;
+  corrector_score_unavailable?: boolean;
   custom_avatar_url?: string; // Custom profile picture URL
   about_status?: string; // Custom About status
   privacy_last_seen?: string;
@@ -105,6 +107,18 @@ export interface VisitorLog {
     is_vip?: boolean;
   };
 }
+
+/** Fields accepted by the authenticated `PATCH /users/me` request. */
+export type ProfileUpdate = Partial<UserProfile> & {
+  location?: { latitude: number; longitude: number };
+  mock_location?: { latitude: number; longitude: number };
+  enable_location_spoofing?: boolean;
+  serious_learner_mode?: boolean;
+  sound_effects_enabled?: boolean;
+  vibration_enabled?: boolean;
+  custom_avatar_url?: string;
+  about_status?: string;
+};
 
 export interface ProfileVisitor {
   id: string;
@@ -158,24 +172,14 @@ export class UserService {
   }
 
   async getMyProfile(): Promise<UserProfile | null> {
-    const fallbackProfile: UserProfile = {
-      ...MOCK_USER_PROFILE,
-      status_text: 'Learning new languages!',
-      chat_enter_to_send: false,
-      chat_text_size: 'medium',
-      auto_download_wifi_only: false,
-      auto_download_preference: 'wifi',
-      last_active_at: new Date().toISOString(),
-    };
-
     if (!this.authService.getAccessToken()) {
-      return fallbackProfile;
+      return null;
     }
 
     return firstValueFrom(
       this.http
         .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of(fallbackProfile))),
+        .pipe(catchError(() => of(null))),
     );
   }
 
@@ -265,33 +269,14 @@ export class UserService {
     return this.updateMyProfile({ about_status: aboutStatus });
   }
 
-  async updateMyProfile(
-    update: Partial<UserProfile> & {
-      location?: { latitude: number; longitude: number };
-      mock_location?: { latitude: number; longitude: number };
-      enable_location_spoofing?: boolean;
-      serious_learner_mode?: boolean;
-      sound_effects_enabled?: boolean;
-      vibration_enabled?: boolean;
-      custom_avatar_url?: string;
-      about_status?: string;
-    },
-  ): Promise<UserProfile> {
+  /**
+   * Persists a profile change through the authenticated PATCH and rejects when
+   * the server does not confirm it. Write callers surface the failure instead
+   * of reporting an unsaved change as saved.
+   */
+  async updateMyProfile(update: ProfileUpdate): Promise<UserProfile> {
     return firstValueFrom(
-      this.http
-        .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
-        .pipe(
-          catchError(() => {
-            const updated: UserProfile = {
-              ...MOCK_USER_PROFILE,
-              status_text: 'Learning new languages!',
-              ...update,
-              auto_download_wifi_only: update.auto_download_wifi_only ?? false,
-              last_active_at: new Date().toISOString(),
-            };
-            return of(updated);
-          }),
-        ),
+      this.http.patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() }),
     );
   }
 
@@ -427,13 +412,11 @@ export class UserService {
 
   async rateCorrector(ratedUserId: string, score: number): Promise<void> {
     return firstValueFrom(
-      this.http
-        .post<void>(
-          `${environment.apiUrl}/corrector-score/rate`,
-          { rated_user_id: ratedUserId, score },
-          { headers: this.getHeaders() },
-        )
-        .pipe(catchError(() => of(undefined))),
+      this.http.post<void>(
+        `${environment.apiUrl}/corrector-score/rate`,
+        { rated_user_id: ratedUserId, score },
+        { headers: this.getHeaders() },
+      ),
     );
   }
 
@@ -562,11 +545,7 @@ export class UserService {
     return firstValueFrom(
       this.http
         .get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
-        .pipe(
-          catchError(() =>
-            of(['technology', 'art', 'music', 'travel', 'food', 'sports']),
-          ),
-        ),
+        .pipe(catchError(() => of(['technology', 'art', 'music', 'travel', 'food', 'sports']))),
     );
   }
 

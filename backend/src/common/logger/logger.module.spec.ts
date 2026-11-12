@@ -15,4 +15,13 @@ describe('SharedLoggerModule', () => {
       ]),
     );
   });
+
+  it('exports the logger context injected by the grammar explanation provider boundary', () => {
+    const exports = Reflect.getMetadata(
+      'exports',
+      SharedLoggerModule,
+    ) as unknown[];
+
+    expect(exports).toContain(getLoggerToken('GrammarExplanationService'));
+  });
 });

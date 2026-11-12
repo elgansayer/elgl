@@ -85,7 +85,7 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
             <p class="text-sm text-text-muted" role="status">{{ 'suggest_flashcards.noWordsFound' | t }}</p>
           }
           @if (error()) {
-            <p class="mt-2 text-xs font-bold text-danger" role="alert">{{ error() }}</p>
+            <p class="mt-2 text-xs font-bold text-danger-ink" role="alert">{{ error() }}</p>
           }
         </app-card>
       </div>

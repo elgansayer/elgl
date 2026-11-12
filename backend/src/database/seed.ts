@@ -1,6 +1,8 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { buildSeedMomentGraph, type SeedMomentGraph } from './data/moments';
+import { buildSeedNotifications } from './data/notifications';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -137,9 +139,56 @@ async function seedUsersAndProfiles(supabase: any) {
             }),
           })
           .eq('id', userId);
+
+        if (userId && u.vip_tier === 'developer') {
+          await supabase.from('developer_metrics').upsert({
+            user_id: userId,
+            total_api_calls_today: 1420,
+            avg_latency_ms: 18,
+            updated_at: new Date().toISOString(),
+          });
+        }
       }
     }),
   );
+}
+
+/**
+ * Inserts the Moment first, then its comments and likes, which reference it.
+ * Failures are reported rather than ignored so a drift between the seed data
+ * and supabase/migrations/005_moments.sql is visible when seeding.
+ */
+async function seedMomentGraph(
+  supabase: SupabaseClient,
+  graph: SeedMomentGraph,
+) {
+  const { error: momentErr } = await supabase
+    .from('moments')
+    .insert(graph.moment);
+  if (momentErr) {
+    console.error('Failed to seed moment:', momentErr);
+    return;
+  }
+
+  const { error: commentErr } = await supabase
+    .from('moment_comments')
+    .insert(graph.comments);
+  if (commentErr) {
+    console.error('Failed to seed moment comments:', commentErr);
+  }
+
+  const { error: likeErr } = await supabase
+    .from('moment_likes')
+    .insert(graph.likes);
+  if (likeErr) {
+    console.error('Failed to seed moment likes:', likeErr);
+  }
+
+  if (!commentErr && !likeErr) {
+    console.log(
+      `✅ Seeded 1 moment with ${graph.comments.length} comments and ${graph.likes.length} likes`,
+    );
+  }
 }
 
 async function seedMomentsAndAudioRooms(supabase: any) {
@@ -151,36 +200,14 @@ async function seedMomentsAndAudioRooms(supabase: any) {
     const host = usersList[0];
     const partner = usersList[1];
 
-    const momentRes = await supabase
-      .from('moments')
-      .insert({
-        author_id: host.id,
-        content_text:
-          'Just arrived at the British Library in London! Exploring historical Japanese manuscripts today. Can anyone recommend a good idiom for "continuous learning" in Japanese?',
-        detected_language: 'en',
-        media_urls: [
-          'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=600',
-        ],
-        likes_count: 14,
-        is_pinned: true,
-      })
-      .select()
-      .single();
-    const momentData = momentRes.data as { id: string } | null;
-
-    if (momentData) {
-      await supabase.from('moment_comments').insert({
-        moment_id: momentData.id,
-        author_id: partner.id,
-        content_text:
-          'In Japanese, we say 「継続は力なり」 (Keizoku wa chikara nari), which means "Continuation is power" or consistency is key!',
-        correction_payload: {
-          original: 'continuous learning',
-          fixed: '継続は力なり (Keizoku wa chikara nari)',
-          explanation: 'Standard Japanese proverb for continuous effort.',
-        },
-      });
-    }
+    await seedMomentGraph(
+      supabase,
+      buildSeedMomentGraph({
+        hostId: host.id,
+        partnerId: partner.id,
+        likerIds: usersList.map((user: { id: string }) => user.id),
+      }),
+    );
 
     await supabase.from('audio_rooms').insert([
       {
@@ -201,6 +228,47 @@ async function seedMomentsAndAudioRooms(supabase: any) {
       },
     ]);
   }
+}
+
+async function seedNotifications(supabase: SupabaseClient) {
+  const { data: usersList } = await supabase
+    .from('users')
+    .select('id')
+    .limit(5);
+  const users: { id: string }[] = usersList ?? [];
+  if (users.length < 2) return;
+
+  const [recipient, ...actors] = users;
+
+  // Re-running the seeder must not stack duplicate inbox rows.
+  const { count } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('recipient_id', recipient.id);
+  if ((count ?? 0) > 0) {
+    console.log('↪ Notifications already seeded, skipping');
+    return;
+  }
+
+  const { data: moment } = await supabase
+    .from('moments')
+    .select('id')
+    .eq('user_id', recipient.id)
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+
+  const rows = buildSeedNotifications({
+    recipientId: recipient.id,
+    actorIds: actors.map((actor) => actor.id),
+    momentId: moment?.id,
+  });
+  const { error } = await supabase.from('notifications').insert(rows);
+  if (error) {
+    console.error('Failed to seed notifications:', error);
+    return;
+  }
+
+  console.log(`✅ Seeded ${rows.length} inbox notifications`);
 }
 
 async function seedSubscriptions(supabase: any) {
@@ -435,6 +503,7 @@ async function runSeed() {
 
   await seedUsersAndProfiles(supabase);
   await seedMomentsAndAudioRooms(supabase);
+  await seedNotifications(supabase);
   await seedSubscriptions(supabase);
   await seedSubscriptionEvents(supabase);
   await seedAchievements(supabase);

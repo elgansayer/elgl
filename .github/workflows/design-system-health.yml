@@ -2,7 +2,7 @@ name: Design System Health
 
 # Deterministic Relay design audit. On pull requests it reports findings in the job summary (and
 # fails only on token-level contrast regressions); weekly it files de-duplicated
-# `design-improvement` issues that the Factory picks up and implements.
+# `design-improvement` issues.
 
 on:
   pull_request:
@@ -50,7 +50,7 @@ jobs:
           "
         env:
           # Ratchet: known token contrast findings at the time this gate landed. Lower it as fixes merge.
-          KNOWN_TOKEN_FINDINGS: '3'
+          KNOWN_TOKEN_FINDINGS: '0'
       - name: Job summary
         if: always()
         run: cat reports/design-audit.md >> "$GITHUB_STEP_SUMMARY" || true
@@ -81,5 +81,5 @@ jobs:
           " | while IFS= read -r line; do
             title="$(jq -r .title <<<"$line")"
             if grep -Fxq "$title" <<<"$open_titles"; then continue; fi
-            gh issue create --title "$title" --body "$(jq -r .body <<<"$line")" --label design-improvement --label factory-ready
+            gh issue create --title "$title" --body "$(jq -r .body <<<"$line")" --label design-improvement
           done

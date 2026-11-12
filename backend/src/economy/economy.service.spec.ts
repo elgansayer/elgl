@@ -368,6 +368,36 @@ describe('EconomyService', () => {
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
     });
 
+    it('rejects a client-declared platform that contradicts the receipt prefix', async () => {
+      await expect(
+        service.purchaseCoins('user-1', {
+          receipt_token: 'ios_receipt-data',
+          platform: 'web',
+        }),
+      ).rejects.toThrow(
+        'Receipt platform (ios) does not match provided platform (web)',
+      );
+
+      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects an invalid Apple receipt without recording or crediting coins', async () => {
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({ data: { status: 21003 } }),
+      );
+
+      await expect(
+        service.purchaseCoins('user-1', {
+          receipt_token: 'ios_invalid-receipt',
+          platform: 'ios',
+        }),
+      ).rejects.toThrow('Apple receipt verification failed (status: 21003)');
+
+      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+
     it('should credit coins for a Stripe session whose metadata.userId matches the caller', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: { id: 'user-1', coins_balance: 100 },
@@ -539,13 +569,304 @@ describe('EconomyService', () => {
     });
   });
 
-  describe('verifyPurchaseReceipt', () => {
-    it('should return true for valid receipts', async () => {
-      const result = await service.verifyPurchaseReceipt({
-        receipt_token: 'test_token',
+  describe('verifyAppleReceipt', () => {
+    beforeEach(() => {
+      vi.spyOn(service['configService'], 'get').mockImplementation(
+        (key: string) => {
+          if (key === 'APPLE_SHARED_SECRET') return 'secret';
+          return null;
+        },
+      );
+    });
+
+    const validAppleReceipt = {
+      status: 0,
+      environment: 'Production',
+      bundle_id: 'com.elgl.app',
+      latest_receipt_info: [
+        {
+          product_id: 'com.linguaexchange.coins.medium',
+          transaction_id: 'txn-apple-1',
+          quantity: '1',
+          purchase_date_ms: '1700000000000',
+        },
+      ],
+    };
+
+    it('verifies a production receipt and strips the ios_ prefix', async () => {
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({ data: validAppleReceipt }),
+      );
+
+      const result = await service['verifyAppleReceipt']('ios_receipt-data');
+
+      expect(result).toEqual({
+        valid: true,
+        productId: 'com.linguaexchange.coins.medium',
+        transactionId: 'txn-apple-1',
+        platform: 'ios',
+        quantity: 1,
+      });
+      expect(service['httpService'].post).toHaveBeenCalledWith(
+        'https://buy.itunes.apple.com/verifyReceipt',
+        expect.objectContaining({
+          'receipt-data': 'receipt-data',
+          password: 'secret',
+        }),
+      );
+    });
+
+    it('retries the sandbox endpoint when Apple reports status 21007', async () => {
+      const post = vi
+        .spyOn(service['httpService'], 'post')
+        .mockReturnValueOnce(of({ data: { status: 21007 } }))
+        .mockReturnValueOnce(
+          of({
+            data: {
+              status: 0,
+              environment: 'Sandbox',
+              latest_receipt_info: [
+                {
+                  product_id: 'com.linguaexchange.coins.small',
+                  transaction_id: 'txn-sandbox-1',
+                  quantity: '1',
+                },
+              ],
+            },
+          }),
+        );
+
+      const result = await service['verifyAppleReceipt']('ios_receipt-data');
+
+      expect(result.valid).toBe(true);
+      expect(post).toHaveBeenCalledTimes(2);
+      expect(post).toHaveBeenLastCalledWith(
+        'https://sandbox.itunes.apple.com/verifyReceipt',
+        expect.objectContaining({ 'receipt-data': 'receipt-data' }),
+      );
+    });
+
+    it('rejects sandbox receipts in production', async () => {
+      vi.spyOn(service['configService'], 'get').mockImplementation(
+        (key: string) => {
+          if (key === 'APPLE_SHARED_SECRET') return 'secret';
+          if (key === 'NODE_ENV') return 'production';
+          return null;
+        },
+      );
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({
+          data: {
+            ...validAppleReceipt,
+            environment: 'Sandbox',
+          },
+        }),
+      );
+
+      await expect(
+        service['verifyAppleReceipt']('ios_receipt-data'),
+      ).rejects.toThrow(
+        'Apple sandbox receipts are not accepted in production',
+      );
+    });
+
+    it('rejects a receipt whose bundle ID does not match the configured app', async () => {
+      vi.spyOn(service['configService'], 'get').mockImplementation(
+        (key: string) => {
+          if (key === 'APPLE_SHARED_SECRET') return 'secret';
+          if (key === 'APPLE_BUNDLE_ID') return 'com.elgl.app';
+          return null;
+        },
+      );
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({
+          data: { ...validAppleReceipt, bundle_id: 'com.evil.app' },
+        }),
+      );
+
+      await expect(
+        service['verifyAppleReceipt']('ios_receipt-data'),
+      ).rejects.toThrow('Apple receipt bundle ID mismatch');
+    });
+
+    it('rejects a receipt with no bundle ID when a bundle ID is configured', async () => {
+      vi.spyOn(service['configService'], 'get').mockImplementation(
+        (key: string) => {
+          if (key === 'APPLE_SHARED_SECRET') return 'secret';
+          if (key === 'APPLE_BUNDLE_ID') return 'com.elgl.app';
+          return null;
+        },
+      );
+      const { bundle_id: _omitted, ...receiptWithoutBundle } =
+        validAppleReceipt;
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({ data: receiptWithoutBundle }),
+      );
+
+      await expect(
+        service['verifyAppleReceipt']('ios_receipt-data'),
+      ).rejects.toThrow('Apple receipt bundle ID mismatch');
+    });
+
+    it('accepts a matching bundle ID nested under receipt', async () => {
+      vi.spyOn(service['configService'], 'get').mockImplementation(
+        (key: string) => {
+          if (key === 'APPLE_SHARED_SECRET') return 'secret';
+          if (key === 'APPLE_BUNDLE_ID') return 'com.elgl.app';
+          return null;
+        },
+      );
+      const { bundle_id: _omitted, ...receiptWithoutBundle } =
+        validAppleReceipt;
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({
+          data: {
+            ...receiptWithoutBundle,
+            receipt: { bundle_id: 'com.elgl.app' },
+          },
+        }),
+      );
+
+      const result = await service['verifyAppleReceipt']('ios_receipt-data');
+      expect(result.valid).toBe(true);
+    });
+
+    it('rejects receipts in production when no bundle ID is configured', async () => {
+      vi.spyOn(service['configService'], 'get').mockImplementation(
+        (key: string) => {
+          if (key === 'APPLE_SHARED_SECRET') return 'secret';
+          if (key === 'NODE_ENV') return 'production';
+          return null;
+        },
+      );
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({ data: validAppleReceipt }),
+      );
+
+      await expect(
+        service['verifyAppleReceipt']('ios_receipt-data'),
+      ).rejects.toThrow('Apple bundle ID not configured');
+    });
+
+    it('rejects product IDs that are not configured iOS coin products', async () => {
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({
+          data: {
+            status: 0,
+            latest_receipt_info: [
+              {
+                product_id: 'com.evil.coins.mega',
+                transaction_id: 'txn-evil-1',
+              },
+            ],
+          },
+        }),
+      );
+
+      await expect(
+        service['verifyAppleReceipt']('ios_receipt-data'),
+      ).rejects.toThrow('Unknown product ID: com.evil.coins.mega.');
+    });
+
+    it('rejects a non-zero Apple status after sandbox retry', async () => {
+      vi.spyOn(service['httpService'], 'post')
+        .mockReturnValueOnce(of({ data: { status: 21007 } }))
+        .mockReturnValueOnce(of({ data: { status: 21003 } }));
+
+      await expect(
+        service['verifyAppleReceipt']('ios_receipt-data'),
+      ).rejects.toThrow('Apple receipt verification failed (status: 21003)');
+    });
+
+    it('supports consumable receipts from receipt.in_app and preserves quantity', async () => {
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({
+          data: {
+            status: 0,
+            environment: 'Production',
+            receipt: {
+              in_app: [
+                {
+                  product_id: 'com.linguaexchange.coins.medium',
+                  transaction_id: 'txn-older',
+                  quantity: '1',
+                  purchase_date_ms: '1690000000000',
+                },
+                {
+                  product_id: 'com.linguaexchange.coins.medium',
+                  transaction_id: 'txn-newer',
+                  quantity: '2',
+                  purchase_date_ms: '1700000000000',
+                },
+              ],
+            },
+          },
+        }),
+      );
+
+      const result = await service['verifyAppleReceipt']('ios_receipt-data');
+
+      expect(result).toEqual({
+        valid: true,
+        productId: 'com.linguaexchange.coins.medium',
+        transactionId: 'txn-newer',
+        platform: 'ios',
+        quantity: 2,
+      });
+    });
+  });
+
+  describe('purchaseCoins with Apple quantity', () => {
+    beforeEach(() => {
+      vi.spyOn(service['configService'], 'get').mockImplementation(
+        (key: string) => {
+          if (key === 'APPLE_SHARED_SECRET') return 'secret';
+          return null;
+        },
+      );
+    });
+
+    it('credits coins for each unit in the verified Apple receipt', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', coins_balance: 100 },
+        error: null,
+      });
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: null,
+        error: null,
+      });
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
+        of({
+          data: {
+            status: 0,
+            environment: 'Production',
+            receipt: {
+              in_app: [
+                {
+                  product_id: 'com.linguaexchange.coins.medium',
+                  transaction_id: 'txn-multi',
+                  quantity: '2',
+                  purchase_date_ms: '1700000000000',
+                },
+              ],
+            },
+          },
+        }),
+      );
+
+      const result = await service.purchaseCoins('user-1', {
+        receipt_token: 'ios_receipt-data',
         platform: 'ios',
       });
-      expect(result).toBe(true);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transaction_id: 'txn-multi',
+          coins_added: 1000,
+          amount_paid: 3998,
+        }),
+      );
+      expect(result).toEqual({ coins: 1000, new_balance: 1100 });
     });
   });
 

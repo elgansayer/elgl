@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  # A burst of serial Factory merges should test the newest integrated main,
+  # A burst of serial merges should test the newest integrated main,
   # not consume runners validating every superseded intermediate push.
   group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
   cancel-in-progress: true
@@ -28,7 +28,6 @@ jobs:
       run_backend: ${{ steps.impact.outputs.run_backend }}
       run_frontend: ${{ steps.impact.outputs.run_frontend }}
       run_admin: ${{ steps.impact.outputs.run_admin }}
-      run_factory: ${{ steps.impact.outputs.run_factory }}
       run_governance: ${{ steps.impact.outputs.run_governance }}
       run_database: ${{ steps.impact.outputs.run_database }}
     steps:
@@ -59,12 +58,10 @@ jobs:
               echo "run_backend=true"
               echo "run_frontend=true"
               echo "run_admin=true"
-              echo "run_factory=true"
               echo "run_governance=true"
               echo "run_database=true"
             } >> "$GITHUB_OUTPUT"
             echo "Application verification required: true"
-            echo "Factory verification required: true"
           fi
 
   backend-checks:
@@ -270,6 +267,8 @@ jobs:
       - run: npm run check:agent-ui-governance
       - run: npm run check:design-sync
       - run: npm run check:design-coverage
+      - name: Enforce English i18n coverage
+        run: npm run check:i18n-coverage
       - name: Enforce Spartan ownership boundaries
         env:
           SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
@@ -487,38 +486,11 @@ jobs:
         if: always() && steps.changes.outputs.run_database == 'true'
         run: npx --yes supabase@2.114.0 stop --no-backup
 
-  factory:
-    needs: changes
-    if: needs.changes.outputs.run_factory == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.13'
-      - name: Setup uv
-        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-        with:
-          version: '0.12.5'
-          enable-cache: true
-          cache-dependency-glob: automation/uv.lock
-      - name: Install frozen Factory dependencies
-        run: uv sync --frozen --extra development
-        working-directory: automation
-      - run: uv run --frozen ruff format --check .
-        working-directory: automation
-      - run: uv run --frozen ruff check openhands_factory tests
-        working-directory: automation
-      - run: uv run --frozen mypy openhands_factory
-        working-directory: automation
-      - run: uv run --frozen pytest
-        working-directory: automation
 
   required-gate:
     name: CI / required
     if: always()
-    needs: [changes, backend-checks, frontend-checks, admin-checks, constitution, database, factory]
+    needs: [changes, backend-checks, frontend-checks, admin-checks, constitution, database]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -530,13 +502,11 @@ jobs:
           ADMIN_RESULT: ${{ needs.admin-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
           DATABASE_RESULT: ${{ needs.database.result }}
-          FACTORY_RESULT: ${{ needs.factory.result }}
           RUN_BACKEND: ${{ needs.changes.outputs.run_backend }}
           RUN_FRONTEND: ${{ needs.changes.outputs.run_frontend }}
           RUN_ADMIN: ${{ needs.changes.outputs.run_admin }}
           RUN_GOVERNANCE: ${{ needs.changes.outputs.run_governance }}
           RUN_DATABASE: ${{ needs.changes.outputs.run_database }}
-          RUN_FACTORY: ${{ needs.changes.outputs.run_factory }}
         run: |
           group_ok() {
             result="$1"
@@ -555,7 +525,6 @@ jobs:
           group_ok "$ADMIN_RESULT" "$RUN_ADMIN" || failed=$((failed + 1))
           group_ok "$CONSTITUTION_RESULT" "$RUN_GOVERNANCE" || failed=$((failed + 1))
           group_ok "$DATABASE_RESULT" "$RUN_DATABASE" || failed=$((failed + 1))
-          group_ok "$FACTORY_RESULT" "$RUN_FACTORY" || failed=$((failed + 1))
 
           {
             echo "### Canonical CI summary"
@@ -568,7 +537,6 @@ jobs:
             echo "| admin | $RUN_ADMIN | $ADMIN_RESULT |"
             echo "| constitution | $RUN_GOVERNANCE | $CONSTITUTION_RESULT |"
             echo "| database | $RUN_DATABASE | $DATABASE_RESULT |"
-            echo "| factory | $RUN_FACTORY | $FACTORY_RESULT |"
             echo
             echo "Failing canonical groups: **$failed**"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -581,13 +549,11 @@ jobs:
           ADMIN_RESULT: ${{ needs.admin-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
           DATABASE_RESULT: ${{ needs.database.result }}
-          FACTORY_RESULT: ${{ needs.factory.result }}
           RUN_BACKEND: ${{ needs.changes.outputs.run_backend }}
           RUN_FRONTEND: ${{ needs.changes.outputs.run_frontend }}
           RUN_ADMIN: ${{ needs.changes.outputs.run_admin }}
           RUN_GOVERNANCE: ${{ needs.changes.outputs.run_governance }}
           RUN_DATABASE: ${{ needs.changes.outputs.run_database }}
-          RUN_FACTORY: ${{ needs.changes.outputs.run_factory }}
         run: |
           group_ok() {
             result="$1"
@@ -606,7 +572,6 @@ jobs:
           group_ok "$ADMIN_RESULT" "$RUN_ADMIN" || failed=1
           group_ok "$CONSTITUTION_RESULT" "$RUN_GOVERNANCE" || failed=1
           group_ok "$DATABASE_RESULT" "$RUN_DATABASE" || failed=1
-          group_ok "$FACTORY_RESULT" "$RUN_FACTORY" || failed=1
 
           if [ "$failed" -ne 0 ]; then
             echo "Canonical CI did not fully pass for the relevant change groups."
@@ -616,7 +581,6 @@ jobs:
             echo "admin=$ADMIN_RESULT required=$RUN_ADMIN"
             echo "constitution=$CONSTITUTION_RESULT required=$RUN_GOVERNANCE"
             echo "database=$DATABASE_RESULT required=$RUN_DATABASE"
-            echo "factory=$FACTORY_RESULT required=$RUN_FACTORY"
             exit 1
           fi
 

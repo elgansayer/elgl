@@ -25,7 +25,7 @@ import {
           [disabled]="pending()"
           (click)="toggleReaction(emoji)"
           [class.bg-primary/20]="hasCurrentUserReaction(emoji)"
-          [class.text-primary]="hasCurrentUserReaction(emoji)"
+          [class.text-primary-ink]="hasCurrentUserReaction(emoji)"
           [class.opacity-100]="reactionCount(emoji) > 0"
           [attr.aria-pressed]="hasCurrentUserReaction(emoji)"
           [attr.aria-label]="emoji + ' ' + reactionCount(emoji)"

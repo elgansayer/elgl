@@ -31,7 +31,7 @@ export interface TypingUser {
             }
             @if (remainingCount() > 0) {
               <span
-                class="w-5 h-5 rounded-full ring-2 ring-black/30 bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold"
+                class="w-5 h-5 rounded-full ring-2 ring-black/30 bg-primary/20 text-primary-ink flex items-center justify-center text-[10px] font-bold"
               >
                 +{{ remainingCount() }}
               </span>

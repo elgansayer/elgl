@@ -1,4 +1,9 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export interface LegalSection {
@@ -14,6 +19,7 @@ export interface LegalDocument {
 }
 
 const DEFAULT_EFFECTIVE_DATE = '2026-07-01';
+const MAX_LEGAL_DOCUMENT_TYPE_LENGTH = 64;
 const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 @Injectable()
@@ -21,6 +27,28 @@ export class LegalService {
   private readonly logger = new Logger(LegalService.name);
 
   constructor(@Optional() private readonly configService?: ConfigService) {}
+
+  getDocument(type: string): LegalDocument {
+    if (
+      !type ||
+      typeof type !== 'string' ||
+      type.length > MAX_LEGAL_DOCUMENT_TYPE_LENGTH
+    ) {
+      throw new NotFoundException('Legal document type must be specified');
+    }
+
+    const normalised = type.trim().toLowerCase();
+    if (normalised === 'terms' || normalised === 'terms-of-service') {
+      return this.getTermsOfService();
+    }
+    if (normalised === 'privacy' || normalised === 'privacy-policy') {
+      return this.getPrivacyPolicy();
+    }
+
+    // Route parameters are untrusted. Keep their contents out of logs and error responses.
+    this.logger.warn('Requested unknown legal document type');
+    throw new NotFoundException('Legal document not found');
+  }
 
   getTermsOfService(): LegalDocument {
     const effectiveDate = this.resolveEffectiveDate('TOS_EFFECTIVE_DATE');

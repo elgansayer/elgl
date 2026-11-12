@@ -99,7 +99,7 @@ describe('ChatService message persistence and realtime pipeline', () => {
       { getBlockedAndBlockerIds: vi.fn() } as never,
       { getPreview: vi.fn() } as never,
       { isSpam: vi.fn().mockReturnValue(false) } as never,
-      { proxyMessage: vi.fn() } as never,
+      { chatCompletion: vi.fn() } as never,
       {} as never,
       xpService as never,
       {} as never,
@@ -139,6 +139,8 @@ describe('ChatService message persistence and realtime pipeline', () => {
       status_reply_payload: null,
       is_view_once: false,
       delivery_status: 'sent',
+      is_encrypted: false,
+      encrypted_payload: null,
     });
     expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
       message: savedMessage,

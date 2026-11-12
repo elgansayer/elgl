@@ -1,4 +1,5 @@
 <!-- @dsCard group="Screens" -->
+<!-- Relay AA text roles: Ember, Tide and danger foregrounds use their dedicated text tokens. -->
 <!doctype html>
 <html lang="en">
   <head>
@@ -277,6 +278,78 @@
         color: inherit;
         opacity: 0.75;
       }
+      .gift-message {
+        align-self: flex-start;
+        min-width: 144px;
+        border: 1px solid rgb(var(--vip) / 0.3);
+        border-radius: 16px;
+        padding: 8px;
+        background: linear-gradient(
+          135deg,
+          rgb(var(--vip) / 0.2),
+          rgb(var(--surface-200)),
+          rgb(var(--accent) / 0.2)
+        );
+        box-shadow: 0 4px 14px rgb(var(--shadow) / 0.08);
+        text-align: center;
+      }
+      .gift-icon {
+        display: block;
+        font-size: 36px;
+        animation: gift-bounce 1.2s ease-in-out infinite alternate;
+      }
+      .gift-name {
+        display: block;
+        color: rgb(var(--text-primary));
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .gift-value {
+        display: block;
+        color: rgb(var(--vip));
+        font-size: 10px;
+        font-weight: 700;
+      }
+      @keyframes gift-bounce {
+        from {
+          transform: translateY(0) scale(1);
+        }
+        to {
+          transform: translateY(-6px) scale(1.1);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .gift-icon {
+          animation: none;
+        }
+      }
+      @media (forced-colors: active) {
+        .gift-message {
+          border-color: CanvasText;
+          background: Canvas;
+          box-shadow: none;
+          color: CanvasText;
+        }
+      }
+      .translation {
+        margin-top: 7px;
+        border-inline-start: 2px solid rgb(var(--primary) / 0.45);
+        padding-inline-start: 8px;
+        color: rgb(var(--primary));
+        font-size: 11px;
+        font-style: italic;
+      }
+      .message-action {
+        min-height: 44px;
+        margin-top: 4px;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: rgb(var(--primary));
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+      }
       .starter-wrap {
         flex: 1;
         display: flex;
@@ -481,10 +554,26 @@
             <div class="message">
               <div class="meta">Chén Wěi · 2:01 PM</div>
               你好! Ready to practise some English today?
+              <div class="translation">Hello! Ready to practise some English today?</div>
+              <button class="message-action" type="button">Hide translation</button>
             </div>
             <div class="message mine">
               <div class="meta">You · 2:02 PM ✓✓</div>
               Yes! I want to practise ordering food at a restaurant.
+            </div>
+            <div class="message" role="status" data-testid="chat-offline-status">
+              <p>📡 You are offline. Messages will send when you reconnect.</p>
+              <p>🕒 2 messages queued</p>
+            </div>
+            <div
+              class="gift-message"
+              role="status"
+              aria-label="Chén Wěi gifted you a Rose for 10 coins"
+            >
+              <div class="meta">Chén Wěi · 2:02 PM</div>
+              <span class="gift-icon" aria-hidden="true">🌹</span>
+              <span class="gift-name">Rose</span>
+              <span class="gift-value">● 10 coins</span>
             </div>
             <div class="message">
               <div class="meta">Chén Wěi · 2:03 PM</div>
@@ -567,7 +656,10 @@
       existing composer; the user remains responsible for sending it. Each message's correction
       action now opens the shared <code>app-correction-modal</code> with that message as its
       read-only source, preserving its ghost-text edit, live diff, optional explanation,
-      cancellation and structured correction payload.
+      cancellation and structured correction payload. Text messages expose a translated state
+      beneath the source text with an RTL-safe logical border and an explicit hide action. Gift
+      payloads render as standalone, accessible status cards using Relay celebration tokens, with
+      motion suppressed for reduced-motion preferences and a legible forced-colour fallback.
     </p>
 
     <script>

@@ -34,6 +34,7 @@ describe('GroupsController', () => {
     getGroupsByCommunity: vi.fn(),
     getDiscoverableGroups: vi.fn(),
     joinGroup: vi.fn(),
+    getOrCreateGroupChat: vi.fn(),
     getGroupResources: vi.fn(),
     deleteGroupResource: vi.fn(),
     restrictSendMessages: vi.fn(),
@@ -345,6 +346,23 @@ describe('GroupsController', () => {
         'member-1',
       );
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('openGroupChat', () => {
+    it('opens the linked group chat for the authenticated member', async () => {
+      const user = { id: 'member-1' } as User;
+      mockGroupsService.getOrCreateGroupChat.mockResolvedValue({
+        roomId: 'room-1',
+      });
+
+      const result = await controller.openGroupChat('group-5', user);
+
+      expect(mockGroupsService.getOrCreateGroupChat).toHaveBeenCalledWith(
+        'member-1',
+        'group-5',
+      );
+      expect(result).toEqual({ roomId: 'room-1' });
     });
   });
 

@@ -27,6 +27,12 @@ export interface Event {
   category?: string;
   date_time: string;
   location?: string;
+  venue_type?: EventVenueType | null;
+  timezone?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  ticket_price_gbp?: number | null;
+  ticket_price_usd?: number | null;
   host_id: string;
   language_pair?: string;
   max_participants?: number;
@@ -50,6 +56,10 @@ export interface CreateEventRequest {
   venue_type: EventVenueType;
   location: string;
   timezone: string;
+  latitude?: number;
+  longitude?: number;
+  ticket_price_gbp?: number;
+  ticket_price_usd?: number;
   language_pair?: string;
   max_participants?: number;
 }

@@ -27,7 +27,7 @@ describe('ToastComponent', () => {
     expect(toastElements().length).toBe(0);
   });
 
-  it('should render an info toast using the surface/text-primary tokens', () => {
+  it('should render an info toast using the surface/text-primary-ink tokens', () => {
     toastsSignal.set([{ id: 1, message: 'Saved', type: 'info' }]);
     fixture.detectChanges();
 

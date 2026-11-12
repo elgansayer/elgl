@@ -18,9 +18,10 @@ import {
 } from './dto/monetisation.dto';
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
-import { SubscriptionPlansService } from './services/subscription-plans.service';
-import { AppleNotificationDto } from './dto/apple-notification.dto';
-import { GoogleNotificationDto } from './dto/google-notification.dto';
+import {
+  SubscriptionPlansService,
+  type VipTier,
+} from './services/subscription-plans.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
 export interface UserVipRow {
@@ -239,17 +240,6 @@ export class MonetisationService {
 
     this.logger.info(`Received verified Stripe Webhook event: ${event.type}`);
 
-    // Helper to determine tier based on planId metadata (or fallback to interval)
-    const tierForPlan = (planId?: string, interval?: string): string => {
-      if (!planId) {
-        return interval === 'year' ? 'developer' : 'consumer';
-      }
-      if (planId.startsWith('consumer_')) return 'consumer';
-      if (planId.startsWith('pro_')) return 'pro';
-      if (planId.startsWith('developer_')) return 'developer';
-      return interval === 'year' ? 'developer' : 'consumer';
-    };
-
     if (
       event.type === 'checkout.session.completed' ||
       event.type === 'customer.subscription.created' ||
@@ -261,15 +251,20 @@ export class MonetisationService {
       };
       const metadata = obj.metadata;
       if (metadata?.userId) {
-        const tier =
-          metadata.tier ?? tierForPlan(metadata.planId, metadata.interval);
         const isActive =
           !obj.status || obj.status === 'active' || obj.status === 'trialing';
-        await this.updateVipStatusFromWebhook(
-          metadata.userId,
-          isActive,
-          isActive ? tier : null,
-        );
+        if (!isActive) {
+          await this.updateVipStatusFromWebhook(metadata.userId, false, null);
+        } else {
+          const tier = this.resolveStripeTier(metadata);
+          if (!tier) {
+            this.logger.warn(
+              'Verified Stripe subscription ignored because its product could not be mapped',
+            );
+          } else {
+            await this.updateVipStatusFromWebhook(metadata.userId, true, tier);
+          }
+        }
       }
     } else if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as {
@@ -284,57 +279,14 @@ export class MonetisationService {
     return { received: true, status: 'processed' };
   }
 
-  async handleAppleNotification(
-    dto: AppleNotificationDto,
-  ): Promise<{ received: boolean; status: string }> {
-    this.logger.info(
-      `Processing Apple Notification: ${dto.notificationType}, ${dto.subtype}`,
-    );
-
-    if (dto.receiptData) {
-      const validationResult =
-        await this.appleReceiptValidatorService.validateReceipt(
-          'userId-placeholder', // Replace with actual user ID resolution logic
-          dto.receiptData,
-          false,
-        );
-
-      if (validationResult.valid) {
-        await this.updateVipStatusFromWebhook(
-          'userId-placeholder', // Replace with actual user ID resolution logic
-          true,
-          'tier-placeholder', // Replace with actual tier resolution logic
-        );
-        return { received: true, status: 'processed' };
-      }
+  private resolveStripeTier(metadata: Record<string, string>): VipTier | null {
+    if (metadata.planId) {
+      return this.subscriptionPlansService.getTierByProductId(metadata.planId);
     }
-
-    return { received: true, status: 'ignored' };
-  }
-
-  async handleGoogleNotification(
-    dto: GoogleNotificationDto,
-  ): Promise<{ received: boolean; status: string }> {
-    this.logger.info(
-      `Processing Google Notification: ${dto.productId}, ${dto.purchaseToken}`,
-    );
-
-    const purchaseDetails =
-      await this.googlePlayNotificationService.getSubscriptionPurchaseDetails(
-        dto.productId,
-        dto.purchaseToken,
-      );
-
-    if (purchaseDetails) {
-      await this.updateVipStatusFromWebhook(
-        dto.userId || 'userId-placeholder', // Replace with actual user ID resolution logic
-        true,
-        'tier-placeholder', // Replace with actual tier resolution logic
-      );
-      return { received: true, status: 'processed' };
+    if (metadata.tier) {
+      return this.subscriptionPlansService.getTierByProductId(metadata.tier);
     }
-
-    return { received: true, status: 'ignored' };
+    return null;
   }
 
   async generateApiKey(
@@ -375,6 +327,40 @@ export class MonetisationService {
     };
   }
 
+  async revokeApiKey(
+    userId: string,
+  ): Promise<{ revoked: boolean; api_key: null }> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('users')
+      .select('id, is_vip, vip_tier')
+      .eq('id', userId)
+      .single();
+
+    if (!response.data) throw new NotFoundException('User not found');
+
+    const isDeveloperTier =
+      response.data.is_vip === true &&
+      (response.data.vip_tier ?? '').startsWith('developer');
+    if (!isDeveloperTier) {
+      throw new ForbiddenException(
+        'Developer API Access is reserved for active subscribers.',
+      );
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ developer_api_key: null })
+      .eq('id', userId);
+
+    if (error) {
+      this.logger.error('Failed to revoke Developer API key');
+      throw new InternalServerErrorException('Failed to revoke API key');
+    }
+
+    return { revoked: true, api_key: null };
+  }
+
   async getDeveloperAnalytics(userId: string): Promise<{
     api_key: string | null;
     tier: string;
@@ -400,15 +386,22 @@ export class MonetisationService {
     if (isDeveloperTier) {
       const metricResponse = await supabase
         .from('developer_metrics')
-        .select('user_id, total_api_calls_today, avg_latency_ms')
+        .select('user_id, total_api_calls_today, avg_latency_ms, updated_at')
         .eq('user_id', userId)
         .single();
       const metric = metricResponse.data as unknown as {
         total_api_calls_today?: number;
         avg_latency_ms?: number;
+        updated_at?: string | null;
       } | null;
-      total_api_calls_today = metric?.total_api_calls_today ?? 0;
-      avg_latency_ms = metric?.avg_latency_ms ?? 0;
+      const isCurrentDay =
+        !!metric?.updated_at &&
+        new Date(metric.updated_at).toDateString() ===
+          new Date().toDateString();
+      total_api_calls_today = isCurrentDay
+        ? (metric?.total_api_calls_today ?? 0)
+        : 0;
+      avg_latency_ms = isCurrentDay ? (metric?.avg_latency_ms ?? 0) : 0;
     }
 
     return {
@@ -501,7 +494,7 @@ export class MonetisationService {
     userId: string,
     platform: 'ios' | 'android' | 'stripe',
     receiptData?: string,
-  ): Promise<{ received: boolean; status: string }> {
+  ): Promise<{ received: boolean; status: string; tier?: string | null }> {
     if (platform === 'stripe') {
       const subscription = await this.findActiveStripeSubscription(userId);
       if (subscription) {
@@ -510,7 +503,7 @@ export class MonetisationService {
           this.inferTierFromPriceId(subscription.items?.data?.[0]?.price?.id);
         if (tier) {
           await this.updateVipStatusFromWebhook(userId, true, tier);
-          return { received: true, status: 'restored' };
+          return { received: true, status: 'restored', tier };
         }
       }
       return { received: true, status: 'no_valid_subscription' };
@@ -530,7 +523,7 @@ export class MonetisationService {
         );
         if (tier) {
           await this.updateVipStatusFromWebhook(userId, true, tier);
-          return { received: true, status: 'restored' };
+          return { received: true, status: 'restored', tier };
         }
       }
       return { received: true, status: 'no_valid_subscription' };
@@ -541,8 +534,12 @@ export class MonetisationService {
       let purchaseToken: string;
       let productId: string | undefined;
       try {
-        const parsed: Record<string, unknown> = JSON.parse(receiptData);
+        const parsed: unknown = JSON.parse(receiptData);
         if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'purchaseToken' in parsed &&
+          'productId' in parsed &&
           typeof parsed.purchaseToken === 'string' &&
           typeof parsed.productId === 'string'
         ) {
@@ -602,7 +599,7 @@ export class MonetisationService {
       const tier = this.subscriptionPlansService.getTierByProductId(productId);
       if (tier) {
         await this.updateVipStatusFromWebhook(userId, true, tier);
-        return { received: true, status: 'restored' };
+        return { received: true, status: 'restored', tier };
       }
 
       return { received: true, status: 'no_valid_subscription' };

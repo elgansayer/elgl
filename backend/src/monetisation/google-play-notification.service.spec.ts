@@ -3,7 +3,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { UnauthorizedException } from '@nestjs/common';
-import { PinoLogger } from 'nestjs-pino';
 import { of } from 'rxjs';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
@@ -85,7 +84,12 @@ describe('GooglePlayNotificationService', () => {
     };
     httpService = { get: vi.fn() };
     subscriptionPlansService = {
-      getTierByProductId: vi.fn((productId: string) => productId),
+      getTierByProductId: vi.fn((productId: string) => {
+        if (productId.startsWith('consumer_')) return 'consumer';
+        if (productId.startsWith('pro_')) return 'pro';
+        if (productId.startsWith('developer_')) return 'developer';
+        return null;
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -419,7 +423,7 @@ describe('GooglePlayNotificationService', () => {
     expect(monetisationService.updateVipStatusFromWebhook).toHaveBeenCalledWith(
       'user-1',
       true,
-      'consumer_8_ukp_10_usd',
+      'consumer',
     );
     expect(result).toEqual({ received: true, status: 'processed' });
   });
@@ -512,8 +516,58 @@ describe('GooglePlayNotificationService', () => {
     expect(monetisationService.updateVipStatusFromWebhook).toHaveBeenCalledWith(
       'user-2',
       true,
-      'developer_20_ukp_26_usd',
+      'developer',
     );
+  });
+
+  it('activates the canonical Pro tier for a verified Pro renewal', async () => {
+    mockQueryBuilder.single.mockResolvedValue({
+      data: { user_id: 'pro-user' },
+    });
+    mockActiveSubscription();
+    const payload = buildPubSubPayload({
+      version: '1.0',
+      packageName: 'com.hellotalk.app',
+      eventTimeMillis: '1700000000000',
+      subscriptionNotification: {
+        version: '1.0',
+        notificationType: 3,
+        purchaseToken: 'pro-token',
+        subscriptionId: 'pro_12_ukp_15_usd',
+      },
+    });
+
+    await service.handleNotification(payload, validAuthHeader());
+
+    expect(monetisationService.updateVipStatusFromWebhook).toHaveBeenCalledWith(
+      'pro-user',
+      true,
+      'pro',
+    );
+  });
+
+  it('fails closed when Google confirms a purchase for an unknown product', async () => {
+    mockQueryBuilder.single.mockResolvedValue({
+      data: { user_id: 'user-1' },
+    });
+    mockActiveSubscription();
+    const payload = buildPubSubPayload({
+      version: '1.0',
+      packageName: 'com.hellotalk.app',
+      eventTimeMillis: '1700000000000',
+      subscriptionNotification: {
+        version: '1.0',
+        notificationType: 3,
+        purchaseToken: 'unknown-token',
+        subscriptionId: 'unknown_subscription',
+      },
+    });
+
+    await service.handleNotification(payload, validAuthHeader());
+
+    expect(
+      monetisationService.updateVipStatusFromWebhook,
+    ).not.toHaveBeenCalled();
   });
 
   it('should revoke VIP status when a known purchase token expires (notificationType 5 = EXPIRED)', async () => {

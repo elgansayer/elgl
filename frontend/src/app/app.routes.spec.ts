@@ -29,6 +29,7 @@ describe('App routes', () => {
       'profile',
       'profile/:userId',
       'settings',
+      'settings/help-about',
       'admin',
       'admin/moderation',
       'profile/me/milestones',

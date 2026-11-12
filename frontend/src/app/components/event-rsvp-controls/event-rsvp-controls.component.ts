@@ -17,7 +17,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <p role="status" class="text-sm text-text-secondary">{{ 'common.loading' | t }}</p>
       } @else if (!rsvp.loaded) {
         <div role="alert" class="flex flex-wrap items-center gap-2">
-          <span class="text-sm text-danger">{{ 'common.error_generic' | t }}</span>
+          <span class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</span>
           <button hlmBtn type="button" variant="secondary" size="touch" (click)="retry()">
             {{ 'common.retry' | t }}
           </button>
@@ -70,9 +70,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </p>
         }
         @if (rsvp.error === 'unavailable' || (rsvp.error === 'full' && !maxParticipants)) {
-          <p role="alert" class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+          <p role="alert" class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
         } @else if (rsvp.error === 'full') {
-          <p role="alert" class="text-sm text-danger">
+          <p role="alert" class="text-sm text-danger-ink">
             {{ 'events.maxParticipants' | t }}: {{ maxParticipants }}
           </p>
         }

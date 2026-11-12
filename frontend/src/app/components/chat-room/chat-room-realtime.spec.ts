@@ -39,6 +39,68 @@ describe('applyChatRoomRealtimeEvent', () => {
     expect(result.incomingMessageToMarkRead).toEqual(baseMessage);
   });
 
+  it('accepts a bounded gift payload from the chat realtime channel', () => {
+    const giftMessage: ChatMessage = {
+      ...baseMessage,
+      id: 'gift-message',
+      message_type: 'gift',
+      text_content: undefined,
+      gift_payload: {
+        gift_id: 'gift_rose',
+        gift_name: 'Rose',
+        gift_icon: '🌹',
+        coin_value: 10,
+        animation_type: 'float',
+      },
+    };
+
+    const result = applyChatRoomRealtimeEvent(
+      [],
+      { message: giftMessage },
+      'room-1',
+      'current-user',
+    );
+
+    expect(result.messages).toEqual([giftMessage]);
+    expect(result.incomingMessageToMarkRead).toEqual(giftMessage);
+  });
+
+  it('rejects missing, malformed, or oversized realtime gift payloads', () => {
+    const malformedPayloads: unknown[] = [
+      undefined,
+      { gift_id: 'gift_rose' },
+      {
+        gift_id: 'gift_rose',
+        gift_name: 'x'.repeat(121),
+        gift_icon: '🌹',
+        coin_value: 10,
+      },
+      {
+        gift_id: 'gift_rose',
+        gift_name: 'Rose',
+        gift_icon: '🌹',
+        coin_value: -1,
+      },
+    ];
+
+    for (const giftPayload of malformedPayloads) {
+      const result = applyChatRoomRealtimeEvent(
+        [],
+        {
+          message: {
+            ...baseMessage,
+            message_type: 'gift',
+            gift_payload: giftPayload,
+          },
+        },
+        'room-1',
+        'current-user',
+      );
+      expect(result.messages).toEqual([]);
+      expect(result.incomingMessageToMarkRead).toBeNull();
+    }
+  });
+
   it.each(['profileUpdated', 'missedCall'])(
     'accepts the %s system event published by Centrifugo without a sender id',
     (eventType) => {

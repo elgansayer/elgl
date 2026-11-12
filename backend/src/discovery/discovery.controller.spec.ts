@@ -108,6 +108,20 @@ describe('DiscoveryController', () => {
   });
 
   describe('findPartners', () => {
+    it('documents the unavailable response exposed by degraded searches', () => {
+      const responses = Reflect.getMetadata(
+        'swagger/apiResponse',
+        DiscoveryController.prototype.findPartners,
+      ) as Record<string, { description: string }>;
+
+      expect(responses['403']).toEqual({
+        description: 'The requested discovery filter requires VIP access.',
+      });
+      expect(responses['503']).toEqual({
+        description: 'Partner discovery is temporarily unavailable.',
+      });
+    });
+
     it('should return empty array if user is not provided', async () => {
       const result = await controller.findPartners(null, {});
       expect(result).toEqual([]);
@@ -140,6 +154,43 @@ describe('DiscoveryController', () => {
         discoveryService.searchPartnersWithDegradation,
       ).toHaveBeenCalledWith('user-1', mockProfile, query);
       expect(result).toEqual(mockPartners);
+    });
+
+    it('should report a degraded partner search as unavailable', async () => {
+      (usersService.getProfile as Mock).mockResolvedValue({ id: 'user-1' });
+      (
+        discoveryService.searchPartnersWithDegradation as Mock
+      ).mockResolvedValue({
+        data: [],
+        marker: {
+          degraded: true,
+          reason: 'Service discovery_partners failed',
+          fallbackSource: 'basic_query',
+        },
+      });
+
+      await expect(
+        controller.findPartners({ id: 'user-1' } as any, {}),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
+    });
+
+    it('should return valid partners from a partial degraded search', async () => {
+      const fallbackPartners = [{ id: 'partner-1' }];
+      (usersService.getProfile as Mock).mockResolvedValue({ id: 'user-1' });
+      (
+        discoveryService.searchPartnersWithDegradation as Mock
+      ).mockResolvedValue({
+        data: fallbackPartners,
+        marker: {
+          degraded: true,
+          reason: 'Primary query timed out',
+          fallbackSource: 'basic_query',
+        },
+      });
+
+      await expect(
+        controller.findPartners({ id: 'user-1' } as any, {}),
+      ).resolves.toEqual(fallbackPartners);
     });
 
     it('should enable the algorithmic filter when serious learner mode is requested', async () => {

@@ -1,6 +1,12 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button hlmBtn type="button" (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+    <button
+      hlmBtn
+      type="button"
+      (click)="goBack()"
+      class="app-button-icon"
+      [attr.aria-label]="'common.back' | t"
+    >
       <span class="text-xl" aria-hidden="true">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.messageFilters.title' | t }}</h1>
@@ -12,19 +18,25 @@
       <div class="app-empty-state" role="status" aria-live="polite">{{ 'common.loading' | t }}</div>
     } @else if (loadFailed()) {
       <section class="space-y-3 rounded-card border border-danger/30 bg-danger/10 p-4" role="alert">
-        <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+        <p class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
         <button hlmBtn type="button" variant="secondary" size="touch" (click)="loadFilters()">
           {{ 'common.retry' | t }}
         </button>
       </section>
     } @else {
       @if (errorMessage()) {
-        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger" role="alert">
+        <div
+          class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger-ink"
+          role="alert"
+        >
           {{ errorMessage() | t }}
         </div>
       }
       @if (successMessage()) {
-        <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success" role="status">
+        <div
+          class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success"
+          role="status"
+        >
           {{ successMessage() | t }}
         </div>
       }

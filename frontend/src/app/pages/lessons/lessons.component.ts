@@ -30,11 +30,11 @@ import {
     WordDefinitionModalComponent,
   ],
   template: `
-    <main class="min-h-screen bg-surface-300 px-4 py-6 text-primary sm:px-6 lg:px-8" aria-labelledby="lessons-title">
+    <main class="min-h-screen bg-surface-300 px-4 py-6 text-primary-ink sm:px-6 lg:px-8" aria-labelledby="lessons-title">
       <div class="mx-auto max-w-6xl">
         @if (selectedLessonId()) {
           <a
-            class="mb-5 inline-flex min-h-11 items-center rounded-app px-3 text-sm font-semibold text-primary hover:bg-surface-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            class="mb-5 inline-flex min-h-11 items-center rounded-app px-3 text-sm font-semibold text-primary-ink hover:bg-surface-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             routerLink="/lessons"
           >
             Back to lessons
@@ -45,7 +45,7 @@ import {
           } @else if (selectedLessonResource.error()) {
             <section class="rounded-card border-2 border-surface-100 bg-surface-200 p-4">
               <h1 id="lessons-title" class="text-xl font-bold">Lesson unavailable</h1>
-              <p class="mt-2 text-secondary">{{ 'common.error_generic' | t }}</p>
+              <p class="mt-2 text-secondary-ink">{{ 'common.error_generic' | t }}</p>
               <button hlmBtn size="touch" type="button" class="mt-4" (click)="retrySelectedLesson()">
                 Retry
               </button>
@@ -53,7 +53,7 @@ import {
           } @else if (selectedLesson(); as lesson) {
             <article aria-labelledby="lessons-title">
               <header class="mb-6">
-                <p class="text-sm font-semibold text-secondary">
+                <p class="text-sm font-semibold text-secondary-ink">
                   @if (lessonCefrLabel(lesson); as level) {
                     <span>{{ level }}</span>
                   }
@@ -63,7 +63,7 @@ import {
                 </p>
                 <h1 id="lessons-title" class="mt-1 break-words text-3xl font-bold">{{ lesson.title }}</h1>
                 @if (lesson.description) {
-                  <p class="mt-2 max-w-3xl break-words text-secondary">{{ lesson.description }}</p>
+                  <p class="mt-2 max-w-3xl break-words text-secondary-ink">{{ lesson.description }}</p>
                 }
               </header>
 
@@ -102,7 +102,7 @@ import {
 
                     @if (safeUrl(segment.stream_url); as streamUrl) {
                       <a
-                        class="mt-4 inline-flex min-h-11 items-center rounded-app px-3 font-semibold text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        class="mt-4 inline-flex min-h-11 items-center rounded-app px-3 font-semibold text-primary-ink underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         [href]="streamUrl"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -112,7 +112,7 @@ import {
                     }
                   </section>
                 } @else {
-                  <p class="text-secondary">This lesson does not have readable content yet.</p>
+                  <p class="text-secondary-ink">This lesson does not have readable content yet.</p>
                 }
 
                 @if (safeUrl(lesson.audio_url); as audioUrl) {
@@ -122,7 +122,7 @@ import {
                 }
 
                 @if (progressLoadFailed() || progressSaveError()) {
-                  <p class="mt-4 text-sm text-danger" role="alert">
+                  <p class="mt-4 text-sm text-danger-ink" role="alert">
                     {{ 'common.error_generic' | t }}
                   </p>
                 }
@@ -157,7 +157,7 @@ import {
         } @else {
           <header class="mb-8">
             <h1 id="lessons-title" class="text-3xl font-bold">Lessons</h1>
-            <p class="mt-2 max-w-2xl text-secondary">Curated lessons for focused language practice.</p>
+            <p class="mt-2 max-w-2xl text-secondary-ink">Curated lessons for focused language practice.</p>
           </header>
 
           @if (lessonsResource.isLoading()) {
@@ -165,13 +165,13 @@ import {
           } @else if (lessonsResource.error()) {
             <section class="rounded-card border-2 border-surface-100 bg-surface-200 p-4">
               <h2 class="text-xl font-bold">Unable to load lessons</h2>
-              <p class="mt-2 text-secondary">{{ 'common.error_generic' | t }}</p>
+              <p class="mt-2 text-secondary-ink">{{ 'common.error_generic' | t }}</p>
               <button hlmBtn size="touch" type="button" class="mt-4" (click)="retryLessons()">Retry</button>
             </section>
           } @else if (lessons().length === 0) {
             <section class="rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card">
               <h2 class="text-xl font-bold">No lessons available</h2>
-              <p class="mt-2 text-secondary">New lessons will appear here when they are published.</p>
+              <p class="mt-2 text-secondary-ink">New lessons will appear here when they are published.</p>
             </section>
           } @else {
             <section aria-labelledby="featured-lessons-title">
@@ -221,7 +221,7 @@ import {
               loading="lazy"
             />
           }
-          <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-secondary">
+          <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-secondary-ink">
             @if (lessonCefrLabel(lesson); as level) {
               <span class="rounded-pill bg-surface-100 px-2 py-1">{{ level }}</span>
             }
@@ -231,7 +231,7 @@ import {
           </div>
           <h3 class="mt-3 break-words text-lg font-bold">{{ lesson.title }}</h3>
           @if (lesson.description) {
-            <p class="mt-2 line-clamp-3 break-words text-sm text-secondary">{{ lesson.description }}</p>
+            <p class="mt-2 line-clamp-3 break-words text-sm text-secondary-ink">{{ lesson.description }}</p>
           }
         </div>
       </a>

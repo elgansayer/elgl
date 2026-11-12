@@ -44,7 +44,8 @@ requireText(
 );
 requirePattern(
   component,
-  /radius_metres:\s*this\.selectedDistanceKm\(\)\s*\*\s*1000/,
+  // Radius is only forwarded for nearby searches or VIP custom distance (entitlement boundary).
+  /radius_metres:[^,]*this\.selectedDistanceKm\(\)\s*\*\s*1000/,
   'Discovery search must send the selected radius to the partner API in metres.',
 );
 

@@ -13,6 +13,11 @@ import { VocabularyStore } from '../../services/vocabulary.store';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
+import { FavouriteService } from '../../services/favourite.service';
+import { toastsSignal } from '../../services/toast.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
+import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
   return {
@@ -32,14 +37,15 @@ describe('ChatRoomComponent (threaded replies)', () => {
   let component: ChatRoomComponent;
   let fixture: ComponentFixture<ChatRoomComponent>;
   let mockChatService: {
+    queuedCount: ReturnType<typeof signal<number>>;
     getRooms: ReturnType<typeof vi.fn>;
     getGroupMembers: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
     sendMessage: ReturnType<typeof vi.fn>;
-    addFavourite: ReturnType<typeof vi.fn>;
     lockChat: ReturnType<typeof vi.fn>;
     unlockChat: ReturnType<typeof vi.fn>;
     translateText: ReturnType<typeof vi.fn>;
+    markMessageStatus: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof signal>;
@@ -47,18 +53,23 @@ describe('ChatRoomComponent (threaded replies)', () => {
     unlockApp: ReturnType<typeof vi.fn>;
     appLocked: ReturnType<typeof signal>;
   };
+  let mockNetworkStatusService: { isOnline: ReturnType<typeof signal<boolean>> };
   let mockTextToSpeechService: { speak: ReturnType<typeof vi.fn> };
+  let mockFavouriteService: { addFavourite: ReturnType<typeof vi.fn> };
+  const unreadCounterMock = { decrement: vi.fn() };
 
   beforeEach(async () => {
+    unreadCounterMock.decrement.mockReset();
     mockChatService = {
+      queuedCount: signal(0),
       getRooms: vi.fn().mockResolvedValue([]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
       getMessages: vi.fn().mockResolvedValue([]),
       sendMessage: vi.fn().mockResolvedValue(makeMessage({ id: 'm2' })),
-      addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),
+      markMessageStatus: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockCentrifugeService = {
@@ -108,13 +119,18 @@ describe('ChatRoomComponent (threaded replies)', () => {
       sendTyping: vi.fn(),
     };
 
-    const mockNetworkStatusService = {
+    mockNetworkStatusService = {
       isOnline: signal(true),
     };
 
     mockTextToSpeechService = {
       speak: vi.fn(),
     };
+
+    mockFavouriteService = {
+      addFavourite: vi.fn().mockResolvedValue({ success: true }),
+    };
+    toastsSignal.set([]);
 
     await TestBed.configureTestingModule({
       imports: [ChatRoomComponent],
@@ -128,7 +144,17 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: VocabularyStore, useValue: mockVocabularyStore },
         { provide: NetworkStatusService, useValue: mockNetworkStatusService },
         { provide: TextToSpeechService, useValue: mockTextToSpeechService },
+        { provide: FavouriteService, useValue: mockFavouriteService },
+        {
+          provide: PersonalChatEncryptionService,
+          useValue: {
+            isRoomE2eeCapable: vi.fn().mockResolvedValue(false),
+            decryptMessage: vi.fn(),
+            clearKey: vi.fn(),
+          },
+        },
         I18nService,
+        { provide: UnreadCounterService, useValue: unreadCounterMock },
       ],
     }).compileComponents();
 
@@ -140,6 +166,166 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('offline status banner', () => {
+    const banner = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('[data-testid="chat-offline-status"]');
+    const text = (testId: string): string =>
+      fixture.nativeElement.querySelector(`[data-testid="${testId}"]`)?.textContent?.trim() ?? '';
+
+    it('stays hidden while online with nothing queued', () => {
+      expect(banner()).toBeNull();
+    });
+
+    it('tells the learner that messages wait for reconnection while offline', () => {
+      mockNetworkStatusService.isOnline.set(false);
+      fixture.detectChanges();
+
+      const i18n = TestBed.inject(I18nService);
+      expect(banner()).not.toBeNull();
+      expect(text('chat-offline-warning')).toContain(i18n.translate('chatRoom.offlineWarning'));
+      expect(text('chat-offline-warning')).not.toContain('chatRoom.');
+      expect(fixture.nativeElement.querySelector('[data-testid="chat-queued-count"]')).toBeNull();
+    });
+
+    it('announces how many messages are queued as a polite status, with text and not colour alone', () => {
+      mockChatService.queuedCount.set(3);
+      fixture.detectChanges();
+
+      const i18n = TestBed.inject(I18nService);
+      expect(banner()?.getAttribute('role')).toBe('status');
+      expect(text('chat-queued-count')).toContain(
+        i18n.translate('chatRoom.queuedMessages', { count: 3 }),
+      );
+      expect(text('chat-queued-count')).toContain('3');
+      // The icons are decorative: the state is carried by the text alone.
+      const icons = banner()?.querySelectorAll('[aria-hidden="true"]') ?? [];
+      expect(icons.length).toBeGreaterThan(0);
+    });
+
+    it('keeps showing the queue after reconnecting until it has been sent', () => {
+      mockNetworkStatusService.isOnline.set(false);
+      mockChatService.queuedCount.set(2);
+      fixture.detectChanges();
+      expect(text('chat-offline-warning')).not.toBe('');
+      expect(text('chat-queued-count')).toContain('2');
+
+      mockNetworkStatusService.isOnline.set(true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="chat-offline-warning"]')).toBeNull();
+      expect(text('chat-queued-count')).toContain('2');
+
+      mockChatService.queuedCount.set(0);
+      fixture.detectChanges();
+      expect(banner()).toBeNull();
+    });
+  });
+
+  describe('bookmarking a message', () => {
+    afterEach(() => {
+      toastsSignal.set([]);
+    });
+
+    it('saves the message through the canonical favourites client without a generated note', async () => {
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+
+      expect(mockFavouriteService.addFavourite).toHaveBeenCalledTimes(1);
+      expect(mockFavouriteService.addFavourite).toHaveBeenCalledWith({ message_id: 'm-saved' });
+    });
+
+    it('never persists the private room identifier or English text as a note', async () => {
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+
+      const [dto] = mockFavouriteService.addFavourite.mock.calls[0];
+      expect(Object.keys(dto)).toEqual(['message_id']);
+      expect(JSON.stringify(dto)).not.toContain('room-1');
+    });
+
+    it('confirms success with a translated toast instead of a raw i18n key', async () => {
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+
+      const i18n = TestBed.inject(I18nService);
+      const [toast] = toastsSignal();
+      expect(toast.type).toBe('success');
+      expect(toast.message).toBe(i18n.translate('chatRoom.bookmarkSuccess'));
+      expect(toast.message).not.toContain('chatRoom.');
+    });
+
+    it('reports failure with a translated error toast and keeps the message unchanged', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      mockFavouriteService.addFavourite.mockRejectedValueOnce(new Error('offline'));
+      const message = makeMessage({ id: 'm-saved' });
+      component.messages.set([message]);
+
+      await component.bookmark(message);
+
+      const i18n = TestBed.inject(I18nService);
+      const [toast] = toastsSignal();
+      expect(toast.type).toBe('error');
+      expect(toast.message).toBe(i18n.translate('chatRoom.bookmarkError'));
+      expect(toast.message).not.toContain('chatRoom.');
+      expect(component.messages()).toEqual([message]);
+    });
+
+    it('can be retried after a failure', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      mockFavouriteService.addFavourite
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({ success: true });
+
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+      await component.bookmark(makeMessage({ id: 'm-saved' }));
+
+      expect(mockFavouriteService.addFavourite).toHaveBeenCalledTimes(2);
+      expect(toastsSignal().map((toast) => toast.type)).toEqual(['error', 'success']);
+    });
+  });
+
+  it('renders persisted gift payloads in the room message feed', async () => {
+    await fixture.whenStable();
+    component.messages.set([
+      makeMessage({
+        id: 'gift-message',
+        message_type: 'gift',
+        text_content: undefined,
+        gift_payload: {
+          gift_id: 'gift_rose',
+          gift_name: 'Rose',
+          gift_icon: '🌹',
+          coin_value: 10,
+          animation_type: 'float',
+        },
+      }),
+    ]);
+    component.isLoading.set(false);
+    await fixture.whenStable();
+
+    const gift = fixture.debugElement.query(By.directive(GiftAnimationComponent));
+    expect(gift).toBeTruthy();
+    expect(gift.componentInstance.giftPayload()).toMatchObject({ gift_id: 'gift_rose' });
+    expect(fixture.nativeElement.querySelector('.chat-bubble-tail')).toBeNull();
+  });
+
+  it('decrements global chat unread only after a persisted read receipt', async () => {
+    await (
+      component as unknown as {
+        markMessageRead(message: ChatMessage): Promise<void>;
+      }
+    ).markMessageRead(makeMessage({ id: 'unread-1', delivery_status: 'sent' }));
+
+    expect(mockChatService.markMessageStatus).toHaveBeenCalledWith('unread-1', 'read');
+    expect(unreadCounterMock.decrement).toHaveBeenCalledWith('chat');
+
+    unreadCounterMock.decrement.mockClear();
+    mockChatService.markMessageStatus.mockRejectedValueOnce(new Error('unavailable'));
+    await (
+      component as unknown as {
+        markMessageRead(message: ChatMessage): Promise<void>;
+      }
+    ).markMessageRead(makeMessage({ id: 'unread-2', delivery_status: 'sent' }));
+
+    expect(unreadCounterMock.decrement).not.toHaveBeenCalled();
   });
 
   it('does not expose a correction action without a source message', () => {
@@ -215,6 +401,28 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
     document.body.removeChild(el);
     vi.useRealTimers();
+  });
+
+  it('renders an unloaded search result before scrolling to it', () => {
+    const result = makeMessage({
+      id: 'unloaded-result',
+      created_at: '2025-01-01T00:00:00.000Z',
+    });
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    component.messages.set([makeMessage({ id: 'loaded-result' })]);
+    component.showSearchPanel.set(true);
+    component.onSearchResultSelect(result);
+    fixture.detectChanges();
+
+    expect(component.showSearchPanel()).toBe(false);
+    expect(component.messages().map((message) => message.id)).toContain('unloaded-result');
+    expect(fixture.nativeElement.querySelector('#msg-unloaded-result')).not.toBeNull();
+    expect(scrollIntoView).toHaveBeenCalled();
+
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   describe('@mentions', () => {

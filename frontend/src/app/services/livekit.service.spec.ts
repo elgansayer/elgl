@@ -211,6 +211,37 @@ describe('LivekitService', () => {
     });
   });
 
+  describe('setMuted enforcement', () => {
+    it('mutes and unmutes the local audio track explicitly', async () => {
+      const mockAudioTrack = mockLocalTrack({
+        kind: 'audio',
+        isMuted: false,
+        mute: vi.fn(() => {
+          mockAudioTrack.isMuted = true;
+        }),
+        unmute: vi.fn(() => {
+          mockAudioTrack.isMuted = false;
+        }),
+      });
+      internals(service)._localAudioTrack = mockAudioTrack;
+
+      await expect(service.setMuted(true)).resolves.toBe(true);
+      expect(mockAudioTrack.mute).toHaveBeenCalledTimes(1);
+      expect(mockAudioTrack.isMuted).toBe(true);
+
+      await expect(service.setMuted(false)).resolves.toBe(false);
+      expect(mockAudioTrack.unmute).toHaveBeenCalledTimes(1);
+      expect(mockAudioTrack.isMuted).toBe(false);
+    });
+
+    it('tracks the internal flag when no local audio track exists yet', async () => {
+      internals(service)._localAudioTrack = null;
+
+      await expect(service.setMuted(true)).resolves.toBe(true);
+      await expect(service.setMuted(false)).resolves.toBe(false);
+    });
+  });
+
   describe.skip('toggleSpeakerphone', () => {
     it('should flip the speakerphone flag and return the new state', () => {
       internals(service)._speakerphone = false;

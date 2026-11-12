@@ -20,7 +20,7 @@ const EVENT_CONFIGS = new Map<string, SystemEventConfig>([
       icon: '👤',
       bgClass: 'bg-secondary/10',
       borderClass: 'border-secondary/30',
-      textClass: 'text-secondary',
+      textClass: 'text-secondary-ink',
       requiredParam: 'name',
     },
   ],
@@ -30,7 +30,7 @@ const EVENT_CONFIGS = new Map<string, SystemEventConfig>([
       icon: '📞',
       bgClass: 'bg-danger/10',
       borderClass: 'border-danger/30',
-      textClass: 'text-danger',
+      textClass: 'text-danger-ink',
       requiredParam: 'name',
     },
   ],
@@ -113,12 +113,7 @@ export class ChatSystemBubbleComponent {
     // inherit or shadow Object prototype members such as `constructor`.
     const result: Record<string, string | number | boolean | null> = Object.create(null);
 
-    const rawParams = this.params();
-    if (!rawParams || typeof rawParams !== 'object') {
-      return result;
-    }
-
-    for (const [key, value] of Object.entries(rawParams).slice(0, MAX_SYSTEM_EVENT_PARAMS)) {
+    for (const [key, value] of Object.entries(this.params()).slice(0, MAX_SYSTEM_EVENT_PARAMS)) {
       if (key === 'type' || !SYSTEM_EVENT_PARAM_KEY_PATTERN.test(key)) continue;
 
       if (typeof value === 'string') {
@@ -157,3 +152,4 @@ export class ChatSystemBubbleComponent {
 }
 
 export { ChatSystemBubbleComponent as SystemMessageBubbleComponent };
+

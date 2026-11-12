@@ -25,7 +25,10 @@ import {
   FOR_YOU_RECENT_SOURCE_LIMIT,
 } from './moments-for-you.constants';
 import { MOCK_USERS } from '../mock-data';
-import { MomentCommentEvent } from '../notifications/events/notification.events';
+import {
+  LikeEvent,
+  MomentCommentEvent,
+} from '../notifications/events/notification.events';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
 interface UserFollowRow {
@@ -158,7 +161,12 @@ export class MomentsService {
         text_content: dto.text_content ?? null,
         media_urls: dto.media_urls ?? [],
         media_type: mediaType,
-        target_language: dto.target_language ?? null,
+        // moments.target_language is NOT NULL DEFAULT 'en' (005_moments.sql).
+        // An explicit null bypasses the column default and fails the insert,
+        // so the key is omitted when the client does not choose a language.
+        ...(dto.target_language
+          ? { target_language: dto.target_language }
+          : {}),
         voice_note_url: dto.voice_note_url ?? null,
         is_ephemeral: true,
         expires_at: expiresAt,
@@ -838,41 +846,78 @@ export class MomentsService {
 
     const correct = moment.correct_answer === answer;
 
+    let insertError: { code?: string } | null = null;
     try {
-      const { error: insertError } = await supabase
-        .from('moment_question_answers')
-        .insert({
-          moment_id: momentId,
-          user_id: userId,
-          answer,
-          is_correct: correct,
-        });
-      if (insertError) {
-        // ignore; table may not exist in some environments
+      const response = await supabase.from('moment_question_answers').insert({
+        moment_id: momentId,
+        user_id: userId,
+        selected_answer: answer,
+        is_correct: correct,
+      });
+      insertError = response.error;
+    } catch (error: unknown) {
+      if (!this.isDuplicateKeyError(error)) {
+        this.failLanguageQuestionPersistence('answer_insert');
       }
-    } catch {
-      // ignore
+    }
+    if (insertError && insertError.code !== '23505') {
+      this.failLanguageQuestionPersistence('answer_insert');
     }
 
-    const { data: rows, error: countError } = await supabase
-      .from('moment_question_answers')
-      .select('is_correct')
-      .eq('moment_id', momentId)
-      .returns<Array<{ is_correct: boolean }>>();
+    let rows: Array<{ is_correct: boolean }> | null = null;
+    let countFailed = false;
+    try {
+      const countResponse = await supabase
+        .from('moment_question_answers')
+        .select('is_correct')
+        .eq('moment_id', momentId)
+        .returns<Array<{ is_correct: boolean }>>();
+      rows = countResponse.data;
+      countFailed = Boolean(countResponse.error);
+    } catch {
+      this.failLanguageQuestionPersistence('answer_count');
+    }
+    if (countFailed || !rows) {
+      this.failLanguageQuestionPersistence('answer_count');
+    }
 
-    if (!countError && rows) {
-      const total = rows.length;
-      const correctCount = rows.filter((r) => r.is_correct).length;
-      await supabase
+    const total = rows.length;
+    const correctCount = rows.filter((row) => row.is_correct).length;
+    let updateFailed = false;
+    try {
+      const updateResponse = await supabase
         .from('moments')
         .update({
           correct_answers_count: correctCount,
           total_answers_count: total,
         })
         .eq('id', momentId);
+      updateFailed = Boolean(updateResponse.error);
+    } catch {
+      this.failLanguageQuestionPersistence('counter_update');
+    }
+    if (updateFailed) {
+      this.failLanguageQuestionPersistence('counter_update');
     }
 
     return { correct, correctAnswer: moment.correct_answer ?? '' };
+  }
+
+  private isDuplicateKeyError(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === '23505'
+    );
+  }
+
+  private failLanguageQuestionPersistence(stage: string): never {
+    this.logger.error({
+      event: 'language_question_answer_persistence_failed',
+      stage,
+    });
+    throw new Error('Failed to persist language question answer');
   }
 
   async likeMoment(
@@ -927,7 +972,7 @@ export class MomentsService {
         .eq('id', momentId);
       return { likes_count: newCount, is_liked: false };
     } else {
-      await supabase
+      const { error: insertError } = await supabase
         .from('moment_likes')
         .insert({ moment_id: momentId, user_id: userId });
       const result = await supabase
@@ -941,6 +986,16 @@ export class MomentsService {
         .from('moments')
         .update({ likes_count: newCount })
         .eq('id', momentId);
+
+      // Tell the moment author through the unified notifications inbox. Only a
+      // persisted like on someone else's moment notifies; unlikes never do.
+      const momentAuthorId = momentData?.user_id;
+      if (!insertError && momentAuthorId && momentAuthorId !== userId) {
+        this.eventEmitter.emit(
+          'user.liked',
+          new LikeEvent(userId, momentAuthorId, 'moment', momentId),
+        );
+      }
       return { likes_count: newCount, is_liked: true };
     }
   }

@@ -11,6 +11,7 @@ const MOCK_CARD = {
   word_token: 'abundant',
   translation: '丰富的',
   definition: 'existing in large quantities',
+  pronunciation_url: 'https://example.com/audio.mp3',
   srs_level: 1,
   easiness_factor: 2.5,
   repetitions: 0,
@@ -184,6 +185,110 @@ describe('FlashcardReviewComponent', () => {
     expect(component.isComplete()).toBe(false);
     expect(component.currentIndex()).toBe(0);
     expect(component.sessionStats()).toEqual({ again: 0, good: 0, known: 0 });
+  });
+
+  it('disables grading controls and exposes busy state while SRS save is in flight', async () => {
+    const deferred = createDeferred<Flashcard>();
+    updateSrsLevel.mockReturnValueOnce(deferred.promise);
+    const fixture = TestBed.createComponent(FlashcardReviewComponent);
+    fixture.componentRef.setInput('cards', MOCK_CARDS);
+    fixture.detectChanges();
+    await vi.waitFor(() => expect(fixture.componentInstance.isLoading()).toBe(false));
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.flipCard();
+    fixture.detectChanges();
+
+    const againBtn = fixture.nativeElement.querySelector('.btn-grade-again') as HTMLButtonElement;
+    const goodBtn = fixture.nativeElement.querySelector('.btn-grade-good') as HTMLButtonElement;
+    const knownBtn = fixture.nativeElement.querySelector('.btn-grade-known') as HTMLButtonElement;
+
+    expect(againBtn.disabled).toBe(false);
+    expect(againBtn.getAttribute('aria-busy')).toBe('false');
+
+    const savePromise = component.gradeReview('again');
+    fixture.detectChanges();
+
+    expect(component.isSaving()).toBe(true);
+    expect(againBtn.disabled).toBe(true);
+    expect(againBtn.getAttribute('aria-busy')).toBe('true');
+    expect(goodBtn.disabled).toBe(true);
+    expect(goodBtn.getAttribute('aria-busy')).toBe('true');
+    expect(knownBtn.disabled).toBe(true);
+    expect(knownBtn.getAttribute('aria-busy')).toBe('true');
+
+    deferred.resolve({ ...MOCK_CARD, srs_level: 0 });
+    await savePromise;
+    fixture.detectChanges();
+
+    expect(component.isSaving()).toBe(false);
+  });
+
+  it('updates face accessibility attributes and audio control disabled state on flip', async () => {
+    const fixture = TestBed.createComponent(FlashcardReviewComponent);
+    fixture.componentRef.setInput('cards', MOCK_CARDS);
+    fixture.detectChanges();
+    await vi.waitFor(() => expect(fixture.componentInstance.isLoading()).toBe(false));
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const cardEl = fixture.nativeElement.querySelector('.flip-card') as HTMLElement;
+    const frontFace = fixture.nativeElement.querySelector('.flip-card-front') as HTMLElement;
+    const backFace = fixture.nativeElement.querySelector('.flip-card-back') as HTMLElement;
+    const audioBtn = fixture.nativeElement.querySelector(
+      '.flip-card-back button',
+    ) as HTMLButtonElement;
+
+    expect(cardEl.getAttribute('aria-describedby')).toBe('card-front-1');
+    expect(frontFace.getAttribute('aria-hidden')).toBeNull();
+    expect(backFace.getAttribute('aria-hidden')).toBe('true');
+    expect(audioBtn.disabled).toBe(true);
+
+    component.flipCard();
+    fixture.detectChanges();
+
+    expect(cardEl.getAttribute('aria-describedby')).toBe('card-back-1');
+    expect(frontFace.getAttribute('aria-hidden')).toBe('true');
+    expect(backFace.getAttribute('aria-hidden')).toBeNull();
+    expect(audioBtn.disabled).toBe(false);
+  });
+
+  it('manages audio playback instance lifecycle and stops playing audio on destroy', async () => {
+    const mockAudio = {
+      play: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn(),
+      addEventListener: vi.fn(),
+      src: '',
+      load: vi.fn(),
+    };
+    const AudioMock = vi.fn(function AudioMock() {
+      return mockAudio;
+    });
+    vi.stubGlobal('Audio', AudioMock);
+
+    const fixture = TestBed.createComponent(FlashcardReviewComponent);
+    fixture.componentRef.setInput('cards', MOCK_CARDS);
+    fixture.detectChanges();
+    await vi.waitFor(() => expect(fixture.componentInstance.isLoading()).toBe(false));
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.flipCard();
+    fixture.detectChanges();
+
+    const mouseEvent = new MouseEvent('click');
+    const stopSpy = vi.spyOn(mouseEvent, 'stopPropagation');
+
+    component.playAudio('https://example.com/audio.mp3', mouseEvent);
+    expect(stopSpy).toHaveBeenCalled();
+    expect(mockAudio.play).toHaveBeenCalledTimes(1);
+
+    component.playAudio('https://example.com/audio2.mp3', mouseEvent);
+    expect(mockAudio.pause).toHaveBeenCalledTimes(1);
+
+    fixture.destroy();
+    expect(mockAudio.pause).toHaveBeenCalledTimes(2);
+
+    vi.unstubAllGlobals();
   });
 
   describe('RTL logical CSS properties', () => {

@@ -208,6 +208,40 @@ describe('UserDetailComponent bio translation', () => {
     expect(fixture.nativeElement.textContent).not.toContain('discovery.vipBadge');
   });
 
+  it('renders the aggregate corrector score on an external profile', async () => {
+    getUserProfile.mockResolvedValue(makeProfile('rated-user', 'Bio', { corrector_score: 4.7 }));
+
+    fixture.componentRef.setInput('userId', 'rated-user');
+    fixture.detectChanges();
+    await component.loadProfile('rated-user');
+    fixture.detectChanges();
+
+    const score = fixture.nativeElement.querySelector(
+      '[data-testid="corrector-score"]',
+    ) as HTMLElement;
+    expect(score.textContent).toContain('profile.correctorScore');
+    expect(score.textContent).toContain('4.7 / 5');
+  });
+
+  it('distinguishes no ratings from an unavailable score', async () => {
+    component.profile.set(makeProfile('unrated-user', 'Bio', { corrector_score: null }));
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="corrector-score"]').textContent,
+    ).toContain('profile.noRatings');
+
+    component.profile.set(
+      makeProfile('unavailable-user', 'Bio', {
+        corrector_score: null,
+        corrector_score_unavailable: true,
+      }),
+    );
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="corrector-score"]').textContent,
+    ).toContain('profile.correctorScoreUnavailable');
+  });
+
   it('translates into the active UI language and can show the original again', async () => {
     translateBio.mockResolvedValue('Biografía traducida');
 
@@ -436,7 +470,7 @@ describe('UserDetailComponent bio translation', () => {
     fixture.detectChanges();
     const likeBtn = buttons.find((b) => b.getAttribute('aria-label') === 'Unlike profile');
     expect(likeBtn).toBeTruthy();
-    expect(likeBtn?.classList.contains('text-primary')).toBe(true);
+    expect(likeBtn?.classList.contains('text-primary-ink')).toBe(true);
     expect(likeBtn?.classList.contains('border-primary')).toBe(true);
     expect(likeBtn?.classList.contains('text-neon-pink')).toBe(false);
     expect(likeBtn?.classList.contains('border-neon-pink')).toBe(false);
@@ -452,14 +486,14 @@ describe('UserDetailComponent bio translation', () => {
     component.isLoading.set(true);
     fixture.detectChanges();
     const spinner = fixture.nativeElement.querySelector('.animate-spin');
-    expect(spinner?.classList.contains('text-secondary')).toBe(true);
+    expect(spinner?.classList.contains('text-secondary-ink')).toBe(true);
     expect(spinner?.classList.contains('text-neon-blue')).toBe(false);
 
     // Check error token
     component.isLoading.set(false);
     component.errorMessage.set('Test error');
     fixture.detectChanges();
-    const errorP = fixture.nativeElement.querySelector('p.text-danger');
+    const errorP = fixture.nativeElement.querySelector('p.text-danger-ink');
     expect(errorP).toBeTruthy();
     expect(errorP?.classList.contains('text-neon-pink')).toBe(false);
   });

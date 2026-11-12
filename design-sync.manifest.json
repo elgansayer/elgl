@@ -78,7 +78,7 @@
       "claudeDesignPath": "components/primitives/feedback-states.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1715-language-picker-dialog (Spartan dialog behaviour changes focus management only; the existing visual contract is unchanged); issue-1876-audio-equalizer-accessible-label (audio-equalizer adds role=img, a translated accessible-label input, a visually hidden sr-only caption and a reduced-motion static fallback; the visible active/inactive bars, colours and layout of this preview are unchanged); issue-1886-audio-equalizer-a11y (the staged accessibility label and reduced-motion fallback preserve the visible equalizer bars, colours and layout)",
       "requiredStates": ["light", "dark", "error", "loading", "empty", "rtl"]
     },
     {
@@ -90,7 +90,7 @@
       "claudeDesignPath": "components/primitives/indicators-media.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1715-language-picker-dialog (Spartan dialog behaviour changes focus management only; the existing visual contract is unchanged)",
       "requiredStates": ["light", "dark", "reduced-motion"]
     },
     {
@@ -153,7 +153,7 @@
       "claudeDesignPath": "screens/shell.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; bolt-bounded-chat-unread-fetch-2026-08-28; issue-6068-correction-modal-relay-tokens-2026-08-21; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1397-mobile-navigation-component (rendered five-tab unread contract with stable tabular badge numerals)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; bolt-bounded-chat-unread-fetch-2026-08-28; issue-6068-correction-modal-relay-tokens-2026-08-21; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1397-mobile-navigation-component (rendered five-tab unread contract with stable tabular badge numerals); issue-1663-shell-unread-refresh (realtime invalidation coalescing and authenticated unread refresh logic only; the shell visual contract is unchanged); issue-2029-group-profile-page (new dedicated group profile landing page renders inside the existing router-outlet; the shell top bar, bottom navigation and shell-mounted action visual contract is unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -170,7 +170,7 @@
       "claudeDesignPath": "screens/home.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1841-word-card-consolidation (Home now uses the existing visually identical shared word card contract, so content, layout and states are unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -182,7 +182,7 @@
       "claudeDesignPath": "screens/chat.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20; issue-1094-appearance-settings-2026-08-23; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1729-chat-draft-persistence (draft restoration and send recovery change component state timing only; the visual contract is unchanged)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20; issue-1094-appearance-settings-2026-08-23; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1729-chat-draft-persistence (draft restoration and send recovery change component state timing only; the visual contract is unchanged); issue-1748-explain-this-corrected-text-2026-10-30 (chat room forwards the correction pair to the message actions menu; no layout change); issue-1663-chat-room-unread-decrement (decrement chat unread on read receipt delivery only; chat room layout and visual contract are unchanged); issue-1776-selection-flashcard (pass partner language to tokenised text; visual contract is unchanged); issue-1195-e2ee-personal-messages (end-to-end encryption status banner is conditionally rendered for encrypted rooms; core chat screen layout and visual contract are unchanged); issue-1803-chat-search-result-load (selecting a search result inserts the matched message into the loaded list and scrolls to it; no markup, styling or layout change, so the visual contract is unchanged); issue-1436-system-event-filtering (senderless and malformed system events now reach the existing system bubble and fallback states; layout and styling are unchanged); issue-1828-canonical-bookmark-client (the existing bookmark action now uses the canonical client and translated toast feedback; chat layout and controls are unchanged); issue-1734-doodle-dialog-host-2026-10-30 (Spartan Dialog modal semantics, focus containment, dismissal and zoom-safe scrolling; existing doodle and chat previews remain the visual contract; Claude Design reconciliation pending); issue-1905-read-receipt-component (the chat room now renders ticks through the existing read-receipt component already shown in the chat preview; tick glyphs, placement and colours are unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl", "400%-zoom"]
     },
     {
@@ -194,8 +194,18 @@
       "claudeDesignPath": "screens/discovery.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6140-global-search-relay-tokens-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
-      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6140-global-search-relay-tokens-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1715-discovery-matchmaking-completion-2026-10-30",
+      "requiredStates": [
+        "light",
+        "dark",
+        "390px",
+        "wide",
+        "rtl",
+        "disabled",
+        "loading",
+        "empty",
+        "error"
+      ]
     },
     {
       "id": "screen.profile",
@@ -206,7 +216,7 @@
       "claudeDesignPath": "screens/profile.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1842-profile-learning-summary-2026-11-03; issue-1889-my-stats-navigation-2026-11-08",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -225,7 +235,7 @@
       "claudeDesignPath": "screens/settings.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23; issue-1463-presence-privacy-toggles-2026-08-26; issue-402-vip-accent-entitlement-2026-08-20; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); pr-9586-chat-settings-save-reliability-2026-10-23 (save-failed role=alert state, toggles disabled while saving; preview reconciliation pending #9467)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23; issue-1463-presence-privacy-toggles-2026-08-26; issue-402-vip-accent-entitlement-2026-08-20; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); pr-9586-chat-settings-save-reliability-2026-10-23 (save-failed role=alert state, toggles disabled while saving; preview reconciliation pending #9467); issue-1736-single-owner-ui-language-2026-10-30 (Appearance language picker replaced by a navigation row to /settings/language; the language radio group re-syncs after a rolled-back switch and a persistent polite status announces the applied language; destination pages are not depicted in the preview); issue-1835-help-about-route (the existing Help & About row is visually unchanged; only its navigation target now opens the canonical settings page)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -333,7 +343,7 @@
       "claudeDesignPath": "screens/more.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1478-localised-page-states (translation keys preserve the existing en-GB loading and error presentation)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1478-localised-page-states (translation keys preserve the existing en-GB loading and error presentation); issue-1805-dynamic-legal-route (canonical and alias routes share the existing legal viewer, loading, error and retry presentation, so the visual contract is unchanged)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -345,7 +355,7 @@
       "claudeDesignPath": "foundations/focus-ring.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; issue-9460-semantic-text-roles (new colour tokens do not change focus-ring behaviour or presentation); issue-1715-semantic-text-tokens (foreground token additions do not change focus-ring behaviour or presentation)",
       "requiredStates": ["focus-visible", "light", "dark"]
     },
     {
@@ -357,7 +367,7 @@
       "claudeDesignPath": "foundations/reduced-motion.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; issue-9460-semantic-text-roles (new colour tokens do not change reduced-motion behaviour or presentation); issue-1715-semantic-text-tokens (foreground token additions do not change reduced-motion behaviour or presentation)",
       "requiredStates": ["reduced-motion", "light", "dark"]
     },
     {
@@ -420,8 +430,19 @@
       "claudeDesignPath": "features/chat-messaging.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
-      "requiredStates": ["light", "dark", "loading", "error", "empty", "390px", "rtl", "400%-zoom"]
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1748-explain-this-corrected-text-2026-10-30 (Explain this action and grammar explanation dialog states in the chat-messaging preview); issue-1663-chat-list-unread-count (chat unread counting refinement and removal of non-authoritative list override; chat messaging layout and visual contract are unchanged); issue-1195-e2ee-personal-messages (encryption status icon is conditionally rendered in message metadata; chat messaging layout and visual contract are unchanged); issue-1839-inline-gift-payloads-2026-11-03 (chat message renderers display validated gift payloads with reduced-motion and unavailable states); issue-1436-system-bubble-wiring (routes system payloads to the existing bubble and validates interpolation keys; the preview already covers profileUpdated, missedCall and fallback states, so the visual contract is unchanged); issue-1828-bookmark-feedback (the existing Favourite action now reports translated success or failure feedback; message markup, controls and layout are unchanged); issue-1734-localised-doodle-image-alt (the translated alternative text changes the accessibility contract only; the visual contract is unchanged); issue-1905-read-receipt-a11y (read-receipt gains button semantics, keyboard toggling and direct-chat reader counts on the existing tooltip design already covered by the preview; the visual contract is unchanged)",
+      "requiredStates": [
+        "light",
+        "dark",
+        "loading",
+        "error",
+        "empty",
+        "390px",
+        "rtl",
+        "400%-zoom",
+        "reduced-motion",
+        "forced-colours"
+      ]
     },
     {
       "id": "feature.calls-live",
@@ -434,6 +455,7 @@
         "frontend/src/app/components/voip-call",
         "frontend/src/app/components/voip-active-call",
         "frontend/src/app/components/video-call",
+        "frontend/src/app/components/exchange-timer",
         "frontend/src/app/components/split-screen-video",
         "frontend/src/app/components/video-room",
         "frontend/src/app/components/audio-room",
@@ -457,7 +479,7 @@
       "claudeDesignPath": "features/calls-live.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1195-e2ee-personal-messages (e2ee secured badge is conditionally rendered on connected calls; call controls and visual contract are unchanged); issue-1777-live-chat-overlay (additive Centrifugo listener and reduced-motion support for live chat overlay; visual contract is unchanged); issue-1788-raise-hand-approve-speaker (consolidated approve speaker modal into standalone component matching existing preview specimen and added decline/dismiss stage handlers; visual contract is unchanged); issue-1840-quick-polls (accessible poll dialogs, explicit numeric result cues, voting actions and reconnect recovery); issue-1828-bookmark-feedback (the existing Favourite action now reports success or failure through the shared translated toast; the message action menu and message layout are unchanged); issue-2037-exchange-timers-2026-11-10 (1:1 calls render a reciprocal turn timer with current speaker language, countdown and end-turn action; mute controls are disabled while the partner holds the turn)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",
@@ -501,7 +523,7 @@
       "claudeDesignPath": "features/profile-identity.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1760-favourites-bookmarking (safe navigation and correction visual diff binding refinements preserve the existing favourites review UI; the profile-identity visual contract is unchanged); issue-1195-favourites-merge (favourites component formatting and safe navigation preserve the existing review UI; the profile-identity visual contract is unchanged); issue-1780-render-visual-charts (reactive chart signal options and screen-reader accessible fallback markup preserve the existing stats visual presentation; the profile-identity visual contract is unchanged); issue-1788-stats-audit (screen-reader accessible fallback list and reactive chart signals preserve existing stats visual presentation; visual contract is unchanged); issue-1842-profile-audio-unavailable-state-2026-11-03",
       "requiredStates": ["light", "dark", "empty", "loading", "error", "390px", "rtl"]
     },
     {
@@ -532,7 +554,8 @@
         "frontend/src/app/pages/language-islands",
         "frontend/src/app/components/report-user-modal",
         "frontend/src/app/components/trust-safety-modal",
-        "frontend/src/app/components/event-rsvp-controls"
+        "frontend/src/app/components/event-rsvp-controls",
+        "frontend/src/app/pages/group-profile"
       ],
       "previewPaths": [
         "frontend/design-preview/features/discovery-community.html",
@@ -542,7 +565,7 @@
       "claudeDesignPath": "features/discovery-community.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged); issue-1663-notification-inbox-tab-reconciliation (per-tab notification unread reconciliation and decrement logic only; discovery and community visual contract is unchanged); issue-1789-liked-by-runtime-hardening (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual states; the visual contract is unchanged); issue-1788-liked-by-audit (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual presentation; visual contract is unchanged); issue-1860-system-alert-presentation (system alerts render the localised system-alert title and bell glyph inside the existing notification row instead of unknown-user text; row layout, tokens, spacing and states are unchanged, so the discovery and community visual contract is unchanged); issue-1886-system-alert-semantics (the staged system notification uses the existing row, typography, spacing and semantic tokens, so the discovery and community visual contract is unchanged)",
       "requiredStates": [
         "light",
         "dark",
@@ -585,13 +608,15 @@
         "frontend/src/app/components/study-streak-counter",
         "frontend/src/app/components/study-streak-widget",
         "frontend/src/app/components/celebration-overlay",
-        "frontend/src/app/components/language-challenges"
+        "frontend/src/app/components/language-challenges",
+        "frontend/src/app/components/ipa-alphabet",
+        "frontend/src/app/components/verb-conjugation-trainer"
       ],
       "previewPaths": ["frontend/design-preview/features/learning.html"],
       "claudeDesignPath": "features/learning.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1792-flashcard-review-interactions (in-flight save disabling, accessibility attributes, and audio lifecycle cleanup preserve the existing review layout; the visual contract is unchanged); issue-2035-verb-conjugation-ipa-alphabet (adds the verb conjugation trainer and IPA alphabet practice specimens)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",
@@ -605,7 +630,8 @@
         "error",
         "390px",
         "rtl",
-        "reduced-motion"
+        "reduced-motion",
+        "forced-colours"
       ]
     },
     {
@@ -634,7 +660,7 @@
       "claudeDesignPath": "features/commerce.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1839-inline-gift-payloads-2026-11-03 (gift animation uses Relay semantic colours and documents unavailable, reduced-motion, and forced-colour states)",
       "requiredStates": [
         "light",
         "dark",
@@ -669,7 +695,7 @@
       "claudeDesignPath": "features/settings-system.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1478-localised-viewer-copy (translation keys and RTL-safe vertical gaps preserve the existing en-GB visual contract)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1478-localised-viewer-copy (translation keys and RTL-safe vertical gaps preserve the existing en-GB visual contract); issue-1736-single-owner-ui-language-2026-10-30 (language selectors apply changes through UiLanguagePreferenceService: failure role=alert state, options disabled while a change is pending, aria-current on the active language; specimens updated)",
       "requiredStates": [
         "light",
         "dark",

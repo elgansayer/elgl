@@ -16,6 +16,7 @@
         --text-secondary: 74 81 99;
         --text-muted: 112 119 137;
         --primary: 198 82 48;
+        --primary-text: 178 74 43;
         --secondary: 163 73 201;
         --warning: 181 118 20;
         --on-fill: 255 255 255;
@@ -57,6 +58,7 @@
         --text-secondary: 180 186 201;
         --text-muted: 146 153 172;
         --primary: 255 122 82;
+        --primary-text: 255 122 82;
         --secondary: 211 116 247;
         --warning: 244 181 63;
         --on-fill: 18 21 28;
@@ -137,6 +139,15 @@
         color: rgb(var(--text-muted));
         font-style: italic;
         overflow-wrap: anywhere;
+      }
+      .ghost-reset {
+        position: absolute;
+        inset-block-end: 6px;
+        inset-inline-end: 8px;
+        min-height: 0;
+        padding: 2px 4px;
+        color: rgb(var(--primary-text));
+        font-size: 11px;
       }
       .ghost-badge {
         position: absolute;
@@ -243,7 +254,8 @@
               <div>
                 <span class="field-label">Original</span>
                 <div class="ghost" dir="auto">
-                  “I goes to market yesterday.”<span class="ghost-badge">Original</span>
+                  “I goes to market yesterday.”<span class="ghost-badge">Original</span
+                  ><button class="ghost-reset">Reset</button>
                 </div>
               </div>
               <label>

@@ -77,7 +77,7 @@ interface InterestTopic {
       <!-- Error banner -->
       @if (error()) {
         <div
-          class="bg-danger/10 text-danger px-3 py-2 mx-4 mt-3 rounded-lg text-sm shrink-0"
+          class="bg-danger/10 text-danger-ink px-3 py-2 mx-4 mt-3 rounded-lg text-sm shrink-0"
           role="alert"
         >
           {{ error() }}
@@ -87,7 +87,7 @@ interface InterestTopic {
       <!-- Loading -->
       @if (loading()) {
         <div class="flex-1 flex items-center justify-center text-text-secondary" aria-busy="true">
-          {{ 'loading' | t }}
+          {{ 'common.loading' | t }}
         </div>
       }
 
@@ -127,15 +127,24 @@ interface InterestTopic {
                 class="bg-surface-400 p-3 sm:p-4 rounded-xl border border-surface-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition hover:border-accent-500/30"
               >
                 <div class="min-w-0">
-                  <span class="text-text-primary font-semibold text-sm sm:text-base block truncate">
+                  <a
+                    [routerLink]="['/groups', group.id]"
+                    class="text-text-primary font-semibold text-sm sm:text-base block truncate rounded-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
                     {{ group.name | sanitiseHtml }}
-                  </span>
+                  </a>
                   <span class="text-text-secondary text-xs sm:text-sm">
                     {{ group.member_count }} / {{ group.max_members }}
                     {{ 'groups_discovery_members' | t }}
                   </span>
                 </div>
-                <div class="shrink-0">
+                <div class="shrink-0 flex flex-wrap items-center gap-2">
+                  <a
+                    [routerLink]="['/groups', group.id]"
+                    class="inline-flex min-h-11 items-center rounded-app text-sm font-semibold text-primary-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    {{ 'groups_discovery_view' | t }}
+                  </a>
                   @if (!group.is_member && group.member_count < group.max_members) {
                     <button
                       hlmBtn
@@ -144,7 +153,7 @@ interface InterestTopic {
                       [disabled]="joiningId() === group.id"
                     >
                       {{
-                        joiningId() === group.id ? ('loading' | t) : ('groups_discovery_join' | t)
+                        joiningId() === group.id ? ('common.loading' | t) : ('groups_discovery_join' | t)
                       }}
                     </button>
                   } @else if (group.is_member) {

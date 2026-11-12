@@ -182,6 +182,8 @@ export class SecureChatService extends ChatService {
         status_reply_payload: dto.status_reply_payload ?? null,
         is_view_once: dto.message_type === 'view_once_media',
         delivery_status: 'sent',
+        is_encrypted: dto.is_encrypted ?? false,
+        encrypted_payload: dto.encrypted_payload ?? null,
       })
       .select(
         `*, sender:users!chat_messages_sender_id_fkey (id, display_name, avatar_url)`,
@@ -196,12 +198,29 @@ export class SecureChatService extends ChatService {
 
     let message: ChatMessage = insertResponse.data;
     // Link previews are enrichment only and must never block a group send.
+    // They are never resolved for encrypted content, matching direct sends.
     const linkPreview =
-      dto.message_type === 'text'
+      !dto.is_encrypted && dto.message_type === 'text'
         ? await this.resolveLinkPreview(dto.text_content)
         : null;
     if (linkPreview) {
+      await this.persistLinkPreview(message.id, linkPreview);
       message = { ...message, link_preview: linkPreview };
+    }
+
+    // A correction submitted without a teaching note is enriched server-side,
+    // exactly as in a direct conversation, before the message is published.
+    const enrichedCorrectionPayload =
+      await this.generateCorrectionPayloadIfNeeded(message.correction_payload);
+    if (enrichedCorrectionPayload) {
+      const { error: updateError } = await this.secureSupabase
+        .getClient()
+        .from('chat_messages')
+        .update({ correction_payload: enrichedCorrectionPayload })
+        .eq('id', message.id);
+      if (!updateError) {
+        message = { ...message, correction_payload: enrichedCorrectionPayload };
+      }
     }
 
     void this.secureXp.awardXpForActivity(senderId, 'send_message');
@@ -225,7 +244,6 @@ export class SecureChatService extends ChatService {
         receiverId,
       );
     }
-    void this.secureReadReceipts?.setInitialSent(message.id);
     this.secureEvents.emit('message.sent', { userId: senderId });
 
     if (dto.message_type === 'text' && dto.text_content) {

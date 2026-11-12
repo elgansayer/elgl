@@ -20,6 +20,34 @@ export interface ChatAnnouncement {
   senderId: string;
 }
 
+export interface GroupInfo {
+  id: string;
+  name: string;
+  owner_id: string;
+  max_members: number;
+  interest_id: string | null;
+  community_id: string | null;
+  interest: { name: string } | null;
+}
+
+export interface GroupMember {
+  user_id: string;
+  user: {
+    id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+}
+
+export interface GroupSettings {
+  can_send_messages: boolean | null;
+  can_edit_info: boolean | null;
+  description: string | null;
+  rules: string | null;
+  interest_id: string | null;
+  max_members: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -57,6 +85,28 @@ export class GroupsService {
 
   getMyGroups(): Promise<ChatGroup[]> {
     return firstValueFrom(this.http.get<ChatGroup[]>(`${this.apiUrl}/mine`));
+  }
+
+  getGroupInfo(groupId: string): Promise<GroupInfo> {
+    return firstValueFrom(this.http.get<GroupInfo>(`${this.apiUrl}/${groupId}`));
+  }
+
+  getGroupMembers(groupId: string): Promise<GroupMember[]> {
+    return firstValueFrom(
+      this.http.get<GroupMember[]>(`${this.apiUrl}/${groupId}/members`),
+    );
+  }
+
+  getGroupSettings(groupId: string): Promise<GroupSettings> {
+    return firstValueFrom(
+      this.http.get<GroupSettings>(`${this.apiUrl}/${groupId}/settings`),
+    );
+  }
+
+  openGroupChat(groupId: string): Promise<{ roomId: string }> {
+    return firstValueFrom(
+      this.http.post<{ roomId: string }>(`${this.apiUrl}/${groupId}/chat`, {}),
+    );
   }
 
   addMember(groupId: string, userId: string): Promise<{ success: boolean }> {

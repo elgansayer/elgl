@@ -86,6 +86,62 @@ describe('UserStatisticsService', () => {
       });
     });
 
+    it('should filter moments and comments by the user_id owner column that 005_moments.sql creates', async () => {
+      // The Supabase mocks answer the same whatever column is filtered, so the
+      // columns are asserted directly. There is no moments.author_id: PostgREST
+      // answers such a filter with 42703, which used to turn into a 404.
+      const userBuilder = createQueryBuilder({
+        data: {
+          study_streak_days: 1,
+          correction_ratio: 0.5,
+          coins_balance: 10,
+          created_at: '2024-01-01T00:00:00Z',
+          is_vip: false,
+        },
+        error: null,
+      });
+      const momentCountBuilder = createQueryBuilder({ count: 1 });
+      const momentIdsBuilder = createQueryBuilder({
+        data: [{ id: 'moment-1' }],
+        error: null,
+      });
+      const commentCountBuilder = createQueryBuilder({ count: 2 });
+      const likeCountBuilder = createQueryBuilder({ count: 3 });
+      const visitCountBuilder = createQueryBuilder({ count: 4 });
+      let momentsCalls = 0;
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'users') return userBuilder;
+        if (table === 'moments') {
+          momentsCalls += 1;
+          return momentsCalls === 1 ? momentCountBuilder : momentIdsBuilder;
+        }
+        if (table === 'moment_comments') return commentCountBuilder;
+        if (table === 'moment_likes') return likeCountBuilder;
+        if (table === 'profile_visits') return visitCountBuilder;
+        throw new Error(`Unexpected table: ${table}`);
+      });
+
+      await service.getUserStatistics('user-1');
+
+      expect(momentCountBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(commentCountBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(momentIdsBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      for (const builder of [
+        momentCountBuilder,
+        commentCountBuilder,
+        momentIdsBuilder,
+      ]) {
+        expect(builder.eq).not.toHaveBeenCalledWith(
+          'author_id',
+          expect.anything(),
+        );
+      }
+      // Likes received are counted over the user's own Moments.
+      expect(likeCountBuilder.in).toHaveBeenCalledWith('moment_id', [
+        'moment-1',
+      ]);
+    });
+
     it('should apply fromDate and toDate filters to relevant queries', async () => {
       const fromDate = '2024-01-01';
       const toDate = '2024-12-31';

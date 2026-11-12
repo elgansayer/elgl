@@ -39,6 +39,7 @@ describe('ChatRoomComponent group corrections', () => {
     sendMessage = vi.fn();
 
     const chatService = {
+      queuedCount: signal(0),
       getRooms: vi.fn().mockResolvedValue([
         {
           id: 'group-room',
@@ -58,7 +59,6 @@ describe('ChatRoomComponent group corrections', () => {
       ]),
       getMessages: vi.fn().mockResolvedValue([]),
       sendMessage,
-      addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),

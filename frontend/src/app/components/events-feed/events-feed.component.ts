@@ -73,10 +73,10 @@ const PAGE_SIZE = 20;
 
     <!-- Event list -->
     @if (isLoading() && events().length === 0) {
-      <p role="status">{{ 'loading' | t }}</p>
+      <p role="status">{{ 'common.loading' | t }}</p>
     } @else if (error() && events().length === 0) {
       <div role="alert" class="flex flex-col items-start gap-3">
-        <p class="text-danger">{{ 'common.error_generic' | t }}</p>
+        <p class="text-danger-ink">{{ 'common.error_generic' | t }}</p>
         <button hlmBtn type="button" variant="secondary" size="touch" (click)="retry()">
           {{ 'common.retry' | t }}
         </button>
@@ -109,7 +109,7 @@ const PAGE_SIZE = 20;
 
       @if (error()) {
         <div role="alert" class="mt-4 flex flex-col items-start gap-3">
-          <p class="text-danger">{{ 'common.error_generic' | t }}</p>
+          <p class="text-danger-ink">{{ 'common.error_generic' | t }}</p>
           <button hlmBtn type="button" variant="secondary" size="touch" (click)="retry()">
             {{ 'common.retry' | t }}
           </button>
@@ -128,7 +128,7 @@ const PAGE_SIZE = 20;
           (click)="loadMore()"
         >
           @if (isLoading()) {
-            {{ 'loading' | t }}
+            {{ 'common.loading' | t }}
           } @else {
             {{ 'events.load_more' | t }}
           }

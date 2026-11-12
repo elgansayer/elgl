@@ -81,9 +81,9 @@ describe('SearchQueryDto', () => {
   });
 
   describe('radius_metres', () => {
-    it('should default to 50000 when not provided', () => {
+    it('should remain absent when not provided', () => {
       const dto = buildDto({});
-      expect(dto.radius_metres).toBe(50000);
+      expect(dto.radius_metres).toBeUndefined();
     });
 
     it('should accept valid radius', async () => {
@@ -161,6 +161,17 @@ describe('SearchQueryDto', () => {
     it('should accept a string proficiency level', async () => {
       const errors = await validateDto({ level: 'B2' });
       expect(errors).toHaveLength(0);
+    });
+
+    it('should normalise lowercase proficiency level to uppercase', () => {
+      const dto = buildDto({ level: 'b1' });
+      expect(dto.level).toBe('B1');
+    });
+
+    it('should reject an unsupported proficiency level', async () => {
+      const errors = await validateDto({ level: 'A3' });
+      expect(errors).toHaveLength(1);
+      expect(errors[0].property).toBe('level');
     });
 
     it('should reject non-string level', async () => {
@@ -361,7 +372,7 @@ describe('SearchQueryDto', () => {
       const errors = await validateDto({});
       expect(errors).toHaveLength(0);
       const dto = buildDto({});
-      expect(dto.radius_metres).toBe(50000);
+      expect(dto.radius_metres).toBeUndefined();
     });
   });
 

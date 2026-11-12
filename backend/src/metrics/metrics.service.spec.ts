@@ -390,6 +390,88 @@ describe('MetricsService', () => {
     });
   });
 
+  describe('Matchmaking daily job metrics', () => {
+    const run = (
+      overrides: Partial<
+        Parameters<MetricsService['recordMatchmakingDailyJobRun']>[0]
+      > = {},
+    ) => ({
+      outcome: 'success' as const,
+      durationSeconds: 42,
+      learnersScanned: 2500,
+      setsCached: 2400,
+      truncated: false,
+      ...overrides,
+    });
+
+    it('counts runs and observes duration per outcome', async () => {
+      service.recordMatchmakingDailyJobRun(run());
+      service.recordMatchmakingDailyJobRun(run({ outcome: 'failed' }));
+      service.recordMatchmakingDailyJobRun(run({ outcome: 'failed' }));
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_job_runs_total{outcome="success"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_job_runs_total{outcome="failed"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_job_duration_seconds_count{outcome="failed"} 2',
+      );
+    });
+
+    it('accumulates learner and cached-set volume across runs', async () => {
+      service.recordMatchmakingDailyJobRun(run());
+      service.recordMatchmakingDailyJobRun(
+        run({ learnersScanned: 500, setsCached: 480 }),
+      );
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_job_learners_scanned_total 3000',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_job_sets_cached_total 2880',
+      );
+    });
+
+    it('only counts a truncation when the run hit the learner ceiling', async () => {
+      service.recordMatchmakingDailyJobRun(run());
+      service.recordMatchmakingDailyJobRun(
+        run({ outcome: 'partial', truncated: true }),
+      );
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_job_truncated_total 1',
+      );
+    });
+
+    it('publishes the last completion time as a gauge', async () => {
+      service.setMatchmakingDailyJobLastCompleted(1793318400);
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_job_last_completed_timestamp_seconds 1793318400',
+      );
+    });
+
+    it('does not move the completion gauge when a run is recorded', async () => {
+      service.recordMatchmakingDailyJobRun(run());
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_job_last_completed_timestamp_seconds 0',
+      );
+    });
+  });
+
   describe('Moments For You metrics', () => {
     it('records ranking duration separately for each outcome', async () => {
       service.observeMomentsForYouRanking('ranked', 0.04);
@@ -573,6 +655,39 @@ describe('MetricsService', () => {
       );
       expect(metrics).toContain(
         'hellotalk_link_preview_fetch_duration_seconds_bucket{le="10",outcome="failed"} 1',
+      );
+    });
+  });
+  describe('PII scrubbing metrics', () => {
+    it('counts provider calls by scrub outcome', async () => {
+      service.recordPiiScrub('deepl', 'translate', 'redacted');
+      service.recordPiiScrub('deepl', 'translate', 'redacted');
+      service.recordPiiScrub('azure', 'transliterate', 'clean');
+      service.recordPiiScrub('deepl', 'translate', 'placeholder_mismatch');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_pii_scrub_total{provider="deepl",operation="translate",outcome="redacted"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_pii_scrub_total{provider="azure",operation="transliterate",outcome="clean"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_pii_scrub_total{provider="deepl",operation="translate",outcome="placeholder_mismatch"} 1',
+      );
+    });
+
+    it('counts redacted spans by category', async () => {
+      service.recordPiiRedactions('deepl', 'translate', 'email', 2);
+      service.recordPiiRedactions('deepl', 'translate', 'email', 1);
+      service.recordPiiRedactions('azure', 'grammar_check', 'card', 1);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_pii_redactions_total{provider="deepl",operation="translate",category="email"} 3',
+      );
+      expect(metrics).toContain(
+        'hellotalk_pii_redactions_total{provider="azure",operation="grammar_check",category="card"} 1',
       );
     });
   });

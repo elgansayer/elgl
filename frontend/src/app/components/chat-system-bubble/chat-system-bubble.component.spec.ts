@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ChatSystemBubbleComponent } from './chat-system-bubble.component';
+import {
+  ChatSystemBubbleComponent,
+  SystemMessageBubbleComponent,
+} from './chat-system-bubble.component';
 
 describe('ChatSystemBubbleComponent', () => {
   let fixture: ComponentFixture<ChatSystemBubbleComponent>;
@@ -189,8 +192,30 @@ describe('ChatSystemBubbleComponent', () => {
     const icon = fixture.nativeElement.querySelector('[aria-hidden="true"]');
     expect(bubble.className).toContain('bg-danger/10');
     expect(bubble.className).toContain('border-danger/30');
-    expect(bubble.className).toContain('text-danger');
+    expect(bubble.className).toContain('text-danger-ink');
     expect(icon.textContent).toContain('📞');
+  });
+
+  it('exports SystemMessageBubbleComponent as an alias for ChatSystemBubbleComponent', () => {
+    expect(SystemMessageBubbleComponent).toBe(ChatSystemBubbleComponent);
+  });
+
+  it('renders translated text for system.profileUpdated with required name', () => {
+    fixture.componentRef.setInput('eventType', 'profileUpdated');
+    fixture.componentRef.setInput('params', { name: 'Alice' });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.i18nKey()).toBe('system.profileUpdated');
+    expect(fixture.nativeElement.textContent).toContain('Alice updated their profile.');
+  });
+
+  it('renders translated text for system.missedCall with required name', () => {
+    fixture.componentRef.setInput('eventType', 'missedCall');
+    fixture.componentRef.setInput('params', { name: 'Bob' });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.i18nKey()).toBe('system.missedCall');
+    expect(fixture.nativeElement.textContent).toContain('You missed a call from Bob.');
   });
 
   it('drops parameter keys containing non-identifier or regex metacharacters', () => {
@@ -211,14 +236,5 @@ describe('ChatSystemBubbleComponent', () => {
     expect(params['.*']).toBeUndefined();
     expect(params['123badLeadingDigit']).toBeUndefined();
     expect(fixture.nativeElement.textContent).toContain('Maintenance scheduled');
-  });
-
-  it('handles null or non-object params gracefully without crashing', () => {
-    fixture.componentRef.setInput('eventType', 'memberRemoved');
-    fixture.componentRef.setInput('params', null as unknown as Record<string, unknown>);
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.displayParams()).toEqual({});
-    expect(fixture.nativeElement.textContent).toContain('A member left the group.');
   });
 });

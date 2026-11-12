@@ -3,7 +3,7 @@ import { RouterModule } from '@angular/router';
 
 import { AuthService } from '../../services/auth.service';
 import { StudyStreakWidgetComponent } from '../../components/study-streak-widget/study-streak-widget.component';
-import { WordOfTheDayCardComponent } from './word-of-the-day-card.component';
+import { WordOfTheDayComponent } from '../../components/word-of-the-day/word-of-the-day.component';
 import { DailyLearningTipComponent } from '../../components/daily-learning-tip/daily-learning-tip.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService } from '../../services/user.service';
@@ -15,7 +15,7 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
   imports: [
     RouterModule,
     StudyStreakWidgetComponent,
-    WordOfTheDayCardComponent,
+    WordOfTheDayComponent,
     DailyLearningTipComponent,
     TranslatePipe,
     StreakCelebrationOverlayComponent,
@@ -27,7 +27,7 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
         <div class="flex items-center gap-4">
           <a
             routerLink="/leaderboard"
-            class="text-sm text-primary hover:text-primary/80 transition-colors"
+            class="text-sm text-primary-ink hover:text-primary-ink/80 transition-colors"
             [attr.aria-label]="'nav.leaderboard' | t"
           >
             {{ 'nav.leaderboard' | t }}

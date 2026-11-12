@@ -28,6 +28,7 @@ const LOGGER_CONTEXTS = [
   'FlashcardsService',
   'GooglePlayNotificationController',
   'GooglePlayNotificationService',
+  'GrammarExplanationService',
   'ModerationService',
   'ModerationMetricsAggregator',
   'MonetisationService',

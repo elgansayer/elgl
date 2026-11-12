@@ -16,6 +16,7 @@ type QueryBuilderMock = {
   lte: Mock;
   limit: Mock;
   is: Mock;
+  in: Mock;
 };
 
 function createQueryBuilder(data: unknown[]): QueryBuilderMock {
@@ -32,6 +33,7 @@ function createQueryBuilder(data: unknown[]): QueryBuilderMock {
     'overlaps',
     'ilike',
     'lte',
+    'in',
   ] as const;
 
   for (const method of chainMethods) {
@@ -133,5 +135,9 @@ describe('DiscoveryService interest filtering', () => {
         distance_metres: 800,
       }),
     );
+    expect(queryBuilder.in).toHaveBeenCalledWith('id', [
+      'photo-user',
+      'music-user',
+    ]);
   });
 });

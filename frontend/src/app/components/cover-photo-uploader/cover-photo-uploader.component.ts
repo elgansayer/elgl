@@ -122,7 +122,7 @@ const MAX_COVER_IMAGE_BYTES = 25 * 1024 * 1024;
           <p class="text-text-muted">{{ 'common.uploading' | t }}</p>
         }
         @if (uploadError()) {
-          <p role="alert" class="text-danger">{{ 'common.error' | t }}</p>
+          <p role="alert" class="text-danger-ink">{{ 'common.error' | t }}</p>
         }
       </div>
 

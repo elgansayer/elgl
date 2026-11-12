@@ -4,7 +4,9 @@ import {
   IsArray,
   IsNumber,
   IsEnum,
+  MaxLength,
 } from 'class-validator';
+import { MOMENT_TARGET_LANGUAGE_MAX_LENGTH } from '../moments-column-limits.constants';
 
 export class CreateStoryDto {
   @IsOptional()
@@ -22,6 +24,7 @@ export class CreateStoryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(MOMENT_TARGET_LANGUAGE_MAX_LENGTH)
   target_language?: string;
 
   @IsOptional()

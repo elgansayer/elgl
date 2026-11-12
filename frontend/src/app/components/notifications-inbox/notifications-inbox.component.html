@@ -67,11 +67,11 @@
               (click)="onNotificationClick(notif)"
             >
               <span class="relative size-10 shrink-0 overflow-hidden rounded-full bg-surface-100" aria-hidden="true">
-                @if (notif.actor?.avatar_url) {
+                @if (notif.type !== 'system' && notif.actor?.avatar_url) {
                   <img [src]="notif.actor!.avatar_url" alt="" class="size-full object-cover" referrerpolicy="no-referrer" />
                 } @else {
                   <span class="flex size-full items-center justify-center text-sm font-medium text-text-secondary">
-                    {{ notif.actor?.display_name?.charAt(0) ?? '?' }}
+                    {{ notif.type === 'system' ? getBadgeIcon(notif.type) : (notif.actor?.display_name?.charAt(0) ?? '?') }}
                   </span>
                 }
                 @if (!notif.is_read) {
@@ -81,11 +81,17 @@
 
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-semibold" dir="auto">
-                  {{ notif.actor?.display_name ?? ('common.unknownUser' | t) }}
+                  @if (notif.type === 'system') {
+                    {{ getNotificationMessageKey(notif.type) | t }}
+                  } @else {
+                    {{ notif.actor?.display_name ?? ('common.unknownUser' | t) }}
+                  }
                 </span>
-                <span class="block text-sm text-text-secondary">
-                  {{ getNotificationMessageKey(notif.type) | t }}
-                </span>
+                @if (notif.type !== 'system') {
+                  <span class="block text-sm text-text-secondary">
+                    {{ getNotificationMessageKey(notif.type) | t }}
+                  </span>
+                }
                 @if (notif.message) {
                   <span class="mt-0.5 block break-words text-xs text-text-muted" dir="auto">{{ notif.message }}</span>
                 }
@@ -103,7 +109,7 @@
       @if (hasMore() || loadMoreError()) {
         <div class="flex flex-col items-center gap-2 p-4">
           @if (loadMoreError()) {
-            <p class="text-center text-sm text-danger" role="alert">{{ 'common.error_generic' | t }}</p>
+            <p class="text-center text-sm text-danger-ink" role="alert">{{ 'common.error_generic' | t }}</p>
           }
           <button
             hlmBtn size="touch"
