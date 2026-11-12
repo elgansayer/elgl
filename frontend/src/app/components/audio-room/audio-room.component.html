@@ -224,9 +224,11 @@
                     }
                   </div>
 
-                  @if (participant.isSpeaking) {
-                    <app-audio-equalizer [isActive]="true" customClass="mt-2"></app-audio-equalizer>
-                  }
+                  <app-audio-equalizer
+                    [isActive]="participant.isSpeaking"
+                    [ariaLabel]="participant.isSpeaking ? ('audioRoom.speaking' | t) : ''"
+                    customClass="mt-2"
+                  ></app-audio-equalizer>
 
                   <p class="mt-1 truncate text-xs font-bold text-text-primary">
                     {{ participant.display_name }}

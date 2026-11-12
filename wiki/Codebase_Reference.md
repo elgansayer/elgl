@@ -421,7 +421,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `canActivate`
 
 ### `backend/src/economy/economy.service.ts`
-- Methods: `getCatalog`, `getDefaultGiftCatalog`, `getPackages`, `createCheckoutSession`, `getBalance`, `claimDailyCheckIn`, `verifyPurchaseReceipt`, `purchaseCoins`, `parseAndroidReceiptToken`, `extractStripeSessionId`, `getCoinPackageByProductId`, `sendGift`, `unlockStickerPack`, `getStickerPacks`, `getTransactionHistory`, `invalidateUserEconomyCaches`, `getDefaultStickerPacks`
+- Methods: `getCatalog`, `getDefaultGiftCatalog`, `getPackages`, `createCheckoutSession`, `getBalance`, `claimDailyCheckIn`, `purchaseCoins`, `detectPlatform`, `parseAndroidReceiptToken`, `extractStripeSessionId`, `verifyReceipt`, `verifyAppleReceipt`, `postAppleReceipt`, `verifyGooglePlayReceipt`, `verifyStripeReceipt`, `getCoinPackageByProductId`, `sendGift`, `unlockStickerPack`, `getStickerPacks`, `getTransactionHistory`, `invalidateUserEconomyCaches`, `getDefaultStickerPacks`
 
 ### `backend/src/economy/sanitise-economy.helper.ts`
 - *(No methods found or interface/type definition)*

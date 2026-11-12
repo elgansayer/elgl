@@ -6,6 +6,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import type { FavouriteRecord } from './interfaces/chat-message.interface';
 
@@ -44,6 +45,7 @@ describe('ChatController favourites contract', () => {
       {} as ConversationStarterService,
       {} as TranslationService,
       {} as PersonalChatEncryptionService,
+      {} as ReadReceiptsService,
     );
   });
 

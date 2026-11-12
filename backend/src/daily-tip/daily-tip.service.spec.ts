@@ -13,7 +13,7 @@ interface MockQueryResult {
 
 describe('DailyTipService', () => {
   let service: DailyTipService;
-  let llmProxyService: { proxyMessage: Mock };
+  let llmProxyService: { chatCompletion: Mock };
   let eventEmitter: { emit: Mock };
   let singleResult: MockQueryResult;
   let selectResult: MockQueryResult;
@@ -47,9 +47,7 @@ describe('DailyTipService', () => {
     };
 
     llmProxyService = {
-      proxyMessage: vi
-        .fn()
-        .mockResolvedValue({ response: 'Practise a little every day.' }),
+      chatCompletion: vi.fn().mockResolvedValue('Practise a little every day.'),
     };
 
     eventEmitter = { emit: vi.fn() };
@@ -88,9 +86,8 @@ describe('DailyTipService', () => {
 
       const tip = await service.getTodayTipForUser('user-1');
 
-      expect(llmProxyService.proxyMessage).toHaveBeenCalledWith(
-        expect.stringContaining('fr'),
-      );
+      const messages = llmProxyService.chatCompletion.mock.calls[0][0];
+      expect(messages[1].content).toContain('"language":"fr"');
       expect(tip).toBe('Practise a little every day.');
     });
 
@@ -102,9 +99,8 @@ describe('DailyTipService', () => {
 
       await service.getTodayTipForUser('user-1');
 
-      expect(llmProxyService.proxyMessage).toHaveBeenCalledWith(
-        expect.stringContaining('ja'),
-      );
+      const messages = llmProxyService.chatCompletion.mock.calls[0][0];
+      expect(messages[1].content).toContain('"language":"ja"');
     });
 
     it('falls back to "en" when the user has no language preferences', async () => {
@@ -112,9 +108,8 @@ describe('DailyTipService', () => {
 
       await service.getTodayTipForUser('user-1');
 
-      expect(llmProxyService.proxyMessage).toHaveBeenCalledWith(
-        expect.stringContaining('en'),
-      );
+      const messages = llmProxyService.chatCompletion.mock.calls[0][0];
+      expect(messages[1].content).toContain('"language":"en"');
     });
 
     it('returns a default tip when the LLM proxy throws', async () => {
@@ -122,7 +117,7 @@ describe('DailyTipService', () => {
         data: { target_languages: ['es'], native_language: 'en' },
         error: null,
       };
-      llmProxyService.proxyMessage.mockRejectedValueOnce(
+      llmProxyService.chatCompletion.mockRejectedValueOnce(
         new Error('LLM unavailable'),
       );
 
@@ -136,7 +131,7 @@ describe('DailyTipService', () => {
         data: { target_languages: ['es'], native_language: 'en' },
         error: null,
       };
-      llmProxyService.proxyMessage.mockResolvedValueOnce({});
+      llmProxyService.chatCompletion.mockResolvedValueOnce('');
 
       const tip = await service.getTodayTipForUser('user-1');
 
@@ -150,7 +145,7 @@ describe('DailyTipService', () => {
 
       await service.generateDailyTips();
 
-      expect(llmProxyService.proxyMessage).not.toHaveBeenCalled();
+      expect(llmProxyService.chatCompletion).not.toHaveBeenCalled();
       expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
@@ -162,7 +157,7 @@ describe('DailyTipService', () => {
         ],
         error: null,
       };
-      llmProxyService.proxyMessage.mockResolvedValueOnce({ response: longTip });
+      llmProxyService.chatCompletion.mockResolvedValueOnce(longTip);
 
       await service.generateDailyTips();
 
@@ -186,9 +181,9 @@ describe('DailyTipService', () => {
         ],
         error: null,
       };
-      llmProxyService.proxyMessage
+      llmProxyService.chatCompletion
         .mockRejectedValueOnce(new Error('LLM unavailable'))
-        .mockResolvedValueOnce({ response: 'Bonjour tip.' });
+        .mockResolvedValueOnce('Bonjour tip.');
 
       await service.generateDailyTips();
 
@@ -210,9 +205,8 @@ describe('DailyTipService', () => {
 
       await service.generateDailyTips();
 
-      expect(llmProxyService.proxyMessage).toHaveBeenCalledWith(
-        expect.stringContaining('de'),
-      );
+      const messages = llmProxyService.chatCompletion.mock.calls[0][0];
+      expect(messages[1].content).toContain('"language":"de"');
     });
   });
 });

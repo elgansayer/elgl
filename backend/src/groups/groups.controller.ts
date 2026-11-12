@@ -215,6 +215,15 @@ export class GroupsController {
     return this.groupsService.joinGroup(groupId, userId);
   }
 
+  @Post(':groupId/chat')
+  @UseGuards(SupabaseAuthGuard)
+  async openGroupChat(
+    @Param('groupId') groupId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.groupsService.getOrCreateGroupChat(user.id, groupId);
+  }
+
   @Get(':groupId/resources')
   @UseGuards(SupabaseAuthGuard)
   async getGroupResources(@Param('groupId') groupId: string) {

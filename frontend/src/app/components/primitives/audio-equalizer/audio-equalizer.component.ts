@@ -7,11 +7,14 @@ import { Component, ChangeDetectionStrategy, input, computed } from '@angular/co
   imports: [],
   host: {
     '[class]': 'customClass()',
+    '[attr.role]': '"img"',
+    '[attr.aria-label]': 'accessibleLabel()',
   },
   template: `
     <div
       class="flex items-end justify-center gap-0.5 h-5"
       [class.opacity-40]="!isActive()"
+      aria-hidden="true"
     >
       @for (bar of bars(); track $index) {
         <div
@@ -22,6 +25,7 @@ import { Component, ChangeDetectionStrategy, input, computed } from '@angular/co
         ></div>
       }
     </div>
+    <span class="sr-only">{{ accessibleLabel() }}</span>
   `,
   styles: [
     `
@@ -39,6 +43,12 @@ import { Component, ChangeDetectionStrategy, input, computed } from '@angular/co
       .animate-eq {
         animation: eq 0.6s ease-in-out infinite;
       }
+      @media (prefers-reduced-motion: reduce) {
+        .animate-eq {
+          animation: none;
+          height: 70%;
+        }
+      }
     `,
   ],
 })
@@ -51,6 +61,16 @@ export class AudioEqualizerComponent {
 
   /** Optional CSS classes to apply to the host element */
   customClass = input<string>('');
+
+  /** Optional accessible label override for assistive technologies */
+  ariaLabel = input<string>('');
+
+  /** Accessible label describing whether the speaker is active */
+  accessibleLabel = computed(() => {
+    const custom = this.ariaLabel().trim();
+    if (custom) return custom;
+    return this.isActive() ? 'Audio active' : 'Audio inactive';
+  });
 
   /** Generate bars with staggered animation delays */
   bars = computed(() => {

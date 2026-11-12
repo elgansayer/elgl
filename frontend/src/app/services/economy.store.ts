@@ -474,6 +474,24 @@ export class EconomyStore {
     }
   }
 
+  async revokeApiKey(): Promise<boolean> {
+    try {
+      await firstValueFrom(
+        this.http.delete<{ revoked: boolean; api_key: null }>(
+          `${this.monetisationUrl}/api-key`,
+          { headers: this.getHeaders() },
+        ),
+      );
+      await this.loadDeveloperAnalytics();
+      showToast(this.i18n.translate('developer.revokeSuccess'));
+      return true;
+    } catch (e) {
+      console.error('Revoke API key error:', e);
+      showToast(this.i18n.translate('developer.revokeError'));
+      return false;
+    }
+  }
+
   async reportUser(reportedId: string, reason: string, details?: string): Promise<void> {
     try {
       await this.safetyService.reportUser({
@@ -571,7 +589,7 @@ export class EconomyStore {
     }
   }
 
-  async loadStickerPacks(): Promise<void> {
+  async loadStickerPacks(): Promise<boolean> {
     try {
       const res = await firstValueFrom(
         this.http.get<{
@@ -589,14 +607,17 @@ export class EconomyStore {
       this.stickerPacks.set(processed);
       this.offlineEconomy.cacheStickerPacks(processed);
       this.offlineEconomy.cacheBalance(res.user_coins);
+      return true;
     } catch (e) {
       console.error('Load sticker packs error:', e);
       if (!this.isOnline()) {
         const cached = await this.offlineEconomy.getCachedStickerPacks();
         if (cached && cached.length > 0) {
           this.stickerPacks.set(cached);
+          return true;
         }
       }
+      return false;
     }
   }
 

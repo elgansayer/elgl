@@ -62,6 +62,43 @@ describe('NotificationsInboxService', () => {
     expect(builder.limit).toHaveBeenCalledWith(12);
   });
 
+  it('never exposes an actor profile on system alerts', async () => {
+    result = {
+      data: [
+        {
+          id: 'notification-1',
+          recipient_id: 'user-1',
+          actor_id: 'admin-9',
+          type: 'system',
+          message: 'Your plan was updated',
+          is_read: false,
+          created_at: '2026-11-07T10:00:00.000Z',
+          actor: { id: 'admin-9', display_name: 'Operator' },
+        },
+        {
+          id: 'notification-2',
+          recipient_id: 'user-1',
+          actor_id: 'actor-2',
+          type: 'follow',
+          is_read: false,
+          created_at: '2026-11-07T09:00:00.000Z',
+          actor: { id: 'actor-2', display_name: 'Sam' },
+        },
+      ],
+      error: null,
+    };
+
+    const [system, follow] = await service.getNotifications('user-1');
+
+    expect(system).toMatchObject({
+      type: 'system',
+      actor_id: 'user-1',
+      message: 'Your plan was updated',
+    });
+    expect(system.actor).toBeUndefined();
+    expect(follow.actor).toEqual({ id: 'actor-2', display_name: 'Sam' });
+  });
+
   it('fails closed when the inbox query fails', async () => {
     result = { data: null, error: { message: 'database unavailable' } };
     await expect(service.getNotifications('user-1')).rejects.toBeInstanceOf(

@@ -46,7 +46,7 @@ Each asset is capped at 12 kB by the verifier and is served through Angular's ex
 
 Illustration loading is non-critical. The translated empty-state copy and action remain functional if an asset request fails. No retry loop or telemetry containing user data is added for decorative media failures.
 
-The verifier fails CI if an asset is deleted, its product reference is removed, unsafe SVG capabilities are introduced, the responsive view box changes unexpectedly, or the shared decorative accessibility contract regresses.
+The verifier fails CI if an asset is deleted, its product reference is removed, unsafe SVG capabilities are introduced, the responsive view box changes unexpectedly, the shared decorative accessibility contract regresses, or a duplicate illustration directory reappears under `frontend/src/assets/illustrations`.
 
 ## Verification
 

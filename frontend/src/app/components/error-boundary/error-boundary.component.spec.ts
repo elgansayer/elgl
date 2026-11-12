@@ -36,7 +36,7 @@ describe('ErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h2')?.textContent).toContain('errorBoundary.title');
+    expect(compiled.querySelector('h2')?.textContent).toContain('Something went wrong');
     expect(compiled.textContent).toContain('Test rendering crash');
     expect(reportEconomyCrash).toHaveBeenCalledTimes(1);
     expect(reportEconomyCrash).toHaveBeenCalledWith(error, {
@@ -77,7 +77,7 @@ describe('ErrorBoundaryComponent', () => {
 
     expect(spartanButtons).toHaveLength(1);
     expect(nativeButtons).toHaveLength(1);
-    expect(nativeButtons[0].textContent).toContain('errorBoundary.report');
+    expect(nativeButtons[0].textContent).toContain('Report problem');
   });
 
   it('should reset error state through the native Retry action', () => {
@@ -87,7 +87,7 @@ describe('ErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
-    const retry = buttons.find((button) => button.textContent?.includes('errorBoundary.retry'));
+    const retry = buttons.find((button) => button.textContent?.includes('Try again'));
     expect(retry).toBeDefined();
 
     retry?.click();
@@ -109,7 +109,7 @@ describe('ErrorBoundaryComponent', () => {
 
     const report = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
-    ).find((button) => button.textContent?.includes('errorBoundary.report'));
+    ).find((button) => button.textContent?.includes('Report problem'));
     expect(report).toBeDefined();
 
     report?.click();

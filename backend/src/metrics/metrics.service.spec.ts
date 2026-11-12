@@ -658,4 +658,37 @@ describe('MetricsService', () => {
       );
     });
   });
+  describe('PII scrubbing metrics', () => {
+    it('counts provider calls by scrub outcome', async () => {
+      service.recordPiiScrub('deepl', 'translate', 'redacted');
+      service.recordPiiScrub('deepl', 'translate', 'redacted');
+      service.recordPiiScrub('azure', 'transliterate', 'clean');
+      service.recordPiiScrub('deepl', 'translate', 'placeholder_mismatch');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_pii_scrub_total{provider="deepl",operation="translate",outcome="redacted"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_pii_scrub_total{provider="azure",operation="transliterate",outcome="clean"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_pii_scrub_total{provider="deepl",operation="translate",outcome="placeholder_mismatch"} 1',
+      );
+    });
+
+    it('counts redacted spans by category', async () => {
+      service.recordPiiRedactions('deepl', 'translate', 'email', 2);
+      service.recordPiiRedactions('deepl', 'translate', 'email', 1);
+      service.recordPiiRedactions('azure', 'grammar_check', 'card', 1);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_pii_redactions_total{provider="deepl",operation="translate",category="email"} 3',
+      );
+      expect(metrics).toContain(
+        'hellotalk_pii_redactions_total{provider="azure",operation="grammar_check",category="card"} 1',
+      );
+    });
+  });
 });

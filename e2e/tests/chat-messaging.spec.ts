@@ -111,7 +111,9 @@ test.describe('HelloTalk Chat Messaging E2E', () => {
     await page.goto(`/chat/${roomId}`);
 
     await expect(page.locator('[data-testid="chat-message-input"]')).toBeVisible();
-    await expect(page.locator('[data-testid="chat-message"]').filter({ hasText: 'こんにちは！' })).toBeVisible();
+    await expect(
+      page.locator('[data-testid="chat-message"]').filter({ hasText: 'こんにちは！' }),
+    ).toBeVisible();
   });
 
   test('sends the composer text through POST /api/chat/messages and renders the result', async ({
@@ -156,7 +158,38 @@ test.describe('HelloTalk Chat Messaging E2E', () => {
       message_type: 'text',
       text_content: text,
     });
-    await expect(page.locator('[data-testid="chat-message"]').filter({ hasText: text })).toBeVisible();
+    await expect(
+      page.locator('[data-testid="chat-message"]').filter({ hasText: text }),
+    ).toBeVisible();
     await expect(messageInput).toHaveValue('');
+  });
+
+  test('retains a failed chat draft so the learner can retry', async ({ page }) => {
+    await page.route('**/api/chat/messages', async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Temporarily unavailable' }),
+      });
+    });
+
+    await page.goto(`/chat/${roomId}`);
+
+    const messageInput = page.locator('[data-testid="chat-message-input"]');
+    const text = 'Retry-safe chat draft';
+    await expect(messageInput).toBeVisible();
+    await messageInput.fill(text);
+
+    const failedResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/chat/messages') && response.request().method() === 'POST',
+    );
+    await messageInput.press('Enter');
+    await failedResponse;
+
+    // The composer keeps the unsent text after a failed delivery, so the learner can retry
+    // without retyping.
+    await expect(messageInput).toBeVisible();
+    await expect(messageInput).toHaveValue(text);
   });
 });

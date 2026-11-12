@@ -27,6 +27,7 @@
         --text-secondary: 74 81 99;
         --text-muted: 101 106 122;
         --primary: 198 82 48;
+        --primary-ink: 178 74 43;
         --secondary: 26 132 120;
         --danger: 217 58 58;
         --success: 25 134 84;
@@ -56,6 +57,7 @@
         --text-secondary: 180 186 201;
         --text-muted: 137 143 157;
         --primary: 255 122 82;
+        --primary-ink: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
         --success: 52 211 153;
@@ -251,11 +253,95 @@
         border: none;
       }
 
+      .learning-summary {
+        margin-top: 14px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-300));
+        padding: 12px;
+      }
+      .language-columns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .learning-label {
+        margin: 0;
+        color: rgb(var(--text-secondary));
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .language-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .language-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        max-width: 100%;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .language-badge.target {
+        border-color: rgb(var(--primary) / 0.3);
+        background: rgb(var(--primary) / 0.1);
+        color: rgb(var(--primary-ink));
+      }
+      .streak-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 14px;
+        border-top: 1px solid rgb(var(--surface-100));
+        padding-top: 12px;
+      }
+      .streak-row p {
+        margin: 0;
+      }
+      .streak-flame {
+        color: rgb(var(--primary-ink));
+        font-size: 18px;
+      }
+      .streak-value {
+        margin-top: 3px !important;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .audio-intro {
+        margin-top: 12px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-300));
+        padding: 12px;
+      }
+      .audio-intro h3 {
+        margin: 0;
+        font-size: 13px;
+      }
+      .audio-intro p {
+        margin: 3px 0 10px;
+        color: rgb(var(--text-secondary));
+        font-size: 11px;
+      }
+      .audio-intro audio {
+        width: 100%;
+        height: 36px;
+      }
       .stat-grid {
         margin-top: 14px;
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px 4px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
         border-radius: 12px;
         border: 1px solid rgb(var(--surface-100));
         background: rgb(var(--surface-300));
@@ -273,15 +359,6 @@
         font-size: 13px;
         font-weight: 800;
         margin: 0;
-      }
-      .c-native {
-        color: rgb(var(--text-primary));
-      }
-      .c-target {
-        color: rgb(var(--primary));
-      }
-      .c-streak {
-        color: rgb(var(--neon-orange));
       }
       .c-corrections {
         color: rgb(var(--success));
@@ -479,19 +556,39 @@
           </div>
         </div>
 
+        <section class="learning-summary" aria-label="Language learning summary">
+          <div class="language-columns">
+            <div role="group" aria-labelledby="native-languages-heading">
+              <p class="learning-label" id="native-languages-heading">Native languages</p>
+              <ul class="language-badges">
+                <li class="language-badge"><span aria-hidden="true">🇨🇳</span> Mandarin Chinese</li>
+                <li class="language-badge"><span aria-hidden="true">🇬🇧</span> British English</li>
+              </ul>
+            </div>
+            <div role="group" aria-labelledby="target-languages-heading">
+              <p class="learning-label" id="target-languages-heading">Learning languages</p>
+              <ul class="language-badges">
+                <li class="language-badge target"><span aria-hidden="true">🇬🇧</span> English</li>
+                <li class="language-badge target"><span aria-hidden="true">🇪🇸</span> Spanish</li>
+              </ul>
+            </div>
+          </div>
+          <div class="streak-row" role="group" aria-labelledby="study-streak-heading">
+            <span class="streak-flame" aria-hidden="true">🔥</span>
+            <div>
+              <p class="learning-label" id="study-streak-heading">Study streak</p>
+              <p class="streak-value">47 days</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="audio-intro" aria-labelledby="audio-intro-heading">
+          <h3 id="audio-intro-heading">Audio introduction</h3>
+          <p>Record a 30-second audio introduction to let others hear your voice.</p>
+          <audio controls aria-label="Audio introduction"></audio>
+        </section>
+
         <div class="stat-grid">
-          <div>
-            <p class="stat-label">Native</p>
-            <p class="stat-value c-native">MANDARIN</p>
-          </div>
-          <div>
-            <p class="stat-label">Target</p>
-            <p class="stat-value c-target">ENGLISH</p>
-          </div>
-          <div>
-            <p class="stat-label">Streak</p>
-            <p class="stat-value c-streak">🔥 47d</p>
-          </div>
           <div>
             <p class="stat-label">Corrections</p>
             <p class="stat-value c-corrections">1.8x</p>
@@ -499,6 +596,7 @@
           <div>
             <p class="stat-label">Corrector score</p>
             <p class="stat-value c-corrector">4.6 / 5</p>
+            <p class="stat-label">Unavailable state: Score unavailable</p>
           </div>
         </div>
 
@@ -521,6 +619,7 @@
 
         <div class="nav-grid">
           <a href="#">Favourites</a>
+          <a href="#">My Stats</a>
           <a href="#">Vocabulary</a>
           <a href="#">Live Rooms</a>
           <a href="#">Developer</a>
@@ -558,12 +657,13 @@
     </div>
 
     <p class="caption">
-      Shown primarily in read-only view mode since that's what most visitors see, with the edit
-      form's proficiency selector included to capture its CEFR choices. The remaining edit form is a
-      long field-by-field settings surface better covered by a future forms/inputs primitives page.
-      Also left out: skeleton loading state, achievements widget, VIP upsell banner (only shown for
-      non-VIP profiles - the previewed profile is VIP), and the business-catalogue section
-      (conditional, empty for most users).
+      Shown primarily in read-only view mode since that's what most visitors see, including native
+      and learning language badge groups, the persisted audio player, and a text-backed study
+      streak. The edit form's proficiency selector captures its CEFR choices. The remaining edit
+      form is a long field-by-field settings surface better covered by a future forms/inputs
+      primitives page. Also left out: skeleton and retry states, achievements widget, VIP upsell
+      banner (only shown for non-VIP profiles - the previewed profile is VIP), and the
+      business-catalogue section (conditional, empty for most users).
     </p>
 
     <script>

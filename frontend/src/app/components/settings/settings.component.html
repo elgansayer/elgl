@@ -185,21 +185,6 @@
               class="h-5 w-5 rounded border-surface-300 text-primary-ink focus:ring-primary/30"
             />
           </label>
-
-          <div class="flex items-center justify-between p-4">
-            <span class="text-sm font-medium text-text-primary">{{ 'settings.textSize' | t }}</span>
-            <hlm-native-select
-              [ngModel]="chatTextSize()"
-              (ngModelChange)="chatTextSize.set($event)"
-              class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-              selectClass="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-              [aria-label]="'Select'"
-            >
-              <option value="small">{{ 'settings.textSizeSmall' | t }}</option>
-              <option value="medium">{{ 'settings.textSizeMedium' | t }}</option>
-              <option value="large">{{ 'settings.textSizeLarge' | t }}</option>
-            </hlm-native-select>
-          </div>
         </div>
       </section>
 
@@ -563,7 +548,7 @@
             <span class="text-text-secondary">→</span>
           </a>
           <a
-            routerLink="/support"
+            routerLink="/settings/help-about"
             class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
           >
             <div class="flex items-center gap-3">

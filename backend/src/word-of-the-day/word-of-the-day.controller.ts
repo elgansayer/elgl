@@ -10,7 +10,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CacheControlInterceptor,
-  CACHE_EDGE_MEDIUM,
+  CACHE_NO_STORE,
 } from '../common/cache.interceptor';
 import { WordOfTheDay, WordOfTheDayService } from './word-of-the-day.service';
 
@@ -21,10 +21,13 @@ export class WordOfTheDayController {
 
   /**
    * Returns the deterministic UTC word for the signed-in learner's primary
-   * target language. Responses are partitioned by Authorization at the edge.
+   * target language. The body depends on the learner's profile and rolls over
+   * at UTC midnight, and every request is authenticated, so no shared cache may
+   * keep it: CacheControlInterceptor would downgrade an edge directive to
+   * no-store for an Authorization header anyway, so the policy is explicit.
    */
   @Get()
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_MEDIUM))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async findOne(@CurrentUser() user: User | null): Promise<WordOfTheDay> {
     if (!user) throw new UnauthorizedException();
     return this.service.getTodayWordForUser(user.id);

@@ -1,6 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
+import { MetricsService } from '../metrics/metrics.service';
+import {
+  PiiOperation,
+  PiiTelemetry,
+  ProtectedText,
+  protectForProvider,
+  restoreFromProvider,
+} from '../privacy/pii-redaction';
 
 /**
  * Detailed translation result that includes the main translation,
@@ -20,13 +28,29 @@ export class TranslationService {
   private deeplApiKey?: string;
   private readonly translationCache = new Map<string, string>();
   private readonly detectionCache = new Map<string, string>();
+  private readonly piiTelemetry: PiiTelemetry;
 
   constructor(
     private configService: ConfigService,
     @InjectPinoLogger(TranslationService.name)
     private readonly logger: PinoLogger,
+    @Optional() metricsService?: MetricsService,
   ) {
     this.deeplApiKey = this.configService.get<string>('DEEPL_API_KEY');
+    this.piiTelemetry = {
+      debug: (message) => this.logger.debug(message),
+      warn: (message) => this.logger.warn(message),
+      metrics: metricsService,
+    };
+  }
+
+  /** Masks PII so the original values never reach DeepL. */
+  private protect(text: string, operation: PiiOperation): ProtectedText {
+    return protectForProvider(
+      text,
+      { provider: 'deepl', operation },
+      this.piiTelemetry,
+    );
   }
 
   /**
@@ -49,9 +73,15 @@ export class TranslationService {
       return cached;
     }
 
+    // Only sensitive spans remain: there is no language to detect, so nothing is sent.
+    const sensitive = this.protect(text, 'detect_language');
+    if (sensitive.nothingToTranslate) {
+      return 'en';
+    }
+
     const detectUrl = 'https://api-free.deepl.com/v2/translate';
     const formData = new URLSearchParams();
-    formData.append('text', text);
+    formData.append('text', sensitive.text);
     formData.append('target_lang', 'EN'); // always temporary
 
     try {
@@ -122,9 +152,15 @@ export class TranslationService {
       return cached;
     }
 
+    // Only sensitive spans remain: the text is already its own translation.
+    const sensitive = this.protect(text, 'translate');
+    if (sensitive.nothingToTranslate) {
+      return text;
+    }
+
     const url = 'https://api-free.deepl.com/v2/translate';
     const formData = new URLSearchParams();
-    formData.append('text', text);
+    formData.append('text', sensitive.text);
     formData.append('source_lang', sourceLang.toUpperCase());
     formData.append('target_lang', targetLang.toUpperCase());
 
@@ -162,8 +198,18 @@ export class TranslationService {
           const record = first as Record<string, unknown>;
           const translation = record['text'];
           if (typeof translation === 'string' && translation.length > 0) {
-            this.translationCache.set(key, translation);
-            return translation;
+            const restored = restoreFromProvider(
+              sensitive,
+              translation,
+              { provider: 'deepl', operation: 'translate' },
+              this.piiTelemetry,
+            );
+            if (restored === null) {
+              // A damaged redaction token is not cached, so a retry can still succeed.
+              return text;
+            }
+            this.translationCache.set(key, restored);
+            return restored;
           }
         }
       }

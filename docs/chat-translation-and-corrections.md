@@ -41,10 +41,12 @@ Message text is private user content. The following rules apply:
 3. Translation output is displayed through Angular text interpolation. Do not introduce raw HTML rendering for provider output.
 4. Corrections continue through the normal authenticated chat persistence boundary and inherit the room's retention/deletion rules.
 5. A translation result is advisory content. It never overwrites the stored source message.
+6. Sensitive spans (email addresses, phone numbers, payment cards, IBANs, national identifiers, IP addresses, URLs and social handles) are replaced by opaque placeholders before the text reaches DeepL or Azure Translator, and are restored in the response. The provider never receives the value. See [PII scrubbing before text reaches DeepL or Azure](./pii-scrubbing-translation-providers.md) for the detection rules, failure behaviour and metrics.
 
 ## Failure and concurrency behavior
 
 - Translation provider/network failure: keep the source message visible, store no cache entry, and allow a later retry.
+- Provider damaged a PII redaction token: the response is treated as invalid, so the source message stays visible and nothing is cached. A message that contains only sensitive data (for example just an email address) makes no provider call and is shown as written.
 - Translation cache miss/expiry: call the authoritative translation API normally.
 - Cache overflow: evict least-recently-used entries without affecting the displayed translation result.
 - Cache lifecycle reset: a fresh application instance starts empty by design.

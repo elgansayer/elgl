@@ -16,6 +16,7 @@ import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
+import { SecureChatService } from './secure-chat.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -33,6 +34,8 @@ import { DisappearingMessagesCleanupService } from './disappearing-messages-clea
 import { DisappearingMessagesInterceptor } from './disappearing-messages.interceptor';
 import { PersonalUnreadListener } from './listeners/personal-unread.listener';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { GroupChatController } from './group-chat.controller';
+import { GroupChatService } from './group-chat.service';
 
 @Module({
   imports: [
@@ -54,14 +57,16 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
+    GroupChatController,
   ],
   providers: [
     CentrifugoService,
+    GroupChatService,
     ReadReceiptsService,
     TranslationService,
     ChatLlmService,
     ChatLlmProxyService,
-    ChatService,
+    { provide: ChatService, useClass: SecureChatService },
     ConversationStarterService,
     DirectConversationService,
     SystemMessageService,
@@ -89,6 +94,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     SystemMessageService,
     ChatSettingsService,
     PersonalChatEncryptionService,
+    GroupChatService,
   ],
 })
 export class ChatModule {}
