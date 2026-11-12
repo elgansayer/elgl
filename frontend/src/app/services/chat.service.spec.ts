@@ -9,10 +9,12 @@ import { ChatService, ChatMessage } from './chat.service';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
+import { NetworkStatusService } from './network-status.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 import { ChatCacheService } from './chat-cache.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import { I18nService } from './i18n.service';
+import { toastsSignal } from './toast.service';
 import { environment } from '../../environments/environment';
 
 const baseUrl = `${environment.apiUrl}/chat`;
@@ -31,6 +33,8 @@ describe('ChatService', () => {
   let incrementRetryCountMock: ReturnType<typeof vi.fn>;
   let hapticTapMock: ReturnType<typeof vi.fn>;
   let getCachedRoomsMock: ReturnType<typeof vi.fn>;
+  let translateMock: ReturnType<typeof vi.fn>;
+  let online: ReturnType<typeof signal<boolean>>;
 
   beforeEach(() => {
     currentUser = signal<{ id: string } | null>(null);
@@ -44,6 +48,10 @@ describe('ChatService', () => {
     incrementRetryCountMock = vi.fn().mockResolvedValue(undefined);
     hapticTapMock = vi.fn();
     getCachedRoomsMock = vi.fn().mockResolvedValue(null);
+    translateMock = vi.fn((key: string) => key);
+    // Offline by default so the automatic replay never races the explicit calls in these tests.
+    online = signal(false);
+    toastsSignal.set([]);
 
     TestBed.configureTestingModule({
       providers: [
@@ -75,6 +83,10 @@ describe('ChatService', () => {
             removeMessage: removeMessageMock,
             incrementRetryCount: incrementRetryCountMock,
           } as unknown as OfflineQueueService,
+        },
+        {
+          provide: NetworkStatusService,
+          useValue: { isOnline: online } as unknown as NetworkStatusService,
         },
         {
           provide: HapticFeedbackService,
@@ -122,7 +134,7 @@ describe('ChatService', () => {
         {
           provide: I18nService,
           useValue: {
-            translate: vi.fn((key: string) => key),
+            translate: translateMock,
           },
         },
       ],
@@ -518,6 +530,33 @@ describe('ChatService', () => {
   });
 
   describe('syncOfflineMessages', () => {
+    const queued = (
+      id: string,
+      roomId = 'room-1',
+      overrides: Partial<ChatMessage> = {},
+    ): ChatMessage => ({
+      id,
+      room_id: roomId,
+      sender_id: 'user-1',
+      message_type: 'text',
+      text_content: `text ${id}`,
+      is_read: false,
+      created_at: '2026-10-31T00:00:00.000Z',
+      ...overrides,
+    });
+
+    /** Lets the replay run until it is waiting on its next HTTP request. */
+    const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    const emptyResult = { sent: 0, failed: 0, rejected: 0 };
+    let warnSpy: ReturnType<typeof vi.spyOn>;
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+
     it('preserves encrypted envelopes when flushing the offline queue', async () => {
       getQueuedMessagesMock.mockResolvedValueOnce([
         {
@@ -544,8 +583,246 @@ describe('ChatService', () => {
       );
       request.flush({ id: 'server-message-1' });
 
-      await expect(sync).resolves.toEqual({ sent: 1, failed: 0 });
+      await expect(sync).resolves.toEqual({ sent: 1, failed: 0, rejected: 0 });
       expect(removeMessageMock).toHaveBeenCalledWith('queued-1');
+    });
+
+    it('sends the queue id as the idempotency key and never the local ownership fields', async () => {
+      getQueuedMessagesMock.mockResolvedValueOnce([queued('11111111-1111-4111-8111-111111111111')]);
+
+      const sync = service.syncOfflineMessages();
+      await settle();
+      const request = httpMock.expectOne(`${baseUrl}/messages`);
+
+      expect(request.request.method).toBe('POST');
+      expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
+      expect(request.request.body).toEqual(
+        expect.objectContaining({
+          room_id: 'room-1',
+          message_type: 'text',
+          text_content: 'text 11111111-1111-4111-8111-111111111111',
+          client_message_id: '11111111-1111-4111-8111-111111111111',
+        }),
+      );
+      expect(request.request.body).not.toHaveProperty('id');
+      expect(request.request.body).not.toHaveProperty('sender_id');
+      expect(request.request.body).not.toHaveProperty('created_at');
+      request.flush({ id: '11111111-1111-4111-8111-111111111111' });
+
+      await expect(sync).resolves.toEqual({ sent: 1, failed: 0, rejected: 0 });
+    });
+
+    it('shares one replay between overlapping triggers so a message is sent once', async () => {
+      getQueuedMessagesMock.mockResolvedValue([queued('m1')]);
+
+      const first = service.syncOfflineMessages();
+      const second = service.syncOfflineMessages();
+      expect(second).toBe(first);
+
+      await settle();
+      httpMock.expectOne(`${baseUrl}/messages`).flush({ id: 'm1' });
+      await expect(first).resolves.toEqual({ sent: 1, failed: 0, rejected: 0 });
+      expect(getQueuedMessagesMock).toHaveBeenCalledTimes(1);
+
+      // Once the replay has finished a later trigger starts a new one.
+      getQueuedMessagesMock.mockResolvedValue([]);
+      await expect(service.syncOfflineMessages()).resolves.toEqual(emptyResult);
+      expect(getQueuedMessagesMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('sends queued messages oldest first, one request at a time', async () => {
+      getQueuedMessagesMock.mockResolvedValue([queued('m1'), queued('m2')]);
+
+      const sync = service.syncOfflineMessages();
+      await settle();
+      const first = httpMock.expectOne(`${baseUrl}/messages`);
+      expect(first.request.body.client_message_id).toBe('m1');
+      first.flush({ id: 'm1' });
+
+      await settle();
+      const second = httpMock.expectOne(`${baseUrl}/messages`);
+      expect(second.request.body.client_message_id).toBe('m2');
+      second.flush({ id: 'm2' });
+
+      await expect(sync).resolves.toEqual({ sent: 2, failed: 0, rejected: 0 });
+      expect(removeMessageMock.mock.calls.map(([id]) => id)).toEqual(['m1', 'm2']);
+    });
+
+    it('holds back later messages of a room after a transient failure but still serves other rooms', async () => {
+      getQueuedMessagesMock.mockResolvedValue([
+        queued('a1', 'room-a'),
+        queued('a2', 'room-a'),
+        queued('b1', 'room-b'),
+      ]);
+
+      const sync = service.syncOfflineMessages();
+      await settle();
+      httpMock
+        .expectOne(`${baseUrl}/messages`)
+        .flush({}, { status: 503, statusText: 'Unavailable' });
+      await settle();
+      // a2 is not attempted: it would overtake the failed a1 in room-a.
+      const other = httpMock.expectOne(`${baseUrl}/messages`);
+      expect(other.request.body.client_message_id).toBe('b1');
+      other.flush({ id: 'b1' });
+
+      await expect(sync).resolves.toEqual({ sent: 1, failed: 2, rejected: 0 });
+      expect(removeMessageMock).toHaveBeenCalledTimes(1);
+      expect(removeMessageMock).toHaveBeenCalledWith('b1');
+      expect(warnSpy).toHaveBeenCalledWith('chat.offline_sync_incomplete', {
+        sent: 1,
+        failed: 2,
+        rejected: 0,
+      });
+      expect(toastsSignal()).toEqual([]);
+    });
+
+    it.each([0, 401, 408, 425, 429, 500, 502, 503])(
+      'keeps the message queued after a retryable %s response',
+      async (status) => {
+        getQueuedMessagesMock.mockResolvedValue([queued('m1')]);
+
+        const sync = service.syncOfflineMessages();
+        await settle();
+        const request = httpMock.expectOne(`${baseUrl}/messages`);
+        if (status === 0) {
+          request.error(new ProgressEvent('error'));
+        } else {
+          request.flush({}, { status, statusText: 'Retry later' });
+        }
+
+        await expect(sync).resolves.toEqual({ sent: 0, failed: 1, rejected: 0 });
+        expect(removeMessageMock).not.toHaveBeenCalled();
+        expect(toastsSignal()).toEqual([]);
+      },
+    );
+
+    it.each([400, 403, 404, 409, 413, 422])(
+      'removes a message the server permanently refuses with %s and still sends later ones',
+      async (status) => {
+        getQueuedMessagesMock.mockResolvedValue([queued('bad'), queued('good')]);
+
+        const sync = service.syncOfflineMessages();
+        await settle();
+        httpMock
+          .expectOne(`${baseUrl}/messages`)
+          .flush({ message: 'refused' }, { status, statusText: 'Refused' });
+        await settle();
+        const next = httpMock.expectOne(`${baseUrl}/messages`);
+        expect(next.request.body.client_message_id).toBe('good');
+        next.flush({ id: 'good' });
+
+        await expect(sync).resolves.toEqual({ sent: 1, failed: 0, rejected: 1 });
+        expect(removeMessageMock.mock.calls.map(([id]) => id)).toEqual(['bad', 'good']);
+        expect(translateMock).toHaveBeenCalledWith('chatRoom.offlineMessagesRejected', {
+          count: 1,
+        });
+        expect(toastsSignal()).toEqual([
+          expect.objectContaining({ type: 'error', message: 'chatRoom.offlineMessagesRejected' }),
+        ]);
+      },
+    );
+
+    it('retries a delivered message whose dequeue failed, relying on the idempotent API', async () => {
+      removeMessageMock.mockRejectedValueOnce(new Error('storage failure'));
+      getQueuedMessagesMock.mockResolvedValue([queued('m1'), queued('m2')]);
+
+      const first = service.syncOfflineMessages();
+      await settle();
+      httpMock.expectOne(`${baseUrl}/messages`).flush({ id: 'm1' });
+
+      // m2 is held back because m1 is still queued.
+      await expect(first).resolves.toEqual({ sent: 0, failed: 2, rejected: 0 });
+      httpMock.expectNone(`${baseUrl}/messages`);
+
+      const second = service.syncOfflineMessages();
+      await settle();
+      const resend = httpMock.expectOne(`${baseUrl}/messages`);
+      expect(resend.request.body.client_message_id).toBe('m1');
+      resend.flush({ id: 'm1' });
+      await settle();
+      httpMock.expectOne(`${baseUrl}/messages`).flush({ id: 'm2' });
+
+      await expect(second).resolves.toEqual({ sent: 2, failed: 0, rejected: 0 });
+    });
+
+    it('does nothing without a session', async () => {
+      getAccessTokenMock.mockReturnValue(null);
+      getQueuedMessagesMock.mockResolvedValue([queued('m1')]);
+
+      await expect(service.syncOfflineMessages()).resolves.toEqual(emptyResult);
+      expect(getQueuedMessagesMock).not.toHaveBeenCalled();
+      httpMock.expectNone(`${baseUrl}/messages`);
+    });
+
+    it('reports an unreadable queue with a fixed diagnostic that carries no private content', async () => {
+      getQueuedMessagesMock.mockRejectedValue(new Error('private message text'));
+
+      await expect(service.syncOfflineMessages()).resolves.toEqual(emptyResult);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy).toHaveBeenCalledWith('chat.offline_queue_unreadable');
+      httpMock.expectNone(`${baseUrl}/messages`);
+    });
+  });
+
+  describe('automatic offline replay', () => {
+    const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    it('replays when a signed-in account gains connectivity', async () => {
+      online.set(true);
+      TestBed.tick();
+      await settle();
+
+      expect(getQueuedMessagesMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('replays again each time connectivity returns', async () => {
+      online.set(true);
+      TestBed.tick();
+      await settle();
+      online.set(false);
+      TestBed.tick();
+      await settle();
+      expect(getQueuedMessagesMock).toHaveBeenCalledTimes(1);
+
+      online.set(true);
+      TestBed.tick();
+      await settle();
+      expect(getQueuedMessagesMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not replay for a signed-out browser', async () => {
+      currentUser.set(null);
+      online.set(true);
+      TestBed.tick();
+      await settle();
+
+      expect(getQueuedMessagesMock).not.toHaveBeenCalled();
+    });
+
+    it('replays messages left by a previous session once the account signs in', async () => {
+      currentUser.set(null);
+      online.set(true);
+      TestBed.tick();
+      await settle();
+      expect(getQueuedMessagesMock).not.toHaveBeenCalled();
+
+      currentUser.set({ id: 'user-1' });
+      TestBed.tick();
+      await settle();
+      expect(getQueuedMessagesMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not replay again when the account object refreshes while staying signed in', async () => {
+      online.set(true);
+      TestBed.tick();
+      await settle();
+
+      currentUser.set({ id: 'user-1' });
+      TestBed.tick();
+      await settle();
+
+      expect(getQueuedMessagesMock).toHaveBeenCalledTimes(1);
     });
   });
 

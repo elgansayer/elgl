@@ -28,6 +28,8 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { ExchangeTimerComponent } from '../exchange-timer/exchange-timer.component';
+import { ExchangeTimerService } from '../../services/exchange-timer.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -38,6 +40,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     AppGradientButtonComponent,
     LiveChatOverlayComponent,
     AppSkeletonLoaderComponent,
+    ExchangeTimerComponent,
     TranslatePipe,
   ],
   template: `
@@ -189,6 +192,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
           {{ callDuration() }}
         </div>
 
+        <!-- Reciprocal language exchange turn timer -->
+        <div class="absolute top-2 sm:top-4 end-3 sm:end-4 z-10 w-48 sm:w-64">
+          <app-exchange-timer />
+        </div>
+
         <!-- Live chat overlay over host video stream -->
         <app-live-chat-overlay [roomId]="roomName()"></app-live-chat-overlay>
       </div>
@@ -206,8 +214,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
               ? 'bg-danger hover:bg-danger/90 rounded-full w-11 h-11 sm:w-14 sm:h-14'
               : 'bg-white/20 hover:bg-white/30 rounded-full w-11 h-11 sm:w-14 sm:h-14'
           "
+          [disabled]="!exchangeTimer.canSpeak()"
           [ariaLabel]="
-            (isAudioMuted() ? 'video_call.unmute_audio_aria' : 'video_call.mute_audio_aria') | t
+            !exchangeTimer.canSpeak()
+              ? ('video_call.exchange_muted_until_turn' | t)
+              : ((isAudioMuted() ? 'video_call.unmute_audio_aria' : 'video_call.mute_audio_aria')
+                | t)
           "
           [ariaPressed]="isAudioMuted()"
           (clicked)="toggleAudio()"
@@ -396,6 +408,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class VideoCallComponent implements OnInit, OnDestroy {
   private livekitService = inject(LivekitService);
+  readonly exchangeTimer = inject(ExchangeTimerService);
 
   // View children for video elements
   readonly remoteVideoRef = viewChild<ElementRef<HTMLVideoElement>>('remoteVideo');
@@ -491,6 +504,13 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         videoEl.removeEventListener('leavepictureinpicture', handleLeave);
       });
     });
+
+    // Enforce the server-authoritative exchange turn by muting the local
+    // microphone whenever the participant is not the current speaker.
+    effect(() => {
+      if (this.connectionState() !== 'connected') return;
+      this.applyTurnMute(this.exchangeTimer.canSpeak());
+    });
   }
 
   // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
@@ -543,6 +563,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       }
 
       this.connectionState.set('connected');
+      void this.exchangeTimer.start(this.roomName());
 
       // Start call duration timer
       this.callStartTime = Date.now();
@@ -603,7 +624,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   toggleAudio(): void {
-    if (!this.localAudio) return;
+    if (!this.localAudio || !this.exchangeTimer.canSpeak()) return;
     if (this.isAudioMuted()) {
       this.localAudio.unmute();
       this.isAudioMuted.set(false);
@@ -655,7 +676,25 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }
   }
 
+  private applyTurnMute(canSpeak: boolean): void {
+    if (!this.localAudio) return;
+
+    if (canSpeak) {
+      if (this.localAudio.isMuted) {
+        this.localAudio.unmute();
+        this.isAudioMuted.set(false);
+      }
+      return;
+    }
+
+    if (!this.localAudio.isMuted) {
+      this.localAudio.mute();
+      this.isAudioMuted.set(true);
+    }
+  }
+
   private cleanup(): void {
+    this.exchangeTimer.stop();
     if (this.durationSub) {
       this.durationSub.unsubscribe();
       this.durationSub = null;

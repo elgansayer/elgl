@@ -137,6 +137,12 @@ export const validationSchema = Joi.object({
     .default(testDefaults.LIVEKIT_TURN_KEY_FILE),
   LIVEKIT_TURN_TLS_PORT: Joi.number().port().default(5349),
   LIVEKIT_TURN_UDP_PORT: Joi.number().port().default(3478),
+  EXCHANGE_TIMERS_ENABLED: Joi.string().valid('true', 'false').default('true'),
+  EXCHANGE_TURN_DURATION_SECONDS: Joi.number()
+    .integer()
+    .min(30)
+    .max(3600)
+    .default(300),
   LIVEKIT_TURN_USERNAME: Joi.string().default(
     testDefaults.LIVEKIT_TURN_USERNAME,
   ),

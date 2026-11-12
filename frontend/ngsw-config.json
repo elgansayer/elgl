@@ -120,7 +120,6 @@
       "urls": [
         "/api/curated-content/**",
         "/api/flashcards/suggest**",
-        "/api/word-of-the-day",
         "/api/lessons/**"
       ],
       "cacheConfig": {

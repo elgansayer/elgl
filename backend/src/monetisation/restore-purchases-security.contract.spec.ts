@@ -129,7 +129,11 @@ describe('Restore purchases ownership security', () => {
   it('claims an unowned Android purchase before restoring entitlement', async () => {
     await expect(
       service.restorePurchases('current-user-id', 'android', receipt()),
-    ).resolves.toEqual({ received: true, status: 'restored' });
+    ).resolves.toEqual({
+      received: true,
+      status: 'restored',
+      tier: 'consumer',
+    });
 
     expect(googlePlay.claimPurchaseToken).toHaveBeenCalledWith(
       'current-user-id',
@@ -146,7 +150,11 @@ describe('Restore purchases ownership security', () => {
   it('restores a purchase already owned by the authenticated account without re-storing it', async () => {
     await expect(
       service.restorePurchases('current-user-id', 'android', receipt()),
-    ).resolves.toEqual({ received: true, status: 'restored' });
+    ).resolves.toEqual({
+      received: true,
+      status: 'restored',
+      tier: 'consumer',
+    });
 
     expect(googlePlay.claimPurchaseToken).toHaveBeenCalledWith(
       'current-user-id',

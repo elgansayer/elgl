@@ -3,12 +3,12 @@ global:
   scrape_timeout: 5s
   evaluation_interval: 15s
 
-# Alerting rules for the Tutor Profiles architecture (#2092) and any future
-# feature rule files. Rules are evaluated every 15s; add an alertmanager
-# target to the alerting block below to route fired alerts to Slack, PagerDuty
-# or email.
+# Alerting rules for the Tutor Profiles (#2092) and Moments (#2049)
+# architectures. Rules are evaluated every 15s; add an alertmanager target to
+# the alerting block below to route fired alerts to Slack, PagerDuty or email.
 rule_files:
   - /etc/prometheus/tutor-profiles.rules.yml
+  - /etc/prometheus/moments.rules.yml
 
 scrape_configs:
   - job_name: 'hellotalk-nestjs'

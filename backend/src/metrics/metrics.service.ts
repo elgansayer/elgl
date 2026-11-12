@@ -10,6 +10,12 @@ import type {
   LinkPreviewFailureReason,
   LinkPreviewOutcome,
 } from '../link-preview/link-preview-diagnostics';
+import type {
+  PiiCategory,
+  PiiOperation,
+  PiiProvider,
+  PiiScrubOutcome,
+} from '../privacy/pii-redaction';
 
 /**
  * How a run of the daily top-10 partner recommendation job ended: `partial`
@@ -48,6 +54,9 @@ export class MetricsService {
   readonly tsDatingRiskScore: Histogram<string>;
   readonly tsReportsByCategory: Counter<string>;
   readonly tsModerationQueueLatency: Histogram<string>;
+
+  // LLM prompt-injection guard metrics
+  readonly llmPromptGuardEvents: Counter<string>;
 
   // LingQ Reading Engine metrics
   readonly readingEngineSessions: Counter<string>;
@@ -123,6 +132,10 @@ export class MetricsService {
   readonly linkPreviewRequests: Counter<string>;
   readonly linkPreviewFailures: Counter<string>;
   readonly linkPreviewFetchDuration: Histogram<string>;
+
+  // PII scrubbing before text is sent to DeepL or Azure
+  readonly piiScrubOutcomes: Counter<string>;
+  readonly piiRedactions: Counter<string>;
 
   constructor() {
     this.register = new Registry();
@@ -304,6 +317,13 @@ export class MetricsService {
       labelNames: ['language'],
       registers: [this.register],
       buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
+    });
+
+    this.llmPromptGuardEvents = new Counter({
+      name: 'hellotalk_llm_prompt_guard_events_total',
+      help: 'LLM prompt guard findings by AI tool: injection signals, withheld third-party text, sanitised content, rejected requests and unguarded provider calls',
+      labelNames: ['tool', 'event'],
+      registers: [this.register],
     });
 
     this.readingEngineAiRequests = new Counter({
@@ -716,6 +736,20 @@ export class MetricsService {
       registers: [this.register],
       buckets: [0.1, 0.25, 0.5, 1, 2, 4, 6, 8, 10],
     });
+
+    this.piiScrubOutcomes = new Counter({
+      name: 'hellotalk_pii_scrub_total',
+      help: 'Provider calls carrying user text by PII scrub outcome (clean, redacted, skipped, placeholder_mismatch)',
+      labelNames: ['provider', 'operation', 'outcome'],
+      registers: [this.register],
+    });
+
+    this.piiRedactions = new Counter({
+      name: 'hellotalk_pii_redactions_total',
+      help: 'PII spans replaced by placeholders before a provider call, by category',
+      labelNames: ['provider', 'operation', 'category'],
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -843,6 +877,14 @@ export class MetricsService {
       { language },
       durationSeconds,
     );
+  }
+
+  /**
+   * Counts one prompt guard finding. `tool` and `event` come from closed sets
+   * in llm-guard, so label cardinality stays bounded; never pass user text.
+   */
+  recordLlmPromptGuardEvent(tool: string, event: string): void {
+    this.llmPromptGuardEvents.inc({ tool, event });
   }
 
   recordReadingEngineAiRequest(endpoint: string, status: string): void {
@@ -1156,6 +1198,29 @@ export class MetricsService {
         details.durationSeconds,
       );
     }
+  }
+
+  // --- PII scrubbing metric helpers ---
+
+  /**
+   * Records one provider call after PII scrubbing. Labels are closed enums, so no
+   * message text, value or user identifier is ever exported.
+   */
+  recordPiiScrub(
+    provider: PiiProvider,
+    operation: PiiOperation,
+    outcome: PiiScrubOutcome,
+  ): void {
+    this.piiScrubOutcomes.inc({ provider, operation, outcome });
+  }
+
+  recordPiiRedactions(
+    provider: PiiProvider,
+    operation: PiiOperation,
+    category: PiiCategory,
+    count: number,
+  ): void {
+    this.piiRedactions.inc({ provider, operation, category }, count);
   }
 
   setModerationQueueSize(count: number): void {

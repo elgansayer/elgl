@@ -299,9 +299,7 @@ describe('AiConversationService', () => {
       const messages = llmProxy.chatCompletion.mock.calls[0][0];
       expect(messages[0].role).toBe('system');
       expect(messages[0].content).toContain('gato');
-      expect(messages[0].content).toContain(
-        'The user has been struggling with the following concepts or vocabulary',
-      );
+      expect(messages[0].content).toContain('struggling_vocabulary');
     });
 
     it('should fallback to local replies when LLM fails', async () => {

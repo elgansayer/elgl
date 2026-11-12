@@ -4,7 +4,7 @@ The Help and About page is the user-facing source for the running frontend versi
 
 ## Runtime ownership
 
-`frontend/src/app/pages/help-about/help-about.component.ts` owns presentation. It reads generated `APP_VERSION` and `BUILD_NUMBER` values and loads `/assets/generated/third-party-licences.json`. The page already provides translated loading, empty, unavailable, and successful states.
+`frontend/src/app/pages/help-about/help-about.component.ts` owns presentation. The lazy-loaded `/settings/help-about` route is the canonical user destination from Settings. The component reads generated `APP_VERSION` and `BUILD_NUMBER` values and loads `/assets/generated/third-party-licences.json`. The page provides translated loading, empty, unavailable, and successful states.
 
 `frontend/scripts/generate-help-about-data.mjs` owns build metadata and licence generation. The frontend `prestart` and `prebuild` scripts run the generator so local development and production builds use the same contract.
 
@@ -33,6 +33,8 @@ The generated manifest is public application metadata and must never contain cre
 The browser does not infer or fabricate missing licence records. Manifest request or parsing failures remain an unavailable state in the existing Help and About page.
 
 External package links open with `rel="noopener noreferrer"`.
+
+The retired root `/help-about` path remains non-canonical. Internal navigation uses `/settings/help-about`, keeping settings destinations grouped without restoring the legacy root-level route.
 
 ## Accessibility and localisation
 

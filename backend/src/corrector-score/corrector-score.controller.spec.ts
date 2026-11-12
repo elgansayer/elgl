@@ -1,5 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CanActivate } from '@nestjs/common';
+import {
+  BadRequestException,
+  CanActivate,
+  ForbiddenException,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { CorrectorScoreController } from './corrector-score.controller';
 import { CorrectorScoreService } from './corrector-score.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -13,6 +19,29 @@ describe('CorrectorScoreController', () => {
   const mockAuthGuard: CanActivate = {
     canActivate: vi.fn(() => true),
   };
+
+  function getUserIdPipe(): ParseUUIDPipe {
+    const routeArgs = Reflect.getMetadata(
+      ROUTE_ARGS_METADATA,
+      CorrectorScoreController,
+      'getScore',
+    ) as
+      | Record<string, { data?: unknown; pipes?: readonly unknown[] }>
+      | undefined;
+    const userIdArgument = Object.values(routeArgs ?? {}).find(
+      (argument) => argument.data === 'userId',
+    );
+    const pipe = userIdArgument?.pipes?.find(
+      (candidate): candidate is ParseUUIDPipe =>
+        candidate instanceof ParseUUIDPipe,
+    );
+
+    if (!pipe) {
+      throw new Error('getScore UUID validation pipe is not registered');
+    }
+
+    return pipe;
+  }
 
   beforeEach(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -58,20 +87,29 @@ describe('CorrectorScoreController', () => {
     });
 
     it('should throw UnauthorizedException when no user provided', async () => {
-      await expect(
-        controller.rateUser(null as unknown as any, dto),
-      ).rejects.toThrow();
+      await expect(controller.rateUser(null, dto)).rejects.toThrow();
     });
 
-    it('should throw UnauthorizedException when rating self', async () => {
+    it('should throw ForbiddenException when rating self', async () => {
       const selfDto = { rated_user_id: 'rater-1', score: 5 };
-      await expect(controller.rateUser(mockUser, selfDto)).rejects.toThrow(
-        'Cannot rate yourself',
-      );
+      await expect(
+        controller.rateUser(mockUser, selfDto),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockSubmitRating).not.toHaveBeenCalled();
     });
   });
 
   describe('getScore', () => {
+    it('rejects malformed user IDs at the route boundary', async () => {
+      await expect(
+        getUserIdPipe().transform('not-a-uuid', {
+          type: 'param',
+          metatype: String,
+          data: 'userId',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
     it('should return the corrector score for a user', async () => {
       const scoreResult = { averageScore: 4.5, totalRatings: 10 };
       mockGetCorrectorScore.mockResolvedValue(scoreResult);

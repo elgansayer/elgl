@@ -1,4 +1,5 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { User, Session, AuthError } from '@supabase/supabase-js';
@@ -20,7 +21,11 @@ export interface AppUser extends User {
 export class AuthService {
   private supabaseService = inject(SupabaseService);
   private fcmService = inject(FirebaseMessagingService);
-  private supabase = this.supabaseService.getClient();
+  private platformId = inject(PLATFORM_ID);
+
+  private get supabase() {
+    return this.supabaseService.getClient();
+  }
 
   // Reactive Angular Signals for Auth State
   readonly currentUser = signal<AppUser | null>(null);
@@ -46,7 +51,11 @@ export class AuthService {
   }
 
   constructor() {
-    this.initAuthListener();
+    if (isPlatformBrowser(this.platformId)) {
+      void this.initAuthListener();
+    } else {
+      this.isLoading.set(false);
+    }
   }
 
   private async initAuthListener(): Promise<void> {

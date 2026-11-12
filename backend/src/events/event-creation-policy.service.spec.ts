@@ -49,6 +49,29 @@ describe('EventCreationPolicyService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('rejects a map coordinate pair that supplies only one axis', async () => {
+    await expect(
+      service.assertCanCreate('host-1', dto({ latitude: 51.5074 })),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.assertCanCreate('host-1', dto({ longitude: -0.1278 })),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('accepts a complete map coordinate pair', async () => {
+    await expect(
+      service.assertCanCreate(
+        'host-1',
+        dto({
+          venue_type: 'in_person',
+          location: '61 Westminster Bridge Road',
+          latitude: 51.4988,
+          longitude: -0.1164,
+        }),
+      ),
+    ).resolves.toBeUndefined();
+  });
+
   it('rejects unsafe meeting URL schemes', async () => {
     await expect(
       service.assertCanCreate(

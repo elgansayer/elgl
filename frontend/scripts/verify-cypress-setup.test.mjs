@@ -22,7 +22,7 @@ function validFixture() {
     pkg: {
       scripts: {
         'cypress:open': 'cypress open',
-        e2e: 'cypress run',
+        e2e: 'node scripts/cypress-e2e.mjs cypress run',
         'e2e:ci': 'start-server-and-test start http://localhost:4200 e2e',
         'test:cypress-setup': 'node --test scripts/verify-cypress-setup.test.mjs',
         pretest: 'npm run test:cypress-setup',

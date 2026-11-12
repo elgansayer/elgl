@@ -1,6 +1,17 @@
 <div
   class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden"
 >
+  @if (!authService.appLocked()) {
+    <!-- Skip-to-content link for keyboard users. It is the first focusable element so
+         desktop Tab navigation can bypass the header and sidebar immediately. -->
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[9999] focus:bg-primary focus:text-on-fill focus:px-4 focus:py-2 focus:rounded-pill focus:font-bold focus:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+    >
+      {{ 'a11y.skipToContent' | t }}
+    </a>
+  }
+
   @if (versionService.isDeprecated()) {
     <app-forced-update-modal [storeUrl]="versionService.updateUrl()" />
   }
@@ -141,21 +152,13 @@
   <!-- Global Full-Screen SVG Gift Animation Broadcast Overlay -->
   <app-gift-animation-overlay />
 
-  <!-- Skip-to-content link for keyboard users -->
-  <a
-    href="#main-content"
-    class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[9999] focus:bg-primary focus:text-on-fill focus:px-4 focus:py-2 focus:rounded-pill focus:font-bold focus:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-  >
-    {{ 'a11y.skipToContent' | t }}
-  </a>
-
   <!-- Desktop + Main Content Wrapper -->
   <div class="flex flex-1">
     <!-- Desktop Sidebar Navigation -->
     <app-desktop-sidebar />
 
     <!-- Main Content Area (padding-bottom to account for bottom nav) -->
-    <main id="main-content" class="flex-1 pb-[72px] lg:pb-0">
+    <main id="main-content" tabindex="-1" class="flex-1 pb-[72px] lg:pb-0">
       <div>
         <router-outlet />
       </div>

@@ -650,6 +650,41 @@
       .speaking {
         box-shadow: 0 0 0 3px rgb(var(--success));
       }
+      /* Stage equalizer rows (components/audio-room + app-audio-equalizer). */
+      .seat-eq {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 2px;
+        height: 20px;
+        margin: 8px 0 4px;
+      }
+      .seat-eq > span {
+        width: 4px;
+        border-radius: 2px 2px 0 0;
+        background: currentColor;
+      }
+      .seat-eq.is-active > span {
+        animation: seat-eq 0.6s ease-in-out infinite;
+      }
+      .seat-eq.is-silent {
+        opacity: 0.4;
+      }
+      @keyframes seat-eq {
+        0%,
+        100% {
+          height: 20%;
+        }
+        50% {
+          height: 100%;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .seat-eq.is-active > span {
+          animation: none;
+          height: 70%;
+        }
+      }
       .live-dot {
         display: inline-block;
         width: 8px;
@@ -803,10 +838,7 @@
         </div>
         <footer>
           States: ringing · video vs voice · E2EE badge · action pending (buttons disabled) ·
-          unknown caller fallback<br /><span class="note-flag"
-            >i18n gap: voip.endToEndEncrypted, voip.acceptIcon, voip.rejectIcon,
-            voip.avatarPlaceholder have no English copy - copy shown is proposed.</span
-          >
+          unknown caller fallback
         </footer>
       </section>
 
@@ -1095,9 +1127,7 @@
         </div>
         <footer>
           States: connecting (skeleton) · waiting for remote · connected · audio muted · camera off
-          · presenting · remote presenting · PiP · error<br /><span class="note-flag"
-            >i18n gap: video_call.connecting has no English copy.</span
-          >
+          · presenting · remote presenting · PiP · error
         </footer>
       </section>
 
@@ -1147,14 +1177,32 @@
             <div class="seats">
               <div>
                 <div class="avatar ember speaking">H</div>
+                <div class="seat-eq is-active" aria-hidden="true">
+                  <span style="animation-delay: 0s"></span>
+                  <span style="animation-delay: -0.18s"></span>
+                  <span style="animation-delay: -0.36s"></span>
+                  <span style="animation-delay: -0.54s"></span>
+                </div>
                 Host
               </div>
               <div>
                 <div class="avatar">K</div>
+                <div class="seat-eq is-silent" aria-hidden="true">
+                  <span style="height: 4px"></span>
+                  <span style="height: 4px"></span>
+                  <span style="height: 4px"></span>
+                  <span style="height: 4px"></span>
+                </div>
                 Co-Host
               </div>
               <div>
                 <div class="avatar">A</div>
+                <div class="seat-eq is-silent" aria-hidden="true">
+                  <span style="height: 4px"></span>
+                  <span style="height: 4px"></span>
+                  <span style="height: 4px"></span>
+                  <span style="height: 4px"></span>
+                </div>
                 Ana
               </div>
               <div><div class="avatar" style="background: rgb(var(--surface-700))">+2</div></div>
@@ -1199,8 +1247,9 @@
           </div>
         </div>
         <footer>
-          States: room list (grouped/flat) · loading · empty · in-room stage/audience · host
-          controls (demote, end and archive) · quick poll form/results · speaker requests
+          States: room list (grouped/flat) · loading · empty · in-room stage/audience · stage
+          speaking/silent equalizer rows · host controls (demote, end and archive) · quick poll
+          form/results · speaker requests
         </footer>
       </section>
 
@@ -1284,6 +1333,22 @@
           States: pending requests · empty. Learners are labelled by truncated user ID (no
           name/avatar) - consider showing display names.
         </footer>
+      </section>
+      <section class="specimen" data-component="components/exchange-timer">
+        <header>
+          <h2>Exchange timer</h2>
+          <code>components/exchange-timer</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <div class="row">
+              <span class="chip">EN</span>
+              <span class="grow" role="timer" aria-label="Your turn">04:32</span>
+            </div>
+            <button class="btn" type="button">End my turn</button>
+            <p class="secondary" style="margin: 0">Muted until your turn.</p>
+          </div>
+        </div>
       </section>
 
       <section class="specimen" data-component="components/video-room">
@@ -1509,13 +1574,7 @@
             <div class="stat"><span class="muted">Uptime</span><b>01:12:09</b></div>
           </div>
         </div>
-        <footer>
-          States: live stats.
-          <span class="note-flag"
-            >i18n gap: every host_dashboard.* key is missing from all locale files - runtime renders
-            raw keys. Labels shown are proposed.</span
-          >
-        </footer>
+        <footer>States: live stats.</footer>
       </section>
 
       <section class="specimen" data-component="components/voiceroom-create-modal">
@@ -1705,10 +1764,7 @@
         </div>
         <footer>
           States: list · filters + clear · loading skeleton · error/retry · empty · filtered empty ·
-          joining (aria-busy) · create modal<br /><span class="note-flag"
-            >i18n gap: language-pair and level option labels (audioRoom.languagePair.*,
-            languageParty.level.*) have no English copy.</span
-          >
+          joining (aria-busy) · create modal
         </footer>
       </section>
 
@@ -1759,10 +1815,7 @@
         </div>
         <footer>
           States: preset selected · custom amount · send disabled when amount &gt; balance · sending
-          ("Sending...", close and cancel disabled)<br /><span class="note-flag"
-            >i18n gap: tipPresetLabel, tipCustomAmountLabel, tipCustomPlaceholder and aria labels
-            lack English copy.</span
-          >
+          ("Sending...", close and cancel disabled)
         </footer>
       </section>
 
