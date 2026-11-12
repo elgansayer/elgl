@@ -214,7 +214,7 @@ describe('EventsService', () => {
   });
 
   describe('createEvent', () => {
-    it('should create an event successfully without persisting request-only venue metadata', async () => {
+    it('should create an event with venue, map and dual-currency ticket metadata', async () => {
       const mockEvent = {
         title: 'Test Event',
         description: 'Test Description',
@@ -223,6 +223,10 @@ describe('EventsService', () => {
         venue_type: 'zoom' as const,
         location: 'https://example.zoom.us/j/123',
         timezone: 'Europe/London',
+        latitude: 51.5074,
+        longitude: -0.1278,
+        ticket_price_gbp: 5,
+        ticket_price_usd: 6.5,
         language_pair: 'en-ja',
         max_participants: 20,
       };
@@ -246,6 +250,12 @@ describe('EventsService', () => {
         category: 'learning_seminar',
         date_time: '2099-08-21T12:00:00.000Z',
         location: 'https://example.zoom.us/j/123',
+        venue_type: 'zoom',
+        timezone: 'Europe/London',
+        latitude: 51.5074,
+        longitude: -0.1278,
+        ticket_price_gbp: 5,
+        ticket_price_usd: 6.5,
         language_pair: 'en-ja',
         max_participants: 20,
         host_id: mockUserId,

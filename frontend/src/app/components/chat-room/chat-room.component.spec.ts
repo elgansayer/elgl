@@ -37,6 +37,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
   let component: ChatRoomComponent;
   let fixture: ComponentFixture<ChatRoomComponent>;
   let mockChatService: {
+    queuedCount: ReturnType<typeof signal<number>>;
     getRooms: ReturnType<typeof vi.fn>;
     getGroupMembers: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
@@ -52,6 +53,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
     unlockApp: ReturnType<typeof vi.fn>;
     appLocked: ReturnType<typeof signal>;
   };
+  let mockNetworkStatusService: { isOnline: ReturnType<typeof signal<boolean>> };
   let mockTextToSpeechService: { speak: ReturnType<typeof vi.fn> };
   let mockFavouriteService: { addFavourite: ReturnType<typeof vi.fn> };
   const unreadCounterMock = { decrement: vi.fn() };
@@ -59,6 +61,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
   beforeEach(async () => {
     unreadCounterMock.decrement.mockReset();
     mockChatService = {
+      queuedCount: signal(0),
       getRooms: vi.fn().mockResolvedValue([]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
       getMessages: vi.fn().mockResolvedValue([]),
@@ -116,7 +119,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
       sendTyping: vi.fn(),
     };
 
-    const mockNetworkStatusService = {
+    mockNetworkStatusService = {
       isOnline: signal(true),
     };
 
@@ -163,6 +166,60 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('offline status banner', () => {
+    const banner = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('[data-testid="chat-offline-status"]');
+    const text = (testId: string): string =>
+      fixture.nativeElement.querySelector(`[data-testid="${testId}"]`)?.textContent?.trim() ?? '';
+
+    it('stays hidden while online with nothing queued', () => {
+      expect(banner()).toBeNull();
+    });
+
+    it('tells the learner that messages wait for reconnection while offline', () => {
+      mockNetworkStatusService.isOnline.set(false);
+      fixture.detectChanges();
+
+      const i18n = TestBed.inject(I18nService);
+      expect(banner()).not.toBeNull();
+      expect(text('chat-offline-warning')).toContain(i18n.translate('chatRoom.offlineWarning'));
+      expect(text('chat-offline-warning')).not.toContain('chatRoom.');
+      expect(fixture.nativeElement.querySelector('[data-testid="chat-queued-count"]')).toBeNull();
+    });
+
+    it('announces how many messages are queued as a polite status, with text and not colour alone', () => {
+      mockChatService.queuedCount.set(3);
+      fixture.detectChanges();
+
+      const i18n = TestBed.inject(I18nService);
+      expect(banner()?.getAttribute('role')).toBe('status');
+      expect(text('chat-queued-count')).toContain(
+        i18n.translate('chatRoom.queuedMessages', { count: 3 }),
+      );
+      expect(text('chat-queued-count')).toContain('3');
+      // The icons are decorative: the state is carried by the text alone.
+      const icons = banner()?.querySelectorAll('[aria-hidden="true"]') ?? [];
+      expect(icons.length).toBeGreaterThan(0);
+    });
+
+    it('keeps showing the queue after reconnecting until it has been sent', () => {
+      mockNetworkStatusService.isOnline.set(false);
+      mockChatService.queuedCount.set(2);
+      fixture.detectChanges();
+      expect(text('chat-offline-warning')).not.toBe('');
+      expect(text('chat-queued-count')).toContain('2');
+
+      mockNetworkStatusService.isOnline.set(true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="chat-offline-warning"]')).toBeNull();
+      expect(text('chat-queued-count')).toContain('2');
+
+      mockChatService.queuedCount.set(0);
+      fixture.detectChanges();
+      expect(banner()).toBeNull();
+    });
   });
 
   describe('bookmarking a message', () => {

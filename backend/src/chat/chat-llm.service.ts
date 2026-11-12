@@ -1,5 +1,18 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  HttpException,
+  HttpStatus,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  buildDataPrompt,
+  requireScreenedReply,
+} from '../llm-guard/prompt-guard';
+import { ProviderPromptGate } from '../llm-guard/provider-prompt-gate';
+import { MetricsService } from '../metrics/metrics.service';
 
 export interface LlmChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -7,10 +20,12 @@ export interface LlmChatMessage {
 }
 
 interface ChatLlmOptions {
-  system?: string;
   temperature?: number;
   maxTokens?: number;
 }
+
+const MAX_TARGET_LANGUAGE_CHARS = 64;
+const MAX_TRANSLATION_CHARS = 8_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -27,25 +42,32 @@ function isString(value: unknown): value is string {
 @Injectable()
 export class ChatLlmService {
   private readonly logger = new Logger(ChatLlmService.name);
+  private readonly promptGate: ProviderPromptGate;
 
-  constructor(private readonly configService: ConfigService) {}
-
-  async generateText(
-    prompt: string,
-    options: ChatLlmOptions = {},
-  ): Promise<string> {
-    const messages: LlmChatMessage[] = [];
-    if (options.system) {
-      messages.push({ role: 'system', content: options.system });
-    }
-    messages.push({ role: 'user', content: prompt });
-    return this.chatCompletion(messages, options);
+  constructor(
+    private readonly configService: ConfigService,
+    @Optional() metricsService?: MetricsService,
+  ) {
+    this.promptGate = new ProviderPromptGate(
+      'chat_llm',
+      this.logger,
+      metricsService,
+    );
   }
 
+  /**
+   * Sends messages to the configured provider. Build them with
+   * buildDataPrompt or buildConversationPrompt from llm-guard: the messages
+   * are validated and cleaned here whatever the caller did, and a prompt that
+   * did not come from a builder is reported as `unguarded`. Throws
+   * PromptGuardError before any request is made when the messages are
+   * malformed or too large.
+   */
   async chatCompletion(
-    messages: LlmChatMessage[],
+    rawMessages: LlmChatMessage[],
     options: ChatLlmOptions = {},
   ): Promise<string> {
+    const { messages } = this.promptGate.harden(rawMessages);
     const provider = this.configService.get<string>('LLM_PROVIDER', 'openai');
     const apiKey = this.configService.get<string>('LLM_API_KEY');
 
@@ -95,9 +117,10 @@ export class ChatLlmService {
         });
 
         if (!response.ok) {
-          const text = await response.text();
+          // The provider body can echo the (private) prompt, so keep only the
+          // status for the log line and the API response.
           throw new HttpException(
-            `Anthropic error: ${response.status} ${text}`,
+            `Anthropic error: ${response.status}`,
             HttpStatus.BAD_GATEWAY,
           );
         }
@@ -163,9 +186,8 @@ export class ChatLlmService {
       });
 
       if (!response.ok) {
-        const text = await response.text();
         throw new HttpException(
-          `OpenAI error: ${response.status} ${text}`,
+          `OpenAI error: ${response.status}`,
           HttpStatus.BAD_GATEWAY,
         );
       }
@@ -215,12 +237,6 @@ export class ChatLlmService {
     }
   }
 
-  /** Proxies a single prompt to the configured LLM and returns the text response. */
-  async proxyMessage(prompt: string): Promise<{ response: string }> {
-    const response = await this.generateText(prompt);
-    return { response };
-  }
-
   /** Proxies a multi-turn chat conversation to the configured LLM. */
   async proxyChatMessages(
     messages: LlmChatMessage[],
@@ -231,15 +247,31 @@ export class ChatLlmService {
 
   /**
    * Translates a given text into the specified target language using the configured LLM.
+   * The text is untrusted data: it is JSON-encoded in the user message and the
+   * answer is screened so it cannot introduce links the source did not contain.
    */
   async translateText(text: string, targetLanguage: string): Promise<string> {
-    const prompt = `Translate the following text into ${targetLanguage}. Respond only with the translated text, without any surrounding quotes or commentary.\n\n${text}`;
-    const response = await this.generateText(prompt, {
-      system:
-        'You are a precise translation engine. Provide accurate natural translations without adding explanations.',
-      temperature: 0.2,
-      maxTokens: 512,
+    if (targetLanguage.length > MAX_TARGET_LANGUAGE_CHARS) {
+      throw new BadRequestException('Target language is too long');
+    }
+
+    const response = await this.chatCompletion(
+      buildDataPrompt({
+        tool: 'message_translate',
+        instructions: [
+          'You are a precise translation engine.',
+          'Translate the "text" field into the language named in the "target_language" field.',
+          'Provide an accurate, natural translation and respond only with the translated text, without quotation marks, notes, explanations or commentary.',
+          'Keep any URLs that appear in the text exactly as written.',
+        ],
+        data: { target_language: targetLanguage, text },
+      }),
+      { temperature: 0.2, maxTokens: 512 },
+    );
+
+    return requireScreenedReply(response, {
+      maxLength: MAX_TRANSLATION_CHARS,
+      sourceTexts: [text],
     });
-    return response.trim();
   }
 }

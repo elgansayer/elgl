@@ -99,7 +99,7 @@ describe('ChatService message persistence and realtime pipeline', () => {
       { getBlockedAndBlockerIds: vi.fn() } as never,
       { getPreview: vi.fn() } as never,
       { isSpam: vi.fn().mockReturnValue(false) } as never,
-      { proxyMessage: vi.fn() } as never,
+      { chatCompletion: vi.fn() } as never,
       {} as never,
       xpService as never,
       {} as never,

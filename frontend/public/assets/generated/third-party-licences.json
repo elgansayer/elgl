@@ -1908,11 +1908,11 @@
     "licenceText": null
   },
   {
-    "id": "ngx-skeleton-loader@13.0.0",
+    "id": "ngx-skeleton-loader@14.0.0",
     "name": "ngx-skeleton-loader",
-    "version": "13.0.0",
+    "version": "14.0.0",
     "licence": "MIT",
-    "packageUrl": "https://www.npmjs.com/package/ngx-skeleton-loader/v/13.0.0",
+    "packageUrl": "https://www.npmjs.com/package/ngx-skeleton-loader/v/14.0.0",
     "licenceFile": null,
     "licenceText": null
   },

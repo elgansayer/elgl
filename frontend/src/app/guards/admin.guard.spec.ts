@@ -1,3 +1,4 @@
+import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -40,5 +41,20 @@ describe('adminGuard', () => {
     const result = await TestBed.runInInjectionContext(() => adminGuard({} as never, {} as never));
 
     expect(result).toEqual(router.parseUrl('/discovery'));
+  });
+
+  it('fails closed during server-side rendering without probing the backend', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AdminService, useValue: adminServiceMock },
+        { provide: PLATFORM_ID, useValue: 'server' },
+      ],
+    });
+
+    const result = await TestBed.runInInjectionContext(() => adminGuard({} as never, {} as never));
+
+    expect(result).toBe(false);
+    expect(adminServiceMock.checkAdminAccess).not.toHaveBeenCalled();
   });
 });

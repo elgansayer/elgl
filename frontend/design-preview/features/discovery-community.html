@@ -1130,9 +1130,6 @@
         </div>
         <footer>
           States shown: default · translated · translating · error · Ember/Tide duet strip.
-          <span class="gap-note"
-            >i18n gap: <code>discovery.tapToView</code> missing from every dictionary.</span
-          >
         </footer>
       </section>
 
@@ -1485,9 +1482,6 @@
         <footer>
           States shown: multi-image with counter, prev/next, indicator dots · loading · failed
           image. Swipe via pointer events.
-          <span class="gap-note"
-            >i18n gap: <code>lightbox.*</code> keys missing - screen readers hear raw keys.</span
-          >
         </footer>
       </section>
 
@@ -1574,31 +1568,59 @@
           <div class="list">
             <div class="group-card">
               <div>
-                <div class="title">日本語 Beginners</div>
+                <a class="title" href="#" style="color: rgb(var(--primary-text))"
+                  >日本語 Beginners</a
+                >
                 <div class="muted">38 / 50 members</div>
               </div>
-              <button class="btn sm" type="button">Join</button>
+              <div class="row" style="gap: 10px; align-items: center; flex-wrap: wrap">
+                <a
+                  href="#"
+                  style="color: rgb(var(--primary-text)); font-size: 13px; font-weight: 600"
+                  >View group</a
+                ><button class="btn sm" type="button">Join</button>
+              </div>
             </div>
             <div class="group-card">
               <div>
-                <div class="title">Español Cafe</div>
+                <a class="title" href="#" style="color: rgb(var(--primary-text))">Español Cafe</a>
                 <div class="muted">12 / 50 members</div>
               </div>
-              <span class="chip tide">✓ Joined</span>
+              <div class="row" style="gap: 10px; align-items: center; flex-wrap: wrap">
+                <a
+                  href="#"
+                  style="color: rgb(var(--primary-text)); font-size: 13px; font-weight: 600"
+                  >View group</a
+                ><span class="chip tide">✓ Joined</span>
+              </div>
             </div>
             <div class="group-card">
               <div>
-                <div class="title" dir="auto">نادي العربية</div>
+                <a class="title" href="#" dir="auto" style="color: rgb(var(--primary-text))"
+                  >نادي العربية</a
+                >
                 <div class="muted">50 / 50 members</div>
               </div>
-              <span class="chip">Full</span>
+              <div class="row" style="gap: 10px; align-items: center; flex-wrap: wrap">
+                <a
+                  href="#"
+                  style="color: rgb(var(--primary-text)); font-size: 13px; font-weight: 600"
+                  >View group</a
+                ><span class="chip">Full</span>
+              </div>
             </div>
             <div class="group-card">
               <div>
-                <div class="title">K-drama Talk</div>
+                <a class="title" href="#" style="color: rgb(var(--primary-text))">K-drama Talk</a>
                 <div class="muted">22 / 50 members</div>
               </div>
-              <button class="btn sm" type="button" disabled>Loading...</button>
+              <div class="row" style="gap: 10px; align-items: center; flex-wrap: wrap">
+                <a
+                  href="#"
+                  style="color: rgb(var(--primary-text)); font-size: 13px; font-weight: 600"
+                  >View group</a
+                ><button class="btn sm" type="button" disabled>Loading...</button>
+              </div>
             </div>
           </div>
           <span class="state-label">Empty (filtered)</span>
@@ -1614,7 +1636,8 @@
         </div>
         <footer>
           States shown: join · joined · full · joining · empty with clear-filter · embedded FAB.
-          Also error banner and loading.
+          Also error banner and loading. Name and "View group" both route to the dedicated group
+          profile page.
         </footer>
       </section>
 
@@ -1711,9 +1734,111 @@
         <footer>
           States shown: open with VIP badge, language pair · (empty: "No participants"). Slides from
           inline-end; mirrors in RTL.
-          <span class="gap-note"
-            >i18n gap: <code>group.participants</code>, <code>group.noParticipants</code>.</span
-          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="pages/group-profile">
+        <header>
+          <h2>Group profile</h2>
+          <code>pages/group-profile</code>
+        </header>
+        <div class="body">
+          <article class="stack">
+            <a
+              href="#"
+              style="color: rgb(var(--primary-text)); font-size: 13px; font-weight: 600"
+              >Back to groups</a
+            >
+            <div class="card stack" style="gap: 10px">
+              <div
+                class="row"
+                style="justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px"
+              >
+                <div>
+                  <h3 class="display" style="margin: 0; font-size: 22px">
+                    Weekend Tandem 🇯🇵🇬🇧
+                  </h3>
+                  <span class="secondary">12 of 50 members</span>
+                  <div class="muted">✈️ Travel</div>
+                </div>
+                <div class="row" style="gap: 8px; align-items: center; flex-wrap: wrap">
+                  <span class="chip tide">Member</span
+                  ><button class="btn sm" type="button">Open group chat</button>
+                </div>
+              </div>
+              <div class="row" style="gap: 8px; align-items: center; flex-wrap: wrap">
+                <button class="btn sm" type="button">Join group</button
+                ><span class="chip">Group is full</span
+                ><span class="muted">Group chat is unavailable until another member joins.</span>
+              </div>
+            </div>
+            <div class="card stack" style="gap: 6px">
+              <h3 class="title" style="margin: 0">About</h3>
+              <span class="secondary"
+                >Weekend language exchange over coffee and strolls. All levels welcome.</span
+              >
+              <h4 class="title" style="margin: 4px 0 0">Rules</h4>
+              <span class="secondary">Be kind. Stay on topic. No spam.</span>
+            </div>
+            <div class="card stack" style="gap: 8px">
+              <h3 class="title" style="margin: 0">Members (3)</h3>
+              <div class="member-row">
+                <span class="avatar">A</span>
+                <div class="grow">
+                  <div class="title">Aiko</div>
+                  <div class="muted">Group owner</div>
+                </div>
+              </div>
+              <div class="member-row">
+                <span class="avatar ember">T</span>
+                <div class="grow">
+                  <div class="title">Tom</div>
+                </div>
+                <button class="btn ghost sm" type="button">Remove</button>
+              </div>
+              <div class="member-row">
+                <span class="avatar">ل</span>
+                <div class="grow">
+                  <div class="title" dir="auto">ليلى</div>
+                </div>
+                <div class="row" style="gap: 6px; align-items: center; flex-wrap: wrap">
+                  <span class="secondary">Remove ليلى from this group?</span
+                  ><button class="btn secondary-btn sm" type="button">Confirm removal</button
+                  ><button class="btn ghost sm" type="button">Cancel</button>
+                </div>
+              </div>
+            </div>
+            <div class="card stack" style="gap: 8px">
+              <h3 class="title" style="margin: 0">Announcements</h3>
+              <div class="stack" style="gap: 6px">
+                <span class="title" style="font-size: 13px">Admin tools</span>
+                <label class="field" for="groupAnnouncementHintInput"
+                  >Announcements<textarea
+                    id="groupAnnouncementHintInput"
+                    rows="2"
+                    aria-describedby="groupAnnouncementHint"
+                  ></textarea></label
+                >
+                <span class="muted" id="groupAnnouncementHint"
+                  >Write an announcement for the group</span
+                >
+                <button class="btn sm" type="button">Post announcement</button>
+              </div>
+              <div class="alert success">Announcement posted.</div>
+            </div>
+            <div class="row" style="justify-content: space-around">
+              <span class="muted">Loading…</span
+              ><span class="alert error"
+                >This group could not be loaded.
+                <button class="btn secondary-btn sm" type="button">Try again</button></span
+              >
+            </div>
+          </article>
+        </div>
+        <footer>
+          States shown: member view with open-group-chat · join · full · chat-gated hint · roster
+          with owner · admin remove with destructive confirmation · announcement composer with
+          success · loading · error/retry.
         </footer>
       </section>
 
@@ -1765,11 +1890,6 @@
         </div>
         <footer>
           States shown: list · load more · error/retry. Also loading and "No upcoming events".
-          <span class="gap-note"
-            >i18n gap: <code>events.createEvent</code>, <code>filter_upcoming/past</code>,
-            <code>hosted_by</code>, <code>load_more</code>; <code>events.title</code> resolves to
-            "Event Title".</span
-          >
         </footer>
       </section>
 
@@ -1843,6 +1963,7 @@
               <h3 class="display" style="margin: 0; font-size: 22px">Tokyo Language Café</h3>
               <span>Tuesday, 20 October 2026 at 14:00</span>
             </div>
+            <div class="alert error" role="status">This event has been cancelled.</div>
             <span class="secondary">Hosted by Aiko · In-Person Meetup · Shibuya, Tokyo</span>
             <p style="margin: 0; font-size: 14px">
               Casual Japanese ↔ English exchange over coffee. All levels welcome - we split into
@@ -1854,6 +1975,18 @@
                 <dd>20</dd>
               </div>
               <div>
+                <dt>Venue</dt>
+                <dd>In-person meetup</dd>
+              </div>
+              <div>
+                <dt>Time zone</dt>
+                <dd>Asia/Tokyo</dd>
+              </div>
+              <div>
+                <dt>Ticket price</dt>
+                <dd aria-label="Ticket price: £5.00 and 6.50 US dollars">£5.00 / $6.50</dd>
+              </div>
+              <div>
                 <dt>attending</dt>
                 <dd>14</dd>
               </div>
@@ -1862,6 +1995,36 @@
                 <dd>31</dd>
               </div>
             </dl>
+            <section
+              class="stack"
+              style="gap: 8px; border-block-start: 1px solid rgb(var(--surface-100)); padding-block-start: 12px"
+              aria-label="Venue map"
+            >
+              <h3 class="title" style="margin: 0">Venue map</h3>
+              <div
+                role="img"
+                aria-label="Map showing the event venue location"
+                style="height: 140px; border-radius: 12px; border: 1px solid rgb(var(--surface-700)); display: grid; place-items: center; font-size: 28px; overflow: hidden"
+              >
+                🗺️
+              </div>
+              <a href="#" style="color: rgb(var(--primary-text)); font-size: 13px; font-weight: 600"
+                >Open in OpenStreetMap</a
+              >
+            </section>
+            <section
+              class="stack"
+              style="gap: 8px; border-block-start: 1px solid rgb(var(--surface-100)); padding-block-start: 12px"
+              aria-label="Reserve your place"
+            >
+              <h3 class="title" style="margin: 0">Reserve your place</h3>
+              <div class="row">
+                <button class="btn grow" type="button" aria-pressed="true">attending · 14</button
+                ><button class="btn secondary-btn grow" type="button" aria-pressed="false">
+                  interested · 31
+                </button>
+              </div>
+            </section>
           </article>
           <div class="row" style="justify-content: space-around">
             <span class="muted">Loading...</span
@@ -1869,8 +2032,9 @@
           </div>
         </div>
         <footer>
-          States shown: loaded · loading · error/retry. Design suggestion: add RSVP and Share
-          actions (runtime has none).
+          States shown: loaded (venue · time zone · dual-currency ticket · map snippet · RSVP
+          controls) · cancelled banner · loading · error/retry. RSVP full/unavailable states live
+          in the event-rsvp-controls specimen.
         </footer>
       </section>
 
@@ -1907,6 +2071,41 @@
             <label class="field"
               >Max Participants<input type="number" placeholder="e.g. 20"
             /></label>
+            <fieldset
+              class="stack"
+              style="border: 1px solid rgb(var(--surface-100)); border-radius: 12px; padding: 12px; gap: 8px; margin: 0"
+            >
+              <legend class="title" style="padding-inline: 4px; font-size: 14px">Venue map</legend>
+              <span class="secondary" style="font-size: 12px"
+                >Optional map coordinates for in-person events</span
+              >
+              <div class="row" style="gap: 12px">
+                <label class="field" style="flex: 1"
+                  >Latitude<input type="number" step="0.000001" value="35.6595"
+                /></label>
+                <label class="field invalid" style="flex: 1"
+                  >Longitude<input type="number" step="0.000001" value="" /><span class="error"
+                    >Enter both latitude and longitude, or neither.</span
+                  ></label
+                >
+              </div>
+            </fieldset>
+            <fieldset
+              class="stack"
+              style="border: 1px solid rgb(var(--surface-100)); border-radius: 12px; padding: 12px; gap: 8px; margin: 0"
+            >
+              <legend class="title" style="padding-inline: 4px; font-size: 14px"
+                >Ticket price</legend
+              >
+              <div class="row" style="gap: 12px">
+                <label class="field" style="flex: 1"
+                  >Ticket price (GBP)<input type="number" step="0.01" min="0" value="5"
+                /></label>
+                <label class="field" style="flex: 1"
+                  >Ticket price (USD)<input type="number" step="0.01" min="0" value="6.5"
+                /></label>
+              </div>
+            </fieldset>
             <label class="field">Description<textarea rows="2"></textarea></label>
             <div class="btn-row">
               <button class="btn secondary-btn" type="button">Cancel</button
@@ -1915,11 +2114,8 @@
           </div>
         </div>
         <footer>
-          States shown: filled · invalid required field · submit disabled. Also submit error.
-          <span class="gap-note"
-            >i18n gap: <code>events.dateTime</code>, <code>where</code>, <code>create</code>,
-            <code>cancel</code>, placeholders.</span
-          >
+          States shown: filled · invalid required field · unpaired coordinates error · dual-currency
+          ticket prices · submit disabled. Also submit error.
         </footer>
       </section>
 
@@ -2067,8 +2263,8 @@
         <footer>
           States shown: form · saved. Also loading, error.
           <span class="gap-note"
-            >i18n gap: every <code>notification_customization.*</code> key is missing. Design
-            suggestion: replace raw URL/pattern inputs with a tone picker + preset patterns.</span
+            >Design suggestion: replace raw URL/pattern inputs with a tone picker + preset
+            patterns.</span
           >
         </footer>
       </section>
@@ -2113,9 +2309,9 @@
         </div>
         <footer>
           <span class="gap-note"
-            >Stub page: renders only a raw i18n key (missing in every dictionary).</span
+            >Minimal page: renders only its title. Proposed design shown for design-first
+            follow-up.</span
           >
-          Proposed design shown for design-first follow-up.
         </footer>
       </section>
 

@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  ServiceUnavailableException,
   UseFilters,
   UseGuards,
   UseInterceptors,
@@ -74,6 +75,12 @@ export class AtomicEconomyController extends EconomyController {
   })
   override async claimDailyCheckIn(@CurrentUser() user: User | null) {
     if (!user) return null;
-    return this.atomicEconomyService.claimDailyCheckIn(user.id);
+    const result = await this.atomicEconomyService.claimDailyCheckIn(user.id);
+    if (result.unavailable) {
+      throw new ServiceUnavailableException(
+        'Daily check-in is temporarily unavailable.',
+      );
+    }
+    return result;
   }
 }

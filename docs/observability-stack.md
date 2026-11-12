@@ -37,6 +37,15 @@ The contract check verifies that:
 
 After deployment, operators should also check container health and Prometheus target health before relying on dashboards.
 
+## Feature alert rules
+
+Feature-specific alert rules live under `prometheus/` and are loaded by `prometheus/prometheus.yml` through `rule_files`. Each rule file is mounted read-only into the Prometheus container by the development and production Compose files.
+
+- `prometheus/tutor-profiles.rules.yml` covers the Tutor Profiles architecture (#2092).
+- `prometheus/moments.rules.yml` covers the Moments architecture (#2049). See `docs/moments-monitoring.md` for thresholds, Datadog monitors and runbooks. Validate it with `npm run check:moments-monitoring`.
+
+When adding a new rule file, add it to `rule_files` and to every Compose Prometheus volume list, then run the matching contract check.
+
 ## Rollout and rollback
 
 This change does not migrate application data. Deploy it with the normal production Compose rollout after setting `GRAFANA_ADMIN_PASSWORD`. The observability containers use persistent named volumes, so restarting or recreating application containers does not discard Prometheus or Grafana state.

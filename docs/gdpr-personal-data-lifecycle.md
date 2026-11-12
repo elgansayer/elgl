@@ -63,6 +63,7 @@ Relevant Redis safety/discovery caches are invalidated after the database update
 - A transient archive-signing failure does not hide the separately persisted account-deletion state.
 - Signed URLs, archive object keys, user IDs, raw provider errors, and exported content are not written to operational logs.
 - User-controlled archive requests are rate limited and concurrent generation is deduplicated by a partial unique index.
+- Chat text sent to DeepL or Azure Translator is scrubbed of PII first and restored afterwards, so those processors never receive the values. See [PII scrubbing before text reaches DeepL or Azure](./pii-scrubbing-translation-providers.md).
 - Non-HTTP(S) download URLs are rejected by the Angular UI before navigation.
 
 ## Observability

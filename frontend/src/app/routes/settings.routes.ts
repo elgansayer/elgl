@@ -1,4 +1,6 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
+import { I18nService } from '../services/i18n.service';
 
 export const settingsRoutes: Routes = [
   {
@@ -126,5 +128,11 @@ export const settingsRoutes: Routes = [
         (m) => m.VersionCheckComponent,
       ),
     title: 'App Version - HelloTalk',
+  },
+  {
+    path: 'settings/help-about',
+    loadComponent: () =>
+      import('../pages/help-about/help-about.component').then((m) => m.HelpAboutComponent),
+    title: () => inject(I18nService).translate('helpAbout.title'),
   },
 ];

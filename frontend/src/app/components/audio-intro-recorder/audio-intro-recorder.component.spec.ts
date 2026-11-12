@@ -224,4 +224,78 @@ describe('AudioIntroRecorderComponent', () => {
     expect(component.hasRecording()).toBe(true);
     expect(component.recordError()).toBe('common.error_generic');
   });
+
+  describe('saved introduction playback', () => {
+    const firstUrl = 'https://media.example.test/audio/first.webm';
+    const secondUrl = 'https://media.example.test/audio/second.webm';
+
+    function audioElement(): HTMLAudioElement {
+      return fixture.nativeElement.querySelector('audio');
+    }
+
+    it('stays quiet while the saved introduction loads normally', () => {
+      fixture.componentRef.setInput('existingAudioUrl', firstUrl);
+      fixture.detectChanges();
+
+      expect(component.playbackUnavailable()).toBe(false);
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('announces an accessible alert when the saved introduction cannot be played', () => {
+      fixture.componentRef.setInput('existingAudioUrl', firstUrl);
+      fixture.detectChanges();
+
+      audioElement().dispatchEvent(new Event('error'));
+      fixture.detectChanges();
+
+      const alert: HTMLElement | null = fixture.nativeElement.querySelector('[role="alert"]');
+      expect(component.playbackUnavailable()).toBe(true);
+      expect(alert?.textContent).toContain('t:audioPlayer.error');
+    });
+
+    it('keeps the record action available so the learner can replace an unplayable introduction', () => {
+      fixture.componentRef.setInput('existingAudioUrl', firstUrl);
+      fixture.detectChanges();
+
+      audioElement().dispatchEvent(new Event('error'));
+      fixture.detectChanges();
+
+      const actions = Array.from<HTMLButtonElement>(
+        fixture.nativeElement.querySelectorAll('button'),
+      );
+      const rerecord = actions.find((button) =>
+        button.textContent?.includes('t:profile.audioIntroRerecord'),
+      );
+      expect(rerecord).toBeDefined();
+      expect(rerecord?.disabled).toBe(false);
+    });
+
+    it('clears the alert when a different introduction replaces the failed one', () => {
+      fixture.componentRef.setInput('existingAudioUrl', firstUrl);
+      fixture.detectChanges();
+      audioElement().dispatchEvent(new Event('error'));
+      fixture.detectChanges();
+      expect(component.playbackUnavailable()).toBe(true);
+
+      fixture.componentRef.setInput('existingAudioUrl', secondUrl);
+      fixture.detectChanges();
+
+      expect(component.playbackUnavailable()).toBe(false);
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+
+      audioElement().dispatchEvent(new Event('error'));
+      fixture.detectChanges();
+      expect(component.playbackUnavailable()).toBe(true);
+    });
+
+    it('never reports playback trouble for an unsafe saved URL it refused to render', () => {
+      fixture.componentRef.setInput('existingAudioUrl', 'javascript:alert(1)');
+      fixture.detectChanges();
+
+      component.onExistingAudioError();
+
+      expect(component.playbackUnavailable()).toBe(false);
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    });
+  });
 });

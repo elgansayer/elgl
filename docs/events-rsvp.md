@@ -80,3 +80,19 @@ For a database integration environment, additionally verify two concurrent `atte
 The frontend can be rolled back independently; the backend and database enforcement remain compatible with older clients. The backend can also be rolled back while leaving the trigger in place, although the legacy delete-then-insert implementation has weaker retry semantics for status switches.
 
 Only remove the database trigger/function after all application versions that rely on database capacity enforcement are gone. Dropping `event_rsvps_enforce_mutation`, `enforce_event_rsvp_mutation()`, and `get_event_rsvp_summaries(UUID, UUID[])` restores the previous schema behavior but also reopens the race that allowed over-capacity attendance, so that rollback should be used only to recover from a migration-specific production fault.
+
+## Venue, map snippet and dual-currency ticket metadata (#2029)
+
+Scheduled events persist `venue_type` (`audio_room`, `zoom`, `in_person`), the creator's IANA `timezone`, two
+optional map coordinates and two optional display prices (`ticket_price_gbp`, `ticket_price_usd`). The
+`EventCreationPolicyService` is registered in `EventsModule` and validates future dates, IANA timezones, venue
+URLs/room ownership and complete coordinate pairs before the row is written.
+
+In-person events with complete coordinates render an OpenStreetMap embed snippet and a "view larger map" link
+built from the persisted numbers; coordinates are range-checked by DTO validation, the policy service and the
+database constraint. Ticket prices are formatted with `Intl.NumberFormat` in the viewer's locale and exposed
+through an accessible label. A single event may show both currencies, for example `£5.00 / US$6.50`.
+
+Prices are display and reservation metadata only. This change does not charge a card, deduct coins, grant VIP or
+introduce a payment webhook. The database constraint rejects negative prices and coordinates without a pair.
+Existing events without the new columns continue to render as before.

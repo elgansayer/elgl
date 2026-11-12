@@ -1,5 +1,6 @@
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { showToast, showErrorToast } from '../../services/toast.service';
 import {
   Component,
@@ -32,6 +33,7 @@ import { WordDefinitionModalComponent } from '../word-definition-modal/word-defi
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { StickerPickerComponent } from '../sticker-picker/sticker-picker.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
+import { ReadReceiptComponent } from '../read-receipt/read-receipt.component';
 import { SafetyService } from '../../services/safety.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
@@ -53,6 +55,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 import { applyChatRoomRealtimeEvent, isChatMessage, isRecord } from './chat-room-realtime';
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
+import { NetworkStatusService } from '../../services/network-status.service';
 import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 function isGroupMember(value: unknown): value is GroupMember {
@@ -64,6 +67,7 @@ function isGroupMember(value: unknown): value is GroupMember {
   imports: [
     HlmButton,
     ...HlmAutocompleteImports,
+    ...HlmDialogImports,
     CommonModule,
     TranslatePipe,
     TypingIndicatorComponent,
@@ -75,6 +79,7 @@ function isGroupMember(value: unknown): value is GroupMember {
     LongPressContextMenuComponent,
     StickerPickerComponent,
     ChatSystemBubbleComponent,
+    ReadReceiptComponent,
     CulturalTipComponent,
     CorrectionModalComponent,
     ReplyPreviewComponent,
@@ -107,7 +112,13 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly translationCache = inject(TranslationCacheService);
   private readonly unreadCounter = inject(UnreadCounterService);
   private readonly chatEncryption = inject(PersonalChatEncryptionService);
+  private readonly networkStatus = inject(NetworkStatusService);
   private readonly pendingMessageScroll = signal<string | null>(null);
+
+  /** Connectivity, and the messages written offline that are still waiting to be sent. */
+  readonly isOnline = this.networkStatus.isOnline;
+  readonly queuedCount = this.chatService.queuedCount;
+  readonly showOfflineStatus = computed(() => !this.isOnline() || this.queuedCount() > 0);
 
   id = input.required<string>();
 
@@ -685,6 +696,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send doodle:', e);
+      showErrorToast(this.i18n.translate('chatRoom.doodleSendFailed'));
     }
   }
 

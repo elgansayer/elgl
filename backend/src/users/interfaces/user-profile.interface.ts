@@ -47,6 +47,7 @@ export interface UserProfile {
   location_privacy?: 'exact' | 'region';
   privacy_hide_online_status: boolean;
   privacy_hide_vip_status: boolean;
+  profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   privacy_last_seen?: 'everyone' | 'vips_only' | 'hidden';
   privacy_profile_photo?: 'everyone' | 'vips_only' | 'hidden';
   privacy_about_info?: 'everyone' | 'vips_only' | 'hidden';
@@ -87,7 +88,9 @@ export interface UserProfile {
   auto_download_wifi_only?: boolean;
   auto_download_preference?: 'wifi' | 'cellular';
   silence_unknown_callers?: boolean;
-  corrector_score?: number;
+  corrector_score?: number | null;
+  corrector_rating_count?: number;
+  corrector_score_unavailable?: boolean;
   xp_total?: number;
   greeting_message?: string;
   away_message?: string;
