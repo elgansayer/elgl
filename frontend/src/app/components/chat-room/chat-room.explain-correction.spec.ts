@@ -74,11 +74,11 @@ describe('ChatRoomComponent corrected-text grammar explanation', () => {
         {
           provide: ChatService,
           useValue: {
+            queuedCount: signal(0),
             getRooms: vi.fn().mockResolvedValue([]),
             getGroupMembers: vi.fn().mockResolvedValue([]),
             getMessages: vi.fn().mockResolvedValue([textMessage, correctionMessage]),
             sendMessage: vi.fn(),
-            addFavourite: vi.fn().mockResolvedValue(undefined),
             lockChat: vi.fn().mockResolvedValue(undefined),
             unlockChat: vi.fn().mockResolvedValue(undefined),
             translateText: vi.fn(),

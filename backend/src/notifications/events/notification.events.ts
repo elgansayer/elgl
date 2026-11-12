@@ -53,11 +53,29 @@ export class LikeEvent {
   ) {}
 }
 
+/**
+ * Platform-generated alert for one recipient, emitted as `system.alert` by the
+ * domain that owns the underlying decision. System alerts have no human actor:
+ * the inbox attributes them to the recipient's own user row and clients never
+ * render an actor for the `system` type. `message` is plain text shown as-is.
+ */
 export class SystemAlertEvent {
   constructor(
     public readonly recipientId: string,
     public readonly message: string,
-    public readonly actorId?: string,
     public readonly entityId?: string,
+  ) {}
+}
+
+export type UnreadCountSource = 'chat' | 'notifications';
+
+/**
+ * Signals that durable unread state changed and clients should refresh the
+ * corresponding authenticated count endpoint.
+ */
+export class UnreadCountsChangedEvent {
+  constructor(
+    public readonly recipientId: string,
+    public readonly source: UnreadCountSource,
   ) {}
 }

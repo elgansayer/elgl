@@ -45,11 +45,11 @@ describe('ChatRoomComponent sequential voice-note autoplay', () => {
       .mockImplementation(() => Promise.resolve());
 
     const chatService = {
+      queuedCount: signal(0),
       getRooms: vi.fn().mockResolvedValue([]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
       getMessages: vi.fn().mockResolvedValue([]),
       sendMessage: vi.fn(),
-      addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),

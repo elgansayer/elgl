@@ -107,4 +107,57 @@ describe('UsersController member visibility', () => {
     expect(result.last_active_at).toBeUndefined();
     expect(result.followers_count).toBe(12);
   });
+
+  it('rejects stats for a hidden profile when requested by another member', async () => {
+    (getUserStats as Mock).mockResolvedValue(
+      makeProfile({ profile_visibility: 'hidden' }),
+    );
+
+    await expect(
+      controller.getUserStats('target-user', {
+        id: 'viewer-user',
+      } as User),
+    ).rejects.toThrow('This profile is not visible');
+  });
+
+  it('allows the owner to read stats for their hidden profile', async () => {
+    (getUserStats as Mock).mockResolvedValue(
+      makeProfile({ profile_visibility: 'hidden' }),
+    );
+
+    const result = await controller.getUserStats('target-user', {
+      id: 'target-user',
+    } as User);
+
+    expect(result.id).toBe('target-user');
+    expect(getProfile).not.toHaveBeenCalled();
+  });
+
+  it('rejects stats for a VIP-only profile when the requester is not VIP', async () => {
+    (getUserStats as Mock).mockResolvedValue(
+      makeProfile({ profile_visibility: 'vips_only' }),
+    );
+    (getProfile as Mock).mockResolvedValue(makeProfile({ is_vip: false }));
+
+    await expect(
+      controller.getUserStats('target-user', {
+        id: 'viewer-user',
+      } as User),
+    ).rejects.toThrow('This profile is visible to VIP members only');
+    expect(getProfile).toHaveBeenCalledWith('viewer-user');
+  });
+
+  it('allows stats for a VIP-only profile when the requester is VIP', async () => {
+    (getUserStats as Mock).mockResolvedValue(
+      makeProfile({ profile_visibility: 'vips_only' }),
+    );
+    (getProfile as Mock).mockResolvedValue(makeProfile({ is_vip: true }));
+
+    const result = await controller.getUserStats('target-user', {
+      id: 'viewer-user',
+    } as User);
+
+    expect(result.id).toBe('target-user');
+    expect(getProfile).toHaveBeenCalledWith('viewer-user');
+  });
 });

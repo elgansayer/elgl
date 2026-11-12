@@ -2,9 +2,18 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { MetricsService } from '../metrics/metrics.service';
+import {
+  PiiScrubContext,
+  PiiTelemetry,
+  ProtectedText,
+  protectForProvider,
+  restoreFromProvider,
+} from '../privacy/pii-redaction';
 import { TranslateDto } from './dto/translate.dto';
 import { TransliterateDto } from './dto/transliterate.dto';
 import {
@@ -47,10 +56,19 @@ export class TranslationRouterService {
   private static readonly AZURE_TRANSLATOR_BASE_URL =
     'https://api.cognitive.microsofttranslator.com';
 
+  private readonly piiTelemetry: PiiTelemetry;
+
   constructor(
     private readonly configService: ConfigService,
     private readonly nlpService: NlpService,
-  ) {}
+    @Optional() metricsService?: MetricsService,
+  ) {
+    this.piiTelemetry = {
+      debug: (message) => this.logger.debug(message),
+      warn: (message) => this.logger.warn(message),
+      metrics: metricsService,
+    };
+  }
 
   async translate(
     userId: string,
@@ -142,6 +160,13 @@ export class TranslationRouterService {
     const apiKey = this.configService.get<string>('DEEPL_API_KEY');
     if (!apiKey) return null;
 
+    const context: PiiScrubContext = {
+      provider: 'deepl',
+      operation: 'translate',
+    };
+    const sensitive = this.protect(text, context);
+    if (sensitive.nothingToTranslate) return { translatedText: text };
+
     const host = apiKey.endsWith(':fx')
       ? 'https://api-free.deepl.com'
       : 'https://api.deepl.com';
@@ -154,7 +179,7 @@ export class TranslationRouterService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          text: [text],
+          text: [sensitive.text],
           target_lang: targetLanguage.toUpperCase(),
           source_lang: sourceLanguage.toUpperCase(),
           preserve_formatting: true,
@@ -169,8 +194,9 @@ export class TranslationRouterService {
       const translation = this.readDeepLTranslation(response.payload);
       if (!translation) {
         this.logProviderFailure('deepl', 'translate', 'invalid-response');
+        return null;
       }
-      return translation;
+      return this.restoreTranslation(translation, sensitive, context);
     } catch (error: unknown) {
       this.logProviderException('deepl', 'translate', error);
       return null;
@@ -185,6 +211,13 @@ export class TranslationRouterService {
     const apiKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
     if (!apiKey) return null;
 
+    const context: PiiScrubContext = {
+      provider: 'azure',
+      operation: 'translate',
+    };
+    const sensitive = this.protect(text, context);
+    if (sensitive.nothingToTranslate) return { translatedText: text };
+
     const query = new URLSearchParams({
       'api-version': '3.0',
       from: sourceLanguage,
@@ -197,7 +230,7 @@ export class TranslationRouterService {
         {
           method: 'POST',
           headers: this.azureHeaders(apiKey),
-          body: JSON.stringify([{ Text: text }]),
+          body: JSON.stringify([{ Text: sensitive.text }]),
         },
       );
 
@@ -209,8 +242,9 @@ export class TranslationRouterService {
       const translation = this.readAzureTranslation(response.payload);
       if (!translation) {
         this.logProviderFailure('azure', 'translate', 'invalid-response');
+        return null;
       }
-      return translation;
+      return this.restoreTranslation(translation, sensitive, context);
     } catch (error: unknown) {
       this.logProviderException('azure', 'translate', error);
       return null;
@@ -248,6 +282,14 @@ export class TranslationRouterService {
     const apiKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
     if (!apiKey) return null;
 
+    // Script conversion would rewrite a redaction token, so only the pieces between
+    // sensitive spans are sent and the spans are put back unchanged afterwards.
+    const sensitive = this.protect(text, {
+      provider: 'azure',
+      operation: 'transliterate',
+    });
+    if (sensitive.segments.length === 0) return text;
+
     const query = new URLSearchParams({
       'api-version': '3.0',
       language: language.toLowerCase(),
@@ -261,7 +303,9 @@ export class TranslationRouterService {
         {
           method: 'POST',
           headers: this.azureHeaders(apiKey),
-          body: JSON.stringify([{ Text: text }]),
+          body: JSON.stringify(
+            sensitive.segments.map((segment) => ({ Text: segment })),
+          ),
         },
       );
 
@@ -275,9 +319,13 @@ export class TranslationRouterService {
         return null;
       }
 
-      const transliteratedText = this.readAzureTransliteration(
+      const converted = this.readAzureTransliterations(
         response.payload,
+        sensitive.segments,
       );
+      const transliteratedText = converted
+        ? sensitive.rebuild(converted)
+        : null;
       if (!transliteratedText) {
         this.logProviderFailure('azure', 'transliterate', 'invalid-response');
       }
@@ -372,12 +420,48 @@ export class TranslationRouterService {
     return { translatedText, detectedLanguage };
   }
 
-  private readAzureTransliteration(payload: unknown): string | null {
-    if (!Array.isArray(payload) || payload.length === 0) return null;
-    const first = payload[0];
-    if (!this.isRecord(first) || typeof first.text !== 'string') return null;
-    const text = first.text.trim();
-    return text || null;
+  /**
+   * One converted string per sent segment, with each segment's own leading and
+   * trailing whitespace kept so it still separates the sensitive spans around it.
+   */
+  private readAzureTransliterations(
+    payload: unknown,
+    segments: readonly string[],
+  ): string[] | null {
+    if (!Array.isArray(payload) || payload.length !== segments.length) {
+      return null;
+    }
+    const converted: string[] = [];
+    for (const [index, item] of payload.entries()) {
+      if (!this.isRecord(item) || typeof item.text !== 'string') return null;
+      const text = item.text.trim();
+      if (!text) return null;
+      const segment = segments[index];
+      converted.push(
+        `${segment.slice(0, segment.length - segment.trimStart().length)}${text}${segment.slice(segment.trimEnd().length)}`,
+      );
+    }
+    return converted;
+  }
+
+  /** Masks PII so the original values never reach the provider. */
+  private protect(text: string, context: PiiScrubContext): ProtectedText {
+    return protectForProvider(text, context, this.piiTelemetry);
+  }
+
+  /** A damaged redaction token makes the response invalid, so the next provider is tried. */
+  private restoreTranslation(
+    translation: TranslationProviderResult,
+    sensitive: ProtectedText,
+    context: PiiScrubContext,
+  ): TranslationProviderResult | null {
+    const translatedText = restoreFromProvider(
+      sensitive,
+      translation.translatedText,
+      context,
+      this.piiTelemetry,
+    );
+    return translatedText === null ? null : { ...translation, translatedText };
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

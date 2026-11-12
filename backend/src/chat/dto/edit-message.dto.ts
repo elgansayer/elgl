@@ -1,10 +1,12 @@
 import {
+  IsBoolean,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
 } from 'class-validator';
+import { IsEncryptedChatPayload } from './encrypted-chat-payload.validator';
 
 export class EditMessageDto {
   @IsString()
@@ -21,4 +23,14 @@ export class EditMessageDto {
   @IsNotEmpty()
   @MaxLength(128)
   reply_to_id?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_encrypted?: boolean;
+
+  @IsEncryptedChatPayload({
+    message:
+      'encrypted_payload must be a bounded e2ee:v1 envelope when is_encrypted is true and absent otherwise',
+  })
+  encrypted_payload?: string;
 }

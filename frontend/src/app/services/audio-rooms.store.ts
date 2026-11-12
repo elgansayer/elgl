@@ -1,6 +1,6 @@
 import { showToast } from './toast.service';
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
   createLocalVideoTrack,
@@ -9,6 +9,7 @@ import {
   RemoteTrack,
   RemoteTrackPublication,
   RemoteVideoTrack,
+  Participant,
   Room,
   RoomEvent,
   Track,
@@ -19,6 +20,8 @@ import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
 import { EconomyStore } from './economy.store';
 import { AudioRoomDegradationService } from './audio-room-degradation.service';
+import type { GiftAnimationType } from './gift-animation.service';
+import { parseQuickPollRealtimeEvent, PollResult, QuickPollService } from './quick-poll.service';
 
 export interface AudioRoomRecord {
   id: string;
@@ -99,6 +102,88 @@ export interface RoomChatMessage {
   created_at: string;
 }
 
+export interface HostTipPayload {
+  tip_id: string;
+  amount_coins: number;
+  sender_user_id: string;
+  sender_name?: string;
+  receiver_user_id: string;
+  receiver_name?: string;
+}
+
+type TipErrorKey =
+  | 'audioRoom.tipError'
+  | 'audioRoom.tipNotFound'
+  | 'audioRoom.tipRetryConflict'
+  | 'audioRoom.tipValidationError'
+  | 'audioRoom.tipUnavailable'
+  | 'audioRoom.tipDeliveryError';
+
+export function getTipErrorKey(error: unknown): TipErrorKey {
+  if (!(error instanceof HttpErrorResponse)) return 'audioRoom.tipError';
+  const responseBody: unknown = error.error;
+  if (
+    typeof responseBody !== 'object' ||
+    responseBody === null ||
+    !('message' in responseBody) ||
+    typeof responseBody.message !== 'string'
+  ) {
+    return 'audioRoom.tipError';
+  }
+
+  const message = responseBody.message;
+  if (
+    message === 'audioRoom.tipNotFound' ||
+    message === 'audioRoom.tipRetryConflict' ||
+    message === 'audioRoom.tipValidationError' ||
+    message === 'audioRoom.tipUnavailable' ||
+    message === 'audioRoom.tipDeliveryError'
+  ) {
+    return message;
+  }
+  return 'audioRoom.tipError';
+}
+
+export function parseHostTipPayload(data: unknown): HostTipPayload | null {
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) return null;
+  if (
+    !('tip_id' in data) ||
+    !('amount_coins' in data) ||
+    !('sender_user_id' in data) ||
+    !('receiver_user_id' in data)
+  ) {
+    return null;
+  }
+
+  const tipId = data.tip_id;
+  const amountCoins = data.amount_coins;
+  const senderUserId = data.sender_user_id;
+  const receiverUserId = data.receiver_user_id;
+  const senderName = 'sender_name' in data ? data.sender_name : undefined;
+  const receiverName = 'receiver_name' in data ? data.receiver_name : undefined;
+  if (
+    typeof tipId !== 'string' ||
+    typeof amountCoins !== 'number' ||
+    !Number.isSafeInteger(amountCoins) ||
+    amountCoins <= 0 ||
+    typeof senderUserId !== 'string' ||
+    typeof receiverUserId !== 'string' ||
+    (senderName !== undefined && typeof senderName !== 'string') ||
+    (receiverName !== undefined && typeof receiverName !== 'string')
+  ) {
+    return null;
+  }
+
+  return {
+    tip_id: tipId,
+    amount_coins: amountCoins,
+    sender_user_id: senderUserId,
+    sender_name: senderName,
+    receiver_user_id: receiverUserId,
+    receiver_name: receiverName,
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -109,6 +194,7 @@ export class AudioRoomsStore {
   private i18n = inject(I18nService);
   private economyStore = inject(EconomyStore);
   private degradationService = inject(AudioRoomDegradationService);
+  private quickPollService = inject(QuickPollService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly activeRooms = signal<AudioRoomRecord[]>([]);
@@ -132,6 +218,8 @@ export class AudioRoomsStore {
   readonly audienceCount = signal<number>(0);
   readonly privateRooms = signal<AudioRoomRecord[]>([]);
   readonly isLoadingPrivate = signal<boolean>(false);
+  private readonly recentTipIds = signal<ReadonlySet<string>>(new Set());
+  readonly currentPoll = signal<PollResult | null>(null);
 
   // Degradation-aware state - reactive bindings to degradation service
   readonly isLiveKitDegraded = this.degradationService.isLiveKitDegraded;
@@ -169,31 +257,21 @@ export class AudioRoomsStore {
 
   private livekitRoom: Room | null = null;
   private roomSubscription: unknown = null;
-  private onTrackSubscribedBound: ((
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ) => void) | null = null;
-  private onTrackUnsubscribedBound: ((
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ) => void) | null = null;
-
-  /**
-   * Type guard that narrows the raw Centrifugo payload into the expected shape.
-   * This avoids production `as` type assertions.
-   */
-  private isHostTipPayload(data: unknown): data is {
-    tip_id?: string;
-    amount_coins?: number;
-    sender_user_id?: string;
-    sender_name?: string;
-    receiver_user_id?: string;
-  } {
-    return typeof data === 'object' && data !== null && !Array.isArray(data);
-  }
-
+  private onTrackSubscribedBound:
+    | ((
+        track: RemoteTrack,
+        publication: RemoteTrackPublication,
+        participant: RemoteParticipant,
+      ) => void)
+    | null = null;
+  private onTrackUnsubscribedBound:
+    | ((
+        track: RemoteTrack,
+        publication: RemoteTrackPublication,
+        participant: RemoteParticipant,
+      ) => void)
+    | null = null;
+  private onActiveSpeakersChangedBound: ((speakers: Participant[]) => void) | null = null;
   private isRoomEvent(data: unknown): data is {
     type?: string;
     user_id?: string;
@@ -210,6 +288,7 @@ export class AudioRoomsStore {
     tip?: unknown;
     gift_id?: string;
     previous_co_host_id?: string | null;
+    is_speaking?: boolean;
   } {
     return typeof data === 'object' && data !== null;
   }
@@ -318,7 +397,13 @@ export class AudioRoomsStore {
   }
 
   async joinRoom(room: AudioRoomRecord): Promise<void> {
+    const previousRoomId = this.currentRoom()?.id;
+    if (this.roomSubscription && previousRoomId) {
+      this.centrifugeService.unsubscribe(`room_${previousRoomId}`);
+      this.roomSubscription = null;
+    }
     this.currentRoom.set(room);
+    this.currentPoll.set(null);
     this.captions.set([]);
     this.roomMessages.set([]);
 
@@ -348,9 +433,11 @@ export class AudioRoomsStore {
           this.livekitRoom = new Room();
           this.onTrackSubscribedBound = this.onTrackSubscribed.bind(this);
           this.onTrackUnsubscribedBound = this.onTrackUnsubscribed.bind(this);
+          this.onActiveSpeakersChangedBound = this.onActiveSpeakersChanged.bind(this);
           this.livekitRoom
             .on(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound)
-            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
+            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound)
+            .on(RoomEvent.ActiveSpeakersChanged, this.onActiveSpeakersChangedBound);
           await this.livekitRoom.connect(tokenRes.livekit_url, tokenRes.token);
           this.isConnectedToLiveKit.set(true);
 
@@ -382,18 +469,37 @@ export class AudioRoomsStore {
 
     // Subscribe to Centrifugo room channel for raise-hands, stage approval, subtitles, and chat
     await this.centrifugeService.connect();
-    if (this.roomSubscription) {
-      this.centrifugeService.unsubscribe(`room_${room.id}`);
-    }
-
-    this.roomSubscription = this.centrifugeService.subscribe(`room_${room.id}`, (data: unknown) => {
+    this.centrifugeService.subscribe(`room_${room.id}`, (data: unknown) => {
+      this.handleCentrifugoMessage(data);
       if (!this.isRoomEvent(data)) return;
       const p = data;
+      const pollEvent = parseQuickPollRealtimeEvent(p);
+
+      if (pollEvent?.type === 'poll_opened') {
+        this.currentPoll.set(pollEvent.poll);
+        return;
+      }
+      if (pollEvent?.type === 'poll_updated') {
+        const currentUserVote =
+          this.currentPoll()?.poll_id === pollEvent.poll.poll_id
+            ? (this.currentPoll()?.userVote ?? null)
+            : null;
+        this.currentPoll.set({ ...pollEvent.poll, userVote: currentUserVote });
+        return;
+      }
 
       if (p.type === 'raise_hand' && p.user_id) {
         this.currentRoom.update((r) => {
           if (!r || r.raised_hands.includes(p.user_id!)) return r;
           return { ...r, raised_hands: [...r.raised_hands, p.user_id!] };
+        });
+      } else if (p.type === 'raise_hand_dismissed' && p.target_user_id) {
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          return {
+            ...r,
+            raised_hands: r.raised_hands.filter((id) => id !== p.target_user_id),
+          };
         });
       } else if (p.type === 'speaker_approved' && p.target_user_id) {
         this.currentRoom.update((r) => {
@@ -550,23 +656,9 @@ export class AudioRoomsStore {
         }
       } else if (p.type === 'subtitle' && p.caption) {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
-      } else if (p.type === 'host_tip' && p.tip && this.isHostTipPayload(p.tip)) {
-        const tip = p.tip;
-        // Don't replay animation for the sender -- it already fired locally in tipHost()
-        if (tip.sender_user_id === this.authService.currentUser()?.id) {
-          return;
-        }
-        const amount = tip.amount_coins ?? 0;
-        this.economyStore.triggerPublicGiftAnimation({
-          giftId: `tip_${tip.tip_id ?? 'unknown'}`,
-          giftName: `${amount} Coins`,
-          giftIcon: this.tipIconForAmount(amount),
-          animationType: this.tipAnimationForAmount(amount),
-          animationUrl: undefined,
-          senderName: tip.sender_name ?? 'Someone',
-          receiverName: 'Host',
-          coinValue: amount,
-        });
+      } else if (p.type === 'host_tip') {
+        const tip = parseHostTipPayload(p.tip);
+        if (tip) this.handleHostTipEvent(tip);
       } else if (p.type === 'virtual_gift' && p.icon && p.gift_name) {
         this.economyStore.triggerPublicGiftAnimation({
           giftId: typeof p.gift_id === 'string' ? p.gift_id : 'unknown',
@@ -593,6 +685,20 @@ export class AudioRoomsStore {
         this.leaveRoom();
       }
     });
+    this.roomSubscription = room.id;
+
+    try {
+      const recoveredPoll = await this.quickPollService.getActivePoll(room.id);
+      if (this.currentRoom()?.id === room.id && this.currentPoll() === null) {
+        this.currentPoll.set(recoveredPoll);
+      }
+    } catch {
+      // Poll recovery is best-effort. Realtime events can still populate the current poll.
+    }
+  }
+
+  setCurrentPoll(poll: PollResult): void {
+    this.currentPoll.set(poll);
   }
 
   private async publishLocalCamera(): Promise<void> {
@@ -641,6 +747,34 @@ export class AudioRoomsStore {
         next.delete(participant.identity);
         return next;
       });
+    }
+  }
+
+  updateSpeakerActivity(activeIdentities: string[]): void {
+    const identitiesSet = new Set(activeIdentities);
+    this.stageParticipants.update((participants) =>
+      participants.map((p) => {
+        const suffix = `_${p.user_id.slice(0, 6)}`;
+        const isSpeaking = Array.from(identitiesSet).some(
+          (identity) => identity === p.user_id || identity.endsWith(suffix),
+        );
+        return p.isSpeaking === isSpeaking ? p : { ...p, isSpeaking };
+      }),
+    );
+  }
+
+  private onActiveSpeakersChanged(speakers: Participant[]): void {
+    this.updateSpeakerActivity(speakers.map((s) => s.identity));
+  }
+
+  handleCentrifugoMessage(data: unknown): void {
+    if (!this.isRoomEvent(data)) return;
+    const p = data;
+    if (p.type === 'speaker_speaking' && p.target_user_id) {
+      const isSpeaking = p.is_speaking ?? true;
+      this.stageParticipants.update((list) =>
+        list.map((sp) => (sp.user_id === p.target_user_id ? { ...sp, isSpeaking } : sp)),
+      );
     }
   }
 
@@ -861,37 +995,45 @@ export class AudioRoomsStore {
     }
   }
 
-  async tipHost(roomId: string, amountCoins: number): Promise<boolean> {
+  async tipHost(roomId: string, amountCoins: number, idempotencyKey: string): Promise<boolean> {
     try {
       const res = await firstValueFrom(
         this.http.post<{
           tip_id: string;
           amount_coins: number;
           receiver_id: string;
-          receiver_new_balance: number;
+          sender_new_balance: number;
         }>(
           `${this.baseUrl}/${roomId}/tip`,
-          { room_id: roomId, amount_coins: amountCoins },
+          {
+            room_id: roomId,
+            amount_coins: amountCoins,
+            idempotency_key: idempotencyKey,
+          },
           { headers: this.getHeaders() },
         ),
       );
-      this.economyStore.coinsBalance.update((bal) => bal - amountCoins);
+      this.economyStore.coinsBalance.set(res.sender_new_balance);
 
       const user = this.authService.currentUser();
-      const senderName = user?.display_name ?? 'Someone';
+      const senderName = user?.display_name || this.i18n.translate('common.languagePartner');
       const animationType = this.tipAnimationForAmount(amountCoins);
+      const receiverName =
+        this.currentRoom()?.host?.display_name || this.i18n.translate('audioRoom.hostFallback');
 
-      // Fire full-screen SVG animation immediately for the sender
-      this.economyStore.triggerPublicGiftAnimation({
-        giftId: `tip_${res.tip_id}`,
-        giftName: `${amountCoins} Coins`,
-        giftIcon: this.tipIconForAmount(amountCoins),
-        animationType,
-        animationUrl: undefined,
-        senderName,
-        receiverName: 'Host',
-        coinValue: amountCoins,
-      });
+      if (this.rememberTipId(res.tip_id)) {
+        // Fire full-screen SVG animation immediately for the sender.
+        this.economyStore.triggerPublicGiftAnimation({
+          giftId: `tip_${res.tip_id}`,
+          giftName: this.i18n.translate('audioRoom.tipName', { amount: amountCoins }),
+          giftIcon: this.tipIconForAmount(amountCoins),
+          animationType,
+          animationUrl: undefined,
+          senderName,
+          receiverName,
+          coinValue: amountCoins,
+        });
+      }
 
       showToast(
         this.i18n.translate('audioRoom.tipSentToast', {
@@ -899,15 +1041,40 @@ export class AudioRoomsStore {
         }),
       );
       return true;
-    } catch (e: unknown) {
-      console.error('Tip host error:', e);
-      const message = e instanceof Error ? e.message : String(e);
-      showToast(message || this.i18n.translate('audioRoom.tipError'));
+    } catch (error: unknown) {
+      console.error('Tip host request failed');
+      showToast(this.i18n.translate(getTipErrorKey(error)));
       return false;
     }
   }
 
-  private tipAnimationForAmount(amount: number): string {
+  private handleHostTipEvent(tip: HostTipPayload): void {
+    // The sender renders the authoritative response locally and ignores its room echo.
+    if (tip.sender_user_id === this.authService.currentUser()?.id) return;
+    if (!this.rememberTipId(tip.tip_id)) return;
+
+    this.economyStore.triggerPublicGiftAnimation({
+      giftId: `tip_${tip.tip_id}`,
+      giftName: this.i18n.translate('audioRoom.tipName', {
+        amount: tip.amount_coins,
+      }),
+      giftIcon: this.tipIconForAmount(tip.amount_coins),
+      animationType: this.tipAnimationForAmount(tip.amount_coins),
+      animationUrl: undefined,
+      senderName: tip.sender_name?.trim() || this.i18n.translate('common.languagePartner'),
+      receiverName: tip.receiver_name?.trim() || this.i18n.translate('audioRoom.hostFallback'),
+      coinValue: tip.amount_coins,
+    });
+  }
+
+  private rememberTipId(tipId: string): boolean {
+    const existing = this.recentTipIds();
+    if (existing.has(tipId)) return false;
+    this.recentTipIds.set(new Set([...existing, tipId].slice(-100)));
+    return true;
+  }
+
+  private tipAnimationForAmount(amount: number): GiftAnimationType {
     if (amount >= 500) return 'premium';
     if (amount >= 100) return 'confetti';
     if (amount >= 50) return 'hearts';
@@ -995,6 +1162,10 @@ export class AudioRoomsStore {
         this.livekitRoom.off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
         this.onTrackUnsubscribedBound = null;
       }
+      if (this.onActiveSpeakersChangedBound) {
+        this.livekitRoom.off(RoomEvent.ActiveSpeakersChanged, this.onActiveSpeakersChangedBound);
+        this.onActiveSpeakersChangedBound = null;
+      }
       this.livekitRoom.disconnect();
       this.livekitRoom = null;
     }
@@ -1004,6 +1175,7 @@ export class AudioRoomsStore {
     }
     this.isConnectedToLiveKit.set(false);
     this.currentRoom.set(null);
+    this.currentPoll.set(null);
     this.isSpeaker.set(false);
     this.stageInfo.set(null);
     this.stageParticipants.set([]);

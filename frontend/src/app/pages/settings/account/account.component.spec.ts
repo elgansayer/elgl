@@ -28,9 +28,7 @@ describe('AccountSettingsComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AccountSettingsComponent],
-      providers: [
-        { provide: SettingsService, useValue: settingsServiceMock },
-      ],
+      providers: [{ provide: SettingsService, useValue: settingsServiceMock }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccountSettingsComponent);
@@ -45,7 +43,7 @@ describe('AccountSettingsComponent', () => {
 
   it('should render the account title', () => {
     const title = fixture.nativeElement.querySelector('h2');
-    expect(title.textContent).toContain('settings.account.title');
+    expect(title.textContent).toContain('Account');
   });
 
   it('should display verified email address', () => {
@@ -56,7 +54,7 @@ describe('AccountSettingsComponent', () => {
   it('should show verified badge when email is verified', () => {
     const badge = fixture.nativeElement.querySelector('.verified-badge');
     expect(badge).toBeTruthy();
-    expect(badge.textContent).toContain('settings.account.email.verified');
+    expect(badge.textContent).toContain('Verified');
   });
 
   it('should not show verified badge when email is not verified', async () => {
@@ -71,7 +69,9 @@ describe('AccountSettingsComponent', () => {
   });
 
   it('should display active sessions count', () => {
-    const sessionsInfo = fixture.nativeElement.querySelector('.setting-item:last-child .setting-info p');
+    const sessionsInfo = fixture.nativeElement.querySelector(
+      '.setting-item:last-child .setting-info p',
+    );
     expect(sessionsInfo.textContent).toContain('3');
   });
 
@@ -93,7 +93,9 @@ describe('AccountSettingsComponent', () => {
   it('should call updateTwoFactorSetting on toggle change', () => {
     component.twoFactorForm.patchValue({ twoFactorEnabled: true });
     component.updateTwoFactorSetting();
-    expect(settingsServiceMock.updateAccountSettings).toHaveBeenCalledWith({ twoFactorEnabled: true });
+    expect(settingsServiceMock.updateAccountSettings).toHaveBeenCalledWith({
+      twoFactorEnabled: true,
+    });
   });
 
   it('should have an invalid password form by default', () => {

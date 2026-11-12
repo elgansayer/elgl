@@ -13,6 +13,7 @@ import {
 import { VideoCallsEncryptionService } from './video-calls-encryption.service';
 import { LivekitService, IceServer } from '../livekit/livekit.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { VideoExchangeTimerService } from './video-exchange-timer.service';
 
 export interface EncryptedVideoCallResponse {
   token: string;
@@ -35,6 +36,7 @@ export class VideoCallsService {
     private encryptionService: VideoCallsEncryptionService,
     private livekitService: LivekitService,
     private readonly metricsService: MetricsService,
+    private readonly exchangeTimerService: VideoExchangeTimerService,
   ) {
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const secret = this.configService.get<string>('LIVEKIT_SECRET');
@@ -147,6 +149,13 @@ export class VideoCallsService {
       remoteUserId,
     );
 
+    await this.exchangeTimerService.startSession(
+      roomName,
+      userId,
+      remoteUserId,
+    );
+    await this.exchangeTimerService.markParticipantJoined(roomName, userId);
+
     if (marker.degraded) {
       this.logger.warn(
         `createRoom degraded for user ${userId}: ${marker.reason}`,
@@ -229,6 +238,8 @@ export class VideoCallsService {
         userId,
       );
     }
+
+    await this.exchangeTimerService.markParticipantJoined(roomName, userId);
 
     return {
       ...result,

@@ -14,6 +14,9 @@ import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { ChatEditController } from './chat-edit.controller';
+import { ChatForwardController } from './chat-forward.controller';
+import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
 import { SecureChatService } from './secure-chat.service';
 import { ChatLlmService } from './chat-llm.service';
@@ -23,9 +26,6 @@ import { DirectConversationController } from './direct-conversation.controller';
 import { DirectConversationService } from './direct-conversation.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
-import { ChatEditController } from './chat-edit.controller';
-import { ChatForwardController } from './chat-forward.controller';
-import { ChatSearchController } from './chat-search.controller';
 import { ChatSettingsService } from './chat-settings.service';
 import { ChatBackupController } from '../chat-backup/chat-backup.controller';
 import { ChatBackupService } from '../chat-backup/chat-backup.service';
@@ -34,6 +34,10 @@ import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
 import { DisappearingMessagesCleanupService } from './disappearing-messages-cleanup.service';
 import { DisappearingMessagesInterceptor } from './disappearing-messages.interceptor';
+import { PersonalUnreadListener } from './listeners/personal-unread.listener';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { GroupChatController } from './group-chat.controller';
+import { GroupChatService } from './group-chat.service';
 
 @Module({
   imports: [
@@ -57,17 +61,16 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
+    GroupChatController,
   ],
   providers: [
     CentrifugoService,
+    GroupChatService,
     ReadReceiptsService,
     TranslationService,
     ChatLlmService,
     ChatLlmProxyService,
-    {
-      provide: ChatService,
-      useClass: SecureChatService,
-    },
+    { provide: ChatService, useClass: SecureChatService },
     ConversationStarterService,
     DirectConversationService,
     SystemMessageService,
@@ -77,6 +80,8 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
     ChatSystemEventListener,
     DisappearingMessagesCleanupService,
     DisappearingMessagesInterceptor,
+    PersonalUnreadListener,
+    PersonalChatEncryptionService,
     {
       provide: APP_INTERCEPTOR,
       useExisting: DisappearingMessagesInterceptor,
@@ -92,6 +97,8 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
     DirectConversationService,
     SystemMessageService,
     ChatSettingsService,
+    PersonalChatEncryptionService,
+    GroupChatService,
   ],
 })
 export class ChatModule {}

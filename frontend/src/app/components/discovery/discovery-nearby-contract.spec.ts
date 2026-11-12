@@ -35,13 +35,16 @@ function partner(distanceMetres: number): UserProfile {
 }
 
 describe('Discovery Nearby GPS product contract', () => {
-  async function setup(distanceMetres = 5_000) {
+  async function setup(distanceMetres = 5_000, isVip = false) {
     const findPartners = vi.fn().mockResolvedValue([partner(distanceMetres)]);
     const getCurrentPosition = vi.fn().mockResolvedValue({
       latitude: 51.5074,
       longitude: -0.1278,
       capturedAt: Date.now(),
     });
+    const currentUser = signal<{ is_vip: boolean } | null>(
+      isVip ? { is_vip: true } : null,
+    );
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
@@ -56,7 +59,7 @@ describe('Discovery Nearby GPS product contract', () => {
           },
         },
         { provide: SafetyService, useValue: { getBlockedIdsAsync: vi.fn().mockResolvedValue([]) } },
-        { provide: AuthService, useValue: { currentUser: signal(null), getAccessToken: vi.fn() } },
+        { provide: AuthService, useValue: { currentUser, getAccessToken: vi.fn() } },
         {
           provide: OfflineDiscoveryCacheService,
           useValue: {
@@ -166,6 +169,37 @@ describe('Discovery Nearby GPS product contract', () => {
 
     expect(findPartners).toHaveBeenLastCalledWith(
       expect.objectContaining({ latitude: undefined, longitude: undefined }),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it('allows VIP users to adjust the Nearby PostGIS search radius with the distance slider', async () => {
+    const { component, findPartners } = await setup(5_000, true);
+
+    component.onFilterSelect('nearby');
+    await vi.waitFor(() => expect(findPartners).toHaveBeenCalledTimes(1));
+
+    expect(findPartners).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        latitude: 51.5074,
+        longitude: -0.1278,
+        radius_metres: 10_000,
+        sort: 'nearest',
+      }),
+      expect.any(AbortSignal),
+    );
+
+    component.onDistanceChanged(150);
+    await vi.waitFor(() => expect(findPartners).toHaveBeenCalledTimes(2));
+
+    expect(component.selectedDistanceKm()).toBe(150);
+    expect(findPartners).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        latitude: 51.5074,
+        longitude: -0.1278,
+        radius_metres: 150_000,
+        sort: 'nearest',
+      }),
       expect.any(AbortSignal),
     );
   });

@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Req,
@@ -35,7 +36,7 @@ export class FavouritesController {
   @Delete(':id')
   async removeFavourite(
     @Req() req: AuthenticatedRequest,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     return this.favouritesService.removeFavourite(req.user.id, id);
   }

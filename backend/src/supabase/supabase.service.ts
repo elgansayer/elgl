@@ -84,6 +84,10 @@ export type UsersRow = {
   language_levels?: Record<string, string> | null;
   chat_preferences?: Record<string, unknown> | null;
   developer_api_key?: string | null;
+  developer_api_key_hash?: string | null;
+  developer_api_key_prefix?: string | null;
+  developer_api_key_last_four?: string | null;
+  developer_api_key_created_at?: string | null;
   deletion_requested_at?: string | null;
   deletion_grace_days?: number | null;
   is_deletion_pending?: boolean | null;
@@ -163,6 +167,9 @@ type AudioRoomTipRow = {
   sender_user_id: string;
   receiver_user_id: string;
   amount_coins: number;
+  idempotency_key?: string | null;
+  sender_balance_after?: number | null;
+  receiver_balance_after?: number | null;
   created_at?: string;
 };
 
@@ -418,6 +425,7 @@ export type GroupsRow = {
   can_edit_info: boolean | null;
   description: string | null;
   rules: string | null;
+  chat_room_id: string | null;
   created_at: string;
 };
 
@@ -457,8 +465,9 @@ type XpEventRow = {
   created_at: string;
 };
 
+// user_follows has the composite primary key (follower_id, following_id) and no
+// id column (supabase/migrations/005_moments.sql).
 type UserFollowRow = {
-  id: string;
   follower_id: string;
   following_id: string;
   created_at: string;
@@ -542,17 +551,15 @@ type UserStickerPackRow = {
   created_at?: string;
 };
 
+// public.moments is owned through user_id and stores text in text_content and
+// the language community in target_language (supabase/migrations/005_moments.sql).
 type MomentRow = {
   id: string;
-  author_id?: string | null;
   user_id?: string | null;
   text_content?: string | null;
-  /** @deprecated legacy alias for text_content used by some older call sites */
-  content_text?: string | null;
   media_urls?: string[] | null;
   media_type?: string | null;
   voice_note_url?: string | null;
-  detected_language?: string | null;
   target_language?: string | null;
   post_type?: string | null;
   question_text?: string | null;
@@ -571,7 +578,6 @@ type MomentRow = {
 type MomentCommentRow = {
   id: string;
   user_id: string;
-  author_id?: string;
   moment_id: string;
   text_content: string | null;
   correction_payload?: {
@@ -603,7 +609,8 @@ type MomentQuestionAnswersRow = {
   id?: string;
   moment_id: string;
   user_id: string;
-  answer: string;
+  /** Column name from 005_moments.sql (VARCHAR(255) NOT NULL). */
+  selected_answer: string;
   is_correct: boolean;
   created_at?: string;
 };
@@ -696,6 +703,8 @@ export type ChatMessageRow = {
   delivery_status?: 'sent' | 'delivered' | 'read';
   expires_at?: string | null;
   deleted_for_user_ids?: string[] | null;
+  is_encrypted?: boolean;
+  encrypted_payload?: string | null;
 };
 
 type BlockRow = {
@@ -723,6 +732,39 @@ export interface Database {
         Row: UsersRow;
         Insert: Partial<UsersRow>;
         Update: Partial<UsersRow>;
+        Relationships: [];
+      };
+      learning_practice_attempts: {
+        Row: {
+          id: string;
+          user_id: string;
+          module: 'verb_conjugation' | 'ipa_alphabet';
+          item_id: string;
+          language_code: string;
+          submitted_answer: string;
+          correct: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          module: 'verb_conjugation' | 'ipa_alphabet';
+          item_id: string;
+          language_code: string;
+          submitted_answer: string;
+          correct: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          user_id: string;
+          module: 'verb_conjugation' | 'ipa_alphabet';
+          item_id: string;
+          language_code: string;
+          submitted_answer: string;
+          correct: boolean;
+          created_at: string;
+        }>;
         Relationships: [];
       };
       reading_engine_crash_reports: {
@@ -755,6 +797,12 @@ export interface Database {
           category: string | null;
           date_time: string;
           location: string | null;
+          venue_type: string | null;
+          timezone: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          ticket_price_gbp: number | null;
+          ticket_price_usd: number | null;
           language_pair: string | null;
           max_participants: number | null;
           host_id: string;
@@ -768,6 +816,12 @@ export interface Database {
           category?: string | null;
           date_time: string;
           location?: string | null;
+          venue_type?: string | null;
+          timezone?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          ticket_price_gbp?: number | null;
+          ticket_price_usd?: number | null;
           language_pair?: string | null;
           max_participants?: number | null;
           host_id: string;
@@ -781,6 +835,12 @@ export interface Database {
           category?: string | null;
           date_time?: string;
           location?: string | null;
+          venue_type?: string | null;
+          timezone?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          ticket_price_gbp?: number | null;
+          ticket_price_usd?: number | null;
           language_pair?: string | null;
           max_participants?: number | null;
           host_id?: string;
@@ -1208,6 +1268,44 @@ export interface Database {
           {
             foreignKeyName: 'chat_messages_sender_id_fkey';
             columns: ['sender_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      message_receipts: {
+        Row: {
+          id: string;
+          message_id: string;
+          user_id: string;
+          status: string;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          user_id: string;
+          status: string;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: string;
+          read_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'message_receipts_message_id_fkey';
+            columns: ['message_id'];
+            isOneToOne: false;
+            referencedRelation: 'chat_messages';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'message_receipts_user_id_fkey';
+            columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'users';
             referencedColumns: ['id'];
@@ -2281,6 +2379,32 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_corrector_score: {
+        Args: { p_user_id: string };
+        Returns: {
+          average_score: number | null;
+          total_ratings: number;
+        }[];
+      };
+      transfer_audio_room_tip: {
+        Args: {
+          p_room_id: string;
+          p_sender_id: string;
+          p_amount: number;
+          p_idempotency_key: string;
+        };
+        Returns: {
+          tip_id: string;
+          amount_coins: number;
+          receiver_id: string;
+          sender_new_balance: number;
+          // Internal RPC field. Never expose another user's wallet balance.
+          receiver_new_balance: number;
+          sender_name: string;
+          receiver_name: string;
+          created: boolean;
+        }[];
+      };
       get_host_dashboard_earnings: {
         Args: {
           p_room_id: string;
@@ -2290,7 +2414,7 @@ export interface Database {
           earned_coins: number;
         }[];
       };
-      claim_daily_checkin_reward: {
+      claim_daily_checkin: {
         Args: {
           p_user_id: string;
           p_reward: number;
@@ -2303,6 +2427,10 @@ export interface Database {
       };
       increment_xp: {
         Args: { user_id: string; amount: number };
+        Returns: void;
+      };
+      record_developer_api_usage: {
+        Args: { p_user_id: string; p_latency_ms: number };
         Returns: void;
       };
       search_nearby_users: {

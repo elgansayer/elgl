@@ -23,10 +23,12 @@ ELGL exposes language-learning actions from each text message through the existi
 - Correction fields are cleared only after the message has been persisted successfully. A failed send leaves the complete draft available for retry.
 - **Request correction** creates a `correction_request` message linked to the source through `reply_to_id`, preserving the original text in the bounded correction-request payload.
 - Existing group-chat correction behavior uses the same message contract and room authorization path.
+- In desktop web chat (`ChatPageComponent`), the structured correction interface mirrors Tandem's correction UI using `CorrectionModalComponent`, providing original ghost text reset, editable correction buffer, live visual diff preview (`VisualDiffComponent`), quick tutor tags, and memory-only in-app translation toggling.
+- The room and AI message composers use explicit translated labels, preserving accessible names for assistive technology while the fields are empty or contain text.
 
 ## API and authorization boundary
 
-Chat APIs are guarded by `SupabaseAuthGuard`; the authenticated user identity is derived from the verified Supabase session rather than supplied by the request body. Translation uses the existing `/chat/translate-real-time` route and correction messages use the existing `/chat/messages` path. Existing room-membership, block, first-contact filtering, message validation, and Centrifugo publication behavior remain authoritative.
+Chat APIs are guarded by `SupabaseAuthGuard`; the authenticated user identity is derived from the verified Supabase session rather than supplied by the request body. Translation uses the existing `/chat/translate-real-time` and `/nlp/translate` routes, and correction messages use the existing `/chat/messages` path. The combined `/nlp/translate-and-correct` endpoint provides simultaneous translation and word-level structured corrections tokenised via `Intl.Segmenter`, bounded by rate-limiting. Existing room-membership, block, first-contact filtering, message validation, and Centrifugo publication behavior remain authoritative.
 
 The translation route is rate limited and delegates language detection/translation to the configured translation service. This change does not add a new provider, credential, anonymous endpoint, database table, or direct browser write path.
 
@@ -39,10 +41,12 @@ Message text is private user content. The following rules apply:
 3. Translation output is displayed through Angular text interpolation. Do not introduce raw HTML rendering for provider output.
 4. Corrections continue through the normal authenticated chat persistence boundary and inherit the room's retention/deletion rules.
 5. A translation result is advisory content. It never overwrites the stored source message.
+6. Sensitive spans (email addresses, phone numbers, payment cards, IBANs, national identifiers, IP addresses, URLs and social handles) are replaced by opaque placeholders before the text reaches DeepL or Azure Translator, and are restored in the response. The provider never receives the value. See [PII scrubbing before text reaches DeepL or Azure](./pii-scrubbing-translation-providers.md) for the detection rules, failure behaviour and metrics.
 
 ## Failure and concurrency behavior
 
 - Translation provider/network failure: keep the source message visible, store no cache entry, and allow a later retry.
+- Provider damaged a PII redaction token: the response is treated as invalid, so the source message stays visible and nothing is cached. A message that contains only sensitive data (for example just an email address) makes no provider call and is shown as written.
 - Translation cache miss/expiry: call the authoritative translation API normally.
 - Cache overflow: evict least-recently-used entries without affecting the displayed translation result.
 - Cache lifecycle reset: a fresh application instance starts empty by design.

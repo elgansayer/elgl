@@ -32,8 +32,8 @@ export class UsersService {
     private readonly xpService: XpService,
     private readonly dataExportWorker: DataExportWorker,
     private readonly eventEmitter: EventEmitter2,
+    private readonly correctorScoreService: CorrectorScoreService,
     @Optional() private readonly notificationsService?: NotificationsService,
-    @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
 
   async proficiencyAssessment(userId: string, score: number): Promise<string> {
@@ -94,8 +94,16 @@ export class UsersService {
     // Fetch related profile data concurrently to improve performance
     const [scoreRes, fcRes, fngRes, xpTotal] = await Promise.all([
       this.correctorScoreService
-        ? this.correctorScoreService.getCorrectorScore(userId)
-        : Promise.resolve({ averageScore: 0 }),
+        .getCorrectorScore(userId)
+        .then((score) => ({ ...score, unavailable: false }))
+        .catch(() => {
+          Logger.error('Corrector score unavailable while loading profile');
+          return {
+            averageScore: null,
+            totalRatings: 0,
+            unavailable: true,
+          };
+        }),
       (async () => {
         try {
           return await supabase
@@ -119,7 +127,9 @@ export class UsersService {
       this.xpService.getTotalXp(userId),
     ]);
 
-    profile.corrector_score = scoreRes?.averageScore ?? 0;
+    profile.corrector_score = scoreRes.averageScore;
+    profile.corrector_rating_count = scoreRes.totalRatings;
+    profile.corrector_score_unavailable = scoreRes.unavailable;
     profile.followers_count = fcRes?.count ?? 0;
     profile.following_count = fngRes?.count ?? 0;
     profile.xp_total = xpTotal;
@@ -1185,11 +1195,12 @@ export class UsersService {
       .update(updatePayload as never)
       .eq('id', userId);
     if (privacyUpdateError) {
-      Logger.warn(
-        `Supabase update for privacy settings failed, falling back to mock: ${privacyUpdateError.message}`,
+      Logger.error('Failed to update privacy settings', {
+        code: privacyUpdateError.code,
+      });
+      throw new InternalServerErrorException(
+        'Unable to update privacy settings',
       );
-      const mock = this.getMockProfile(userId);
-      return { ...mock, ...updatePayload };
     }
     return this.getProfile(userId);
   }
@@ -1214,21 +1225,25 @@ export class UsersService {
       visitsCountRes,
     ] = await Promise.all([
       supabase.from('users').select('*').eq('id', userId).maybeSingle(),
+      // The Moments tables are owned through user_id and user_follows has a
+      // composite primary key (follower_id, following_id) with no id column
+      // (005_moments.sql). Filtering or selecting a column that does not exist
+      // makes the count query fail, which surfaced as a silent zero.
       supabase
         .from('moments')
         .select('id', { count: 'exact', head: true })
-        .eq('author_id', userId),
+        .eq('user_id', userId),
       supabase
         .from('moment_comments')
         .select('id', { count: 'exact', head: true })
-        .eq('author_id', userId),
+        .eq('user_id', userId),
       supabase
         .from('user_follows')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('following_id', userId),
       supabase
         .from('user_follows')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('follower_id', userId),
       supabase
         .from('profile_visits')
@@ -1320,7 +1335,6 @@ export class UsersService {
         | 'user_profile_likes'
         | 'status_views';
       column:
-        | 'author_id'
         | 'user_id'
         | 'sender_id'
         | 'visitor_id'
@@ -1332,8 +1346,8 @@ export class UsersService {
         | 'viewer_id'
         | 'status_owner_id';
     }> = [
-      { table: 'moments', column: 'author_id' },
-      { table: 'moment_comments', column: 'author_id' },
+      { table: 'moments', column: 'user_id' },
+      { table: 'moment_comments', column: 'user_id' },
       { table: 'moment_likes', column: 'user_id' },
       { table: 'flashcards', column: 'user_id' },
       { table: 'chat_messages', column: 'sender_id' },

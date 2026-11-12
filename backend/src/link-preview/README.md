@@ -76,9 +76,12 @@ returns `null`.
 ## Integration
 
 `ChatService.sendMessage` calls `LinkPreviewService.getPreview` for the first
-URL found in a text message and stores the result on the published
-`ChatMessage.link_preview` field. The Angular `LinkPreviewCardComponent` then
-renders that typed metadata as ordinary text and safe link/image attributes.
+URL found in a text message, stores the result on the saved message
+(`chat_messages.link_preview`) and then attaches it to the published
+`ChatMessage.link_preview` field. Group sends (`SecureChatService`), edits and
+forwards share the same URL selection and best-effort behaviour. The Angular
+`LinkPreviewCardComponent` then renders that typed metadata as ordinary text and
+safe link/image attributes.
 Unsafe destination/image URLs are suppressed in the component as a final
 browser-side defence. If a remote preview image fails to load, only the image
 is removed; the text/link card remains usable and a later replacement image can
@@ -88,21 +91,19 @@ Preview scraping is best effort for chat delivery. A cache outage does not
 prevent a fresh scrape, while invalid/unreachable external URLs follow the
 existing service error contract.
 
-**Persistence.** `ChatService` also stores the resolved preview in
-`chat_messages.link_preview` (direct send, group send, edit and forward) before
-it publishes, so history, search and export return the card for recipients who
-were offline. The write is best effort and logged as
-`chat.link_preview_persist_failed message=<id> code=<database code>`; an edit
-that removes or breaks the link clears the stored value, and a correction fix
-(`fixMessage`) keeps a stored preview only while it still describes the first
-link. Reads pass every
-stored preview through `LinkPreviewService.restoreStoredPreview(stored, text)`,
-which treats it as untrusted: it re-sanitises and re-bounds the fields (the same
-code as the cache read), applies the scraper's URL policy to the first link of
-the message's current text and requires the stored `url` to equal it. A
-malformed, stale or orphaned preview becomes `null`. No network, Redis or
-metrics access happens on that path. Retention, deletion and rollout are in
-`docs/rich-link-previews.md`.
+**Persistence.** The preview is stored with its message so history reads,
+reconnecting clients, offline recipients and later joiners get the same card
+the live recipients saw, and opening a room never triggers a scrape. Sends
+insert the message first and then write the preview to that row before
+publishing, so a slow origin cannot delay or lose the message. Edits resolve the
+preview before the write and store it in the same statement as the new text (a
+removed or unresolvable link clears the old card there), and forwards insert the
+copy with the preview. Encrypted messages are never previewed or stored, and the
+`chat_messages_link_preview_shape` constraint enforces that along with a
+16 KiB bound and a mandatory string `url`. A failed write only costs the stored
+card: the card is still delivered live and `chat.link_preview_persist_failed
+message=<id>` is logged without the URL. The card is deleted with its message.
+See `docs/rich-link-previews.md` for the full contract.
 
 **URL selection.** `extractFirstHttpUrl` (`link-url.ts`) picks the first
 well-formed `http(s)` URL in a message. A URL ends at whitespace, markup
@@ -239,32 +240,36 @@ reach the network.
   missing/empty values, disallowed protocols, length caps and non-string types.
 - `link-preview-card.component.spec.ts`: safe external-link rendering, unsafe
   URL suppression and broken/replacement image behaviour.
+- `chat/chat-link-preview.behaviour.spec.ts` and
+  `chat/secure-chat.service.link-preview.spec.ts`: URL selection, live
+  publication and persistence on send, group send, edit and forward, including
+  failed writes, encrypted messages and stale-card clearing.
+- `database/migrations/20261111000000_chat_message_link_preview.spec.ts`: the
+  additive, retry-safe migration and the constraint that bounds the stored card.
 
 ## Rollout and rollback
 
-The scraper itself is application-only. Persisting previews with their message
-adds migration `supabase/migrations/20261029120000_chat_messages_link_preview.sql`
-(a nullable `link_preview` JSONB column, a restrictive policy that prevents
-authenticated direct clients from supplying it, and a guarded size `CHECK`);
-there is no environment variable or feature flag. Apply the migration, then
-deploy backend instances. Mixed versions remain compatible: older instances
-ignore the column, and a new instance that starts before the migration only
-fails its best-effort write with a
-`chat.link_preview_persist_failed ... code=42703` warning. The response interface
-and Redis namespace are unchanged. `LinkPreviewService`
-injects `MetricsService`, which `MetricsModule` provides globally, so
+Persisting previews needs one additive migration,
+`supabase/migrations/20261111000000_chat_message_link_preview.sql` (a nullable
+`chat_messages.link_preview` JSONB column and a `NOT VALID` shape constraint),
+and no environment variable or feature flag. Apply the migration before the
+backend: a backend that is ahead of it still sends messages, but edits and
+forwards that carry a preview fail until the column exists. Older backend
+instances ignore the column, so a rolling deploy is safe, and the response
+interface and Redis namespace are unchanged. `LinkPreviewService` injects
+`MetricsService`, which `MetricsModule` provides globally, so
 `LinkPreviewModule` needs no new import. After deploying, confirm
 `hellotalk_link_preview_requests_total` appears on `/api/metrics`, that
 `reason="timeout"` and `reason="unknown"` stay near zero, and that
-`chat.link_preview_persist_failed` warnings are absent.
+`chat.link_preview_persist_failed` does not appear in the logs.
 
-Rollback can revert the controller/service/tests/documentation commits; the
-column and constraint are inert when unused and can stay (see
-`docs/rich-link-previews.md` for the destructive removal statements, which are
-not needed for rollback). The security checks are intentionally fail-closed, so
-do not selectively remove redirect validation or DNS guarding while leaving the
-public scraper exposed. Removing the 8 second deadline restores the unbounded
-slow-drip exposure, so prefer tuning `FETCH_DEADLINE_MS` over removing it. The
-metrics are additive: reverting them leaves dashboards empty but changes no
-behaviour. Redis entries in the `v2` namespace naturally expire after one hour
-and require no cleanup.
+Rollback can revert the controller/service/tests/documentation commits. The
+migration can stay: older code ignores the column, and dropping it only removes
+the stored cards. The security checks are intentionally fail-closed, so do not
+selectively remove redirect validation or DNS guarding while leaving the public
+scraper exposed.
+Removing the 8 second deadline restores the unbounded slow-drip exposure, so
+prefer tuning `FETCH_DEADLINE_MS` over removing it. The metrics are additive:
+reverting them leaves dashboards empty but changes no behaviour.
+Redis entries in the `v2` namespace naturally expire after one hour and require
+no cleanup.

@@ -34,6 +34,16 @@ const futureLocalDate: ValidatorFn = (control: AbstractControl): ValidationError
   return Number.isFinite(timestamp) && timestamp > Date.now() ? null : { futureDate: true };
 };
 
+const coordinatesPairedValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
+  const latitude = control.get('latitude')?.value;
+  const longitude = control.get('longitude')?.value;
+  const hasLatitude = latitude !== null && latitude !== undefined && latitude !== '';
+  const hasLongitude = longitude !== null && longitude !== undefined && longitude !== '';
+  return hasLatitude === hasLongitude ? null : { coordinatesIncomplete: true };
+};
+
 const venueLocationValidator: ValidatorFn = (
   control: AbstractControl,
 ): ValidationErrors | null => {
@@ -95,7 +105,7 @@ const venueLocationValidator: ValidatorFn = (
           <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" novalidate>
             <div class="mb-3">
               <label class="mb-1 block text-sm font-medium" for="titleInput">
-                {{ 'events.title' | t }}
+                {{ 'events.eventTitle' | t }}
               </label>
               <input
                 hlmInput
@@ -241,6 +251,94 @@ const venueLocationValidator: ValidatorFn = (
               }
             </div>
 
+            @if (eventForm.controls.venue_type.value === 'in_person') {
+              <fieldset class="mb-3 rounded-lg border border-surface-100 p-3">
+                <legend class="px-1 text-sm font-medium">
+                  {{ 'events.map' | t }}
+                </legend>
+                <p class="mb-2 text-xs text-text-secondary">
+                  {{ 'events.coordinatesHint' | t }}
+                </p>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label class="mb-1 block text-sm font-medium" for="latitudeInput">
+                      {{ 'events.createLatitude' | t }}
+                    </label>
+                    <input
+                      hlmInput
+                      id="latitudeInput"
+                      formControlName="latitude"
+                      type="number"
+                      min="-90"
+                      max="90"
+                      step="0.000001"
+                      class="min-h-11 w-full"
+                      [attr.aria-invalid]="eventForm.hasError('coordinatesIncomplete') ? 'true' : null"
+                    />
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-sm font-medium" for="longitudeInput">
+                      {{ 'events.createLongitude' | t }}
+                    </label>
+                    <input
+                      hlmInput
+                      id="longitudeInput"
+                      formControlName="longitude"
+                      type="number"
+                      min="-180"
+                      max="180"
+                      step="0.000001"
+                      class="min-h-11 w-full"
+                      [attr.aria-invalid]="eventForm.hasError('coordinatesIncomplete') ? 'true' : null"
+                    />
+                  </div>
+                </div>
+                @if (eventForm.hasError('coordinatesIncomplete') && submitAttempted()) {
+                  <p role="alert" class="mt-2 text-xs text-danger-ink">
+                    {{ 'events.coordinatesIncomplete' | t }}
+                  </p>
+                }
+              </fieldset>
+            }
+
+            <fieldset class="mb-3 rounded-lg border border-surface-100 p-3">
+              <legend class="px-1 text-sm font-medium">
+                {{ 'events.ticketPrice' | t }}
+              </legend>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="mb-1 block text-sm font-medium" for="ticketPriceGbpInput">
+                    {{ 'events.createTicketGbp' | t }}
+                  </label>
+                  <input
+                    hlmInput
+                    id="ticketPriceGbpInput"
+                    formControlName="ticket_price_gbp"
+                    type="number"
+                    min="0"
+                    max="100000"
+                    step="0.01"
+                    class="min-h-11 w-full"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium" for="ticketPriceUsdInput">
+                    {{ 'events.createTicketUsd' | t }}
+                  </label>
+                  <input
+                    hlmInput
+                    id="ticketPriceUsdInput"
+                    formControlName="ticket_price_usd"
+                    type="number"
+                    min="0"
+                    max="100000"
+                    step="0.01"
+                    class="min-h-11 w-full"
+                  />
+                </div>
+              </div>
+            </fieldset>
+
             <div class="mb-4">
               <label class="mb-1 block text-sm font-medium" for="descriptionInput">
                 {{ 'events.description' | t }}
@@ -314,12 +412,16 @@ export class CreateEventModalComponent {
       category: ['audio_room', Validators.required],
       location: ['', [Validators.required, trimmedRequired, Validators.maxLength(500)]],
       max_participants: [null as number | null, [Validators.min(1), Validators.max(100)]],
+      latitude: [null as number | null, [Validators.min(-90), Validators.max(90)]],
+      longitude: [null as number | null, [Validators.min(-180), Validators.max(180)]],
+      ticket_price_gbp: [null as number | null, [Validators.min(0), Validators.max(100000)]],
+      ticket_price_usd: [null as number | null, [Validators.min(0), Validators.max(100000)]],
       description: [
         '',
         [Validators.required, trimmedRequired, Validators.maxLength(2000)],
       ],
     },
-    { validators: venueLocationValidator },
+    { validators: [venueLocationValidator, coordinatesPairedValidator] },
   );
 
   readonly created = output<Event>();
@@ -386,6 +488,10 @@ export class CreateEventModalComponent {
           category: raw.category || undefined,
           location: raw.location!.trim(),
           max_participants: raw.max_participants ?? undefined,
+          latitude: raw.latitude ?? undefined,
+          longitude: raw.longitude ?? undefined,
+          ticket_price_gbp: raw.ticket_price_gbp ?? undefined,
+          ticket_price_usd: raw.ticket_price_usd ?? undefined,
           description: raw.description!.trim(),
         }),
       );
@@ -408,6 +514,10 @@ export class CreateEventModalComponent {
       category: 'audio_room',
       location: '',
       max_participants: null,
+      latitude: null,
+      longitude: null,
+      ticket_price_gbp: null,
+      ticket_price_usd: null,
       description: '',
     });
     this.submitAttempted.set(false);

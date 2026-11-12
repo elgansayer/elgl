@@ -4,9 +4,25 @@ import { firstValueFrom } from 'rxjs';
 import { AdminAuthContextService } from '../admin-auth-context.service';
 import {
   AdminLoginHistoryEntry,
+  AdminUserDataFailure,
   AdminUserSummary,
   AdminUsersService,
+  failureOf,
 } from '../admin-users.service';
+
+const USER_FAILURE_MESSAGES: Record<AdminUserDataFailure, string> = {
+  unavailable: 'User data is temporarily unavailable. Try again.',
+  unauthenticated: 'Your admin session has expired. Sign in again to continue.',
+  forbidden: 'Your admin account is not permitted to view this user.',
+  'not-found': 'No user matches this identifier.',
+};
+
+const HISTORY_FAILURE_MESSAGES: Record<AdminUserDataFailure, string> = {
+  unavailable: 'Login history is temporarily unavailable. Try again.',
+  unauthenticated: 'Your admin session has expired. Sign in again to continue.',
+  forbidden: 'Your admin account is not permitted to view login history.',
+  'not-found': 'Login history is temporarily unavailable. Try again.',
+};
 
 @Component({
   standalone: true,
@@ -23,15 +39,27 @@ import {
         private profile data.
       </p>
 
-      @if (busy()) {
-        <p aria-live="polite">Loading user…</p>
-      }
+      <p role="status">
+        @if (busy()) {
+          Loading user…
+        }
+      </p>
 
       @if (error()) {
         <div role="alert" class="error-panel">
-          <h3>Unable to load user</h3>
+          <h3>{{ failure() === 'not-found' ? 'User not found' : 'Unable to load user' }}</h3>
           <p>{{ error() }}</p>
-          <p><a routerLink="/users">Return to user search</a></p>
+          <p class="error-actions">
+            @switch (failure()) {
+              @case ('unauthenticated') {
+                <a routerLink="/login">Sign in again</a>
+              }
+              @case ('unavailable') {
+                <button type="button" (click)="reload()" [disabled]="busy()">Try again</button>
+              }
+            }
+            <a routerLink="/users">Return to user search</a>
+          </p>
         </div>
       }
 
@@ -86,19 +114,28 @@ import {
               <code>users.sessions.read</code>; returned values are privacy-scrubbed by the backend.
             </p>
 
-            @if (!historyLoaded() && !historyBusy()) {
-              <button type="button" (click)="loadLoginHistory()">Load login history</button>
+            @if (canLoadLoginHistory()) {
+              <button type="button" (click)="loadLoginHistory()">
+                {{ historyError() ? 'Try again' : 'Load login history' }}
+              </button>
             }
 
-            @if (historyBusy()) {
-              <p aria-live="polite">Loading login history…</p>
-            }
+            <p role="status">
+              @if (historyBusy()) {
+                Loading login history…
+              }
+            </p>
 
             @if (historyError()) {
-              <p role="alert">{{ historyError() }}</p>
+              <div role="alert">
+                <p>{{ historyError() }}</p>
+                @if (historyFailure() === 'unauthenticated') {
+                  <a routerLink="/login">Sign in again</a>
+                }
+              </div>
             }
 
-            @if (historyLoaded() && loginHistory().length === 0 && !historyError()) {
+            @if (historyLoaded() && loginHistory().length === 0) {
               <p>No recent login-history entries were returned.</p>
             }
 
@@ -138,6 +175,8 @@ import {
     .history-entry { border-block-start: 1px solid currentColor; padding-block-start: .75rem; }
     .history-entry h4 { margin-block: 0 .5rem; }
     .error-panel { border: 1px solid currentColor; border-radius: .75rem; padding: 1rem; }
+    .error-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+    [role='status']:empty { margin-block: 0; }
     .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   `],
 })
@@ -148,10 +187,12 @@ export class UserDetailPageComponent {
   readonly user = signal<AdminUserSummary | null>(null);
   readonly busy = signal(true);
   readonly error = signal<string | null>(null);
+  readonly failure = signal<AdminUserDataFailure | null>(null);
   readonly loginHistory = signal<AdminLoginHistoryEntry[]>([]);
   readonly historyBusy = signal(false);
   readonly historyLoaded = signal(false);
   readonly historyError = signal<string | null>(null);
+  readonly historyFailure = signal<AdminUserDataFailure | null>(null);
 
   constructor() {
     void this.loadUser();
@@ -161,32 +202,48 @@ export class UserDetailPageComponent {
     return this.authContext.hasCapability('users.sessions.read');
   }
 
+  /** Offered before the first load and after an outage, never once access is refused. */
+  canLoadLoginHistory(): boolean {
+    const failure = this.historyFailure();
+    return (
+      !this.historyLoaded() && !this.historyBusy() && (failure === null || failure === 'unavailable')
+    );
+  }
+
+  reload(): void {
+    if (this.busy()) return;
+    void this.loadUser();
+  }
+
   async loadLoginHistory(): Promise<void> {
     const userId = this.user()?.id;
     if (!userId || !this.canReadSessionHistory() || this.historyBusy()) return;
 
     this.historyBusy.set(true);
     this.historyError.set(null);
+    this.historyFailure.set(null);
     try {
-      this.loginHistory.set(
-        await firstValueFrom(this.usersService.getLoginHistory(userId)),
-      );
+      this.loginHistory.set(await firstValueFrom(this.usersService.getLoginHistory(userId)));
       this.historyLoaded.set(true);
     } catch (error) {
+      const failure = failureOf(error);
       this.loginHistory.set([]);
-      this.historyLoaded.set(true);
-      this.historyError.set(
-        error instanceof Error ? error.message : 'Login-history lookup failed',
-      );
+      this.historyFailure.set(failure);
+      this.historyError.set(HISTORY_FAILURE_MESSAGES[failure]);
     } finally {
       this.historyBusy.set(false);
     }
   }
 
   private async loadUser(): Promise<void> {
+    this.busy.set(true);
+    this.error.set(null);
+    this.failure.set(null);
+
     const userId = this.route.snapshot.paramMap.get('id');
     if (!userId) {
-      this.error.set('No user identifier was provided.');
+      this.failure.set('not-found');
+      this.error.set(USER_FAILURE_MESSAGES['not-found']);
       this.busy.set(false);
       return;
     }
@@ -194,7 +251,10 @@ export class UserDetailPageComponent {
     try {
       this.user.set(await firstValueFrom(this.usersService.getUser(userId)));
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'User lookup failed');
+      const failure = failureOf(error);
+      this.user.set(null);
+      this.failure.set(failure);
+      this.error.set(USER_FAILURE_MESSAGES[failure]);
     } finally {
       this.busy.set(false);
     }

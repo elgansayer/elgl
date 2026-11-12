@@ -590,9 +590,77 @@ describe('DiscoveryService', () => {
           filter_audio_intro: false,
         },
       );
-      expect(result).toEqual(
-        nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })),
+      expect(result).toEqual([
+        {
+          id: 'nearby-1',
+          display_name: 'Nearby User',
+          distance_metres: undefined,
+          is_vip: false,
+          is_partner_of_week: false,
+        },
+      ]);
+    });
+
+    it('masks private presence and VIP state in nearby RPC results', async () => {
+      stubRpcResponse([
+        {
+          id: 'private-nearby',
+          is_vip: true,
+          vip_tier: 'consumer',
+          last_active_at: '2026-11-03T01:00:00.000Z',
+        },
+      ]);
+      stubLimitResponse([
+        {
+          id: 'private-nearby',
+          privacy_hide_online_status: true,
+          privacy_hide_vip_status: true,
+        },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
+
+      expect(result).toEqual([
+        {
+          id: 'private-nearby',
+          is_vip: false,
+          is_partner_of_week: false,
+        },
+      ]);
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        'id, privacy_hide_online_status, privacy_hide_vip_status',
       );
+    });
+
+    it('fails closed when nearby privacy state cannot be hydrated', async () => {
+      stubRpcResponse([
+        {
+          id: 'nearby-1',
+          is_vip: true,
+          vip_tier: 'consumer',
+          last_active_at: '2026-11-03T01:00:00.000Z',
+        },
+      ]);
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST500' },
+      });
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
+
+      expect(result).toEqual([
+        {
+          id: 'nearby-1',
+          is_vip: false,
+          is_partner_of_week: false,
+        },
+      ]);
     });
 
     it('should use default radius_metres 50000 when not provided', async () => {
@@ -626,7 +694,7 @@ describe('DiscoveryService', () => {
           radius_m: 25_000,
         }),
       );
-      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(100);
     });
 
     it('should reject a saved-location radius filter for a non-VIP caller', async () => {
@@ -1188,6 +1256,100 @@ describe('DiscoveryService', () => {
       ]);
     });
 
+    it('best_match: boosts active Pro members without exposing tier-specific metadata or reasons', async () => {
+      const partners = [
+        {
+          id: 'consumer-user',
+          is_vip: true,
+          vip_tier: 'consumer',
+          correction_ratio: 0,
+        },
+        {
+          id: 'pro-user',
+          is_vip: true,
+          vip_tier: 'pro',
+          correction_ratio: 0,
+        },
+      ];
+      stubLimitResponse(partners);
+
+      const result = await service.searchPartners('user-1', null, {
+        sort: 'best_match',
+      });
+
+      expect(result.map((user) => user.id)).toEqual([
+        'pro-user',
+        'consumer-user',
+      ]);
+      expect(result[0]).toMatchObject({
+        match_reasons: expect.arrayContaining(['vip_priority']),
+      });
+      expect(result[1]).toMatchObject({
+        match_reasons: expect.arrayContaining(['vip_priority']),
+      });
+      expect(result[0].match_reasons).not.toContain('pro_visibility_boost');
+      expect(result[0]).not.toHaveProperty('vip_tier');
+      expect(result[1]).not.toHaveProperty('vip_tier');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        expect.stringContaining('is_vip, vip_tier'),
+      );
+    });
+
+    it('best_match: hydrates bounded tier data for nearby Pro members before ranking', async () => {
+      const privacyBuilder = createMockQueryBuilder();
+      privacyBuilder.limit.mockResolvedValue({
+        data: [
+          {
+            id: 'consumer-nearby',
+            privacy_hide_online_status: false,
+            privacy_hide_vip_status: false,
+          },
+          {
+            id: 'pro-nearby',
+            privacy_hide_online_status: false,
+            privacy_hide_vip_status: false,
+          },
+        ],
+        error: null,
+      });
+      const tierBuilder = createMockQueryBuilder();
+      tierBuilder.limit.mockResolvedValue({
+        data: [
+          { id: 'consumer-nearby', vip_tier: 'consumer' },
+          { id: 'pro-nearby', vip_tier: 'pro' },
+        ],
+        error: null,
+      });
+      mockSupabaseClient.from
+        .mockReturnValueOnce(mockQueryBuilder)
+        .mockReturnValueOnce(privacyBuilder)
+        .mockReturnValueOnce(tierBuilder);
+      stubRpcResponse([
+        { id: 'consumer-nearby', is_vip: true, correction_ratio: 0 },
+        { id: 'pro-nearby', is_vip: true, correction_ratio: 0 },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        sort: 'best_match',
+      });
+
+      expect(tierBuilder.select).toHaveBeenCalledWith('id, vip_tier');
+      expect(tierBuilder.in).toHaveBeenCalledWith('id', [
+        'consumer-nearby',
+        'pro-nearby',
+      ]);
+      expect(tierBuilder.limit).toHaveBeenCalledWith(2);
+      expect(result.map((user) => user.id)).toEqual([
+        'pro-nearby',
+        'consumer-nearby',
+      ]);
+      expect(result[0].match_reasons).toContain('vip_priority');
+      expect(result[0].match_reasons).not.toContain('pro_visibility_boost');
+      expect(result[0]).not.toHaveProperty('vip_tier');
+    });
+
     it('online_now: orders by most recent last_active_at first', async () => {
       const partners = [
         { id: 'a', last_active_at: '2026-07-01T00:00:00.000Z' },
@@ -1201,6 +1363,44 @@ describe('DiscoveryService', () => {
       });
 
       expect(result.map((u) => u.id)).toEqual(['b', 'a', 'c']);
+    });
+
+    it('does not reveal hidden presence or VIP state through ranking signals', async () => {
+      const hidden = {
+        id: 'hidden-state',
+        is_vip: true,
+        vip_tier: 'pro',
+        last_active_at: '2026-11-03T01:00:00.000Z',
+        privacy_hide_online_status: true,
+        privacy_hide_vip_status: true,
+      };
+      const publicMember = {
+        id: 'public-state',
+        is_vip: false,
+        last_active_at: '2026-10-01T01:00:00.000Z',
+        privacy_hide_online_status: false,
+        privacy_hide_vip_status: false,
+      };
+      stubLimitResponse([hidden, publicMember]);
+
+      const bestMatch = await service.searchPartners('user-1', null, {
+        sort: 'best_match',
+      });
+      stubLimitResponse([hidden, publicMember]);
+      const onlineNow = await service.searchPartners('user-1', null, {
+        sort: 'online_now',
+      });
+
+      expect(
+        bestMatch.find((user) => user.id === 'hidden-state')?.match_reasons,
+      ).not.toContain('active_recently');
+      expect(
+        bestMatch.find((user) => user.id === 'hidden-state')?.match_reasons,
+      ).not.toContain('vip_priority');
+      expect(onlineNow.map((user) => user.id)).toEqual([
+        'public-state',
+        'hidden-state',
+      ]);
     });
 
     it('newest: orders by most recently created first', async () => {
@@ -1708,9 +1908,15 @@ describe('DiscoveryService', () => {
 
       expect(result.marker.degraded).toBe(false);
       expect(result.marker.fallbackSource).toBe('none');
-      expect(result.data).toEqual(
-        nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })),
-      );
+      expect(result.data).toEqual([
+        {
+          id: 'nearby-1',
+          display_name: 'Nearby',
+          distance_metres: undefined,
+          is_vip: false,
+          is_partner_of_week: false,
+        },
+      ]);
       expect(mockSupabaseClient.rpc).toHaveBeenCalled();
     });
   });

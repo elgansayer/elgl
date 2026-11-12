@@ -28,6 +28,8 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { ExchangeTimerComponent } from '../exchange-timer/exchange-timer.component';
+import { ExchangeTimerService } from '../../services/exchange-timer.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -38,6 +40,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     AppGradientButtonComponent,
     LiveChatOverlayComponent,
     AppSkeletonLoaderComponent,
+    ExchangeTimerComponent,
     TranslatePipe,
   ],
   template: `
@@ -132,6 +135,22 @@ import { TranslatePipe } from '../../services/translate.pipe';
         }
 
         <!-- Local Camera Preview (PiP overlay) -->
+        @if (connectionState() === 'connected') {
+          <div
+            class="absolute top-3 sm:top-4 start-3 sm:start-4 z-10 inline-flex items-center gap-1.5 ps-2.5 pe-2.5 pt-1 pb-1 rounded-full bg-black/50 text-white text-xs backdrop-blur-sm"
+            role="status"
+          >
+            <svg class="w-3 h-3 text-success shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path
+                fill-rule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <span>{{ 'calls.e2eeSecured' | t }}</span>
+          </div>
+        }
+
         <div
           class="absolute top-3 sm:top-4 end-3 sm:end-4 w-24 sm:w-32 h-36 sm:h-48 rounded-lg sm:rounded-xl overflow-hidden shadow-lg border-2 border-surface-50/30"
           role="region"
@@ -173,6 +192,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
           {{ callDuration() }}
         </div>
 
+        <!-- Reciprocal language exchange turn timer -->
+        <div class="absolute top-2 sm:top-4 end-3 sm:end-4 z-10 w-48 sm:w-64">
+          <app-exchange-timer />
+        </div>
+
         <!-- Live chat overlay over host video stream -->
         <app-live-chat-overlay [roomId]="roomName()"></app-live-chat-overlay>
       </div>
@@ -190,8 +214,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
               ? 'bg-danger hover:bg-danger/90 rounded-full w-11 h-11 sm:w-14 sm:h-14'
               : 'bg-white/20 hover:bg-white/30 rounded-full w-11 h-11 sm:w-14 sm:h-14'
           "
+          [disabled]="!exchangeTimer.canSpeak()"
           [ariaLabel]="
-            (isAudioMuted() ? 'video_call.unmute_audio_aria' : 'video_call.mute_audio_aria') | t
+            !exchangeTimer.canSpeak()
+              ? ('video_call.exchange_muted_until_turn' | t)
+              : ((isAudioMuted() ? 'video_call.unmute_audio_aria' : 'video_call.mute_audio_aria')
+                | t)
           "
           [ariaPressed]="isAudioMuted()"
           (clicked)="toggleAudio()"
@@ -380,6 +408,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class VideoCallComponent implements OnInit, OnDestroy {
   private livekitService = inject(LivekitService);
+  readonly exchangeTimer = inject(ExchangeTimerService);
 
   // View children for video elements
   readonly remoteVideoRef = viewChild<ElementRef<HTMLVideoElement>>('remoteVideo');
@@ -475,6 +504,13 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         videoEl.removeEventListener('leavepictureinpicture', handleLeave);
       });
     });
+
+    // Enforce the server-authoritative exchange turn by muting the local
+    // microphone whenever the participant is not the current speaker.
+    effect(() => {
+      if (this.connectionState() !== 'connected') return;
+      this.applyTurnMute(this.exchangeTimer.canSpeak());
+    });
   }
 
   // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
@@ -527,6 +563,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       }
 
       this.connectionState.set('connected');
+      void this.exchangeTimer.start(this.roomName());
 
       // Start call duration timer
       this.callStartTime = Date.now();
@@ -587,7 +624,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   toggleAudio(): void {
-    if (!this.localAudio) return;
+    if (!this.localAudio || !this.exchangeTimer.canSpeak()) return;
     if (this.isAudioMuted()) {
       this.localAudio.unmute();
       this.isAudioMuted.set(false);
@@ -639,7 +676,25 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }
   }
 
+  private applyTurnMute(canSpeak: boolean): void {
+    if (!this.localAudio) return;
+
+    if (canSpeak) {
+      if (this.localAudio.isMuted) {
+        this.localAudio.unmute();
+        this.isAudioMuted.set(false);
+      }
+      return;
+    }
+
+    if (!this.localAudio.isMuted) {
+      this.localAudio.mute();
+      this.isAudioMuted.set(true);
+    }
+  }
+
   private cleanup(): void {
+    this.exchangeTimer.stop();
     if (this.durationSub) {
       this.durationSub.unsubscribe();
       this.durationSub = null;

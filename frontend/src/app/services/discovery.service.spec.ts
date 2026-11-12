@@ -233,4 +233,49 @@ describe('DiscoveryService offline privacy boundary', () => {
     const results = await service.findPartners({ has_audio_intro: true });
     expect(results.map((user) => user.id)).toEqual(['with-intro']);
   });
+
+  it('maps proficiency levels and language filters to uppercase CEFR query parameters', async () => {
+    let capturedParams: unknown = null;
+    const get = vi.fn((_url: string, options?: { params?: unknown }) => {
+      capturedParams = options?.params;
+      return of([]);
+    });
+
+    await TestBed.configureTestingModule({
+      providers: [
+        DiscoveryService,
+        { provide: HttpClient, useValue: { get } },
+        {
+          provide: AuthService,
+          useValue: {
+            getAccessToken: vi.fn(() => 'token'),
+            currentUser: signal({ id: 'viewer-1' }),
+          },
+        },
+        {
+          provide: SafetyService,
+          useValue: { getBlockedAndBlockerIdsStrict: vi.fn(() => Promise.resolve([])) },
+        },
+        { provide: ChatService, useValue: {} },
+        { provide: UserService, useValue: {} },
+        {
+          provide: OfflineDiscoveryCacheService,
+          useValue: { isOnline: signal(true) },
+        },
+      ],
+    }).compileComponents();
+
+    const service = TestBed.inject(DiscoveryService);
+    await service.findPartners({
+      native_languages: 'es',
+      target_language: 'fr',
+      proficiency_level: 'b1',
+    });
+
+    expect(get).toHaveBeenCalled();
+    const params = capturedParams as { get: (key: string) => string | null };
+    expect(params.get('native_languages')).toBe('es');
+    expect(params.get('target_language')).toBe('fr');
+    expect(params.get('level')).toBe('B1');
+  });
 });

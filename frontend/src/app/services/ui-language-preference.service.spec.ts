@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nService } from './i18n.service';
+import { LoggingService } from './logging.service';
 import {
   UiLanguagePreferenceError,
   UiLanguagePreferenceService,
@@ -15,6 +16,7 @@ describe('UiLanguagePreferenceService', () => {
   let currentLang = signal('en-GB');
   let translations = signal<Record<string, string>>(english);
   let setLanguage: ReturnType<typeof vi.fn>;
+  let warn: ReturnType<typeof vi.fn>;
   let service: UiLanguagePreferenceService;
   let documentRef: Document;
 
@@ -22,6 +24,7 @@ describe('UiLanguagePreferenceService', () => {
     currentLang = signal('en-GB');
     translations = signal<Record<string, string>>(english);
     setLanguage = vi.fn();
+    warn = vi.fn();
     documentRef = document;
     documentRef.documentElement.lang = 'en-GB';
     documentRef.documentElement.dir = 'ltr';
@@ -62,6 +65,7 @@ describe('UiLanguagePreferenceService', () => {
           },
         },
         { provide: DOCUMENT, useValue: documentRef },
+        { provide: LoggingService, useValue: { warn } },
       ],
     });
 
@@ -154,5 +158,138 @@ describe('UiLanguagePreferenceService', () => {
 
     expect(currentLang()).toBe('en-GB');
     expect(translations()).toEqual(english);
+  });
+
+  describe('failure reasons', () => {
+    it('reports unsupported locales with a typed reason', async () => {
+      await expect(service.changeLanguage('not-supported')).rejects.toMatchObject({
+        reason: 'unsupported',
+      });
+    });
+
+    it('reports a failed dictionary load as translation-unavailable', async () => {
+      setLanguage.mockImplementation(async (code: string) => {
+        currentLang.set(code);
+      });
+
+      await expect(service.changeLanguage('es')).rejects.toMatchObject({
+        reason: 'translation-unavailable',
+      });
+    });
+
+    it('rolls back when the provider throws and never leaks the provider message', async () => {
+      setLanguage.mockRejectedValue(new Error('DeepL key sk-secret rejected'));
+
+      const failure = await service.changeLanguage('es').then(
+        () => null,
+        (error: unknown) => error,
+      );
+
+      expect(failure).toBeInstanceOf(UiLanguagePreferenceError);
+      expect(failure).toHaveProperty('message', 'Unable to change interface language');
+      expect(currentLang()).toBe('en-GB');
+    });
+  });
+
+  describe('concurrent changes', () => {
+    let finishLoad: () => void;
+
+    beforeEach(() => {
+      setLanguage.mockImplementation(
+        (code: string) =>
+          new Promise<void>((resolve) => {
+            finishLoad = () => {
+              currentLang.set(code);
+              translations.set(spanish);
+              resolve();
+            };
+          }),
+      );
+    });
+
+    it('shares the in-flight attempt when the same locale is requested twice', async () => {
+      const first = service.changeLanguage('es');
+      const second = service.changeLanguage('es');
+
+      finishLoad();
+      await Promise.all([first, second]);
+
+      expect(setLanguage).toHaveBeenCalledTimes(1);
+      expect(currentLang()).toBe('es');
+    });
+
+    it('refuses a different locale while another change is loading', async () => {
+      const first = service.changeLanguage('es');
+
+      await expect(service.changeLanguage('ar')).rejects.toMatchObject({ reason: 'busy' });
+      expect(setLanguage).toHaveBeenCalledTimes(1);
+
+      finishLoad();
+      await first;
+      expect(currentLang()).toBe('es');
+    });
+
+    it('accepts a new change once the previous attempt has succeeded', async () => {
+      const first = service.changeLanguage('es');
+      finishLoad();
+      await first;
+
+      setLanguage.mockImplementation(async (code: string) => {
+        currentLang.set(code);
+        translations.set({ 'settings.title': 'الإعدادات' });
+      });
+      await service.changeLanguage('ar');
+
+      expect(currentLang()).toBe('ar');
+    });
+
+    it('accepts a new change once the previous attempt has failed', async () => {
+      setLanguage.mockRejectedValueOnce(new Error('provider unavailable'));
+      await expect(service.changeLanguage('es')).rejects.toBeInstanceOf(UiLanguagePreferenceError);
+
+      setLanguage.mockImplementation(async (code: string) => {
+        currentLang.set(code);
+        translations.set(spanish);
+      });
+      await service.changeLanguage('es');
+
+      expect(currentLang()).toBe('es');
+    });
+  });
+
+  describe('observability', () => {
+    it('logs only the locale and a failure category when a switch is rolled back', async () => {
+      translations.set(english);
+      setLanguage.mockRejectedValue(new Error('Bearer eyJhbGciOi.secret.token failed'));
+
+      await expect(service.changeLanguage('es')).rejects.toBeInstanceOf(UiLanguagePreferenceError);
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        'Interface language change refused',
+        'UiLanguagePreferenceService',
+        { locale: 'es', reason: 'translation-unavailable' },
+      );
+      expect(JSON.stringify(warn.mock.calls)).not.toContain('Bearer');
+      expect(JSON.stringify(warn.mock.calls)).not.toContain('Ajustes');
+    });
+
+    it('does not echo arbitrary unsupported input into the log', async () => {
+      await expect(service.changeLanguage('<script>alert(1)</script>')).rejects.toMatchObject({
+        reason: 'unsupported',
+      });
+
+      expect(warn).toHaveBeenCalledWith(
+        'Interface language change refused',
+        'UiLanguagePreferenceService',
+        { locale: 'invalid', reason: 'unsupported' },
+      );
+    });
+
+    it('does not log a successful change or a no-op', async () => {
+      await service.changeLanguage('en-GB');
+
+      expect(warn).not.toHaveBeenCalled();
+    });
   });
 });

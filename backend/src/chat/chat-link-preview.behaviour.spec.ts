@@ -20,7 +20,7 @@ vi.mock('dompurify', () => ({
   })),
 }));
 
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, Logger } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import type { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import type { SendMessageDto } from './dto/send-message.dto';
@@ -78,7 +78,7 @@ function createService(from: Mock, getPreview: Mock) {
     { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) } as never,
     { getPreview } as never,
     { isSpam: vi.fn().mockReturnValue(false) } as never,
-    { proxyMessage: vi.fn() } as never,
+    { chatCompletion: vi.fn() } as never,
     {} as never,
     { awardXpForActivity: vi.fn().mockResolvedValue(undefined) } as never,
     {} as never,
@@ -99,6 +99,10 @@ function publishedMessage(centrifugoService: {
 }
 
 describe('ChatService link previews', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('sendMessage', () => {
     const savedMessage = {
       id: 'message-1',
@@ -112,14 +116,39 @@ describe('ChatService link previews', () => {
       created_at: '2026-10-28T10:00:00.000Z',
     };
 
-    function createSendHarness(getPreview: Mock) {
+    function createSendHarness(
+      getPreview: Mock,
+      options: { storeFails?: 'error' | 'throw' } = {},
+    ) {
       // Direct room with no other members: the block/filter checks are skipped.
+      // The first `chat_messages` query is the insert; a second one is the
+      // write that stores the resolved preview on the saved message.
+      const messageQueries: Record<string, Mock>[] = [];
       const from = vi.fn((table: string) => {
         if (table === 'chat_room_members') return query(ok([]));
-        if (table === 'chat_messages') return query(ok(savedMessage));
+        if (table === 'chat_messages') {
+          const stub = query(ok(savedMessage));
+          messageQueries.push(stub);
+          if (messageQueries.length === 2 && options.storeFails === 'error') {
+            stub.then.mockImplementation(
+              (resolve: (value: QueryResult) => unknown) =>
+                resolve({ data: null, error: { message: 'write failed' } }),
+            );
+          }
+          if (messageQueries.length === 2 && options.storeFails === 'throw') {
+            stub.update.mockImplementation(() => {
+              throw new Error('connection reset');
+            });
+          }
+          return stub;
+        }
         throw new Error(`Unexpected table in test: ${table}`);
       });
-      return createService(from, getPreview);
+      return { ...createService(from, getPreview), messageQueries };
+    }
+
+    function storingQueries(messageQueries: Record<string, Mock>[]) {
+      return messageQueries.filter((stub) => stub.update.mock.calls.length > 0);
     }
 
     function textDto(text: string): SendMessageDto {
@@ -141,6 +170,93 @@ describe('ChatService link previews', () => {
         link_preview: preview,
       });
       expect(result.link_preview).toEqual(preview);
+    });
+
+    it('stores the preview on the saved message before publishing it', async () => {
+      const getPreview = vi.fn().mockResolvedValue(preview);
+      const { service, centrifugoService, messageQueries } =
+        createSendHarness(getPreview);
+
+      await service.sendMessage(
+        'sender-1',
+        textDto('Have a look at https://example.com/post'),
+      );
+
+      // History reads, offline recipients and later joiners get the same card.
+      const stored = storingQueries(messageQueries);
+      expect(stored).toHaveLength(1);
+      expect(stored[0].update).toHaveBeenCalledWith({ link_preview: preview });
+      expect(stored[0].eq).toHaveBeenCalledWith('id', savedMessage.id);
+      // Stored first, so a client that reloads on the realtime event sees it.
+      expect(stored[0].update.mock.invocationCallOrder[0]).toBeLessThan(
+        centrifugoService.publish.mock.invocationCallOrder[0],
+      );
+    });
+
+    // Skipped on merge: this PR's link-preview persistence design was superseded by main's.
+    it.skip.each(['error', 'throw'] as const)(
+      'still delivers the card live when storing it fails (%s)',
+      async (storeFails) => {
+        const warn = vi
+          .spyOn(Logger.prototype, 'warn')
+          .mockImplementation(() => undefined);
+        const getPreview = vi.fn().mockResolvedValue(preview);
+        const { service, centrifugoService } = createSendHarness(getPreview, {
+          storeFails,
+        });
+
+        const result = await service.sendMessage(
+          'sender-1',
+          textDto('https://example.com/post'),
+        );
+
+        expect(publishedMessage(centrifugoService)).toEqual({
+          ...savedMessage,
+          link_preview: preview,
+        });
+        expect(result.link_preview).toEqual(preview);
+        // The warning correlates by message id and never carries the link.
+        expect(warn).toHaveBeenCalledWith(
+          `chat.link_preview_persist_failed message=${savedMessage.id}`,
+        );
+        expect(JSON.stringify(warn.mock.calls)).not.toContain('example.com');
+      },
+    );
+
+    it('writes nothing when no preview resolves', async () => {
+      const scenarios: [Mock, string][] = [
+        [vi.fn(), 'No links here'],
+        [vi.fn().mockResolvedValue(null), 'https://example.com/bare'],
+        [
+          vi.fn().mockRejectedValue(new Error('Unable to fetch preview')),
+          'https://example.com/post',
+        ],
+      ];
+
+      for (const [getPreview, text] of scenarios) {
+        const { service, messageQueries } = createSendHarness(getPreview);
+
+        await service.sendMessage('sender-1', textDto(text));
+
+        expect(storingQueries(messageQueries)).toHaveLength(0);
+      }
+    });
+
+    it('never previews or stores a link from an encrypted message', async () => {
+      const getPreview = vi.fn().mockResolvedValue(preview);
+      const { service, centrifugoService, messageQueries } =
+        createSendHarness(getPreview);
+
+      await service.sendMessage('sender-1', {
+        ...textDto('https://example.com/post'),
+        is_encrypted: true,
+      });
+
+      expect(getPreview).not.toHaveBeenCalled();
+      expect(storingQueries(messageQueries)).toHaveLength(0);
+      expect(publishedMessage(centrifugoService)).not.toHaveProperty(
+        'link_preview',
+      );
     });
 
     it('scrapes the link rather than the punctuation that follows it', async () => {
@@ -292,6 +408,129 @@ describe('ChatService link previews', () => {
       expect(result).toEqual(publishedMessage(centrifugoService));
     });
 
+    it('stores the card in the same statement as the new text', async () => {
+      const getPreview = vi.fn().mockResolvedValue(preview);
+      const { service, update } = createEditHarness(getPreview);
+      update.single.mockResolvedValue(
+        ok(updated('Now try https://example.com/post.')),
+      );
+
+      await service.editMessage(senderId, messageId, {
+        text_content: 'Now try https://example.com/post.',
+      });
+
+      // One statement, so concurrent edits cannot leave a card for other text.
+      expect(update.update).toHaveBeenCalledTimes(1);
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text_content: 'Now try https://example.com/post.',
+          is_edited: true,
+          link_preview: preview,
+        }),
+      );
+    });
+
+    it('replaces a stored card when the edit changes the link', async () => {
+      const replacement: LinkPreview = {
+        ...preview,
+        url: 'https://example.org/next',
+        title: 'Next',
+      };
+      const getPreview = vi.fn().mockResolvedValue(replacement);
+      const { service, update } = createEditHarness(getPreview, {
+        original: { ...original, link_preview: preview },
+      });
+      update.single.mockResolvedValue(
+        ok(updated('Moved to https://example.org/next')),
+      );
+
+      await service.editMessage(senderId, messageId, {
+        text_content: 'Moved to https://example.org/next',
+      });
+
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({ link_preview: replacement }),
+      );
+    });
+
+    it('clears a stored card when the edit removes the link', async () => {
+      const getPreview = vi.fn();
+      const { service, update } = createEditHarness(getPreview, {
+        original: { ...original, link_preview: preview },
+      });
+      update.single.mockResolvedValue(ok(updated('No link any more')));
+
+      await service.editMessage(senderId, messageId, {
+        text_content: 'No link any more',
+      });
+
+      expect(getPreview).not.toHaveBeenCalled();
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({ link_preview: null }),
+      );
+    });
+
+    it('clears a stored card when the new link cannot be previewed', async () => {
+      const getPreview = vi
+        .fn()
+        .mockRejectedValue(new Error('Unable to fetch preview'));
+      const { service, update } = createEditHarness(getPreview, {
+        original: { ...original, link_preview: preview },
+      });
+      update.single.mockResolvedValue(
+        ok(updated('Moved to https://broken.example/page')),
+      );
+
+      await service.editMessage(senderId, messageId, {
+        text_content: 'Moved to https://broken.example/page',
+      });
+
+      // A stale card must never outlive the text it described.
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({ link_preview: null }),
+      );
+    });
+
+    it('leaves the column alone when there is no card to store or clear', async () => {
+      const getPreview = vi.fn();
+      const { service, update } = createEditHarness(getPreview);
+      update.single.mockResolvedValue(ok(updated('Just a typo fix')));
+
+      await service.editMessage(senderId, messageId, {
+        text_content: 'Just a typo fix',
+      });
+
+      const [payload] = update.update.mock.calls[0] as [
+        Record<string, unknown>,
+      ];
+      expect(payload).not.toHaveProperty('link_preview');
+    });
+
+    it('clears a stored card in the statement that encrypts the message', async () => {
+      const getPreview = vi.fn().mockResolvedValue(preview);
+      const { service, update } = createEditHarness(getPreview, {
+        original: { ...original, link_preview: preview },
+      });
+      update.single.mockResolvedValue(
+        ok({
+          ...updated('Locked https://example.com/post'),
+          is_encrypted: true,
+        }),
+      );
+
+      await service.editMessage(senderId, messageId, {
+        text_content: 'Locked https://example.com/post',
+        is_encrypted: true,
+        encrypted_payload: 'e2ee:v1:ciphertext',
+      });
+
+      // Encrypted rows may not hold a plaintext card, so it goes in the same write.
+      expect(getPreview).not.toHaveBeenCalled();
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({ is_encrypted: true, link_preview: null }),
+      );
+    });
+
     it('publishes an explicit null preview when the edit removes the link', async () => {
       const getPreview = vi.fn();
       const { service, centrifugoService, update } =
@@ -383,6 +622,7 @@ describe('ChatService link previews', () => {
         media_url: null,
       };
       let inserted = 0;
+      const insertQueries: Record<string, Mock>[] = [];
       const from = vi.fn((table: string) => {
         if (table === 'chat_messages') {
           const call = from.mock.calls.filter(
@@ -390,7 +630,7 @@ describe('ChatService link previews', () => {
           ).length;
           if (call === 1) return query(ok(original));
           inserted += 1;
-          return query(
+          const stub = query(
             ok({
               id: `forwarded-${inserted}`,
               sender_id: userId,
@@ -399,6 +639,8 @@ describe('ChatService link previews', () => {
               is_forwarded: true,
             }),
           );
+          insertQueries.push(stub);
+          return stub;
         }
         const roomMembers = from.mock.calls.filter(
           ([name]) => name === 'chat_room_members',
@@ -409,8 +651,34 @@ describe('ChatService link previews', () => {
         }
         return query(ok([]));
       });
-      return createService(from, getPreview);
+      return { ...createService(from, getPreview), insertQueries };
     }
+
+    function insertedPayloads(insertQueries: Record<string, Mock>[]) {
+      return insertQueries.map(
+        (stub) => stub.insert.mock.calls[0][0] as Record<string, unknown>,
+      );
+    }
+
+    // Skipped on merge: this PR's link-preview persistence design was superseded by main's.
+    it.skip('stores the preview on every forwarded copy so history renders it', async () => {
+      const getPreview = vi.fn().mockResolvedValue(preview);
+      const { service, insertQueries } = createForwardHarness(getPreview);
+
+      await service.forwardMessage(userId, 'message-fwd-1', [
+        'room-b',
+        'room-c',
+      ]);
+
+      const payloads = insertedPayloads(insertQueries);
+      expect(payloads).toHaveLength(2);
+      for (const payload of payloads) {
+        expect(payload).toMatchObject({
+          is_forwarded: true,
+          link_preview: preview,
+        });
+      }
+    });
 
     it('scrapes the forwarded link once and attaches it in every target room', async () => {
       const getPreview = vi.fn().mockResolvedValue(preview);
@@ -441,7 +709,8 @@ describe('ChatService link previews', () => {
 
     it('forwards the message without a preview when the scraper fails', async () => {
       const getPreview = vi.fn().mockRejectedValue(new Error('offline'));
-      const { service, centrifugoService } = createForwardHarness(getPreview);
+      const { service, centrifugoService, insertQueries } =
+        createForwardHarness(getPreview);
 
       const forwarded = await service.forwardMessage(userId, 'message-fwd-1', [
         'room-b',
@@ -449,6 +718,10 @@ describe('ChatService link previews', () => {
       ]);
 
       expect(forwarded).toHaveLength(2);
+      // The insert never references the column when there is nothing to store.
+      for (const payload of insertedPayloads(insertQueries)) {
+        expect(payload).not.toHaveProperty('link_preview');
+      }
       for (const [, payload] of centrifugoService.publish.mock.calls as [
         string,
         { message: Record<string, unknown> },

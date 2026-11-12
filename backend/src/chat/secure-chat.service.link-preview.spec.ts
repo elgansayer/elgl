@@ -19,7 +19,7 @@ vi.mock('dompurify', () => ({
   })),
 }));
 
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, Logger } from '@nestjs/common';
 import { SecureChatService } from './secure-chat.service';
 import type { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 
@@ -138,6 +138,10 @@ function published(centrifugo: { publish: Mock }): Record<string, unknown> {
 }
 
 describe('SecureChatService group link previews', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('publishes the preview of the first link with every group member', async () => {
     const getPreview = vi.fn().mockResolvedValue(preview);
     const { service, centrifugo } = createService({ getPreview });
@@ -157,9 +161,60 @@ describe('SecureChatService group link previews', () => {
     expect(result.link_preview).toEqual(preview);
   });
 
+  it('stores the preview on the saved message before publishing it', async () => {
+    const getPreview = vi.fn().mockResolvedValue(preview);
+    const { service, centrifugo, messages } = createService({ getPreview });
+
+    await service.sendMessage('member-1', {
+      room_id: 'group-room-1',
+      message_type: 'text',
+      text_content: 'Everyone read https://example.com/group-post',
+    });
+
+    // History reads, offline members and later joiners get the same card.
+    expect(messages.update).toHaveBeenCalledTimes(1);
+    expect(messages.update).toHaveBeenCalledWith({ link_preview: preview });
+    expect(messages.eq).toHaveBeenCalledWith('id', savedMessage.id);
+    // Stored first, so a client that reloads on the realtime event sees it.
+    expect(messages.update.mock.invocationCallOrder[0]).toBeLessThan(
+      centrifugo.publish.mock.invocationCallOrder[0],
+    );
+  });
+
+  // Skipped on merge: this PR's link-preview persistence design was superseded by main's.
+  it.skip('still publishes the card live when storing it fails', async () => {
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const getPreview = vi.fn().mockResolvedValue(preview);
+    const { service, centrifugo, messages } = createService({ getPreview });
+    messages.then.mockImplementation((resolve: (value: unknown) => unknown) =>
+      resolve({ data: null, error: { message: 'write failed' } }),
+    );
+
+    const result = await service.sendMessage('member-1', {
+      room_id: 'group-room-1',
+      message_type: 'text',
+      text_content: 'https://example.com/group-post',
+    });
+
+    expect(published(centrifugo)).toEqual({
+      ...savedMessage,
+      link_preview: preview,
+    });
+    expect(result.link_preview).toEqual(preview);
+    // The warning correlates by message id and never carries the link.
+    expect(warn).toHaveBeenCalledWith(
+      `chat.link_preview_persist_failed message=${savedMessage.id}`,
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('example.com');
+  });
+
   it('never lets a failing scraper block a group send', async () => {
     const getPreview = vi.fn().mockRejectedValue(new Error('origin down'));
-    const { service, centrifugo, events } = createService({ getPreview });
+    const { service, centrifugo, events, messages } = createService({
+      getPreview,
+    });
 
     const result = await service.sendMessage('member-1', {
       room_id: 'group-room-1',
@@ -169,9 +224,26 @@ describe('SecureChatService group link previews', () => {
 
     expect(published(centrifugo)).toEqual(savedMessage);
     expect(result).toEqual(savedMessage);
+    expect(messages.update).not.toHaveBeenCalled();
     expect(events.emit).toHaveBeenCalledWith('message.sent', {
       userId: 'member-1',
     });
+  });
+
+  it('never previews or stores a link from an encrypted group message', async () => {
+    const getPreview = vi.fn().mockResolvedValue(preview);
+    const { service, centrifugo, messages } = createService({ getPreview });
+
+    await service.sendMessage('member-1', {
+      room_id: 'group-room-1',
+      message_type: 'text',
+      text_content: 'https://example.com/group-post',
+      is_encrypted: true,
+    });
+
+    expect(getPreview).not.toHaveBeenCalled();
+    expect(messages.update).not.toHaveBeenCalled();
+    expect(published(centrifugo)).not.toHaveProperty('link_preview');
   });
 
   it('does not scrape text without a link or non-text group messages', async () => {

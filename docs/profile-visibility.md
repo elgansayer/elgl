@@ -12,7 +12,7 @@ The persisted value is `users.profile_visibility`. The existing database constra
 
 ## API and authorization
 
-The Privacy settings UI reads `GET /api/users/me/privacy-settings` and writes `PATCH /api/users/me/privacy` with a single validated `profile_visibility` value. Both routes are protected by `SupabaseAuthGuard`. The public profile route remains authoritative for enforcement: owners can always read their own profile, `hidden` rejects other viewers, and `vips_only` checks the requesting user's server-side VIP entitlement before returning profile data.
+The Privacy settings UI reads `GET /api/users/me/privacy-settings` and writes `PATCH /api/users/me/privacy` with a single validated `profile_visibility` value. Both routes are protected by `SupabaseAuthGuard`. The public profile and stats routes enforce the same visibility contract: owners can always read their own profile data, `hidden` rejects other viewers, and `vips_only` checks the requesting user's server-side VIP entitlement before returning profile data or stats.
 
 The browser never decides whether another user is allowed to view a profile. UI state is only a preference editor. The frontend also treats the privacy response as an untrusted serialization boundary: the response must explicitly contain one of the three canonical visibility values. Missing, malformed, or future/unknown values are not interpreted as `everyone`.
 
@@ -36,7 +36,7 @@ Relevant automated coverage lives in:
 
 - `frontend/src/app/services/profile-visibility.service.spec.ts`
 - `frontend/src/app/pages/settings/privacy-settings/privacy-settings.component.spec.ts`
-- existing backend users controller/service privacy tests
+- `backend/src/users/users.controller.privacy.spec.ts`, including profile and stats authorization
 
 The service suite locks authenticated reads/writes, canonical values, malformed/missing response rejection, invalid mutation rejection, provider failures, and missing-session behavior. Standard frontend unit, static-analysis, production-build, accessibility/design-governance, backend, and repository checks remain authoritative in CI.
 

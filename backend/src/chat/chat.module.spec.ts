@@ -1,12 +1,20 @@
 import { ChatEditController } from './chat-edit.controller';
 import { ChatForwardController } from './chat-forward.controller';
 import { ChatModule } from './chat.module';
-import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
+import { ChatSearchController } from './chat-search.controller';
+import { PersonalUnreadListener } from './listeners/personal-unread.listener';
 import { SecureChatService } from './secure-chat.service';
 
 describe('ChatModule', () => {
-  it('registers the authenticated message mutation and search routes', () => {
+  it('registers the personal unread realtime listener', () => {
+    const providers =
+      (Reflect.getMetadata('providers', ChatModule) as unknown[]) ?? [];
+
+    expect(providers).toContain(PersonalUnreadListener);
+  });
+
+  it('registers the authenticated message search endpoint', () => {
     const controllers =
       (Reflect.getMetadata('controllers', ChatModule) as unknown[]) ?? [];
 
@@ -15,7 +23,7 @@ describe('ChatModule', () => {
     expect(controllers).toContain(ChatSearchController);
   });
 
-  it('uses the membership-enforcing chat service in production', () => {
+  it('routes chat operations through the membership-enforcing service', () => {
     const providers =
       (Reflect.getMetadata('providers', ChatModule) as unknown[]) ?? [];
 

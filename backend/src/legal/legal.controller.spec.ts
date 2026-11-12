@@ -37,4 +37,14 @@ describe('LegalController', () => {
       expect(doc.lastUpdated).toBeDefined();
     });
   });
+
+  describe('getDocument', () => {
+    it('should return document by parameterized route', () => {
+      const termsDoc = controller.getDocument('terms-of-service');
+      expect(termsDoc.title).toBe('Terms of Service');
+
+      const privacyDoc = controller.getDocument('privacy-policy');
+      expect(privacyDoc.title).toBe('Privacy Policy');
+    });
+  });
 });

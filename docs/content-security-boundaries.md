@@ -155,6 +155,10 @@ Translation, grammar, LLM and external provider output is untrusted.
 - prompts, source text and output are excluded from logs/traces by default;
 - generated corrections use typed text spans, not HTML strings.
 
+The shared structural guard for AI prompts, including tool coverage, telemetry
+and failure behaviour, is documented in
+`docs/llm-prompt-injection-protection.md`.
+
 ## Email and notifications
 
 Browser sanitisation does not secure other output contexts.

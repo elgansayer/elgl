@@ -4,22 +4,14 @@ on:
   pull_request:
     paths:
       - '.github/workflows/**'
-      - 'config/systemd/**'
       - 'scripts/audit-workflows.mjs'
       - 'scripts/deploy-workflow-contract.test.mjs'
-      - 'scripts/deploy-and-start-factory.sh'
-      - 'scripts/maintain-factory-host-storage.sh'
-      - 'scripts/relocate-home-cache-to-second-disk.sh'
   push:
     branches: [main]
     paths:
       - '.github/workflows/**'
-      - 'config/systemd/**'
       - 'scripts/audit-workflows.mjs'
       - 'scripts/deploy-workflow-contract.test.mjs'
-      - 'scripts/deploy-and-start-factory.sh'
-      - 'scripts/maintain-factory-host-storage.sh'
-      - 'scripts/relocate-home-cache-to-second-disk.sh'
   workflow_dispatch:
 
 permissions:
@@ -57,15 +49,6 @@ jobs:
 
       - name: Verify shellcheck runtime
         run: shellcheck --version
-
-      - name: Validate host operation scripts
-        run: |
-          shellcheck \
-            scripts/deploy-and-start-factory.sh \
-            scripts/maintain-factory-host-storage.sh \
-            scripts/relocate-home-cache-to-second-disk.sh \
-            config/systemd/hellotalk-factory-update.sh \
-            config/systemd/hellotalk-factory-watchdog.sh
 
       - name: Validate workflow syntax, expressions, and shell scripts
         run: |

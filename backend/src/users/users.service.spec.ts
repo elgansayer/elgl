@@ -3,19 +3,26 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   BadRequestException,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { DataExportWorker } from './data-export.worker';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
+import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 
 describe('UsersService', () => {
   let service: UsersService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockGetCorrectorScore: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    mockGetCorrectorScore = vi.fn().mockResolvedValue({
+      averageScore: null,
+      totalRatings: 0,
+    });
     mockQueryBuilder = {
       select: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
@@ -75,6 +82,10 @@ describe('UsersService', () => {
         {
           provide: EventEmitter2,
           useValue: { emit: vi.fn() },
+        },
+        {
+          provide: CorrectorScoreService,
+          useValue: { getCorrectorScore: mockGetCorrectorScore },
         },
       ],
     }).compile();
@@ -188,7 +199,46 @@ describe('UsersService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('*');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
-      expect(result).toMatchObject(mockProfile);
+      expect(result).toMatchObject({
+        ...mockProfile,
+        corrector_score: null,
+        corrector_rating_count: 0,
+        corrector_score_unavailable: false,
+      });
+      expect(mockGetCorrectorScore).toHaveBeenCalledWith('user-1');
+    });
+
+    it('composes the aggregate corrector score into the profile', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', display_name: 'HelloUser' },
+        error: null,
+      });
+      mockGetCorrectorScore.mockResolvedValue({
+        averageScore: 4.7,
+        totalRatings: 3,
+      });
+
+      await expect(service.getProfile('user-1')).resolves.toMatchObject({
+        corrector_score: 4.7,
+        corrector_rating_count: 3,
+        corrector_score_unavailable: false,
+      });
+    });
+
+    it('keeps the profile available when score aggregation is unavailable', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', display_name: 'HelloUser' },
+        error: null,
+      });
+      mockGetCorrectorScore.mockRejectedValue(
+        new Error('database unavailable'),
+      );
+
+      await expect(service.getProfile('user-1')).resolves.toMatchObject({
+        corrector_score: null,
+        corrector_rating_count: 0,
+        corrector_score_unavailable: true,
+      });
     });
 
     it('should throw NotFoundException instead of returning a mock profile when absent', async () => {
@@ -707,6 +757,165 @@ describe('UsersService', () => {
     });
   });
 
+  describe('getUserStats', () => {
+    // Awaiting the builder resolves a Supabase count response, like the real
+    // PostgREST builder. The shared mock cannot reject an unknown column, so
+    // the tests assert which columns each count query uses.
+    const countBuilder = (count: number) => {
+      const builder = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        then: (resolve: (value: { count: number; error: null }) => void) =>
+          resolve({ count, error: null }),
+      };
+      builder.select.mockReturnValue(builder);
+      builder.eq.mockReturnValue(builder);
+      return builder;
+    };
+
+    it('counts Moments and comments by user_id and follows by their composite key', async () => {
+      const profile = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: { id: 'user-1', display_name: 'Ada' },
+          error: null,
+        }),
+      };
+      const moments = countBuilder(4);
+      const comments = countBuilder(6);
+      const followers = countBuilder(8);
+      const following = countBuilder(3);
+      const visits = countBuilder(2);
+      const followBuilders = [followers, following];
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        switch (table) {
+          case 'users':
+            return profile;
+          case 'moments':
+            return moments;
+          case 'moment_comments':
+            return comments;
+          case 'user_follows':
+            return followBuilders.shift();
+          case 'profile_visits':
+            return visits;
+          default:
+            throw new Error(`Unexpected table: ${table}`);
+        }
+      });
+
+      const stats = await service.getUserStats('user-1');
+
+      expect(stats).toMatchObject({
+        momentsCount: 4,
+        commentsCount: 6,
+        followersCount: 8,
+        followingCount: 3,
+        profileVisitsCount: 2,
+      });
+      // moments and moment_comments are owned through user_id; there is no
+      // author_id column (005_moments.sql).
+      expect(moments.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(comments.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(moments.eq).not.toHaveBeenCalledWith(
+        'author_id',
+        expect.anything(),
+      );
+      expect(comments.eq).not.toHaveBeenCalledWith(
+        'author_id',
+        expect.anything(),
+      );
+      // user_follows has the composite key (follower_id, following_id) and no
+      // id column, so a count must not select one.
+      expect(followers.eq).toHaveBeenCalledWith('following_id', 'user-1');
+      expect(following.eq).toHaveBeenCalledWith('follower_id', 'user-1');
+      expect(followers.select).not.toHaveBeenCalledWith(
+        'id',
+        expect.anything(),
+      );
+      expect(following.select).not.toHaveBeenCalledWith(
+        'id',
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('permanentDeleteAccount', () => {
+    it('deletes Moments, comments and likes by user_id and the follow edges before removing the account row', async () => {
+      const deletes: Array<{ table: string; column: string; value: unknown }> =
+        [];
+      mockSupabaseClient.from.mockImplementation((table: string) => ({
+        delete: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn((column: string, value: unknown) => {
+          deletes.push({ table, column, value });
+          return Promise.resolve({ error: null });
+        }),
+      }));
+
+      await service.permanentDeleteAccount('user-1');
+
+      for (const table of ['moments', 'moment_comments', 'moment_likes']) {
+        expect(deletes).toContainEqual({
+          table,
+          column: 'user_id',
+          value: 'user-1',
+        });
+      }
+      // There is no author_id column on any Moments table.
+      expect(
+        deletes.filter(
+          (entry) =>
+            entry.column === 'author_id' &&
+            ['moments', 'moment_comments'].includes(entry.table),
+        ),
+      ).toEqual([]);
+      expect(deletes).toContainEqual({
+        table: 'user_follows',
+        column: 'follower_id',
+        value: 'user-1',
+      });
+      expect(deletes).toContainEqual({
+        table: 'user_follows',
+        column: 'following_id',
+        value: 'user-1',
+      });
+      // The account row goes last so ON DELETE CASCADE removes what is left.
+      expect(deletes[deletes.length - 1]).toEqual({
+        table: 'users',
+        column: 'id',
+        value: 'user-1',
+      });
+    });
+
+    it('still removes the account row when an explicit delete reports an error', async () => {
+      const warn = vi.spyOn(Logger, 'warn').mockImplementation(() => undefined);
+      const deleted: string[] = [];
+      mockSupabaseClient.from.mockImplementation((table: string) => ({
+        delete: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn(() => {
+          deleted.push(table);
+          return Promise.resolve({
+            error:
+              table === 'moments' ? { message: 'deadlock detected' } : null,
+          });
+        }),
+      }));
+
+      await expect(
+        service.permanentDeleteAccount('user-1'),
+      ).resolves.toBeUndefined();
+
+      expect(deleted[deleted.length - 1]).toBe('users');
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('deadlock detected'),
+      );
+      warn.mockRestore();
+    });
+  });
+
   describe('getPrivacySettings', () => {
     it('should surface profile lookup failures instead of returning mock defaults', async () => {
       mockQueryBuilder.single.mockResolvedValue({
@@ -720,6 +929,21 @@ describe('UsersService', () => {
   });
 
   describe('updatePrivacySettings', () => {
+    it('should surface persistence failures instead of returning mock success', async () => {
+      mockQueryBuilder.eq.mockResolvedValueOnce({
+        error: { code: 'PGRST500', message: 'database unavailable' },
+      });
+
+      await expect(
+        service.updatePrivacySettings(
+          'user-1',
+          { privacy_hide_vip_status: true },
+          false,
+        ),
+      ).rejects.toThrow(InternalServerErrorException);
+      expect(mockQueryBuilder.single).not.toHaveBeenCalled();
+    });
+
     it('should throw BadRequestException when a non-VIP user enables incognito_visits', async () => {
       await expect(
         service.updatePrivacySettings(
@@ -771,6 +995,30 @@ describe('UsersService', () => {
 
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         incognito_visits: false,
+      });
+      expect(result).toMatchObject(updatedProfile);
+    });
+
+    it('should persist VIP-status privacy independently of entitlement', async () => {
+      const updatedProfile = {
+        id: 'user-1',
+        is_vip: true,
+        privacy_hide_vip_status: true,
+      };
+      mockQueryBuilder.eq.mockResolvedValueOnce({ error: null });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: updatedProfile,
+        error: null,
+      });
+
+      const result = await service.updatePrivacySettings(
+        'user-1',
+        { privacy_hide_vip_status: true },
+        false,
+      );
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        privacy_hide_vip_status: true,
       });
       expect(result).toMatchObject(updatedProfile);
     });

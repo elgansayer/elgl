@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -425,20 +426,18 @@ describe('FlashcardsService', () => {
       expect(result.easiness_factor).toBe(1.3);
     });
 
-    it('should throw Error when fetch of current card fails with non-connectivity error', async () => {
+    it('should throw NotFoundException when the current card does not exist', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
-        error: { message: 'Card not found' },
+        error: { message: 'Card not found', code: 'PGRST116' },
       });
 
       await expect(
         service.updateSrsLevel('user-1', 'card-1', { quality: 3 }),
-      ).rejects.toThrow(
-        'Failed to fetch flashcard for SRS update: Card not found',
-      );
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('should throw Error when update fails with non-connectivity error', async () => {
+    it('should throw NotFoundException when the card disappears before the update', async () => {
       mockQueryBuilder.single
         .mockResolvedValueOnce({
           data: { easiness_factor: 2.5, repetitions: 0, interval_days: 0 },
@@ -446,12 +445,41 @@ describe('FlashcardsService', () => {
         })
         .mockResolvedValueOnce({
           data: null,
-          error: { message: 'Card not found' },
+          error: { message: 'Card not found', code: 'PGRST116' },
         });
 
       await expect(
         service.updateSrsLevel('user-1', 'card-1', { quality: 3 }),
-      ).rejects.toThrow('Failed to update SRS review level: Card not found');
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('should throw Error when fetch of current card fails with a non-connectivity, non-404 error', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'permission denied' },
+      });
+
+      await expect(
+        service.updateSrsLevel('user-1', 'card-1', { quality: 3 }),
+      ).rejects.toThrow(
+        'Failed to fetch flashcard for SRS update: permission denied',
+      );
+    });
+
+    it('should throw Error when update fails with a non-connectivity, non-404 error', async () => {
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({
+          data: { easiness_factor: 2.5, repetitions: 0, interval_days: 0 },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'permission denied' },
+        });
+
+      await expect(
+        service.updateSrsLevel('user-1', 'card-1', { quality: 3 }),
+      ).rejects.toThrow('Failed to update SRS review level: permission denied');
     });
 
     it('should return degraded card when fetch fails with connectivity error', async () => {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -83,6 +83,19 @@ export class FlashcardsService {
     }
 
     return isRateLimitError(error);
+  }
+
+  /**
+   * Detects a missing-row response from Supabase (PostgREST error PGRST116)
+   * so the controller can return 404 rather than a generic 500.
+   */
+  private isNotFoundError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const err = error as Record<string, unknown>;
+    if (err.code === 'PGRST116') return true;
+    const msg =
+      typeof err.message === 'string' ? err.message.toLowerCase() : '';
+    return msg.includes('not found') || msg.includes('no rows');
   }
 
   async createOrUpdateFlashcard(
@@ -170,14 +183,25 @@ export class FlashcardsService {
         { logger: this.logger },
       );
 
-      if (fetchResult.error || !fetchResult.data) {
-        if (this.isConnectivityError(fetchResult.error)) {
+      const { error: fetchError, data: fetchedCard } = fetchResult;
+
+      if (fetchError || !fetchedCard) {
+        if (this.isConnectivityError(fetchError)) {
           this.logger.warn(
             { userId, flashcardId },
             'Database unavailable for SRS fetch, continuing with SM-2 defaults',
           );
+        } else if (
+          this.isNotFoundError(fetchError) ||
+          (!fetchError && !fetchedCard)
+        ) {
+          this.logger.warn(
+            { userId, flashcardId },
+            'Flashcard not found for SRS update',
+          );
+          throw new NotFoundException('Flashcard not found');
         } else {
-          const msg = fetchResult.error?.message ?? 'Not found';
+          const msg = fetchError?.message ?? 'Unknown error';
           this.logger.error(
             { userId, flashcardId, error: msg },
             'Failed to fetch flashcard for SRS update',
@@ -185,7 +209,7 @@ export class FlashcardsService {
           throw new Error(`Failed to fetch flashcard for SRS update: ${msg}`);
         }
       } else {
-        current = fetchResult.data;
+        current = fetchedCard;
       }
     } catch (error) {
       if (!this.isConnectivityError(error)) {
@@ -228,13 +252,24 @@ export class FlashcardsService {
         { logger: this.logger },
       );
 
-      if (updateResult.error || !updateResult.data) {
-        const msg = updateResult.error?.message ?? 'Unknown error';
-        if (this.isConnectivityError(updateResult.error)) {
+      const { error: updateError, data: updatedCard } = updateResult;
+
+      if (updateError || !updatedCard) {
+        const msg = updateError?.message ?? 'Unknown error';
+        if (this.isConnectivityError(updateError)) {
           this.logger.warn(
             { userId, flashcardId },
             'Database unavailable for SRS write, returning degraded result',
           );
+        } else if (
+          this.isNotFoundError(updateError) ||
+          (!updateError && !updatedCard)
+        ) {
+          this.logger.warn(
+            { userId, flashcardId },
+            'Flashcard not found for SRS write',
+          );
+          throw new NotFoundException('Flashcard not found');
         } else {
           this.logger.error(
             { userId, flashcardId, error: msg },
@@ -256,7 +291,7 @@ export class FlashcardsService {
           },
           'SRS review completed',
         );
-        return updateResult.data;
+        return updatedCard;
       }
     } catch (error) {
       if (!this.isConnectivityError(error)) {

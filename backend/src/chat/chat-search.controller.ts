@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Header, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -12,11 +12,12 @@ import type { ChatMessage } from './interfaces/chat-message.interface';
 export class ChatSearchController {
   constructor(private readonly chatService: ChatService) {}
 
-  @Get()
+  @Post()
+  @Header('Cache-Control', 'no-store')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   async searchMessages(
     @CurrentUser() user: User | null,
-    @Query() query: SearchMessagesQueryDto,
+    @Body() query: SearchMessagesQueryDto,
   ): Promise<ChatMessage[]> {
     if (!user) return [];
 

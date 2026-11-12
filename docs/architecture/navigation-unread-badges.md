@@ -14,7 +14,9 @@ Issues #1045 and #1046 are implemented by the shared `UnreadCounterService` and 
 
 Both `DesktopSidebarComponent` and `MobileNavigationComponent` read those counters through `tabCount(tab)`. A visual badge is rendered only when the corresponding count is greater than zero. `badgeText(tab)` caps visual text at `99+`, while the full integer remains in service state for totals, assistive technology, later decrements, and the application badge. Tabular numerals keep badge widths visually stable as counts change.
 
-Counter producers remain separate from presentation. The root user-channel subscription and unread bootstrap populate chat/notification state, while feature-specific producers may update the other tab counters through the same service. Navigation components perform no network requests and must not fabricate counts when a producer is unavailable.
+Counter producers remain separate from presentation. Chat uses its authenticated aggregate endpoint. Notifications uses an extended, backwards-compatible response containing `unreadCount` plus Moments, Discovery, and Profile counts. Navigation components perform no network requests and never fabricate counts when a provider is unavailable.
+
+Durable unread creations publish a count-only `{ type: "unread_counts_changed", source }` invalidation on the authenticated personal channel. The app shell coalesces repeated invalidations by source, serialises the corresponding REST refreshes, and reconciles each response against a snapshot taken when that request begins. Successful reads update the initiating client only after persistence succeeds, without echoing a second read invalidation that could double-decrement the same state. Chat-list previews no longer write the global count because their bounded room histories are not an authoritative aggregate.
 
 ## Defensive count handling
 
@@ -40,7 +42,7 @@ The desktop sidebar remains hidden below the repository's desktop breakpoint, wh
 
 ## Failure behavior
 
-Unread bootstrap and realtime delivery are best-effort. If a backend count request or realtime event is unavailable, navigation remains usable and displays the latest valid in-memory count. The UI does not invent unread values to conceal provider or network failures.
+Unread bootstrap and realtime delivery are best-effort. If one count source or realtime delivery is unavailable, navigation remains usable and preserves the latest valid in-memory value. Chat and notification refreshes fail independently. The UI does not invent unread values to conceal provider or network failures.
 
 Application Badge API failures remain non-fatal because browser support is optional. The navigation UI continues to display service state even when `navigator.setAppBadge()` or `navigator.clearAppBadge()` is unavailable or rejects.
 
@@ -55,12 +57,14 @@ Relevant automated coverage lives in:
 - `frontend/src/app/services/unread-counter.service.spec.ts` for per-tab state, normalization, saturation, compact badge presentation, totals, and optional application-badge integration;
 - `frontend/src/app/components/mobile-navigation/mobile-navigation.component.spec.ts` for rendered destination order, per-tab badge state, compact presentation, full assistive counts, native-link semantics, focus treatment, and Serious Learner mode;
 - `frontend/src/app/components/desktop-sidebar/desktop-sidebar.component.spec.ts` for all five tab bindings, zero-state removal, `99+` presentation, full assistive unread text, native-link semantics, focus treatment, and active-route semantics;
-- `frontend/src/app/app.component.spec.ts` for root-service wiring and realtime unread updates.
+- `frontend/src/app/app.component.spec.ts` for source-scoped realtime invalidation, serialised refresh, and partial startup failure;
+- `backend/src/notifications/notifications-inbox.service.spec.ts` for grouped indexed counts and persistence-gated read handling;
+- `backend/src/chat/listeners/personal-unread.listener.spec.ts` for the count-only personal-channel contract and delivery failure.
 
 Frontend CI should run the normal unit, static-analysis, production-build, translation-safety, UI-design, and repository verification gates before merge.
 
 ## Rollout and rollback
 
-This is a frontend-only compatibility change. It introduces no schema, API, route, persistence, authentication, or migration changes and is safe to deploy independently of the backend.
+The existing notification unread endpoint gains additive `byTab` fields and retains `unreadCount`. No schema, route, authentication, or migration change is required. Deploy the backend before or with the frontend.
 
-Rollback is a normal revert of the issue #1046 commits. Existing producer APIs and persisted data require no cleanup or downgrade procedure.
+Rollback is a normal code revert of the backend response/event and frontend consumer. Existing persisted data requires no cleanup or downgrade procedure.

@@ -27,6 +27,14 @@ export class AudioIntroRecorderComponent {
   readonly recordError = signal<string | null>(null);
   readonly safeExistingAudioUrl = computed(() => this.toSafeHttpUrl(this.existingAudioUrl()));
 
+  // Remember which URL failed rather than a boolean so the alert clears by itself when the saved
+  // introduction changes (for example after a successful re-record).
+  private readonly failedAudioUrl = signal<string | null>(null);
+  readonly playbackUnavailable = computed(() => {
+    const url = this.safeExistingAudioUrl();
+    return url !== null && url === this.failedAudioUrl();
+  });
+
   readonly maxDuration = 30;
 
   private mediaRecorder: MediaRecorder | null = null;
@@ -37,6 +45,10 @@ export class AudioIntroRecorderComponent {
 
   constructor() {
     this.destroyRef.onDestroy(() => this.cleanupRecording());
+  }
+
+  onExistingAudioError(): void {
+    this.failedAudioUrl.set(this.safeExistingAudioUrl());
   }
 
   formatTime(seconds: number): string {
@@ -153,7 +165,10 @@ export class AudioIntroRecorderComponent {
 
   private createMediaRecorder(stream: MediaStream): MediaRecorder {
     const preferredMime = 'audio/webm;codecs=opus';
-    if (typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(preferredMime)) {
+    if (
+      typeof MediaRecorder.isTypeSupported === 'function' &&
+      MediaRecorder.isTypeSupported(preferredMime)
+    ) {
       return new MediaRecorder(stream, { mimeType: preferredMime });
     }
     return new MediaRecorder(stream);

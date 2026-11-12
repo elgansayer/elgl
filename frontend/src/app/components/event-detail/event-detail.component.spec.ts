@@ -4,14 +4,21 @@ import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventDetailComponent } from './event-detail.component';
 import { EventsService, type Event } from '../../services/events.service';
+import { EventRsvpStore } from '../../services/event-rsvp.store';
 
 const event: Event = {
   id: 'event-123',
   title: 'Japanese practice',
   description: '<script>alert(1)</script> Useful practice session',
   category: 'learning_seminar',
-  date_time: '2026-08-25T18:00:00.000Z',
+  date_time: '2099-08-25T18:00:00.000Z',
   location: 'Online',
+  venue_type: 'in_person',
+  timezone: 'Europe/London',
+  latitude: 51.5074,
+  longitude: -0.1278,
+  ticket_price_gbp: 5,
+  ticket_price_usd: 6.5,
   host_id: 'host-1',
   host_name: 'Host User',
   language_pair: 'en-ja',
@@ -20,6 +27,16 @@ const event: Event = {
   updated_at: '2026-08-20T12:00:00.000Z',
   attendees_count: 8,
   interested_count: 3,
+};
+
+const rsvpState = {
+  status: null,
+  attendingCount: 8,
+  interestedCount: 3,
+  loaded: true,
+  loading: false,
+  pending: false,
+  error: null,
 };
 
 describe('EventDetailComponent', () => {
@@ -39,6 +56,15 @@ describe('EventDetailComponent', () => {
       providers: [
         provideRouter([]),
         { provide: EventsService, useValue: { getEvent } },
+        {
+          provide: EventRsvpStore,
+          useValue: {
+            state: () => rsvpState,
+            ensureLoaded: vi.fn(),
+            setStatus: vi.fn(),
+            clear: vi.fn(),
+          },
+        },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: (name: string) => (name === 'id' ? 'event-123' : null) } } },
@@ -79,5 +105,35 @@ describe('EventDetailComponent', () => {
 
     expect(getEvent).toHaveBeenCalledTimes(2);
     expect(fixture.nativeElement.textContent).toContain('Japanese practice');
+  });
+
+  it('renders dual-currency ticket prices with an accessible label', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    const price = fixture.nativeElement.querySelector(
+      '[aria-label^="Ticket price in GBP"]',
+    ) as HTMLElement | null;
+    expect(price).not.toBeNull();
+    expect(price?.textContent).toContain('5');
+    expect(price?.textContent).toContain('6.5');
+  });
+
+  it('renders an accessible map snippet for in-person events with coordinates', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    const frame = fixture.nativeElement.querySelector('iframe') as HTMLIFrameElement | null;
+    expect(frame).not.toBeNull();
+    expect(frame?.getAttribute('src')).toContain('openstreetmap.org');
+    expect(frame?.getAttribute('src')).toContain('51.5074');
+    expect(frame?.getAttribute('title')).toBeTruthy();
+  });
+
+  it('mounts RSVP controls for upcoming events', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    expect(fixture.nativeElement.querySelector('app-event-rsvp-controls')).not.toBeNull();
   });
 });

@@ -11,6 +11,7 @@ import { CentrifugeService } from '../../services/centrifuge.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 
 describe('ChatPageComponent', () => {
   let component: ChatPageComponent;
@@ -24,6 +25,7 @@ describe('ChatPageComponent', () => {
     fixMessage: vi.fn(),
     replyToStatusUpdate: vi.fn(),
     markMessageStatus: vi.fn().mockResolvedValue(undefined),
+    translateText: vi.fn(),
   };
 
   const authServiceMock = {
@@ -41,8 +43,15 @@ describe('ChatPageComponent', () => {
     sendMessage: vi.fn(),
   };
 
+  const translationCacheMock = {
+    get: vi.fn().mockReturnValue(null),
+    set: vi.fn(),
+    clear: vi.fn(),
+  };
+
   const i18nServiceMock = {
     translate: (key: string) => key,
+    currentLang: signal('en-GB'),
   };
 
   const room = {
@@ -77,6 +86,10 @@ describe('ChatPageComponent', () => {
     chatServiceMock.replyToStatusUpdate.mockReset();
     chatServiceMock.markMessageStatus.mockReset();
     chatServiceMock.markMessageStatus.mockResolvedValue(undefined);
+    chatServiceMock.translateText.mockReset();
+    translationCacheMock.get.mockReset();
+    translationCacheMock.get.mockReturnValue(null);
+    translationCacheMock.set.mockReset();
     centrifugeServiceMock.subscribe.mockReset();
     centrifugeServiceMock.unsubscribe.mockReset();
     aiConversationServiceMock.getScenarios.mockReset();
@@ -90,6 +103,7 @@ describe('ChatPageComponent', () => {
         { provide: CentrifugeService, useValue: centrifugeServiceMock },
         { provide: AiConversationService, useValue: aiConversationServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
+        { provide: TranslationCacheService, useValue: translationCacheMock },
       ],
     }).compileComponents();
 
@@ -100,6 +114,37 @@ describe('ChatPageComponent', () => {
 
   it('should create the component', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should label the room composer without relying on a placeholder', async () => {
+    chatServiceMock.getMessages.mockResolvedValue([]);
+
+    await component.selectRoom(room);
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('#room-chat-message') as HTMLInputElement;
+    const label = fixture.nativeElement.querySelector(
+      'label[for="room-chat-message"]',
+    ) as HTMLLabelElement;
+
+    expect(input).toBeTruthy();
+    expect(input.hasAttribute('placeholder')).toBe(false);
+    expect(label.textContent?.trim()).toBe('chatRoom.messageInput');
+  });
+
+  it('should label the AI composer without relying on a placeholder', () => {
+    component.aiMode.set(true);
+    component.aiSelectedScenario.set(scenarios[0]);
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('#ai-chat-message') as HTMLInputElement;
+    const label = fixture.nativeElement.querySelector(
+      'label[for="ai-chat-message"]',
+    ) as HTMLLabelElement;
+
+    expect(input).toBeTruthy();
+    expect(input.hasAttribute('placeholder')).toBe(false);
+    expect(label.textContent?.trim()).toBe('aiPartner.messageInput');
   });
 
   describe('room and message loading', () => {
@@ -423,6 +468,133 @@ describe('ChatPageComponent', () => {
       });
       expect(component.messages()).toContain(correctionMessage);
       expect(component.correctionTargetMessage()).toBeNull();
+    });
+
+    it('should submit a structured correction via onCorrectionSubmitted', async () => {
+      component.openCorrection(message);
+
+      const correctionMessage = {
+        id: 'corr-2',
+        room_id: 'room-1',
+        sender_id: 'test-user',
+        message_type: 'correction',
+        text_content: '',
+      } as ChatMessage;
+
+      chatServiceMock.sendMessage.mockResolvedValue(correctionMessage);
+
+      await component.onCorrectionSubmitted({
+        original: 'Hello',
+        corrected: 'Bonjour',
+        explanation: 'French greeting',
+      });
+
+      expect(chatServiceMock.sendMessage).toHaveBeenCalledWith({
+        room_id: 'room-1',
+        message_type: 'correction',
+        correction_payload: {
+          original: 'Hello',
+          corrected: 'Bonjour',
+          explanation: 'French greeting',
+        },
+        reply_to_id: 'msg-1',
+      });
+      expect(component.messages()).toContain(correctionMessage);
+      expect(component.correctionTargetMessage()).toBeNull();
+    });
+
+    it('should submit a message fix via onFixSubmitted', async () => {
+      const ownMessage = { ...message, sender_id: 'test-user' };
+      component.openFix(ownMessage);
+
+      const updatedMessage = {
+        ...ownMessage,
+        text_content: 'Hello everyone',
+      };
+      chatServiceMock.fixMessage.mockResolvedValue(updatedMessage);
+
+      await component.onFixSubmitted({
+        original: 'Hello',
+        corrected: 'Hello everyone',
+        explanation: 'More complete',
+      });
+
+      expect(chatServiceMock.fixMessage).toHaveBeenCalledWith(
+        'msg-1',
+        'Hello everyone',
+        'More complete',
+      );
+      expect(component.fixTargetMessage()).toBeNull();
+    });
+  });
+
+  describe('in-app translation flow', () => {
+    it('should translate a message and cache it when cache misses', async () => {
+      chatServiceMock.translateText.mockResolvedValue({
+        translated_text: 'Bonjour',
+      });
+
+      await component.toggleTranslation(message);
+
+      expect(chatServiceMock.translateText).toHaveBeenCalledWith('Hello', 'en-GB');
+      expect(translationCacheMock.set).toHaveBeenCalledWith('Hello', 'en-GB', 'Bonjour');
+      expect(component.translations()['msg-1']).toBe('Bonjour');
+      expect(component.showTranslation()['msg-1']).toBe(true);
+    });
+
+    it('should use memory cache on cache hit without network request', async () => {
+      translationCacheMock.get.mockReturnValue('Bonjour (cached)');
+
+      await component.toggleTranslation(message);
+
+      expect(translationCacheMock.get).toHaveBeenCalledWith('Hello', 'en-GB');
+      expect(chatServiceMock.translateText).not.toHaveBeenCalled();
+      expect(component.translations()['msg-1']).toBe('Bonjour (cached)');
+      expect(component.showTranslation()['msg-1']).toBe(true);
+    });
+
+    it('should toggle off translation when already showing', async () => {
+      component.translations.set({ 'msg-1': 'Bonjour' });
+      component.showTranslation.set({ 'msg-1': true });
+
+      await component.toggleTranslation(message);
+
+      expect(chatServiceMock.translateText).not.toHaveBeenCalled();
+      expect(component.showTranslation()['msg-1']).toBe(false);
+    });
+
+    it('should toggle on translation when already in signal without network request', async () => {
+      component.translations.set({ 'msg-1': 'Bonjour' });
+      component.showTranslation.set({ 'msg-1': false });
+
+      await component.toggleTranslation(message);
+
+      expect(chatServiceMock.translateText).not.toHaveBeenCalled();
+      expect(component.showTranslation()['msg-1']).toBe(true);
+    });
+
+    it('should handle translation error gracefully without crashing', async () => {
+      chatServiceMock.translateText.mockRejectedValue(new Error('Network error'));
+
+      await component.toggleTranslation(message);
+
+      expect(component.translating()['msg-1']).toBe(false);
+      expect(component.showTranslation()['msg-1']).toBeFalsy();
+    });
+
+    it('should reset translations and modals when selecting a room', async () => {
+      component.translations.set({ 'msg-1': 'Bonjour' });
+      component.showTranslation.set({ 'msg-1': true });
+      component.openCorrection(message);
+
+      chatServiceMock.getMessages.mockResolvedValue([]);
+
+      await component.selectRoom(room);
+
+      expect(component.translations()).toEqual({});
+      expect(component.showTranslation()).toEqual({});
+      expect(component.correctionTargetMessage()).toBeNull();
+      expect(component.fixTargetMessage()).toBeNull();
     });
   });
 });

@@ -163,6 +163,17 @@ describe('SearchQueryDto', () => {
       expect(errors).toHaveLength(0);
     });
 
+    it('should normalise lowercase proficiency level to uppercase', () => {
+      const dto = buildDto({ level: 'b1' });
+      expect(dto.level).toBe('B1');
+    });
+
+    it('should reject an unsupported proficiency level', async () => {
+      const errors = await validateDto({ level: 'A3' });
+      expect(errors).toHaveLength(1);
+      expect(errors[0].property).toBe('level');
+    });
+
     it('should reject non-string level', async () => {
       const errors = await validateDto({ level: 42 });
       expect(errors).toHaveLength(1);
