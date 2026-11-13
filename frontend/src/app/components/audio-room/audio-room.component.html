@@ -250,7 +250,7 @@
                       </span>
                     }
                     @if (participant.isMuted) {
-                      <span class="sr-only">{{ 'audioRoom.muteBtn' | t }}</span>
+                      <span class="sr-only">{{ 'audioRoom.mutedLabel' | t }}</span>
                     }
                   </div>
 
@@ -276,6 +276,15 @@
                         [attr.aria-label]="'audioRoom.demoteBtn' | t"
                       >
                         {{ 'audioRoom.demoteBtn' | t }}
+                      </button>
+                      <button
+                        hlmBtn
+                        size="touch"
+                        (click)="kick(participant.user_id)"
+                        class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-danger-ink hover:bg-danger/20"
+                        [attr.aria-label]="'audioRoom.kickBtn' | t"
+                      >
+                        {{ 'audioRoom.kickBtn' | t }}
                       </button>
                     </div>
                   }
