@@ -38,9 +38,7 @@ export class StripeService {
       }
     }
 
-    this.stripe = new Stripe(secretKey, {
-      apiVersion: '2023-10-16',
-    });
+    this.stripe = new Stripe(secretKey);
   }
 
   async createCheckoutSession(
@@ -99,7 +97,6 @@ export class StripeService {
     try {
       const session = await this.stripe.checkout.sessions.create({
         mode: 'subscription',
-        payment_method_types: ['card'],
         line_items: lineItems,
         client_reference_id: userId,
         metadata: {
