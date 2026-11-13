@@ -82,12 +82,15 @@ describe('CallsController authentication', () => {
     }
   });
 
-  it.each(routes)('passes authenticated user ID: %s', async (_route, invoke) => {
-    await Promise.resolve(invoke({ id: 'authenticated-user' } as User));
-    const calls = Object.values(service).flatMap(
-      (method) => method.mock.calls,
-    );
-    expect(calls).toHaveLength(1);
-    expect(calls[0][0]).toBe('authenticated-user');
-  });
+  it.each(routes)(
+    'passes authenticated user ID: %s',
+    async (_route, invoke) => {
+      await Promise.resolve(invoke({ id: 'authenticated-user' } as User));
+      const calls = Object.values(service).flatMap(
+        (method) => method.mock.calls,
+      );
+      expect(calls).toHaveLength(1);
+      expect(calls[0][0]).toBe('authenticated-user');
+    },
+  );
 });
