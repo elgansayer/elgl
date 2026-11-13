@@ -73,9 +73,7 @@ export class MonetisationService {
       }
     }
 
-    this.stripe = new Stripe(secret, {
-      apiVersion: '2023-10-16',
-    });
+    this.stripe = new Stripe(secret);
   }
 
   /**
@@ -807,8 +805,7 @@ export class MonetisationService {
         ? {
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             currentPeriodEnd: new Date(
-              (readItemPeriodEnd(item) ?? subscription.current_period_end) *
-                1000,
+              readItemPeriodEnd(item, subscription) * 1000,
             ).toISOString(),
             nextBillingAmount:
               item.price?.unit_amount != null
@@ -948,10 +945,16 @@ export class MonetisationService {
 }
 
 /**
- * Newer Stripe API versions report the billing period on each subscription
- * item; the pinned SDK types only declare it on the subscription.
+ * Stripe reports the billing period on each subscription item rather than on
+ * the subscription itself. Older SDK typings only declare it on the
+ * subscription, so read it defensively from either source.
  */
-function readItemPeriodEnd(item: object): number | undefined {
-  const value: unknown = Reflect.get(item, 'current_period_end');
-  return typeof value === 'number' ? value : undefined;
+function readItemPeriodEnd(...sources: object[]): number {
+  for (const source of sources) {
+    const value: unknown = Reflect.get(source, 'current_period_end');
+    if (typeof value === 'number') {
+      return value;
+    }
+  }
+  throw new Error('Stripe subscription is missing current_period_end');
 }
