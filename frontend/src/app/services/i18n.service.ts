@@ -2980,10 +2980,8 @@ export class I18nService {
     'app_lock.unlock_btn': 'Unlock',
     'audioRoom.degradedAudioToast':
       'Live audio connection unavailable. You are in voice-only fallback mode.',
-    'audioRoom.micForceMutedToast': 'Your microphone was muted by the host.',
     'audioRoom.micForceUnmutedToast': 'Your microphone was unmuted by the host.',
     'audioRoom.notesBtn': '📝 Notes',
-    'audioRoom.speakerKickedToast': 'You have been removed from the speaker stage.',
     'audioRoom.tipAmountAria': 'Tip {{amount}} coins',
     'audioRoom.tipCustomAmountLabel': 'Custom tip amount',
     'audioRoom.tipCustomAria': 'Use a custom tip of {{amount}} coins',
