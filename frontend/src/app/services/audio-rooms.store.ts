@@ -271,6 +271,21 @@ export class AudioRoomsStore {
         participant: RemoteParticipant,
       ) => void)
     | null = null;
+
+  /**
+   * Type guard that narrows the raw Centrifugo payload into the expected shape.
+   * This avoids production `as` type assertions.
+   */
+  private isHostTipPayload(data: unknown): data is {
+    tip_id?: string;
+    amount_coins?: number;
+    sender_user_id?: string;
+    sender_name?: string;
+    receiver_user_id?: string;
+  } {
+    return typeof data === 'object' && data !== null && !Array.isArray(data);
+  }
+
   private onActiveSpeakersChangedBound: ((speakers: Participant[]) => void) | null = null;
   private isRoomEvent(data: unknown): data is {
     type?: string;
@@ -524,6 +539,9 @@ export class AudioRoomsStore {
           if (!r) return r;
           return { ...r, speakers: r.speakers.filter((id) => id !== p.target_user_id) };
         });
+        this.stageParticipants.update((list) =>
+          list.filter((sp) => sp.user_id !== p.target_user_id),
+        );
 
         // If target user is me, drop publish permission and mute the microphone
         if (p.target_user_id === this.authService.currentUser()?.id) {
@@ -624,19 +642,7 @@ export class AudioRoomsStore {
           }
           showToast(this.i18n.translate('audioRoom.micForceMutedToast'));
         }
-      } else if (p.type === 'force_unmute' && p.target_user_id) {
-        this.stageParticipants.update((list) =>
-          list.map((sp) => (sp.user_id === p.target_user_id ? { ...sp, isMuted: false } : sp)),
-        );
-
-        // If target user is me, unmute my local microphone
-        if (p.target_user_id === this.authService.currentUser()?.id) {
-          if (this.livekitRoom) {
-            void this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
-          }
-          showToast(this.i18n.translate('audioRoom.micForceUnmutedToast'));
-        }
-      } else if (p.type === 'speaker_kicked' && p.target_user_id) {
+      } else if ((p.type === 'speaker_kicked' || p.type === 'force_kick') && p.target_user_id) {
         // Remove kicked user from both currentRoom speakers and stageParticipants
         this.currentRoom.update((r) => {
           if (!r) return r;
@@ -873,27 +879,10 @@ export class AudioRoomsStore {
           { headers: this.getHeaders() },
         ),
       );
+      showToast(this.i18n.translate('audioRoom.speakerMutedSuccessToast'));
     } catch (e) {
       console.error('Mute speaker error:', e);
-    }
-  }
-
-  async unmuteSpeaker(targetUserId: string): Promise<void> {
-    const room = this.currentRoom();
-    if (!room) return;
-    try {
-      await firstValueFrom(
-        this.http.post<AudioRoomRecord>(
-          `${this.baseUrl}/unmute-speaker`,
-          {
-            room_id: room.id,
-            target_user_id: targetUserId,
-          },
-          { headers: this.getHeaders() },
-        ),
-      );
-    } catch (e) {
-      console.error('Unmute speaker error:', e);
+      showToast(this.i18n.translate('audioRoom.muteError'));
     }
   }
 
@@ -911,8 +900,10 @@ export class AudioRoomsStore {
           { headers: this.getHeaders() },
         ),
       );
+      showToast(this.i18n.translate('audioRoom.speakerKickedSuccessToast'));
     } catch (e) {
       console.error('Kick speaker error:', e);
+      showToast(this.i18n.translate('audioRoom.kickError'));
     }
   }
 
