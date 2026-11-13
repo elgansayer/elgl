@@ -456,32 +456,76 @@ export class ChatService {
   }
 
   /**
-   * Stores a resolved preview on the message it describes, so history reads,
-   * reconnects, offline recipients and members who join later render the same
-   * card as live recipients, with no viewer-triggered scrape.
+   * Stores the resolved preview with its message, so a history reload and a
+   * recipient who was offline when it was sent still get the card. `null`
+   * clears the preview of an edited message whose link was removed.
    *
-   * Best effort, like the scrape itself: the message is already saved, so a
-   * storage failure only costs the persisted card. The warning carries the
-   * opaque message id for correlation and never the URL or the preview.
+   * Best effort like the scrape itself: the message is already saved and the
+   * realtime event carries the preview, so a failed write is logged and never
+   * fails the send; the card is then only missing from history. The write
+   * sets an absolute value on one row, so retrying it is harmless.
    */
   protected async persistLinkPreview(
     messageId: string,
-    preview: LinkPreview,
+    linkPreview: LinkPreview | null,
   ): Promise<void> {
-    let persisted: boolean;
     try {
       const { error } = await this.supabaseService
         .getClient()
         .from('chat_messages')
-        .update({ link_preview: preview })
+        .update({ link_preview: linkPreview })
         .eq('id', messageId);
-      persisted = !error;
+      if (error) {
+        this.logger.warn(
+          `chat.link_preview_persist_failed message=${messageId} code=${error.code}`,
+        );
+      }
     } catch {
-      persisted = false;
-    }
-    if (!persisted) {
       this.logger.warn(`chat.link_preview_persist_failed message=${messageId}`);
     }
+  }
+
+  /**
+   * For a message whose text was rewritten without resolving a new preview (a
+   * correction fix): keeps a stored preview that still describes the first
+   * link, and clears one that no longer does, both in history and in the
+   * returned message so realtime clients drop the card too. Messages without a
+   * stored preview are returned untouched.
+   */
+  private async reconcileLinkPreview<T extends ChatMessage>(
+    message: T,
+  ): Promise<T> {
+    if (!message.link_preview) {
+      return message;
+    }
+    const restored = this.linkPreviewService.restoreStoredPreview(
+      message.link_preview,
+      message.text_content,
+    );
+    if (!restored) {
+      await this.persistLinkPreview(message.id, null);
+    }
+    return { ...message, link_preview: restored };
+  }
+
+  /**
+   * Revalidates every stored preview against its message's current text before
+   * messages leave the API, so a malformed or stale row (for example after an
+   * edit whose clearing write failed) never reaches a client as a card.
+   * Messages without a stored preview are returned untouched.
+   */
+  private withRestoredLinkPreviews<T extends ChatMessage>(messages: T[]): T[] {
+    return messages.map((message) =>
+      message.link_preview
+        ? {
+            ...message,
+            link_preview: this.linkPreviewService.restoreStoredPreview(
+              message.link_preview,
+              message.text_content,
+            ),
+          }
+        : message,
+    );
   }
 
   /**
@@ -882,10 +926,10 @@ export class ChatService {
         }
         return true;
       });
-      return visibleMessages;
+      return this.withRestoredLinkPreviews(visibleMessages);
     }
 
-    return messages;
+    return this.withRestoredLinkPreviews(messages);
   }
 
   /**
@@ -1758,11 +1802,12 @@ export class ChatService {
       );
     }
 
+    const fixedMsg = await this.reconcileLinkPreview(updatedMsg);
     await this.centrifugoService.publish(`chat:${roomId}`, {
-      message: updatedMsg,
+      message: fixedMsg,
     });
 
-    return updatedMsg;
+    return fixedMsg;
   }
 
   async editMessage(
@@ -2257,6 +2302,9 @@ export class ChatService {
         }
 
         const insertedMsg: ChatMessage = insertResponse.data;
+        if (forwardedPreview) {
+          await this.persistLinkPreview(insertedMsg.id, forwardedPreview);
+        }
         const forwardedMsg: ChatMessage = forwardedPreview
           ? { ...insertedMsg, link_preview: forwardedPreview }
           : insertedMsg;
@@ -2365,7 +2413,7 @@ export class ChatService {
       throw new Error(`Failed to fetch messages: ${error.message}`);
     }
 
-    return data ?? [];
+    return this.withRestoredLinkPreviews(data ?? []);
   }
 
   /**
@@ -2580,7 +2628,7 @@ export class ChatService {
           .map((item) => item.id)
           .slice(0, MAX_PRACTICE_WORDS);
       }
-    } catch (error) {
+    } catch {
       // Ignore errors fetching learner knowledge to allow the reply to still be generated
     }
 
