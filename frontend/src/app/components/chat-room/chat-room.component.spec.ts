@@ -59,6 +59,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
   const unreadCounterMock = { decrement: vi.fn() };
 
   beforeEach(async () => {
+    toastsSignal.set([]);
     unreadCounterMock.decrement.mockReset();
     mockChatService = {
       queuedCount: signal(0),
@@ -382,6 +383,25 @@ describe('ChatRoomComponent (threaded replies)', () => {
       expect.objectContaining({ text_content: 'A reply', reply_to_id: 'm1' }),
     );
     expect(component.replyingTo()).toBeNull();
+  });
+
+  it('shows a translated restriction error when profile filters reject the initial message', async () => {
+    mockChatService.sendMessage.mockRejectedValue({
+      error: {
+        message: 'You cannot send the first message to this user due to their age filter settings.',
+      },
+    });
+    component.textInput = 'Hello';
+
+    await component.sendTextMessage();
+
+    expect(toastsSignal()).toEqual([
+      expect.objectContaining({
+        message:
+          'You cannot send the first message because this user has restricted who may contact them.',
+        type: 'error',
+      }),
+    ]);
   });
 
   it('scrollToMessage scrolls to and briefly highlights the target message', () => {

@@ -535,6 +535,23 @@ describe('UsersService', () => {
       expect(result).toMatchObject(updatedProfile);
     });
 
+    it('should update age and gender when provided in update profile', async () => {
+      const dto = { age: 28, gender: 'female' };
+      const updatedProfile = { id: 'user-1', age: 28, gender: 'female' };
+
+      mockQueryBuilder.single.mockResolvedValue({
+        data: updatedProfile,
+        error: null,
+      });
+
+      const result = await service.updateProfile('user-1', dto, false);
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({ age: 28, gender: 'female' }),
+      );
+      expect(result).toMatchObject(updatedProfile);
+    });
+
     it('should update profile with minimal fields when only partial DTO provided', async () => {
       const dto = { display_name: 'Minimal Update' };
       const updatedProfile = { id: 'user-1', display_name: 'Minimal Update' };
@@ -554,10 +571,10 @@ describe('UsersService', () => {
 
     it('should persist null when clearing a saved proficiency level', async () => {
       const dto = { proficiency_level: null };
-      const updatedProfile = { id: 'user-1', proficiency_level: null };
 
-      mockQueryBuilder.single.mockResolvedValue({
-        data: updatedProfile,
+      mockQueryBuilder.eq.mockResolvedValueOnce({ error: null });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'user-1', proficiency_level: null },
         error: null,
       });
 
@@ -566,7 +583,20 @@ describe('UsersService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         proficiency_level: null,
       });
-      expect(result).toMatchObject(updatedProfile);
+      expect(result).toMatchObject({ id: 'user-1', proficiency_level: null });
+    });
+
+    it('should report an age persistence failure instead of returning synthetic success', async () => {
+      mockQueryBuilder.eq.mockResolvedValueOnce({
+        error: { message: 'Database check violation' },
+      });
+
+      await expect(
+        service.updateProfile('user-1', { age: 28 }, false),
+      ).rejects.toThrow('Unable to update user profile');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({ age: 28 });
+      expect(mockQueryBuilder.single).not.toHaveBeenCalled();
     });
 
     it('should surface a profile reload failure after an update', async () => {

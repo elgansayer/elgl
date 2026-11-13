@@ -104,6 +104,26 @@ export class User {
   @Column({ type: 'text', array: true, nullable: true })
   interests!: string[] | null;
 
+  @Column({ type: 'integer', nullable: true })
+  age!: number | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  gender!: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  message_filters!: {
+    age_min?: number;
+    age_max?: number;
+    allowed_genders?: string[];
+    allowed_native_languages?: string[];
+    enabled?: boolean;
+    allow_everyone?: boolean;
+    same_native_language?: boolean;
+    same_target_language?: boolean;
+    same_gender?: boolean;
+    same_age?: boolean;
+  } | null;
+
   @CreateDateColumn({ type: 'timestamptz', default: () => 'NOW()' })
   created_at!: Date;
 }

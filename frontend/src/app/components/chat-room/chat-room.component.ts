@@ -62,6 +62,24 @@ function isGroupMember(value: unknown): value is GroupMember {
   return typeof value === 'object' && value !== null && 'user_id' in value;
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (!isRecord(error)) return '';
+
+  if ('error' in error) {
+    const responseBody = error['error'];
+    if (typeof responseBody === 'string') return responseBody;
+    if (isRecord(responseBody) && 'message' in responseBody) {
+      const msg = responseBody['message'];
+      if (typeof msg === 'string') return msg;
+      if (Array.isArray(msg) && msg.length > 0 && typeof msg[0] === 'string') return msg[0];
+    }
+  }
+
+  const directMessage = error['message'];
+  return typeof directMessage === 'string' ? directMessage : '';
+}
+
 @Component({
   selector: 'app-chat-room',
   imports: [
@@ -110,6 +128,16 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
+  private presentMessageFilterError(error: unknown): void {
+    const msg = errorMessage(error).toLowerCase();
+    if (
+      msg.includes('filter settings') ||
+      msg.includes('message_not_allowed') ||
+      msg.includes('recipient_filters')
+    ) {
+      showErrorToast(this.i18n.translate('chatRoom.initialMessageRestricted'));
+    }
+  }
   private readonly unreadCounter = inject(UnreadCounterService);
   private readonly chatEncryption = inject(PersonalChatEncryptionService);
   private readonly networkStatus = inject(NetworkStatusService);
@@ -636,6 +664,7 @@ export class ChatRoomComponent implements OnDestroy {
       }
     } catch (e) {
       console.error('Failed to send text message:', e);
+      this.presentMessageFilterError(e);
       this.draftService.saveChatDraft(roomId, text);
     } finally {
       this.isSendingText.set(false);
@@ -666,6 +695,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.saveChatDrafts();
     } catch (e) {
       console.error('Failed to send correction:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -681,6 +711,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to request correction:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -696,6 +727,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send doodle:', e);
+      this.presentMessageFilterError(e);
       showErrorToast(this.i18n.translate('chatRoom.doodleSendFailed'));
     }
   }
@@ -712,6 +744,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send voice note:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -727,6 +760,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send sticker:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
