@@ -888,6 +888,42 @@ describe('MonetisationService', () => {
       });
     });
 
+    it('should fall back to the subscription period end when the item omits it', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { is_vip: true, vip_tier: 'consumer', email: 'user@example.com' },
+        error: null,
+      });
+      mockSubscriptionsList.mockResolvedValue({
+        data: [
+          {
+            id: 'sub_1',
+            status: 'active',
+            metadata: { userId: 'user-1' },
+            cancel_at_period_end: false,
+            customer: 'cus_1',
+            current_period_end: 1893456000,
+            items: {
+              data: [
+                {
+                  price: {
+                    unit_amount: 800,
+                    currency: 'gbp',
+                    recurring: { interval: 'month' },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      });
+
+      const result = await service.getSubscriptionDetails('user-1');
+
+      expect(result.billing?.currentPeriodEnd).toBe(
+        new Date(1893456000 * 1000).toISOString(),
+      );
+    });
+
     it('should return null billing when the user has no active Stripe subscription', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: { is_vip: false, vip_tier: null, email: 'free@example.com' },
