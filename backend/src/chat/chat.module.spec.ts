@@ -1,3 +1,5 @@
+import { ChatEditController } from './chat-edit.controller';
+import { ChatForwardController } from './chat-forward.controller';
 import { ChatModule } from './chat.module';
 import { ChatService } from './chat.service';
 import { ChatSearchController } from './chat-search.controller';
@@ -16,6 +18,8 @@ describe('ChatModule', () => {
     const controllers =
       (Reflect.getMetadata('controllers', ChatModule) as unknown[]) ?? [];
 
+    expect(controllers).toContain(ChatEditController);
+    expect(controllers).toContain(ChatForwardController);
     expect(controllers).toContain(ChatSearchController);
   });
 

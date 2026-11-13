@@ -61,7 +61,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
         [messageType]="message().message_type"
         [correctionOriginal]="message().correction_payload?.original ?? null"
         [correctionCorrected]="message().correction_payload?.corrected ?? null"
-        [senderId]="message().sender_id"
+        [senderId]="message().sender_id || ''"
         [roomId]="message().room_id"
         [isBlocked]="isBlocked()"
         (copyMessage)="onCopy($event)"
@@ -371,9 +371,9 @@ export class ChatMessageComponent {
     effect(() => {
       const senderId = this.message().sender_id;
       const blockedIds = this.safetyService.blockedUserIdsSignal();
-      const currentlyBlocked = blockedIds.has(senderId);
+      const currentlyBlocked = senderId ? blockedIds.has(senderId) : false;
       this.isBlocked.set(currentlyBlocked);
-      if (currentlyBlocked) {
+      if (currentlyBlocked && senderId) {
         this.messageBlocked.emit(senderId);
       }
     });

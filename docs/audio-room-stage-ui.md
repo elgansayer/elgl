@@ -37,6 +37,14 @@ This change adds no API endpoint, schema, storage, credential, logging, analytic
 
 No private room content, access tokens, LiveKit credentials, user IDs, or room payloads are added to logs by this UI normalization layer.
 
+Host moderation may mute a speaker or remove them from the stage, but it never remotely unmutes a participant. Restoring microphone capture always requires an action by that participant. The authenticated API and audio-room service intentionally expose no remote-unmute operation.
+
+Mute and kick are enforced by the LiveKit server API before the endpoint reports success. Mute applies to the participant's published microphone tracks. Kick revokes LiveKit publish permission before removing the participant from the persisted speaker list. The Centrifugo event remains a UI synchronisation mechanism rather than the security boundary.
+
+Supabase mutations and every required Centrifugo publication are checked. A rejected media-plane, persistence, or notification operation returns an unavailable response, so the frontend cannot show a successful moderation toast for a failed action. Retrying mute is safe because already-muted tracks are skipped; retrying kick is safe because speaker removal and permission revocation are idempotent.
+
+Privileged moderation attempts are persisted through `AdminAuditService` with the actor, target speaker, room, `moderation_enforcement` reason, request correlation ID, and final `success`, `denied`, or `failed` outcome. Identifiers remain structured data fields and are never interpolated into audit messages.
+
 ## Verification
 
 `audio-room-view-model.spec.ts` covers:
@@ -53,6 +61,6 @@ The normal frontend unit, static-analysis, production-build, translation-safety,
 
 ## Rollout and rollback
 
-There is no migration and no API contract change. Deploy the frontend normally after required checks pass. Mixed frontend/backend versions are supported because the view model accepts both the room snapshot and the existing stage response.
+There is no migration and no request-body contract change. Deploy the backend before or with the existing frontend. Mixed frontend/backend versions are supported because moderation still uses the established endpoints and event payloads.
 
-Rollback is a normal revert of this change. No persisted data requires cleanup or transformation.
+Rollback is a normal code revert and no schema cleanup is required. A failed kick after LiveKit revocation can leave the participant unable to publish while the database still lists them on stage; retry the kick to converge, or re-approve the speaker to restore publish permission. Audit records are retained under the existing admin audit retention policy and are not removed during rollback.

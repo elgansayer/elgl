@@ -139,6 +139,7 @@ describe('AudioRoomsService co-host replacement', () => {
       {} as never,
       {} as never,
       {} as never,
+      { record: vi.fn().mockResolvedValue(undefined) } as never,
     );
 
     if (!options?.participantControlsUnavailable) {

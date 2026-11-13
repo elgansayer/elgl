@@ -8,6 +8,7 @@ import { NlpModule } from '../nlp/nlp.module';
 import { CloudflareModule } from '../cloudflare/cloudflare.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
 import { CloudflareStreamService } from '../cloudflare-stream/cloudflare-stream.service';
+import { AdminModule } from '../admin/admin.module';
 import { AudioRoomArchivesController } from './audio-room-archives.controller';
 import { AudioRoomArchivesService } from './audio-room-archives.service';
 import { AudioRoomTranscriptAccessInterceptor } from './audio-room-transcript-access.interceptor';
@@ -23,6 +24,7 @@ import { TranscriptEgressService } from './transcript-egress.service';
     NlpModule,
     CloudflareModule,
     CloudflareR2Module,
+    AdminModule,
   ],
   controllers: [
     AudioRoomsController,

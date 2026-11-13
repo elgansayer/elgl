@@ -340,9 +340,7 @@ export class EconomyService {
       }
     }
 
-    this.stripe = new Stripe(stripeSecret, {
-      apiVersion: '2023-10-16',
-    });
+    this.stripe = new Stripe(stripeSecret);
   }
 
   private static readonly CATALOG_CACHE_KEY = 'economy:catalog';

@@ -12,6 +12,7 @@ import type { TranscriptEgressService } from './transcript-egress.service';
 import type { NlpService } from '../nlp/nlp.service';
 import type { R2Service } from '../cloudflare-r2/r2.service';
 import type { ChatLlmService } from '../chat/chat-llm.service';
+import type { AdminAuditService } from '../admin/admin-audit.service';
 import { AudioRoomsService } from './audio-rooms.service';
 
 interface QueryResult {
@@ -106,6 +107,9 @@ describe('AudioRoomsService quick polls', () => {
       {} as NlpService,
       {} as R2Service,
       {} as ChatLlmService,
+      {
+        record: vi.fn().mockResolvedValue(undefined),
+      } as unknown as AdminAuditService,
     );
   });
 

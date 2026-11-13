@@ -124,6 +124,10 @@ it (`/wiki/Rust_(language)`).
   credentials or a custom port. DNS resolution is still checked by the guarded
   HTTP(S) agents on every connection, including redirects.
 - Redis failure degrades to an uncached fetch; it never weakens URL validation.
+- A failed preview write never fails a send or an edit; the live event still
+  carries the card and only history lacks it.
+- A stored preview that is malformed, oversized, unsafe, or that no longer
+  describes the first link of its message is dropped on read rather than shown.
 - Oversized pages, URLs and metadata are rejected or bounded before they can
   become unbounded cache/API payloads.
 - A slow or stalled origin is abandoned at the 8 second deadline. Nothing is
@@ -215,6 +219,18 @@ reach the network.
 - `link-preview-diagnostics.spec.ts`: failure classification, pinned against
   real axios and follow-redirects errors so a library upgrade cannot silently
   change the reasons.
+- `link-preview.stored.spec.ts`: `restoreStoredPreview` with the real sanitiser:
+  binding to the first link of the current text, stale and orphaned previews,
+  malformed values, markup, unsafe or oversized images and fields, hostname
+  fallback and refusal of links the scraper would refuse.
+- `chat/chat-link-preview.history.behaviour.spec.ts`: persistence on direct
+  send, edit and forward (publication waits for the write, failures never block
+  delivery and log no URL, client input is never stored) and revalidation in
+  history, search and export. `chat/secure-chat.service.link-preview.spec.ts`
+  covers the group send path and group history.
+- `database/chat-message-link-preview-migration.contract.spec.ts`: additive
+  nullable column, restrictive authenticated-client insert policy, guarded
+  `CHECK` equal to the application's cache bound and no row rewrite.
 - `link-preview.module.spec.ts`: module metadata, Nest dependency resolution
   with the real `MetricsService`, and the exported Prometheus series.
 - `metrics/metrics.service.spec.ts`: the link-preview counters and histogram.

@@ -5,10 +5,14 @@ import {
   Put,
   Body,
   Param,
-  Request,
+  UnauthorizedException,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
+import type { User } from '@supabase/supabase-js';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CallsService } from './calls.service';
 import { CreateGroupCallDto } from './dto/create-group-call.dto';
 import { InitiateCallDto } from './dto/initiate-call.dto';
@@ -22,20 +26,12 @@ import {
 } from '@nestjs/swagger';
 import {
   CacheControlInterceptor,
-  CACHE_EDGE_SHORT,
-  CACHE_EDGE_MEDIUM,
   CACHE_NO_STORE,
-  CACHE_TAG_CALLS,
 } from '../common/cache.interceptor';
-
-interface RequestWithUser {
-  user?: {
-    id?: string;
-  };
-}
 
 @ApiTags('Video Classrooms')
 @Controller('calls')
+@UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class CallsController {
   constructor(
@@ -43,6 +39,13 @@ export class CallsController {
     @InjectPinoLogger(CallsController.name)
     private readonly logger: PinoLogger,
   ) {}
+
+  private authenticatedId(user: User | null): string {
+    if (!user?.id) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    return user.id;
+  }
 
   @Post('initiate')
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
@@ -107,10 +110,10 @@ export class CallsController {
   @ApiResponse({ status: 400, description: 'Bad request - invalid callee ID.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async initiateCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User | null,
     @Body() dto: InitiateCallDto,
   ) {
-    const callerId = req.user?.id || 'dummy_caller_id';
+    const callerId = this.authenticatedId(user);
     return this.callsService.initiateCall(
       callerId,
       dto.callee_id,
@@ -178,25 +181,23 @@ export class CallsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async createGroupCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User | null,
     @Body() dto: CreateGroupCallDto,
   ) {
-    const callerId = req.user?.id || 'dummy_caller_id';
+    const callerId = this.authenticatedId(user);
     const participantIds = dto.participant_ids;
     const limit = dto.participant_limit;
     return this.callsService.createGroupCall(callerId, participantIds, limit);
   }
 
   @Get('active')
-  @UseInterceptors(
-    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]),
-  )
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'List active calls for the current user',
     description:
       'Returns all active calls for the authenticated user, including held calls. ' +
       'Each call entry includes room name, hold status, E2EE key, video flag, and participant info. ' +
-      'Responses are cached at CDN edge for short duration.',
+      'Responses are never cached because they may contain call credentials.',
   })
   @ApiResponse({
     status: 200,
@@ -217,15 +218,13 @@ export class CallsController {
       },
     },
   })
-  getActiveCalls(@Request() req: RequestWithUser) {
-    const userId = req.user?.id || 'dummy_caller_id';
+  getActiveCalls(@CurrentUser() user: User | null) {
+    const userId = this.authenticatedId(user);
     return this.callsService.getActiveCalls(userId);
   }
 
   @Get('active/:room_name')
-  @UseInterceptors(
-    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]),
-  )
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Get details of a specific active call',
     description:
@@ -255,17 +254,15 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   getActiveCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User | null,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = this.authenticatedId(user);
     return this.callsService.getActiveCall(userId, roomName);
   }
 
   @Get('waiting')
-  @UseInterceptors(
-    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]),
-  )
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'List waiting (queued) calls for the current user',
     description:
@@ -288,8 +285,8 @@ export class CallsController {
       },
     },
   })
-  getWaitingCalls(@Request() req: RequestWithUser) {
-    const userId = req.user?.id || 'dummy_caller_id';
+  getWaitingCalls(@CurrentUser() user: User | null) {
+    const userId = this.authenticatedId(user);
     return this.callsService.getWaitingCalls(userId);
   }
 
@@ -342,8 +339,8 @@ export class CallsController {
     description:
       'Bad request - call not found, same call, or no waiting calls.',
   })
-  switchCall(@Request() req: RequestWithUser, @Body() dto: SwitchCallDto) {
-    const userId = req.user?.id || 'dummy_caller_id';
+  switchCall(@CurrentUser() user: User | null, @Body() dto: SwitchCallDto) {
+    const userId = this.authenticatedId(user);
     return this.callsService.switchCall(
       userId,
       dto.current_room_name,
@@ -379,10 +376,10 @@ export class CallsController {
     description: 'Waiting call not found or no waiting calls.',
   })
   acceptWaitingCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User | null,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = this.authenticatedId(user);
     this.callsService.acceptWaitingCall(userId, roomName);
     return { success: true };
   }
@@ -412,10 +409,10 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   holdCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User | null,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = this.authenticatedId(user);
     this.callsService.holdCall(userId, roomName);
     return { success: true };
   }
@@ -445,10 +442,10 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   resumeCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User | null,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = this.authenticatedId(user);
     this.callsService.resumeCall(userId, roomName);
     return { success: true };
   }
@@ -478,10 +475,10 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   leaveCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User | null,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = this.authenticatedId(user);
     this.callsService.leaveCall(userId, roomName);
     return { success: true };
   }
