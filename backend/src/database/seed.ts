@@ -230,6 +230,98 @@ async function seedMomentsAndAudioRooms(supabase: any) {
   }
 }
 
+async function seedLanguageIslands(supabase: SupabaseClient) {
+  const { count } = await supabase
+    .from('language_islands')
+    .select('*', { count: 'exact', head: true });
+  if (count && count > 0) {
+    return;
+  }
+
+  const { data: usersList } = await supabase
+    .from('users')
+    .select('id, email')
+    .limit(6);
+  if (!usersList || usersList.length < 2) {
+    return;
+  }
+
+  const japaneseHost =
+    usersList.find((user: { email?: string }) => user.email?.includes('.jp')) ??
+    usersList[0];
+  const spanishHost =
+    usersList.find((user: { email?: string }) => user.email?.includes('.es')) ??
+    usersList[1];
+  const arabicHost =
+    usersList.find((user: { email?: string }) => user.email?.includes('.sa')) ??
+    usersList[2] ??
+    usersList[1];
+
+  const islands = [
+    {
+      name: 'Japanese Island',
+      description: 'Beginner-friendly conversation practice',
+      language_pair: 'ja-en',
+      host_id: japaneseHost.id,
+      max_members: 500,
+      is_active: true,
+    },
+    {
+      name: 'Spanish Island',
+      description: 'Everyday Spanish for confident travellers',
+      language_pair: 'es-en',
+      host_id: spanishHost.id,
+      max_members: 500,
+      is_active: true,
+    },
+    {
+      name: 'Arabic Island',
+      description: 'Modern Standard Arabic reading circle',
+      language_pair: 'ar-en',
+      host_id: arabicHost.id,
+      max_members: 250,
+      is_active: true,
+    },
+  ];
+
+  const { data: createdIslands, error: islandError } = await supabase
+    .from('language_islands')
+    .insert(islands)
+    .select('id, host_id');
+
+  if (islandError || !createdIslands) {
+    console.error('Failed to seed language islands:', islandError);
+    return;
+  }
+
+  const memberships = createdIslands.flatMap(
+    (island: { id: string; host_id: string }) => {
+      const members = usersList
+        .filter((user: { id: string }) => user.id !== island.host_id)
+        .slice(0, 3)
+        .map((user: { id: string }) => ({
+          island_id: island.id,
+          user_id: user.id,
+          role: 'member',
+        }));
+      return [
+        { island_id: island.id, user_id: island.host_id, role: 'host' },
+        ...members,
+      ];
+    },
+  );
+
+  const { error: memberError } = await supabase
+    .from('language_island_members')
+    .insert(memberships);
+  if (memberError) {
+    console.error('Failed to seed language island members:', memberError);
+    return;
+  }
+
+  console.log(`✅ Seeded ${createdIslands.length} language islands`);
+}
+
 async function seedNotifications(supabase: SupabaseClient) {
   const { data: usersList } = await supabase
     .from('users')
@@ -503,6 +595,7 @@ async function runSeed() {
 
   await seedUsersAndProfiles(supabase);
   await seedMomentsAndAudioRooms(supabase);
+  await seedLanguageIslands(supabase);
   await seedNotifications(supabase);
   await seedSubscriptions(supabase);
   await seedSubscriptionEvents(supabase);
