@@ -105,7 +105,9 @@ describe('AudioRoomComponent Host Moderation Controls', () => {
   });
 
   it('uses accessible semantic colour and touch-target contracts for host controls', () => {
-    expect(template).toMatch(/class="[^"]*text-danger-ink[^"]*"\s+\[attr\.aria-label\]="'audioRoom\.kickBtn'/);
+    expect(template).toMatch(
+      /<button\s+hlmBtn\s+size="touch"\s+\(click\)="kick\(participant\.user_id\)"\s+class="[^"]*text-danger-ink[^"]*"\s+\[attr\.aria-label\]="'audioRoom\.kickBtn'/,
+    );
     expect(template).toMatch(
       /<button\s+hlmBtn\s+size="touch"\s+\(click\)="selectLanguageGroup\(group\.language_pair\)"/,
     );
