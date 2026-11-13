@@ -687,6 +687,8 @@ export type ChatMessageRow = {
     animation_type?: string;
     animation_url?: string | null;
   } | null;
+  /** Bounded OpenGraph preview of the first URL in a text message. */
+  link_preview?: LinkPreview | null;
   reply_to_id?: string | null;
   is_view_once?: boolean;
   viewed_at?: string | null;
@@ -703,8 +705,6 @@ export type ChatMessageRow = {
   deleted_for_user_ids?: string[] | null;
   is_encrypted?: boolean;
   encrypted_payload?: string | null;
-  /** Bounded OpenGraph card of the first URL in a plaintext text message. */
-  link_preview?: LinkPreview | null;
 };
 
 type BlockRow = {

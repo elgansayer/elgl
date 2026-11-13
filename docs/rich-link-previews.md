@@ -33,6 +33,35 @@ Storing the preview is best effort, like the scrape itself. If the write fails, 
 - Cached metadata is re-sanitised and re-bounded on read. This keeps mixed-version or corrupted cache entries from bypassing the current output contract.
 - Cache failures are best-effort. A Redis outage does not turn link enrichment into a chat-delivery failure.
 
+## Persistence and history
+
+Before this was added a preview existed only in the realtime publication, so reloading a conversation, or opening it after being offline, showed plain text. The preview is now stored on the message row.
+
+- **Column.** `chat_messages.link_preview` is nullable `JSONB` holding the same `{ url, title, description, image, siteName }` object that is published. A `CHECK` constraint (`chat_messages_link_preview_check`) requires a JSON object of at most 16 KiB, which equals the 16 KiB bound already applied to Redis cache entries and sits far above the 300/1,000/200 character field bounds plus two URLs of at most 2,048 characters.
+- **Writers.** Only `ChatService` writes it, and only with a preview it has just resolved through `LinkPreviewService`: direct send, group send, edit and forward. Client input is never stored: insert payloads are built field by field, the global validation pipe rejects unknown properties, and the restrictive `chat_messages_link_preview_backend_only` RLS policy requires authenticated direct inserts to leave the column null. The backend service role is outside that policy and remains the sole non-null writer.
+- **Ordering.** When a preview resolves, it is stored before the message is published, so anything a client sees live is also in the history it loads later. Sends and forwards use a separate idempotent preview update after inserting the message. Edits atomically update the text and preview in one statement.
+- **Best effort.** A failed preview write never fails a send or forward. It is logged as `chat.link_preview_persist_failed message=<id> code=<database error code>` (no URL, title or database message) and the live event still carries the card; only history lacks it. An unmigrated database reports code `42703`.
+- **Edits.** The stored preview follows the text. An edit that removes the link, or whose new link cannot be previewed, atomically stores `null` with the new text and publishes that explicit `null`. The update predicates on the text fetched for authorisation, so the first overlapping edit to commit wins. A slower stale edit receives HTTP 409 and is not persisted or published.
+- **Correction fixes.** Applying another member's correction (`fixMessage`) rewrites the text without scraping anything. A stored preview that still describes the first link is kept; one that no longer does is cleared in the database and published as `null`, so clients drop the card instead of keeping a stale one. A message without a stored preview is published exactly as before.
+- **Reads.** `getMessages`, `searchAllMessages` and `exportChatHistory` pass every row that has a stored preview through `LinkPreviewService.restoreStoredPreview` before it leaves the API. The stored value is treated as untrusted, exactly like a cache entry: text fields are sanitised and bounded again, an unsafe image is dropped, and the preview must describe the normalised first `http(s)` link of the message's current text and pass the scraper's URL policy. A malformed, stale or orphaned preview becomes `null`. This makes a lost clearing write, two concurrent edits, an older instance that edits the text without knowing about the column during a rollout, or a forged backup import unable to put a wrong card on screen. Rows without a stored preview are returned untouched, and the read path makes no network, Redis or metrics call, so history latency does not depend on how many links a room contains.
+- **Not backfilled.** Messages sent before the migration have no stored preview and are not scraped retroactively. Scraping an unbounded backlog of old URLs on deploy would be an abuse risk, and the pages may have changed since the message was sent.
+
+### Retention and deletion
+
+The preview is part of the message row and has no lifecycle of its own.
+
+| Event                               | Effect on the stored preview                                                                                               |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Delete for everyone                 | The row is hard-deleted, so the preview is deleted with it.                                                                |
+| Disappearing-message expiry         | The purge function hard-deletes the row and the favourites snapshots of it.                                                |
+| Account deletion and data retention | Messages are hard-deleted by sender.                                                                                       |
+| Delete for me                       | The row is hidden for that user only; the preview stays for the other participants.                                        |
+| Edit                                | Replaced or cleared, see above.                                                                                            |
+| Personal data export                | The user's own messages are exported with their stored preview, which is public third-party metadata for a link they sent. |
+| Favourite                           | The snapshot copies the message row, so it carries the preview and follows the snapshot's own lifetime.                    |
+
+The Redis cache keeps its separate one hour TTL and is not a retention store.
+
 ## Rendering contract
 
 - Only absolute `http:` and `https:` destinations are rendered.
@@ -67,7 +96,7 @@ A failure to store a resolved preview is logged as `chat.link_preview_persist_fa
 
 Link-preview enrichment is optional. If the scraper cannot resolve metadata, the chat message is still delivered and rendered without a preview. Unsupported resources, malformed destinations, blocked network targets, timeouts (including the hard 8 second deadline), oversized pages, and other scrape failures return a stable bad-request response at the preview API boundary rather than exposing provider details.
 
-If Redis is unavailable, the scraper fetches the origin directly and returns the fresh result without caching it. If a malformed, oversized, stale, or URL-mismatched cache entry is encountered, it is ignored and refreshed rather than trusted.
+If the preview cannot be stored, the message is delivered with its live preview and only history is missing the card (see [Persistence and history](#persistence-and-history)). If Redis is unavailable, the scraper fetches the origin directly and returns the fresh result without caching it. If a malformed, oversized, stale, or URL-mismatched cache entry is encountered, it is ignored and refreshed rather than trusted.
 
 If a malformed or unsafe preview reaches the client through an older cache, a stored message or a realtime publication, the preview card fails closed while leaving the original message text visible. Image failures degrade to a text-only preview. No automatic retry loop is used in the browser, avoiding repeated requests to a failing external origin.
 
