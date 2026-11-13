@@ -16,9 +16,17 @@ describe('Calls API authentication (e2e)', () => {
   const service = {
     initiateCall: vi.fn().mockResolvedValue({ call_id: 'call-1' }),
     createGroupCall: vi.fn(),
-    getActiveCalls: vi.fn().mockReturnValue([{ room_name: 'room-1', e2ee_key: 'fixture-key' }]),
-    getActiveCall: vi.fn().mockReturnValue({ room_name: 'room-1', e2ee_key: 'fixture-key' }),
-    getWaitingCalls: vi.fn().mockReturnValue([{ room_name: 'room-1', callee_token: 'fixture-token' }]),
+    getActiveCalls: vi
+      .fn()
+      .mockReturnValue([{ room_name: 'room-1', e2ee_key: 'fixture-key' }]),
+    getActiveCall: vi
+      .fn()
+      .mockReturnValue({ room_name: 'room-1', e2ee_key: 'fixture-key' }),
+    getWaitingCalls: vi
+      .fn()
+      .mockReturnValue([
+        { room_name: 'room-1', callee_token: 'fixture-token' },
+      ]),
     switchCall: vi.fn(),
     acceptWaitingCall: vi.fn(),
     holdCall: vi.fn(),
@@ -66,14 +74,19 @@ describe('Calls API authentication (e2e)', () => {
     ['get', '/api/calls/active', undefined],
     ['get', '/api/calls/active/room-1', undefined],
     ['get', '/api/calls/waiting', undefined],
-    ['put', '/api/calls/switch', { current_room_name: 'room-1', target_room_name: 'room-2' }],
+    [
+      'put',
+      '/api/calls/switch',
+      { current_room_name: 'room-1', target_room_name: 'room-2' },
+    ],
     ['put', '/api/calls/room-1/accept-waiting', undefined],
     ['put', '/api/calls/room-1/hold', undefined],
     ['put', '/api/calls/room-1/resume', undefined],
     ['put', '/api/calls/room-1/leave', undefined],
   ] as const;
 
-  it.each(anonymousRoutes)('rejects anonymous %s %s with 401',
+  it.each(anonymousRoutes)(
+    'rejects anonymous %s %s with 401',
     async (method, path, body) => {
       const call = request(app.getHttpServer())[method](path);
       if (body) {
@@ -88,7 +101,10 @@ describe('Calls API authentication (e2e)', () => {
   );
 
   it('rejects an unverified bearer token', async () => {
-    getUser.mockResolvedValueOnce({ data: { user: null }, error: { message: 'invalid token' } });
+    getUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: 'invalid token' },
+    });
     await request(app.getHttpServer())
       .post('/api/calls/initiate')
       .set('Authorization', 'Bearer bad-token')
