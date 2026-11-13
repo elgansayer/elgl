@@ -197,7 +197,7 @@
             [messageType]="msg.message_type"
             [correctionOriginal]="msg.correction_payload?.original ?? null"
             [correctionCorrected]="msg.correction_payload?.corrected ?? null"
-            [senderId]="msg.sender_id"
+            [senderId]="msg.sender_id || ''"
             [roomId]="roomId"
             [isBlocked]="msg.sender_id ? blockedUserIds().includes(msg.sender_id) : false"
             (reply)="startReply(msg.id)"
