@@ -24,6 +24,7 @@ describe('AppComponent', () => {
   let component: AppComponent;
   let fixture: ComponentFixture<AppComponent>;
   let subscribeCallback: ((data: unknown) => void) | undefined;
+  const subscribeCallbacks = new Map<string, (data: unknown) => void>();
 
   const authServiceMock = {
     isAuthenticated: vi.fn(() => true),
@@ -52,8 +53,9 @@ describe('AppComponent', () => {
 
   const centrifugeServiceMock = {
     connect: vi.fn(() => Promise.resolve()),
-    subscribe: vi.fn((_channel: string, cb: (data: unknown) => void) => {
-      subscribeCallback = cb;
+    subscribe: vi.fn((channel: string, cb: (data: unknown) => void) => {
+      subscribeCallbacks.set(channel, cb);
+      if (channel.startsWith('user_')) subscribeCallback = cb;
     }),
   };
 
@@ -133,6 +135,7 @@ describe('AppComponent', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     subscribeCallback = undefined;
+    subscribeCallbacks.clear();
 
     authServiceMock.isAuthenticated.mockReturnValue(true);
     authServiceMock.currentUser.mockReturnValue({ id: 'test-user-1' });
@@ -196,7 +199,7 @@ describe('AppComponent', () => {
     expect(safetyServiceMock.loadBlockedUsers).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.claimDailyCheckIn).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.connect).toHaveBeenCalledTimes(1);
-    expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(1);
+    expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(2);
     expect(fcmServiceMock.requestPermissionAndGetToken).toHaveBeenCalledTimes(1);
     await vi.waitFor(() => {
       expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
@@ -325,6 +328,36 @@ describe('AppComponent', () => {
       },
       sender_name: 'Alice',
       receiver_name: 'You',
+    });
+  });
+
+  it('should trigger the global gift overlay from the public gifts channel', () => {
+    const globalGift = subscribeCallbacks.get('gifts:global');
+    expect(globalGift).toBeDefined();
+
+    globalGift?.({
+      type: 'virtual_gift',
+      gift_id: 'gift-2',
+      gift_name: 'Crown',
+      icon: '👑',
+      coin_value: 500,
+      animation_type: 'premium',
+      animation_url: '',
+      sender_name: 'Alice',
+      receiver_name: 'Bob',
+    });
+
+    expect(economyStoreMock.triggerGiftAnimation).toHaveBeenCalledWith({
+      gift: {
+        id: 'gift-2',
+        name: 'Crown',
+        icon: '👑',
+        cost_coins: 500,
+        animation_type: 'premium',
+        animationUrl: undefined,
+      },
+      sender_name: 'Alice',
+      receiver_name: 'Bob',
     });
   });
 

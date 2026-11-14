@@ -44,6 +44,16 @@
       "presence": true,
       "channel_limit": 5,
       "channel_subscription_rate_limit": 5
+    },
+    {
+      "name": "gifts",
+      "publish": true,
+      "subscribe_to_publish": false,
+      "presence": false,
+      "history_size": 20,
+      "history_ttl": "1h",
+      "channel_limit": 1,
+      "channel_subscription_rate_limit": 2
     }
   ]
 }

@@ -1527,6 +1527,17 @@ export class EconomyService {
           `Centrifugo publish to user_${dto.receiver_id} failed: ${pubMsg}`,
         );
       });
+    // Public broadcast channel for the full-screen animated gift overlay
+    // shown to every connected client, regardless of room membership.
+    this.centrifugoService
+      .publish('gifts:global', giftEvent)
+      .catch((pubErr: unknown) => {
+        const pubMsg =
+          pubErr instanceof Error ? pubErr.message : String(pubErr);
+        this.logger.warn(
+          `Centrifugo publish to gifts:global failed: ${pubMsg}`,
+        );
+      });
     if (dto.room_id) {
       this.centrifugoService
         .publish(`room_${dto.room_id}`, giftEvent)

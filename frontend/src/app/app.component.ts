@@ -188,31 +188,7 @@ export class AppComponent implements OnInit {
         const eventType = typeof data['type'] === 'string' ? data['type'] : null;
 
         if (eventType === 'virtual_gift') {
-          const giftName = typeof data['gift_name'] === 'string' ? data['gift_name'] : 'Gift';
-          const giftIcon = typeof data['icon'] === 'string' ? data['icon'] : '🎁';
-          const giftId = typeof data['gift_id'] === 'string' ? data['gift_id'] : 'unknown';
-          const costCoins = typeof data['coin_value'] === 'number' ? data['coin_value'] : 0;
-          const animationType =
-            typeof data['animation_type'] === 'string' ? data['animation_type'] : 'float';
-          const animationUrl =
-            typeof data['animation_url'] === 'string' && data['animation_url'].length > 0
-              ? data['animation_url']
-              : undefined;
-          const senderName =
-            typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner';
-
-          this.economyStore.triggerGiftAnimation({
-            gift: {
-              id: giftId,
-              name: giftName,
-              icon: giftIcon,
-              cost_coins: costCoins,
-              animation_type: animationType,
-              animationUrl,
-            },
-            sender_name: senderName,
-            receiver_name: 'You',
-          });
+          this.triggerGiftAnimation(data, 'You');
         }
 
         // Handle incoming call events
@@ -240,6 +216,15 @@ export class AppComponent implements OnInit {
           }
         }
       });
+
+      this.centrifugeService.subscribe('gifts:global', (data: unknown) => {
+        if (!isRecord(data) || data['type'] !== 'virtual_gift') return;
+        const receiverName =
+          typeof data['receiver_name'] === 'string' && data['receiver_name'].length > 0
+            ? data['receiver_name']
+            : this.i18n.translate('gift.someone');
+        this.triggerGiftAnimation(data, receiverName);
+      });
     } catch {
       console.warn('Personal realtime updates were unavailable during application startup');
     }
@@ -262,6 +247,36 @@ export class AppComponent implements OnInit {
     // Request notification permission after user is authenticated
     await this.fcmService.requestPermissionAndGetToken();
     await this.fcmService.persistFcmToken(user.id);
+  }
+
+  private triggerGiftAnimation(data: Record<string, unknown>, receiverName: string): void {
+    const giftName = typeof data['gift_name'] === 'string' ? data['gift_name'] : 'Gift';
+    const giftIcon = typeof data['icon'] === 'string' ? data['icon'] : '🎁';
+    const giftId = typeof data['gift_id'] === 'string' ? data['gift_id'] : 'unknown';
+    const costCoins = typeof data['coin_value'] === 'number' ? data['coin_value'] : 0;
+    const animationType =
+      typeof data['animation_type'] === 'string' ? data['animation_type'] : 'float';
+    const animationUrl =
+      typeof data['animation_url'] === 'string' && data['animation_url'].length > 0
+        ? data['animation_url']
+        : undefined;
+    const senderName =
+      typeof data['sender_name'] === 'string'
+        ? data['sender_name']
+        : this.i18n.translate('gift.someone');
+
+    this.economyStore.triggerGiftAnimation({
+      gift: {
+        id: giftId,
+        name: giftName,
+        icon: giftIcon,
+        cost_coins: costCoins,
+        animation_type: animationType,
+        animationUrl,
+      },
+      sender_name: senderName,
+      receiver_name: receiverName,
+    });
   }
 
   private loadInitialUnreadCounts(source: UnreadRefreshSource = 'all'): Promise<void> {
