@@ -2425,6 +2425,31 @@ export interface Database {
           new_balance: number;
         }[];
       };
+      fulfil_coin_purchase: {
+        Args: {
+          p_user_id: string;
+          p_package_id: string;
+          p_coins_added: number;
+          p_amount_paid: number;
+          p_currency: string;
+          p_receipt_token: string;
+          p_platform: string;
+          p_transaction_id: string;
+        };
+        Returns:
+          | { status: 'settled'; new_balance: number }
+          | { status: 'duplicate' };
+      };
+      complete_pending_coin_purchase: {
+        Args: {
+          p_purchase_id: string;
+          p_user_id: string;
+          p_transaction_id: string;
+        };
+        Returns:
+          | { status: 'settled'; new_balance: number }
+          | { status: 'not_pending' };
+      };
       increment_xp: {
         Args: { user_id: string; amount: number };
         Returns: void;
