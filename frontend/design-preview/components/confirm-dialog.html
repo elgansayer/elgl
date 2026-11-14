@@ -162,6 +162,47 @@
           animation: none;
         }
       }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 137 143 157;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --accent: 225 79 66;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+      }
+      .audit-states {
+        margin-block-start: 32px;
+        padding: 20px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-200));
+      }
+      .audit-states h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .audit-states .state-line {
+        margin: 6px 0;
+      }
     </style>
   </head>
   <body>
@@ -170,7 +211,12 @@
         <p class="label">Light · 390px mobile · stacked touch actions</p>
         <div class="viewport">
           <div class="backdrop">
-            <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-light-title">
+            <div
+              class="dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="confirm-light-title"
+            >
               <h2 id="confirm-light-title" class="message">
                 Remove this language partner? You can reconnect later from Discovery.
               </h2>
@@ -187,10 +233,15 @@
         <p class="label">Dark · tablet / desktop · expanded translation</p>
         <div class="viewport dark desktop">
           <div class="backdrop">
-            <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-dark-title">
+            <div
+              class="dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="confirm-dark-title"
+            >
               <h2 id="confirm-dark-title" class="message">
-                この操作を続けますか？ Your current primary accent remains the Spartan action colour,
-                while the dialog surface and text stay on Relay semantic theme tokens.
+                この操作を続けますか？ Your current primary accent remains the Spartan action
+                colour, while the dialog surface and text stay on Relay semantic theme tokens.
               </h2>
               <div class="actions">
                 <button type="button" class="secondary">キャンセル</button>
@@ -201,5 +252,9 @@
         </div>
       </section>
     </main>
+    <section class="audit-states" aria-labelledby="audit-states-title">
+      <h2 id="audit-states-title">Required states</h2>
+      <div dir="rtl" lang="ar" class="state-line">مرحبا بالعالم - RTL specimen</div>
+    </section>
   </body>
 </html>

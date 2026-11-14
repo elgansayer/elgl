@@ -219,23 +219,23 @@
         place-items: center;
         overflow: hidden;
         border-radius: 0.75rem;
-        background: #050505;
+        background: black;
         color: white;
       }
       .lightbox-stage .media {
         inline-size: min(70%, 24rem);
         aspect-ratio: 4 / 3;
-        border: 1px solid #777;
+        border: 1px solid ButtonBorder;
         border-radius: 0.75rem;
-        background: linear-gradient(135deg, #1d4ed8, #c026d3);
+        background: linear-gradient(135deg, Highlight, Mark);
       }
       .lightbox-close,
       .lightbox-prev,
       .lightbox-next {
         position: absolute;
-        background: #111c;
+        background: color-mix(in srgb, black 80%, transparent);
         color: white;
-        border-color: #777;
+        border-color: ButtonBorder;
       }
       .lightbox-close {
         inset-block-start: 1rem;
@@ -264,7 +264,7 @@
         min-inline-size: 24px;
         padding: 0;
         border-radius: 999px;
-        background: #ffffff55;
+        background: color-mix(in srgb, white 33%, transparent);
         border-color: transparent;
       }
       .lightbox-dot[aria-current='true'] {
@@ -609,7 +609,11 @@
         overflow: hidden;
         border: 1px solid ButtonBorder;
         border-radius: 1rem;
-        background: linear-gradient(135deg, color-mix(in srgb, CanvasText 5%, Canvas), color-mix(in srgb, CanvasText 14%, Canvas));
+        background: linear-gradient(
+          135deg,
+          color-mix(in srgb, CanvasText 5%, Canvas),
+          color-mix(in srgb, CanvasText 14%, Canvas)
+        );
       }
       .cover-photo-overlay {
         position: absolute;
@@ -630,7 +634,11 @@
         overflow: hidden;
         border: 1px solid ButtonBorder;
         border-radius: 1rem;
-        background: linear-gradient(135deg, color-mix(in srgb, Highlight 20%, Canvas), color-mix(in srgb, CanvasText 14%, Canvas));
+        background: linear-gradient(
+          135deg,
+          color-mix(in srgb, Highlight 20%, Canvas),
+          color-mix(in srgb, CanvasText 14%, Canvas)
+        );
       }
       .cover-crop-stage::after {
         content: '';
@@ -772,10 +780,10 @@
       <section aria-labelledby="device-lock-relay-title">
         <h2 id="device-lock-relay-title">Device lock Relay states</h2>
         <p>
-          The lock route uses semantic Relay surface and text roles in both themes. The native Spartan
-          unlock action inherits the user primary accent, stays full-width at the 390px baseline, and
-          returns to intrinsic width on wider layouts. Pending authentication preserves the same action
-          with disabled and busy semantics.
+          The lock route uses semantic Relay surface and text roles in both themes. The native
+          Spartan unlock action inherits the user primary accent, stays full-width at the 390px
+          baseline, and returns to intrinsic width on wider layouts. Pending authentication
+          preserves the same action with disabled and busy semantics.
         </p>
         <div class="device-lock-states">
           <div class="device-lock-preview light" aria-label="Device lock light mobile preview">
@@ -949,7 +957,10 @@
       </section>
       <section aria-labelledby="mutation-controls-title">
         <h2 id="mutation-controls-title">Mutation controls</h2>
-        <p>Feature forms keep native submit semantics while Spartan-owned fields and actions expose labelled, disabled and busy states during asynchronous mutations.</p>
+        <p>
+          Feature forms keep native submit semantics while Spartan-owned fields and actions expose
+          labelled, disabled and busy states during asynchronous mutations.
+        </p>
         <form aria-busy="true">
           <div class="row">
             <label>Community name <input value="Language Exchange" disabled /></label>
@@ -958,7 +969,10 @@
           </div>
         </form>
         <ul aria-busy="true">
-          <li>Language Exchange <button type="button" aria-label="Delete Language Exchange" disabled>Delete</button></li>
+          <li>
+            Language Exchange
+            <button type="button" aria-label="Delete Language Exchange" disabled>Delete</button>
+          </li>
         </ul>
       </section>
       <section>
@@ -1048,19 +1062,36 @@
       </section>
       <section>
         <h2>Correction dialog interaction</h2>
-        <p>The correction editor delegates overlay dismissal, Escape handling, focus containment and focus restoration to the owned Spartan dialog primitive. Relay keeps the correction fields, diff presentation and action layout while feature code retains validation and submit payload rules.</p>
+        <p>
+          The correction editor delegates overlay dismissal, Escape handling, focus containment and
+          focus restoration to the owned Spartan dialog primitive. Relay keeps the correction
+          fields, diff presentation and action layout while feature code retains validation and
+          submit payload rules.
+        </p>
         <div class="dialog-stage">
-          <div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="correction-dialog-title">
+          <div
+            class="dialog-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="correction-dialog-title"
+          >
             <div class="dialog-header">
               <strong id="correction-dialog-title">Correct sentence</strong>
               <button type="button" aria-label="Cancel correction">×</button>
             </div>
             <div class="dialog-body">
               <p>Original: “I goes to market yesterday.”</p>
-              <label for="preview-correction">Corrected sentence <textarea id="preview-correction">I went to the market yesterday.</textarea></label>
-              <label for="preview-explanation">Explanation <input id="preview-explanation" value="Use the past tense." /></label>
+              <label for="preview-correction"
+                >Corrected sentence
+                <textarea id="preview-correction">I went to the market yesterday.</textarea>
+              </label>
+              <label for="preview-explanation"
+                >Explanation <input id="preview-explanation" value="Use the past tense."
+              /></label>
             </div>
-            <div class="dialog-footer"><button type="button">Cancel</button><button type="button">Send correction</button></div>
+            <div class="dialog-footer">
+              <button type="button">Cancel</button><button type="button">Send correction</button>
+            </div>
           </div>
         </div>
       </section>
@@ -1138,48 +1169,82 @@
       </section>
       <section aria-labelledby="document-viewer-preview-title">
         <h2 id="document-viewer-preview-title">Document viewer Relay theme states</h2>
-        <p>The document viewer uses neutral Relay surface and text roles in both themes. Mobile starts with compact padding at the 390px baseline, while wider tablet and desktop layouts increase the page and card spacing without changing the projected document contract.</p>
+        <p>
+          The document viewer uses neutral Relay surface and text roles in both themes. Mobile
+          starts with compact padding at the 390px baseline, while wider tablet and desktop layouts
+          increase the page and card spacing without changing the projected document contract.
+        </p>
         <div class="document-viewer-states">
-          <article class="document-viewer-preview" aria-label="Document viewer light mobile preview">
+          <article
+            class="document-viewer-preview"
+            aria-label="Document viewer light mobile preview"
+          >
             <div class="document-viewer-card">
               <h3>Privacy policy</h3>
-              <p>Your privacy controls and account choices remain readable without a dark-only typography override.</p>
+              <p>
+                Your privacy controls and account choices remain readable without a dark-only
+                typography override.
+              </p>
               <p>Long document text wraps naturally within the semantic Relay card surface.</p>
             </div>
           </article>
-          <article class="document-viewer-preview dark wide" aria-label="Document viewer dark desktop preview">
+          <article
+            class="document-viewer-preview dark wide"
+            aria-label="Document viewer dark desktop preview"
+          >
             <div class="document-viewer-card">
               <h3>Terms of service</h3>
-              <p>The same semantic surface hierarchy adapts to dark mode while retaining text contrast and wider spacing.</p>
-              <p>Projected content inherits the active theme rather than forcing an inverted prose palette.</p>
+              <p>
+                The same semantic surface hierarchy adapts to dark mode while retaining text
+                contrast and wider spacing.
+              </p>
+              <p>
+                Projected content inherits the active theme rather than forcing an inverted prose
+                palette.
+              </p>
             </div>
           </article>
         </div>
       </section>
       <section>
         <h2>Cover photo uploader theme and responsive parity</h2>
-        <p>Relay owns the card radius, surface, elevation and theme-aware media treatment. Spartan owns the action controls. At the 390px baseline actions stack to full width; tablet and desktop layouts return to wrapped inline actions.</p>
+        <p>
+          Relay owns the card radius, surface, elevation and theme-aware media treatment. Spartan
+          owns the action controls. At the 390px baseline actions stack to full width; tablet and
+          desktop layouts return to wrapped inline actions.
+        </p>
         <div class="cover-uploader-grid">
           <div class="cover-uploader-demo light">
             <p class="viewport-label">Light theme · 390px mobile contract</p>
             <div class="cover-photo-frame">
-              <div class="cover-photo-overlay"><div><strong>Add cover photo</strong><span>Theme-aware Relay surface over media</span></div></div>
+              <div class="cover-photo-overlay">
+                <div>
+                  <strong>Add cover photo</strong><span>Theme-aware Relay surface over media</span>
+                </div>
+              </div>
             </div>
-            <div class="cover-actions"><button>Crop</button><button>Upload</button><button>Cancel</button></div>
+            <div class="cover-actions">
+              <button>Crop</button><button>Upload</button><button>Cancel</button>
+            </div>
           </div>
           <div class="cover-uploader-demo dark">
             <p class="viewport-label">Dark theme · tablet / desktop crop contract</p>
-            <div class="cover-crop-stage" aria-label="Cover crop preview"><div class="cover-crop-window"></div></div>
-            <div class="cover-actions"><button>Apply crop</button><button>Cancel</button><button>Upload</button></div>
+            <div class="cover-crop-stage" aria-label="Cover crop preview">
+              <div class="cover-crop-window"></div>
+            </div>
+            <div class="cover-actions">
+              <button>Apply crop</button><button>Cancel</button><button>Upload</button>
+            </div>
           </div>
         </div>
       </section>
       <section aria-labelledby="learning-practice-preview-title">
         <h2 id="learning-practice-preview-title">Learning practice trainers</h2>
         <p>
-          The verb conjugation trainer and IPA alphabet module reuse the same Relay surfaces, Spartan
-          answer buttons and native selects. Correct and incorrect feedback always pairs colour with
-          explicit text, and the answer grid collapses to one column at the 390px baseline.
+          The verb conjugation trainer and IPA alphabet module reuse the same Relay surfaces,
+          Spartan answer buttons and native selects. Correct and incorrect feedback always pairs
+          colour with explicit text, and the answer grid collapses to one column at the 390px
+          baseline.
         </p>
         <div class="row" role="group" aria-label="Verb conjugation answer options preview">
           <button aria-pressed="true">hablo</button>

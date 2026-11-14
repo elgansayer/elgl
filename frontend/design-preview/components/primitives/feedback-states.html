@@ -126,6 +126,8 @@
         --vip: 232 184 75;
         --on-fill: 18 21 28;
         --shadow: 0 0 0;
+
+        --accent: 225 79 66;
       }
       * {
         box-sizing: border-box;
@@ -332,6 +334,20 @@
       }
       .animate-slide-down {
         animation: slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .audit-states {
+        margin-block-start: 32px;
+        padding: 20px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-200));
+      }
+      .audit-states h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .audit-states .state-line {
+        margin: 6px 0;
       }
     </style>
   </head>
@@ -563,5 +579,9 @@
         document.getElementById('btn-light').classList.remove('active');
       });
     </script>
+    <section class="audit-states" aria-labelledby="audit-states-title">
+      <h2 id="audit-states-title">Required states</h2>
+      <div dir="rtl" lang="ar" class="state-line">مرحبا بالعالم - RTL specimen</div>
+    </section>
   </body>
 </html>
