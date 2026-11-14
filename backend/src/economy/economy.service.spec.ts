@@ -39,6 +39,17 @@ vi.mock('../common/http-retry.helper', () => ({
   withExponentialBackoff: vi.fn((fn: () => unknown) => fn()),
 }));
 
+vi.mock('./apple-signed-transaction.verifier', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('./apple-signed-transaction.verifier')
+    >();
+  return {
+    ...actual,
+    verifyAppleSignedTransaction: vi.fn(actual.verifyAppleSignedTransaction),
+  };
+});
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EconomyService } from './economy.service';
@@ -49,6 +60,7 @@ import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { withExponentialBackoff } from '../common/http-retry.helper';
+import { verifyAppleSignedTransaction } from './apple-signed-transaction.verifier';
 import { of } from 'rxjs';
 import type Stripe from 'stripe';
 
@@ -614,6 +626,36 @@ describe('EconomyService', () => {
           password: 'secret',
         }),
       );
+    });
+
+    it('verifies StoreKit 2 signed transactions locally', async () => {
+      vi.spyOn(service['configService'], 'get').mockImplementation(
+        (key: string) => {
+          if (key === 'APPLE_BUNDLE_ID') return 'com.elgl.app';
+          if (key === 'NODE_ENV') return 'production';
+          return null;
+        },
+      );
+      const post = vi.spyOn(service['httpService'], 'post');
+      const verdict = {
+        valid: true as const,
+        productId: 'com.linguaexchange.coins.small',
+        transactionId: 'txn-signed-1',
+        platform: 'ios' as const,
+        quantity: 1,
+      };
+      vi.mocked(verifyAppleSignedTransaction).mockReturnValueOnce(verdict);
+
+      const result = await service['verifyAppleReceipt'](
+        'ios_header.payload.signature',
+      );
+
+      expect(verifyAppleSignedTransaction).toHaveBeenCalledWith(
+        'header.payload.signature',
+        { bundleId: 'com.elgl.app', nodeEnv: 'production' },
+      );
+      expect(post).not.toHaveBeenCalled();
+      expect(result).toEqual(verdict);
     });
 
     it('retries the sandbox endpoint when Apple reports status 21007', async () => {

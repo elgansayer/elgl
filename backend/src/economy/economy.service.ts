@@ -22,6 +22,10 @@ import {
 } from './dto/economy.dto';
 import { sanitiseEconomyData } from './sanitise-economy.helper';
 import { withExponentialBackoff } from '../common/http-retry.helper';
+import {
+  isAppleSignedTransaction,
+  verifyAppleSignedTransaction,
+} from './apple-signed-transaction.verifier';
 
 export interface VirtualGiftRow {
   id: string;
@@ -1028,17 +1032,29 @@ export class EconomyService {
   private async verifyAppleReceipt(
     receiptToken: string,
   ): Promise<VerifiedReceipt> {
-    const sharedSecret = this.configService.get<string>('APPLE_SHARED_SECRET');
-
-    if (!sharedSecret) {
-      throw new BadRequestException('Apple shared secret not configured');
-    }
-
     // Clients prefix raw App Store receipt data with `ios_` so the platform can
     // be detected without trusting a client-supplied flag alone.
     const receiptData = receiptToken.replace(/^ios_/, '');
     if (!receiptData) {
       throw new BadRequestException('Invalid Apple receipt token');
+    }
+
+    // StoreKit 2 sends a signed transaction (compact JWS) instead of the
+    // legacy base64 receipt. Verify the signature, chain and claims locally
+    // before crediting any coins; never fall back to the legacy endpoint for a
+    // signed transaction that fails verification. Signed transactions do not
+    // use the legacy shared secret.
+    if (isAppleSignedTransaction(receiptData)) {
+      return verifyAppleSignedTransaction(receiptData, {
+        bundleId: this.configService.get<string>('APPLE_BUNDLE_ID'),
+        nodeEnv: this.configService.get<string>('NODE_ENV'),
+      });
+    }
+
+    const sharedSecret = this.configService.get<string>('APPLE_SHARED_SECRET');
+
+    if (!sharedSecret) {
+      throw new BadRequestException('Apple shared secret not configured');
     }
 
     const configuredUrl =
