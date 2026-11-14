@@ -25,6 +25,16 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
+      @if (roomDetails?.type === 'group') {
+        <app-button-secondary
+          (clicked)="showVocabularyPanel.set(!showVocabularyPanel())"
+          customClass="ps-3 pe-3 pt-2 pb-2 text-xs"
+          [ariaLabel]="'chatRoom.vocabularyBtn' | t"
+          [ariaPressed]="showVocabularyPanel()"
+        >
+          {{ 'chatRoom.vocabularyBtn' | t }}
+        </app-button-secondary>
+      }
       @if (isAdmin) {
         <app-button-secondary
           (clicked)="showAdminPanel.set(!showAdminPanel())"
@@ -108,6 +118,9 @@
       </app-button-primary>
     </div>
   } @else {
+    @if (showVocabularyPanel() && roomDetails?.type === 'group') {
+      <app-group-vocabulary-bank [roomId]="roomId"></app-group-vocabulary-bank>
+    }
     @if (showSearchPanel()) {
       <div class="mt-2.5">
         <app-chat-search

@@ -20,6 +20,7 @@ import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { SendAnnouncementDto } from './dto/send-announcement.dto';
 import { RenameGroupDto } from './dto/rename-group.dto';
+import { CreateGroupVocabularyDto } from './dto/group-vocabulary.dto';
 
 @Controller('groups')
 export class GroupsController {
@@ -222,6 +223,36 @@ export class GroupsController {
     @CurrentUser() user: User,
   ) {
     return this.groupsService.getOrCreateGroupChat(user.id, groupId);
+  }
+
+  @Get('rooms/:roomId/vocabulary')
+  @UseGuards(SupabaseAuthGuard)
+  async getGroupVocabulary(
+    @Param('roomId') roomId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.groupsService.getGroupVocabulary(user.id, roomId);
+  }
+
+  @Post('rooms/:roomId/vocabulary')
+  @UseGuards(SupabaseAuthGuard)
+  async addGroupVocabulary(
+    @Param('roomId') roomId: string,
+    @Body() dto: CreateGroupVocabularyDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.groupsService.addGroupVocabulary(user.id, roomId, dto);
+  }
+
+  @Delete('rooms/:roomId/vocabulary/:entryId')
+  @UseGuards(SupabaseAuthGuard)
+  @HttpCode(204)
+  async deleteGroupVocabulary(
+    @Param('roomId') roomId: string,
+    @Param('entryId') entryId: string,
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    return this.groupsService.deleteGroupVocabulary(user.id, roomId, entryId);
   }
 
   @Get(':groupId/resources')

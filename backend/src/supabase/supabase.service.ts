@@ -452,6 +452,16 @@ type GroupResourcesRow = {
   created_at: string;
 };
 
+type GroupVocabularyRow = {
+  id: string;
+  group_id: string;
+  created_by: string;
+  term: string;
+  translation: string;
+  language: string;
+  created_at: string;
+};
+
 type InterestsRow = {
   id: string;
   name: string;
@@ -964,6 +974,12 @@ export interface Database {
         Row: GroupResourcesRow;
         Insert: Partial<GroupResourcesRow>;
         Update: Partial<GroupResourcesRow>;
+        Relationships: [];
+      };
+      group_vocabulary: {
+        Row: GroupVocabularyRow;
+        Insert: Partial<GroupVocabularyRow>;
+        Update: Partial<GroupVocabularyRow>;
         Relationships: [];
       };
       interests: {

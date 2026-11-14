@@ -1044,6 +1044,18 @@ export class I18nService {
     'chatRoom.userIdRemovePlaceholder': 'User ID to Remove',
     'chatRoom.removeMemberBtn': 'Remove Member',
     'chatRoom.adminBtn': 'Admin',
+    'chatRoom.vocabularyBtn': 'Vocabulary bank',
+    'chatRoom.vocabularyTitle': 'Shared vocabulary',
+    'chatRoom.vocabularyLoading': 'Loading shared vocabulary…',
+    'chatRoom.vocabularyError': 'Shared vocabulary is unavailable right now.',
+    'chatRoom.vocabularyEmpty': 'No shared terms yet. Add the first one below.',
+    'chatRoom.vocabularyTermPlaceholder': 'Word or phrase',
+    'chatRoom.vocabularyTranslationPlaceholder': 'Translation',
+    'chatRoom.vocabularyLanguagePlaceholder': 'Language code, for example fr',
+    'chatRoom.vocabularyAddBtn': 'Add term',
+    'chatRoom.vocabularyDeleteBtn': 'Remove',
+    'chatRoom.vocabularyDeleteAria': 'Remove {{term}} from the shared vocabulary',
+    'chatRoom.vocabularySaveError': 'The vocabulary bank could not be updated.',
     'wordDef.lingqTitle': 'LingQ Interactive Reader',
     'wordDef.translationLabel': 'Translation',
     'wordDef.dictionaryLabel': 'Dictionary definition',
@@ -2577,8 +2589,7 @@ export class I18nService {
 
     // Language Islands
     'languageIslands.title': 'Language Islands',
-    'languageIslands.subtitle':
-      'Drop into an always-on space where only one language is spoken.',
+    'languageIslands.subtitle': 'Drop into an always-on space where only one language is spoken.',
     'languageIslands.filterAll': 'All islands',
     'languageIslands.filterLabel': 'Language filters',
     'languageIslands.practisingNow': '{{count}} practising now',
@@ -2589,11 +2600,9 @@ export class I18nService {
     'languageIslands.error': 'Could not load language islands.',
     'languageIslands.retry': 'Retry',
     'languageIslands.empty': 'No language islands available right now.',
-    'languageIslands.emptyDescription':
-      'New islands appear here as the community opens them.',
+    'languageIslands.emptyDescription': 'New islands appear here as the community opens them.',
     'languageIslands.noMatches': 'No islands match this language yet.',
-    'languageIslands.actionError':
-      'Could not update your island membership. Please try again.',
+    'languageIslands.actionError': 'Could not update your island membership. Please try again.',
     'languageIslands.mapAriaLabel': 'Language islands map',
     'languageIslands.mapPinLabel': '{{name}}: {{count}} practising now',
 
@@ -3225,7 +3234,6 @@ export class I18nService {
     'join.joinButton': 'Join group',
     'join.joining': 'Joining...',
     'join.loading': 'Loading group...',
-    'languageIslands.title': 'Language Islands',
     'languageParty.cancelBtn': 'Cancel',
     'languageParty.clearFilters': 'Clear',
     'languageParty.clearFiltersAction': 'Clear All Filters',
