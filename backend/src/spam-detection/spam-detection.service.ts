@@ -44,6 +44,18 @@ export class SpamDetectionService {
     // Determine appropriate n-gram size based on detected language
     const trigramN = this.getTrigramSize(normalized);
 
+    // Identical repeats share a cache key, so the similarity loop alone would
+    // never accumulate them; count the stored occurrences for this exact key.
+    const contentKey = normalized.substring(0, 200);
+    const existingRecord = this.cache.get(contentKey);
+    if (
+      existingRecord &&
+      existingRecord.timestamps.length >= this.THRESHOLD - 1
+    ) {
+      this.addRecord(normalized, this.trigramSet(normalized, trigramN), now);
+      return true;
+    }
+
     // Compute trigram set for the incoming message
     const incomingTrigrams = this.trigramSet(normalized, trigramN);
 
