@@ -36,6 +36,9 @@ describe('GroupsController', () => {
     joinGroup: vi.fn(),
     getOrCreateGroupChat: vi.fn(),
     getGroupResources: vi.fn(),
+    getGroupVocabulary: vi.fn(),
+    addGroupVocabulary: vi.fn(),
+    deleteGroupVocabulary: vi.fn(),
     deleteGroupResource: vi.fn(),
     restrictSendMessages: vi.fn(),
     restrictEditInfo: vi.fn(),
@@ -49,6 +52,66 @@ describe('GroupsController', () => {
   function mockUser(id: string): User {
     return { id } as User;
   }
+
+  describe('shared vocabulary', () => {
+    it('lists a room vocabulary bank for the signed-in member', async () => {
+      mockGroupsService.getGroupVocabulary.mockResolvedValue([
+        {
+          id: 'entry-1',
+          group_id: 'group-1',
+          created_by: 'user-1',
+          term: 'bonjour',
+          translation: 'hello',
+          language: 'fr',
+          created_at: '2026-11-14T00:00:00.000Z',
+        },
+      ]);
+
+      const result = await controller.getGroupVocabulary(
+        'room-1',
+        mockUser('user-1'),
+      );
+
+      expect(mockGroupsService.getGroupVocabulary).toHaveBeenCalledWith(
+        'user-1',
+        'room-1',
+      );
+      expect(result).toHaveLength(1);
+    });
+
+    it('adds and deletes entries through the service', async () => {
+      const dto = { term: 'merci', translation: 'thanks', language: 'fr' };
+      mockGroupsService.addGroupVocabulary.mockResolvedValue({
+        id: 'entry-2',
+        group_id: 'group-1',
+        created_by: 'user-1',
+        ...dto,
+        created_at: '2026-11-14T00:00:00.000Z',
+      });
+
+      await controller.addGroupVocabulary(
+        'room-1',
+        dto,
+        mockUser('user-1'),
+      );
+      expect(mockGroupsService.addGroupVocabulary).toHaveBeenCalledWith(
+        'user-1',
+        'room-1',
+        dto,
+      );
+
+      await controller.deleteGroupVocabulary(
+        'room-1',
+        'entry-2',
+        mockUser('user-1'),
+      );
+      expect(mockGroupsService.deleteGroupVocabulary).toHaveBeenCalledWith(
+        'user-1',
+        'room-1',
+        'entry-2',
+      );
+    });
+  });
 
   describe('create', () => {
     it('should call groupsService.createGroup with the dto mapped fields', async () => {

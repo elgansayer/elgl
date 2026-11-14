@@ -203,6 +203,17 @@ export interface ChatRoom {
   created_at: string;
   admin_id?: string | null;
   wallpaper_url?: string | null;
+  type?: 'direct' | 'group' | null;
+}
+
+export interface GroupVocabularyEntry {
+  id: string;
+  group_id: string;
+  created_by: string;
+  term: string;
+  translation: string;
+  language: string;
+  created_at: string;
 }
 
 export interface GroupMember {
@@ -910,6 +921,36 @@ export class ChatService {
   async removeGroupMember(roomId: string, memberId: string): Promise<void> {
     await firstValueFrom(
       this.http.delete(`${this.baseUrl}/groups/${roomId}/members/${memberId}`, {
+        headers: this.getHeaders(),
+      }),
+    );
+  }
+
+  async getGroupVocabulary(roomId: string): Promise<GroupVocabularyEntry[]> {
+    return firstValueFrom(
+      this.http.get<GroupVocabularyEntry[]>(
+        `${environment.apiUrl}/groups/rooms/${roomId}/vocabulary`,
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async addGroupVocabulary(
+    roomId: string,
+    entry: { term: string; translation: string; language: string },
+  ): Promise<GroupVocabularyEntry> {
+    return firstValueFrom(
+      this.http.post<GroupVocabularyEntry>(
+        `${environment.apiUrl}/groups/rooms/${roomId}/vocabulary`,
+        entry,
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async deleteGroupVocabulary(roomId: string, entryId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`${environment.apiUrl}/groups/rooms/${roomId}/vocabulary/${entryId}`, {
         headers: this.getHeaders(),
       }),
     );

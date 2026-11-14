@@ -373,7 +373,7 @@ export class ChatService {
     const response = await supabase
       .from('chat_rooms')
       .select(
-        'id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id, wallpaper_url, labels',
+        'id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id, wallpaper_url, labels, type',
       )
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: true });

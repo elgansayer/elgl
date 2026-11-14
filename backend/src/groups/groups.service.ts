@@ -14,6 +14,7 @@ import { CentrifugoService } from '../chat/centrifugo.service';
 import { GroupChatService } from '../chat/group-chat.service';
 import { InterestsService } from '../interests/interests.service';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
+import { CreateGroupVocabularyDto } from './dto/group-vocabulary.dto';
 
 export interface GroupRecord {
   id: string;
@@ -51,6 +52,16 @@ export interface GroupSettings {
   rules: string | null;
   interest_id: string | null;
   max_members: number;
+}
+
+export interface GroupVocabularyEntry {
+  id: string;
+  group_id: string;
+  created_by: string;
+  term: string;
+  translation: string;
+  language: string;
+  created_at: string;
 }
 
 export interface GroupAnnouncement {
@@ -738,6 +749,124 @@ export class GroupsService {
     if (error) {
       throw new NotFoundException('Failed to delete resource');
     }
+  }
+
+  // --- Shared group vocabulary banks ---
+  async getGroupVocabulary(
+    userId: string,
+    roomId: string,
+  ): Promise<GroupVocabularyEntry[]> {
+    const group = await this.resolveGroupForRoom(userId, roomId);
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('group_vocabulary')
+      .select('*')
+      .eq('group_id', group.id)
+      .order('created_at', { ascending: true })
+      .returns<GroupVocabularyEntry[]>();
+
+    if (error) {
+      throw new NotFoundException('Failed to fetch group vocabulary');
+    }
+    return data ?? [];
+  }
+
+  async addGroupVocabulary(
+    userId: string,
+    roomId: string,
+    dto: CreateGroupVocabularyDto,
+  ): Promise<GroupVocabularyEntry> {
+    const group = await this.resolveGroupForRoom(userId, roomId);
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('group_vocabulary')
+      .insert({
+        group_id: group.id,
+        created_by: userId,
+        term: dto.term.trim(),
+        translation: dto.translation.trim(),
+        language: dto.language,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      if (error?.code === '23505') {
+        throw new ConflictException(
+          'This term is already in the vocabulary bank',
+        );
+      }
+      throw new NotFoundException('Failed to add vocabulary');
+    }
+    return data;
+  }
+
+  async deleteGroupVocabulary(
+    userId: string,
+    roomId: string,
+    entryId: string,
+  ): Promise<void> {
+    const group = await this.resolveGroupForRoom(userId, roomId);
+    const supabase = this.supabaseService.getClient();
+    const { data: entry, error: lookupError } = await supabase
+      .from('group_vocabulary')
+      .select('id, created_by')
+      .eq('id', entryId)
+      .eq('group_id', group.id)
+      .maybeSingle();
+
+    if (lookupError) {
+      throw new NotFoundException('Failed to fetch vocabulary entry');
+    }
+    if (!entry) {
+      throw new NotFoundException('Vocabulary entry not found');
+    }
+    if (entry.created_by !== userId && group.owner_id !== userId) {
+      throw new ForbiddenException(
+        'Only the creator or group admin can remove this term',
+      );
+    }
+
+    const { error } = await supabase
+      .from('group_vocabulary')
+      .delete()
+      .eq('id', entryId)
+      .eq('group_id', group.id);
+
+    if (error) {
+      throw new NotFoundException('Failed to delete vocabulary entry');
+    }
+  }
+
+  private async resolveGroupForRoom(
+    userId: string,
+    roomId: string,
+  ): Promise<{ id: string; owner_id: string }> {
+    const supabase = this.supabaseService.getClient();
+    const { data: group, error } = await supabase
+      .from('groups')
+      .select('id, owner_id')
+      .eq('chat_room_id', roomId)
+      .maybeSingle();
+
+    if (error) {
+      throw new NotFoundException('Failed to resolve the group chat');
+    }
+    if (!group) {
+      throw new NotFoundException('Group chat not found');
+    }
+    if (group.owner_id !== userId) {
+      const { data: membership, error: membershipError } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', group.id)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (membershipError || !membership) {
+        throw new ForbiddenException('Group membership is required');
+      }
+    }
+    return group;
   }
 
   // --- Community management helpers ---

@@ -57,6 +57,7 @@ import { UnreadCounterService } from '../../services/unread-counter.service';
 import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
+import { GroupVocabularyBankComponent } from '../group-vocabulary-bank/group-vocabulary-bank.component';
 
 function isGroupMember(value: unknown): value is GroupMember {
   return typeof value === 'object' && value !== null && 'user_id' in value;
@@ -111,6 +112,7 @@ function errorMessage(error: unknown): string {
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
     GiftAnimationComponent,
+    GroupVocabularyBankComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -209,6 +211,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly showStickerDrawer = signal<boolean>(false);
   readonly showSearch = signal<boolean>(false);
   readonly showAdminPanel = signal<boolean>(false);
+  readonly showVocabularyPanel = signal<boolean>(false);
   readonly showParticipantDrawer = signal<boolean>(false);
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);

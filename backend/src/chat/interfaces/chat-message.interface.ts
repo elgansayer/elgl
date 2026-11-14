@@ -114,4 +114,5 @@ export interface ChatRoomRecord {
   labels?: string[] | null;
   wallpaper_url?: string | null;
   admin_id?: string | null;
+  type?: string | null;
 }
