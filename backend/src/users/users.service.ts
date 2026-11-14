@@ -4,7 +4,9 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { isMockBackendEnabled } from '../config/mock-backend-mode';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MessageFiltersDto, UpdateProfileDto } from './dto/update-profile.dto';
@@ -401,7 +403,12 @@ export class UsersService {
       .update(updatePayload as never)
       .eq('id', userId);
     if (dndUpdateError) {
-      Logger.warn(`DND update failed, falling back: ${dndUpdateError.message}`);
+      Logger.warn(`DND update failed: ${dndUpdateError.message}`);
+      if (!isMockBackendEnabled()) {
+        throw new ServiceUnavailableException(
+          'Unable to update do-not-disturb settings',
+        );
+      }
       const mock = this.getMockProfile(userId);
       return { ...mock, ...updatePayload };
     }
@@ -703,8 +710,13 @@ export class UsersService {
       .eq('id', userId);
     if (error) {
       Logger.warn(
-        `Supabase update for notification preferences failed, falling back to mock: ${error.message}`,
+        `Supabase update for notification preferences failed: ${error.message}`,
       );
+      if (!isMockBackendEnabled()) {
+        throw new ServiceUnavailableException(
+          'Unable to update notification preferences',
+        );
+      }
       const mock = this.getMockProfile(userId);
       return {
         ...mock,

@@ -18,6 +18,7 @@ vi.mock('dompurify', () => ({
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { UnauthorizedException } from '@nestjs/common';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
@@ -271,6 +272,18 @@ describe('ChatController', () => {
       expect(chatService.getRooms).not.toHaveBeenCalled();
     });
 
+    it('propagates an upstream outage instead of returning rooms', async () => {
+      (chatService.getRooms as Mock).mockRejectedValue(
+        new ServiceUnavailableException(
+          'Chat rooms are temporarily unavailable',
+        ),
+      );
+
+      await expect(controller.getRooms(mockUser())).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+    });
+
     it('should call chatService.getRooms when user is provided', async () => {
       const rooms = [{ id: 'global-exchange' }];
       (chatService.getRooms as Mock).mockResolvedValue(rooms);
@@ -300,6 +313,18 @@ describe('ChatController', () => {
   });
 
   describe('getMessages', () => {
+    it('propagates an upstream outage instead of returning messages', async () => {
+      (chatService.getMessages as Mock).mockRejectedValue(
+        new ServiceUnavailableException(
+          'Chat messages are temporarily unavailable',
+        ),
+      );
+
+      await expect(
+        controller.getMessages(mockUser(), 'room-1'),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
     it('should call chatService.getMessages without user when omitted', async () => {
       const messages = [{ id: 'msg-1' }];
       (chatService.getMessages as Mock).mockResolvedValue(messages);

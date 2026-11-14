@@ -8,6 +8,7 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { isMockBackendEnabled } from '../config/mock-backend-mode';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService, ChatMessageRow } from '../supabase/supabase.service';
@@ -378,7 +379,12 @@ export class ChatService {
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: true });
 
-    if (response.error || !response.data || response.data.length === 0) {
+    if (response.error) {
+      if (!isMockBackendEnabled()) {
+        throw new ServiceUnavailableException(
+          'Chat rooms are temporarily unavailable',
+        );
+      }
       const mockRooms = [
         {
           id: 'mock-room-1',
@@ -405,6 +411,10 @@ export class ChatService {
       ] as ChatRoomRecord[];
 
       return mockRooms;
+    }
+
+    if (!response.data || response.data.length === 0) {
+      return [];
     }
 
     let rooms: ChatRoomRecord[] = response.data;
@@ -918,7 +928,12 @@ export class ChatService {
     }
 
     const response = await query;
-    if (response.error || !response.data || response.data.length === 0) {
+    if (response.error) {
+      if (!isMockBackendEnabled()) {
+        throw new ServiceUnavailableException(
+          'Chat messages are temporarily unavailable',
+        );
+      }
       const mockMessages: ChatMessage[] = [
         {
           id: 'mock-msg-1',
@@ -958,6 +973,11 @@ export class ChatService {
       }
       return mockMessages;
     }
+
+    if (!response.data || response.data.length === 0) {
+      return [];
+    }
+
     const messages: DeletedAwareMessage[] = response.data;
 
     // Exclude media_url for view-once media that has already been viewed
