@@ -54,6 +54,11 @@ services:
       context: ./frontend
       target: production
     restart: always
+    environment:
+      - PUBLIC_SUPABASE_URL=${PUBLIC_SUPABASE_URL:?PUBLIC_SUPABASE_URL must be set}
+      - PUBLIC_SUPABASE_ANON_KEY=${PUBLIC_SUPABASE_ANON_KEY:?PUBLIC_SUPABASE_ANON_KEY must be set}
+      - PUBLIC_CENTRIFUGO_URL=${PUBLIC_CENTRIFUGO_URL:?PUBLIC_CENTRIFUGO_URL must be set}
+      - PUBLIC_LIVEKIT_URL=${PUBLIC_LIVEKIT_URL:?PUBLIC_LIVEKIT_URL must be set}
     ports:
       - '8080:80'
     depends_on:
