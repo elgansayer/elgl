@@ -8,6 +8,7 @@ import { DiscoveryService } from '../../services/discovery.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { I18nService } from '../../services/i18n.service';
 import { ConfirmService } from '../../services/confirm.service';
+import { DeveloperBotsService } from '../../services/developer-bots.service';
 
 describe('DeveloperDashboardComponent', () => {
   const developerStats = signal(null);
@@ -56,6 +57,10 @@ describe('DeveloperDashboardComponent', () => {
         {
           provide: I18nService,
           useValue: { translate: (key: string) => key },
+        },
+        {
+          provide: DeveloperBotsService,
+          useValue: { listBots: vi.fn().mockResolvedValue([]) },
         },
       ],
     }).compileComponents();

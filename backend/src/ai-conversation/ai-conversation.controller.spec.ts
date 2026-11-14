@@ -2,6 +2,7 @@ import type { Mock } from 'vitest';
 import { User } from '@supabase/supabase-js';
 import { AiConversationController } from './ai-conversation.controller';
 import { AiConversationService } from './ai-conversation.service';
+import { DeveloperBotsService } from '../developer-bots/developer-bots.service';
 
 function mockUser(): User {
   return { id: 'user-123' } as unknown as User;
@@ -14,6 +15,7 @@ describe('AiConversationController', () => {
     generateReply: Mock;
     checkDailyAiRateLimit: Mock;
   };
+  let botsService: { getEnabledBot: Mock };
 
   beforeEach(() => {
     service = {
@@ -21,8 +23,10 @@ describe('AiConversationController', () => {
       generateReply: vi.fn(),
       checkDailyAiRateLimit: vi.fn().mockResolvedValue(true),
     };
+    botsService = { getEnabledBot: vi.fn() };
     controller = new AiConversationController(
       service as unknown as AiConversationService,
+      botsService as unknown as DeveloperBotsService,
     );
   });
 
@@ -80,6 +84,48 @@ describe('AiConversationController', () => {
       ).rejects.toThrow('Daily AI usage limit reached');
     });
 
+    it('resolves a custom bot for the caller and passes it to the reply', async () => {
+      const bot = {
+        id: '11111111-1111-4111-8111-111111111111',
+        owner_id: 'user-123',
+        display_name: 'Chef Ana',
+        persona: 'A cheerful Spanish chef',
+        target_language: 'es',
+        tone: 'playful',
+        greeting: 'Hola',
+        is_enabled: true,
+        created_at: '2026-11-14T00:00:00.000Z',
+        updated_at: '2026-11-14T00:00:00.000Z',
+      };
+      botsService.getEnabledBot.mockResolvedValue(bot);
+      service.generateReply.mockResolvedValue('Buenas');
+
+      await controller.handleMessage(mockUser(), {
+        message: 'Hola',
+        botId: bot.id,
+      });
+
+      expect(botsService.getEnabledBot).toHaveBeenCalledWith(
+        bot.id,
+        'user-123',
+      );
+      expect(service.generateReply).toHaveBeenCalledWith(
+        'user-123',
+        'Hola',
+        undefined,
+        undefined,
+        bot,
+      );
+    });
+
+    it('does not resolve a bot when no bot id is supplied', async () => {
+      service.generateReply.mockResolvedValue('Hello');
+
+      await controller.handleMessage(mockUser(), { message: 'Hi' });
+
+      expect(botsService.getEnabledBot).not.toHaveBeenCalled();
+    });
+
     it('should call generateReply with message, scenarioId, and conversationHistory', async () => {
       const reply = 'Would you like a latte or cappuccino?';
       service.generateReply.mockResolvedValue(reply);
@@ -96,6 +142,7 @@ describe('AiConversationController', () => {
         'I would like a coffee please.',
         'ordering-coffee',
         history,
+        undefined,
       );
       expect(result).toEqual({ reply });
     });
@@ -111,6 +158,7 @@ describe('AiConversationController', () => {
       expect(service.generateReply).toHaveBeenCalledWith(
         'user-123',
         'help',
+        undefined,
         undefined,
         undefined,
       );

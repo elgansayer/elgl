@@ -17,6 +17,7 @@ import { AppChipComponent } from '../primitives/chip/chip.component';
 import { AppInputComponent } from '../primitives/input/input.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+import { DeveloperBotsComponent } from '../developer-bots/developer-bots.component';
 
 type DeveloperDashboardTab = 'overview' | 'postgis' | 'centrifugo' | 'livekit';
 
@@ -37,6 +38,7 @@ type DeveloperDashboardTab = 'overview' | 'postgis' | 'centrifugo' | 'livekit';
     AppInputComponent,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
+    DeveloperBotsComponent,
   ],
   templateUrl: './developer-dashboard.component.html',
   styleUrls: ['./developer-dashboard.component.scss'],

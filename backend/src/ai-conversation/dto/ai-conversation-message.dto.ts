@@ -4,6 +4,7 @@ import {
   IsArray,
   IsIn,
   IsOptional,
+  IsUUID,
   IsString,
   MaxLength,
   ValidateNested,
@@ -36,6 +37,10 @@ export class AiConversationMessageDto {
   @IsString()
   @MaxLength(64)
   scenarioId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  botId?: string | null;
 
   @IsOptional()
   @IsArray()

@@ -11,6 +11,7 @@ import { FlashcardsService } from '../flashcards/flashcards.service';
 import { StudyStreakService } from '../study-streak/study-streak.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
+import type { CustomEducationalBotRow } from '../developer-bots/interfaces/custom-bot.interface';
 import {
   LearnerKnowledgeService,
   LearnerKnowledgeProfile,
@@ -285,6 +286,7 @@ The user's role: Someone practising casual English.
     userMessage: string,
     scenarioId?: string,
     conversationHistory?: { role: 'user' | 'assistant'; content: string }[],
+    customBot?: CustomEducationalBotRow,
   ): Promise<string> {
     const scenario = this.scenarios.find((s) => s.id === scenarioId);
     const profile = await this.usersService
@@ -308,7 +310,14 @@ The user's role: Someone practising casual English.
     let instructions: string[];
     let context: Record<string, UntrustedJson | undefined> | undefined;
 
-    if (scenario?.systemPrompt) {
+    if (customBot) {
+      instructions = [
+        `You are ${customBot.display_name}, a custom educational language bot.`,
+        `Persona: ${customBot.persona}`,
+        `Tone: ${customBot.tone}. Target language: ${customBot.target_language}.`,
+        ...DEFAULT_TUTOR_INSTRUCTIONS.slice(1),
+      ];
+    } else if (scenario?.systemPrompt) {
       instructions = [scenario.systemPrompt];
     } else {
       const [flashcards, streak] = await Promise.all([
@@ -325,13 +334,21 @@ The user's role: Someone practising casual English.
         learnerKnowledge,
       );
     }
-    const scenarioName = scenario?.name ?? 'free conversation';
+    const scenarioName =
+      customBot?.display_name ?? scenario?.name ?? 'free conversation';
+    // A custom bot may open with its configured greeting when the learner
+    // starts a fresh conversation.
+    const effectiveHistory =
+      customBot?.greeting &&
+      (!conversationHistory || conversationHistory.length === 0)
+        ? [{ role: 'assistant' as const, content: customBot.greeting }]
+        : conversationHistory;
 
     const messages = buildConversationPrompt({
       tool: 'ai_conversation',
       instructions,
       context,
-      history: conversationHistory,
+      history: effectiveHistory,
       message: userMessage,
     });
 

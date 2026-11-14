@@ -6,6 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { FlashcardsModule } from '../flashcards/flashcards.module';
 import { StudyStreakModule } from '../study-streak/study-streak.module';
 import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
+import { DeveloperBotsModule } from '../developer-bots/developer-bots.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.m
     FlashcardsModule,
     StudyStreakModule,
     LearnerKnowledgeModule,
+    DeveloperBotsModule,
   ],
   controllers: [AiConversationController],
   providers: [AiConversationService],
