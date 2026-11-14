@@ -118,6 +118,8 @@
         --vip: 232 184 75;
         --on-fill: 18 21 28;
         --shadow: 0 0 0;
+
+        --accent: 225 79 66;
       }
       * {
         box-sizing: border-box;
@@ -250,6 +252,24 @@
         color: rgb(var(--text-muted));
         max-width: 720px;
         line-height: 1.6;
+      }
+      .audit-states {
+        margin-block-start: 32px;
+        padding: 20px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-200));
+      }
+      .audit-states h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .audit-states .state-line {
+        margin: 6px 0;
+      }
+      :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
       }
     </style>
   </head>
@@ -464,5 +484,9 @@ Locked while under moderation review.</textarea>
         document.getElementById('btn-light').classList.remove('active');
       });
     </script>
+    <section class="audit-states" aria-labelledby="audit-states-title">
+      <h2 id="audit-states-title">Required states</h2>
+      <div dir="rtl" lang="ar" class="state-line">مرحبا بالعالم - RTL specimen</div>
+    </section>
   </body>
 </html>
