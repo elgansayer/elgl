@@ -13,6 +13,18 @@ import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.m
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
+import { ChatArchiveController } from './chat-archive.controller';
+import { ChatArchiveService } from './chat-archive.service';
+import { ChatFoldersController } from './chat-folders.controller';
+import { ChatFoldersService } from './chat-folders.service';
+import { ChatMediaSendController } from './chat-media-send.controller';
+import { ChatMediaMessageService } from './chat-media-message.service';
+import { ChatPinsController } from './chat-pins.controller';
+import { ChatPinsService } from './chat-pins.service';
+import { ChatTypingController } from './chat-typing.controller';
+import { ChatTypingService } from './chat-typing.service';
+import { MessageReactionsController } from './message-reactions.controller';
+import { MessageReactionsService } from './message-reactions.service';
 import { ChatController } from './chat.controller';
 import { ChatEditController } from './chat-edit.controller';
 import { ChatForwardController } from './chat-forward.controller';
@@ -27,8 +39,6 @@ import { DirectConversationService } from './direct-conversation.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
 import { ChatSettingsService } from './chat-settings.service';
-import { ChatBackupController } from '../chat-backup/chat-backup.controller';
-import { ChatBackupService } from '../chat-backup/chat-backup.service';
 import { QuickRepliesController } from './quick-replies/quick-replies.controller';
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
@@ -59,7 +69,12 @@ import { GroupChatService } from './group-chat.service';
     ChatSearchController,
     DirectConversationController,
     ChatSettingsController,
-    ChatBackupController,
+    ChatArchiveController,
+    ChatFoldersController,
+    ChatMediaSendController,
+    ChatPinsController,
+    ChatTypingController,
+    MessageReactionsController,
     QuickRepliesController,
     GroupChatController,
   ],
@@ -75,7 +90,12 @@ import { GroupChatService } from './group-chat.service';
     DirectConversationService,
     SystemMessageService,
     ChatSettingsService,
-    ChatBackupService,
+    ChatArchiveService,
+    ChatFoldersService,
+    ChatMediaMessageService,
+    ChatPinsService,
+    ChatTypingService,
+    MessageReactionsService,
     QuickRepliesService,
     ChatSystemEventListener,
     DisappearingMessagesCleanupService,

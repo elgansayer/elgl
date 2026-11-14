@@ -10,6 +10,8 @@ import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
 import { CloudflareStreamService } from '../cloudflare-stream/cloudflare-stream.service';
 import { AdminModule } from '../admin/admin.module';
 import { AudioRoomArchivesController } from './audio-room-archives.controller';
+import { AudioRoomsHealthController } from './audio-rooms-health.controller';
+import { AudioRoomsHealthService } from './audio-rooms-health.service';
 import { AudioRoomArchivesService } from './audio-room-archives.service';
 import { AudioRoomTranscriptAccessInterceptor } from './audio-room-transcript-access.interceptor';
 import { AudioRoomsController } from './audio-rooms.controller';
@@ -30,10 +32,12 @@ import { TranscriptEgressService } from './transcript-egress.service';
     AudioRoomsController,
     AudioRoomsPreviewController,
     AudioRoomArchivesController,
+    AudioRoomsHealthController,
   ],
   providers: [
     AudioRoomsService,
     AudioRoomArchivesService,
+    AudioRoomsHealthService,
     TranscriptEgressService,
     CloudflareStreamService,
     {
@@ -78,6 +82,7 @@ import { TranscriptEgressService } from './transcript-egress.service';
   exports: [
     AudioRoomsService,
     AudioRoomArchivesService,
+    AudioRoomsHealthService,
     TranscriptEgressService,
   ],
 })

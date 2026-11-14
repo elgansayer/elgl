@@ -2,33 +2,20 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
-import { UpdateNotificationPreferencesDto } from '../notification-preferences/dto/update-notification-preferences.dto';
+import { NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationDto } from './dto/notification.dto';
 import { UnreadCountsChangedEvent } from './events/notification.events';
 
 type FirebaseAdmin = any;
 
-export interface LegacyPreferenceChannel {
-  push: boolean;
-  badge: boolean;
-}
-
-export interface LegacyNotificationPreferences {
-  userId: string;
-  direct_messages: LegacyPreferenceChannel;
-  groups: LegacyPreferenceChannel;
-  likes: LegacyPreferenceChannel;
-  voice_rooms: LegacyPreferenceChannel;
-  do_not_disturb: boolean;
-  updatedAt: string;
-}
-
 export type PushDispatchResult = 'sent' | 'suppressed' | 'retry';
 
-type UpdatePreferencesInput = Partial<
-  Omit<LegacyNotificationPreferences, 'userId' | 'updatedAt'>
-> &
-  Partial<UpdateNotificationPreferencesDto>;
+const LEGACY_PUSH_CATEGORY = {
+  direct_messages: 'new_message',
+  groups: 'moment_comment',
+  likes: 'moment_like',
+  voice_rooms: 'audio_room_invite',
+} as const;
 
 @Injectable()
 export class NotificationsService {
@@ -38,68 +25,8 @@ export class NotificationsService {
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly preferencesService: NotificationPreferencesService,
   ) {}
-
-  async getPreferences(userId: string): Promise<LegacyNotificationPreferences> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('notification_preferences')
-      .select('preferences, updated_at')
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !data) {
-      // Return sensible defaults
-      return {
-        userId,
-        direct_messages: { push: true, badge: true },
-        groups: { push: true, badge: true },
-        likes: { push: true, badge: true },
-        voice_rooms: { push: true, badge: true },
-        do_not_disturb: false,
-        updatedAt: new Date().toISOString(),
-      };
-    }
-
-    const prefs: LegacyNotificationPreferences = {
-      userId,
-      ...(data.preferences as Omit<
-        LegacyNotificationPreferences,
-        'userId' | 'updatedAt'
-      >),
-      updatedAt: data.updated_at,
-    };
-    return prefs;
-  }
-
-  async updatePreferences(
-    userId: string,
-    preferences: UpdatePreferencesInput,
-  ): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.from('notification_preferences').upsert(
-      {
-        user_id: userId,
-        preferences: {
-          direct_messages: preferences.direct_messages ?? {
-            push: true,
-            badge: true,
-          },
-          groups: preferences.groups ?? { push: true, badge: true },
-          likes: preferences.likes ?? { push: true, badge: true },
-          voice_rooms: preferences.voice_rooms ?? { push: true, badge: true },
-          do_not_disturb: preferences.do_not_disturb ?? false,
-        },
-        updated_at: new Date().toISOString(),
-      } as Record<string, unknown>,
-      { onConflict: 'user_id' },
-    );
-    if (error) {
-      throw new Error(
-        `Failed to update notification preferences: ${error.message}`,
-      );
-    }
-  }
 
   async sendPushNotification(
     userId: string,
@@ -118,12 +45,14 @@ export class NotificationsService {
       let pushEnabled = true;
       let badgeEnabled = true;
       if (payload.category) {
-        const prefs = await this.getPreferences(userId);
-        const cat = prefs[payload.category];
-        if (cat) {
-          pushEnabled = cat.push;
-          badgeEnabled = cat.badge;
-        }
+        const richCategory = LEGACY_PUSH_CATEGORY[payload.category];
+        const prefs = await this.preferencesService.getPreferences(userId);
+        pushEnabled = await this.preferencesService.shouldSendNotification(
+          userId,
+          richCategory,
+          'push',
+        );
+        badgeEnabled = prefs[richCategory]?.badges ?? true;
       }
       if (!pushEnabled) {
         console.log(
