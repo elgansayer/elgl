@@ -9,6 +9,7 @@ import {
 import { basename, join } from 'node:path';
 import { compatibilityShims } from '../supabase/clean-replay-compat.mjs';
 import { schemaCompatibilityShims } from '../supabase/clean-replay-compat-schema.mjs';
+import { missingRequiredReplayTables } from '../supabase/required-replay-tables.mjs';
 
 const replayCompatibilityShims = [
   ...compatibilityShims,
@@ -121,6 +122,17 @@ for (const sourceEntry of sourceEntries) {
     ...nextReplayIdentity(basename(sourceEntry.sourceFile, '.sql')),
     ...sourceEntry,
   });
+}
+
+const missingTables = missingRequiredReplayTables([
+  ...replayEntries.map(({ source }) => source),
+  ...shimEntries.map(({ source }) => source),
+]);
+if (missingTables.length > 0) {
+  throw new Error(
+    `Clean replay is missing required table(s): ${missingTables.join(', ')}. ` +
+      'Add a supabase/migrations file that creates each table before a replay can run.',
+  );
 }
 
 rmSync(outputDirectory, { recursive: true, force: true });
