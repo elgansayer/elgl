@@ -265,7 +265,9 @@ describe('UserDetailComponent bio translation', () => {
     const initialButton = fixture.nativeElement.querySelector(
       `button[aria-controls="${component.translationBioId()}"]`,
     ) as HTMLButtonElement;
-    const bio = fixture.nativeElement.querySelector(`#${component.translationBioId()}`) as HTMLElement;
+    const bio = fixture.nativeElement.querySelector(
+      `#${component.translationBioId()}`,
+    ) as HTMLElement;
 
     expect(initialButton.getAttribute('aria-label')).toBe('profile.translateBio: Partner user-1');
     expect(initialButton.getAttribute('aria-pressed')).toBe('false');
@@ -283,7 +285,9 @@ describe('UserDetailComponent bio translation', () => {
       `#${component.translationBioId()}`,
     ) as HTMLElement;
     expect(translatedButton.getAttribute('aria-pressed')).toBe('true');
-    expect(translatedButton.getAttribute('aria-label')).toBe('profile.showOriginal: Partner user-1');
+    expect(translatedButton.getAttribute('aria-label')).toBe(
+      'profile.showOriginal: Partner user-1',
+    );
     expect(translatedBio.getAttribute('aria-atomic')).toBe('true');
     expect(translatedBio.textContent).toContain('مرحبا من ملفي الشخصي');
   });
@@ -293,7 +297,11 @@ describe('UserDetailComponent bio translation', () => {
     fixture.detectChanges();
 
     expect(component.displayBio).toBe('');
-    expect(fixture.nativeElement.querySelector(`button[aria-controls="${component.translationBioId()}"]`)).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector(
+        `button[aria-controls="${component.translationBioId()}"]`,
+      ),
+    ).toBeNull();
 
     await component.toggleTranslation();
     expect(translateBio).not.toHaveBeenCalled();
@@ -458,8 +466,12 @@ describe('UserDetailComponent bio translation', () => {
 
   it('uses Relay tokens instead of decorative neon classes for interactive elements and text', async () => {
     // Check follow button and like button classes
-    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
-    const followBtn = buttons.find((b) => b.getAttribute('aria-label')?.includes('userProfile.follow'));
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[];
+    const followBtn = buttons.find((b) =>
+      b.getAttribute('aria-label')?.includes('userProfile.follow'),
+    );
     expect(followBtn).toBeTruthy();
     expect(followBtn?.classList.contains('bg-primary')).toBe(true);
     expect(followBtn?.classList.contains('text-on-fill')).toBe(true);
@@ -468,7 +480,7 @@ describe('UserDetailComponent bio translation', () => {
     // Toggle liked and check like button classes
     component.isLiked.set(true);
     fixture.detectChanges();
-    const likeBtn = buttons.find((b) => b.getAttribute('aria-label') === 'Unlike profile');
+    const likeBtn = buttons.find((b) => b.getAttribute('aria-label') === 'userDetail.unlikeAria');
     expect(likeBtn).toBeTruthy();
     expect(likeBtn?.classList.contains('text-primary-ink')).toBe(true);
     expect(likeBtn?.classList.contains('border-primary')).toBe(true);

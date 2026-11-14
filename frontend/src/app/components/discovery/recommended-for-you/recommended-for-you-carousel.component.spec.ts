@@ -70,8 +70,19 @@ describe('RecommendedForYouCarouselComponent', () => {
                 'discovery.recommendation.availabilityMatch': 'Matching availability',
                 'discovery.recommendation.helpfulCorrector': 'Helpful corrector',
                 'discovery.recommendation.learningGoalMatch': 'Shared learning goal',
+                'discovery.recommendationsLoading': 'Loading recommendations',
+                'discovery.recommendationsUnavailable':
+                  'Recommendations are unavailable right now.',
+                'discovery.retry': 'Try again',
+                'discovery.noRecommendationsTitle': 'No recommendations yet',
+                'discovery.noRecommendationsDescription':
+                  'Add interests and learning languages to improve your matches.',
+                'discovery.updateProfile': 'Update Profile',
+                'discovery.viewProfileAria': 'View profile for {{name}}',
               };
-              return (labels[key] ?? key).replace('{{count}}', String(params?.['count'] ?? ''));
+              return (labels[key] ?? key)
+                .replace('{{count}}', String(params?.['count'] ?? ''))
+                .replace('{{name}}', String(params?.['name'] ?? ''));
             },
           },
         },

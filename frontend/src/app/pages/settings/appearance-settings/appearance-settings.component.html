@@ -257,7 +257,7 @@
                   [value]="accentFieldValue()"
                   (input)="onCustomColorChange($event)"
                   maxlength="7"
-                  placeholder="#c65230"
+                  [placeholder]="'settings.customColourPlaceholder' | t"
                   class="min-w-0 flex-1 bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30 font-mono"
                   [attr.aria-label]="'settings.customColourPlaceholder' | t"
                   [attr.aria-invalid]="accentInvalid()"

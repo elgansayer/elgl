@@ -518,7 +518,9 @@
             [class.bg-primary/20]="store.selectedLanguageGroup() === group.language_pair"
             [class.border-surface-100]="store.selectedLanguageGroup() !== group.language_pair"
             [class.bg-surface-300]="store.selectedLanguageGroup() !== group.language_pair"
-            [attr.aria-label]="group.language_pair + ' - ' + group.count + ' room(s)'"
+            [attr.aria-label]="
+              'audioRoom.languagePairRoomsAria' | t: { pair: group.language_pair, count: group.count }
+            "
           >
             <span class="text-text-primary">{{ group.language_pair }}</span>
             <span

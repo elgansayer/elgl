@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  collectUntranslatedAttributes,
   collectUsedKeys,
   extractUsedKeys,
+  findDuplicateDictionaryKeys,
+  findUntranslatedAttributes,
   isKeyDerivedCopy,
   parseDictionarySource,
   readBaseDictionary,
@@ -53,6 +56,48 @@ test('flags copy generated from the key name', () => {
   assert.equal(isKeyDerivedCopy('events.description', 'What is this event about?'), false);
   assert.equal(isKeyDerivedCopy('raw.key', 'raw.key'), true);
   assert.equal(isKeyDerivedCopy('blank.key', '   '), true);
+});
+
+test('fails on duplicate dictionary keys', () => {
+  const source = `
+    private readonly baseDictionary: Record<string, string> = {
+      'chat.title': 'Chat',
+      'chat.title': 'Chat again',
+      'chat.other': 'Other',
+    };
+
+  readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
+  `;
+  assert.deepEqual(findDuplicateDictionaryKeys(source), ['chat.title']);
+});
+
+test('finds literal accessible-name, placeholder, title and alt attributes', () => {
+  const source = `
+    <img alt="Shared photo" />
+    <img alt="" />
+    <img [alt]="'chatMedia.sharedPhotoAlt' | t" />
+    <button aria-label="Remove media"></button>
+    <input [attr.aria-label]="'text input'" />
+    <input [attr.aria-label]="(isLiked() ? 'userDetail.unlikeAria' : 'userDetail.likeAria') | t" />
+    <span title="{{ 'tour.title' | t }}"></span>
+    <app-select ariaLabel="events.languagePair"></app-select>
+    <video aria-label="Camera preview" translation-static-ok></video>
+    <span [attr.aria-label]="'audioRoom.roomsAria' | t: { count: 2 }"></span>
+  `;
+
+  const violations = findUntranslatedAttributes(source).map(
+    (violation) => `${violation.attribute}: ${violation.value}`,
+  );
+
+  assert.deepEqual(violations, [
+    'alt: Shared photo',
+    'aria-label: Remove media',
+    "attr.aria-label: 'text input'",
+  ]);
+});
+
+test('the live templates contain no untranslated literal attributes', () => {
+  assert.deepEqual(collectUntranslatedAttributes(), []);
 });
 
 test('the live dictionary covers every used key and has no key-derived copy', () => {

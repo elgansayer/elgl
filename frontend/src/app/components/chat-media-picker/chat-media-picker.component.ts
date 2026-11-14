@@ -10,8 +10,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
-const ACCEPTED_MEDIA =
-  'image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime';
+const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime';
 
 @Component({
   selector: 'app-chat-media-picker',
@@ -29,7 +28,9 @@ const ACCEPTED_MEDIA =
     >
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h2 id="chat-media-title" class="text-base font-black text-text-primary">Photo / video</h2>
+          <h2 id="chat-media-title" class="text-base font-black text-text-primary">
+            Photo / video
+          </h2>
           <p class="mt-1 text-xs text-text-secondary">
             Standard uses less data. HD keeps more image detail and allows larger videos.
           </p>
@@ -38,7 +39,7 @@ const ACCEPTED_MEDIA =
           type="button"
           (clicked)="cancel()"
           customClass="min-h-11 min-w-11 px-3 text-sm"
-          ariaLabel="Close media picker"
+          [ariaLabel]="'chatMedia.closePickerAria' | t"
         >
           ✕
         </app-button-secondary>
@@ -48,7 +49,7 @@ const ACCEPTED_MEDIA =
         class="mt-4 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-card border border-dashed border-surface-100 bg-surface-300 p-4 text-center focus-within:ring-2 focus-within:ring-primary"
       >
         <span class="text-sm font-bold text-text-primary">
-          {{ selectedFile() ? selectedFile()!.name : 'Choose a photo or video' }}
+          {{ selectedFile() ? selectedFile()!.name : ('chatMedia.chooseAria' | t) }}
         </span>
         <span class="mt-1 text-xs text-text-secondary">JPEG, PNG, WebP, MP4, WebM or MOV</span>
         <input
@@ -56,27 +57,33 @@ const ACCEPTED_MEDIA =
           class="sr-only"
           [accept]="acceptedMedia"
           (change)="onFileSelected($event)"
-          aria-label="Choose a photo or video"
+          [attr.aria-label]="'chatMedia.chooseAria' | t"
         />
       </label>
 
       @if (previewUrl(); as preview) {
         <div class="mt-4 overflow-hidden rounded-card border border-surface-100 bg-black/5">
           @if (selectedKind() === 'image') {
-            <img [src]="preview" alt="Selected photo preview" class="max-h-72 w-full object-contain" />
+            <img
+              [src]="preview"
+              [alt]="'chatMedia.selectedPhotoAlt' | t"
+              class="max-h-72 w-full object-contain"
+            />
           } @else {
             <video
               [src]="preview"
               controls
               preload="metadata"
               class="max-h-72 w-full object-contain"
-              aria-label="Selected video preview"
+              [attr.aria-label]="'chatMedia.selectedVideoAria' | t"
             ></video>
           }
         </div>
       }
 
-      <label class="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-card bg-surface-300 px-3 py-2">
+      <label
+        class="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-card bg-surface-300 px-3 py-2"
+      >
         <span>
           <span class="block text-sm font-bold text-text-primary">HD quality</span>
           <span class="block text-xs text-text-secondary">Higher quality, larger upload</span>
@@ -85,7 +92,7 @@ const ACCEPTED_MEDIA =
           class="h-5 w-5"
           [checked]="quality() === 'hd'"
           (checkedChange)="onQualityCheckedChange($event)"
-          aria-label="Send in HD quality"
+          [aria-label]="'chatMedia.sendHdAria' | t"
         />
       </label>
 
@@ -171,11 +178,7 @@ export class ChatMediaPickerComponent implements OnDestroy {
       const uploaded = await this.chatMedia.upload(file, this.quality());
       this.uploaded.emit(uploaded);
     } catch (error) {
-      this.error.set(
-        error instanceof Error
-          ? error.message
-          : 'Upload failed. Please try again.',
-      );
+      this.error.set(error instanceof Error ? error.message : 'Upload failed. Please try again.');
     } finally {
       this.isUploading.set(false);
     }

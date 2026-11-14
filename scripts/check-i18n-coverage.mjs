@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 // Fails when any translation key used by a template or t() call has no English
-// value, resolves to copy generated from the key name, or when the English JSON
-// mirror drifts from I18nService.baseDictionary (the single source of truth).
+// value, resolves to copy generated from the key name, when a template carries
+// literal accessible-name/placeholder copy outside the translation pipe, or when
+// the English JSON mirror drifts from I18nService.baseDictionary (the single
+// source of truth).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+  collectUntranslatedAttributes,
   collectUsedKeys,
+  findDuplicateDictionaryKeys,
   enGbJsonPath,
   isKeyDerivedCopy,
   readBaseDictionary,
@@ -13,7 +17,11 @@ import {
 } from './i18n-english-lib.mjs';
 
 const dictionary = readBaseDictionary();
+const duplicateKeys = findDuplicateDictionaryKeys(
+  readFileSync(resolve(root, 'frontend/src/app/services/i18n.service.ts'), 'utf8'),
+);
 const usage = collectUsedKeys();
+const untranslatedAttributes = collectUntranslatedAttributes();
 
 const missing = [];
 for (const [key] of usage) {
@@ -51,10 +59,22 @@ if (derivedCopy.length) fail('Keys with copy generated from the key name', deriv
 if (drift.length) {
   fail('English JSON mirror out of sync; run npm run generate:i18n-english', drift);
 }
+if (duplicateKeys.length) {
+  fail('Duplicate dictionary keys (last value silently wins)', duplicateKeys);
+}
+if (untranslatedAttributes.length) {
+  fail(
+    'Template attributes with untranslated copy',
+    untranslatedAttributes.map(
+      (violation) =>
+        `${violation.file}:${violation.line} ${violation.attribute}: ${violation.value}`,
+    ),
+  );
+}
 
-const failures = missing.length + derivedCopy.length + drift.length;
+const failures = missing.length + derivedCopy.length + drift.length + untranslatedAttributes.length;
 if (failures > 0) process.exit(1);
 
 console.log(
-  `English i18n coverage verified: ${usage.size} used keys, ${dictionary.size} dictionary entries.`,
+  `English i18n coverage verified: ${usage.size} used keys, ${dictionary.size} dictionary entries, no literal template attributes.`,
 );

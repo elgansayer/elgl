@@ -1,4 +1,12 @@
-import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  computed,
+  inject,
+  input,
+  output,
+} from '@angular/core';
+import { I18nService } from '../../../services/i18n.service';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
@@ -56,6 +64,8 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
   },
 })
 export class AppEmptyStateComponent {
+  private readonly i18n = inject(I18nService);
+
   readonly illustration = input<string>('');
   readonly icon = input<string>('📭');
   readonly title = input<string>('');
@@ -65,7 +75,9 @@ export class AppEmptyStateComponent {
 
   readonly actionClicked = output<void>();
 
-  readonly ariaLabelAttribute = computed(() => this.title() || 'Empty state');
+  readonly ariaLabelAttribute = computed(
+    () => this.title() || this.i18n.translate('common.emptyStateAria'),
+  );
 
   readonly containerClasses = computed(() => {
     const base =

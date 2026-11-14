@@ -1,4 +1,11 @@
-import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  computed,
+  inject,
+  input,
+} from '@angular/core';
+import { I18nService } from '../../../services/i18n.service';
 
 @Component({
   selector: 'app-audio-equalizer',
@@ -53,6 +60,8 @@ import { Component, ChangeDetectionStrategy, input, computed } from '@angular/co
   ],
 })
 export class AudioEqualizerComponent {
+  private readonly i18n = inject(I18nService);
+
   /** Whether the speaker is currently talking */
   isActive = input<boolean>(false);
 
@@ -69,7 +78,9 @@ export class AudioEqualizerComponent {
   accessibleLabel = computed(() => {
     const custom = this.ariaLabel().trim();
     if (custom) return custom;
-    return this.isActive() ? 'Audio active' : 'Audio inactive';
+    return this.i18n.translate(
+      this.isActive() ? 'common.audioActiveAria' : 'common.audioInactiveAria',
+    );
   });
 
   /** Generate bars with staggered animation delays */

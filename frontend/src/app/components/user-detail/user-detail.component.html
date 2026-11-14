@@ -5,7 +5,7 @@
     <div class="flex items-center gap-4">
       <button
         hlmBtn
-        aria-label="Go back"
+        [attr.aria-label]="'userDetail.goBackAria' | t"
         (click)="goBack()"
         class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors"
       >
@@ -37,7 +37,11 @@
           class="relative h-24 w-24 rounded-full border-4 border-surface-500 bg-surface-300 flex items-center justify-center overflow-hidden"
         >
           @if (profile()?.avatar_url) {
-            <img [src]="profile()?.avatar_url" alt="avatar" class="h-full w-full object-cover" />
+            <img
+              [src]="profile()?.avatar_url"
+              [alt]="'userDetail.avatarAlt' | t"
+              class="h-full w-full object-cover"
+            />
           } @else {
             <span class="text-3xl font-bold text-text-secondary">{{
               profile()?.display_name?.charAt(0) || '?'
@@ -58,7 +62,7 @@
               class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
               [class.text-primary-ink]="isLiked()"
               [class.border-primary]="isLiked()"
-              aria-label="{{ isLiked() ? 'Unlike profile' : 'Like profile' }}"
+              [attr.aria-label]="(isLiked() ? 'userDetail.unlikeAria' : 'userDetail.likeAria') | t"
             >
               {{ isLiked() ? '❤️' : '🤍' }}
             </button>

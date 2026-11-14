@@ -12,7 +12,6 @@ import { Component, ChangeDetectionStrategy, input, computed } from '@angular/co
     '[class]': 'hostClasses()',
     '[attr.aria-hidden]': 'true',
     '[attr.role]': '"presentation"',
-    '[attr.aria-label]': '"Loading placeholder"',
   },
 })
 export class AppSkeletonLoaderComponent {
