@@ -109,7 +109,9 @@ export interface ChatMessage {
     | 'correction_request'
     | 'status_reply'
     | 'view_once_media'
-    | 'gift';
+    | 'gift'
+    | 'location'
+    | 'live_location';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
@@ -121,6 +123,12 @@ export interface ChatMessage {
     type: string;
     [param: string]: unknown;
   };
+  location_payload?: {
+    latitude: number;
+    longitude: number;
+    label?: string | null;
+    is_live?: boolean;
+  } | null;
   gift_payload?: GiftPayload;
   is_read: boolean;
   delivery_status?: 'sent' | 'delivered' | 'read';

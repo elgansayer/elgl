@@ -3,12 +3,15 @@ import {
   IsBoolean,
   IsIn,
   IsNotEmpty,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
+  Min,
   registerDecorator,
   ValidateIf,
   ValidateNested,
@@ -95,6 +98,27 @@ export class StatusReplyPayloadDto {
   status_text!: string;
 }
 
+export class LocationPayloadDto {
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude!: number;
+
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  label?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_live?: boolean;
+}
+
 export class SendMessageDto {
   @IsString()
   @IsNotEmpty()
@@ -111,6 +135,8 @@ export class SendMessageDto {
     'correction_request',
     'status_reply',
     'view_once_media',
+    'location',
+    'live_location',
   ])
   message_type!: string;
 
@@ -148,6 +174,17 @@ export class SendMessageDto {
   @ValidateNested()
   @Type(() => CorrectionPayloadDto)
   correction_payload?: CorrectionPayloadDto;
+
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.message_type === 'location' ||
+      dto.message_type === 'live_location' ||
+      dto.location_payload !== undefined,
+  )
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocationPayloadDto)
+  location_payload?: LocationPayloadDto;
 
   @IsOptional()
   @IsString()

@@ -433,6 +433,7 @@ describe('ChatService', () => {
         reply_to_id: null,
         correction_request_payload: null,
         status_reply_payload: null,
+        location_payload: null,
         is_view_once: false,
         delivery_status: 'sent',
         is_encrypted: false,
@@ -443,6 +444,67 @@ describe('ChatService', () => {
       });
       expect(result).toEqual(savedMessage);
     }, 15000);
+
+    it('persists and broadcasts a location payload', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'location',
+        location_payload: {
+          latitude: 51.5074,
+          longitude: -0.1278,
+          label: 'Trafalgar Square',
+          is_live: false,
+        },
+      };
+      const savedMessage = {
+        id: 'msg-2',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'location',
+        location_payload: dto.location_payload,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          location_payload: {
+            latitude: 51.5074,
+            longitude: -0.1278,
+            label: 'Trafalgar Square',
+            is_live: false,
+          },
+        }),
+      );
+      expect(service['centrifugoService'].publish).toHaveBeenCalledWith(
+        'chat:room-1',
+        { message: savedMessage },
+      );
+    });
+
+    it('rejects a location payload on a non-location message', async () => {
+      await expect(
+        service.sendMessage('sender-1', {
+          room_id: 'room-1',
+          message_type: 'text',
+          text_content: 'hello',
+          location_payload: { latitude: 1, longitude: 1 },
+        }),
+      ).rejects.toThrow('location_payload is only valid for location messages');
+    });
+
+    it('rejects a location message without a payload', async () => {
+      await expect(
+        service.sendMessage('sender-1', {
+          room_id: 'room-1',
+          message_type: 'location',
+        }),
+      ).rejects.toThrow('location_payload is required for location messages');
+    });
 
     it('should save encrypted message and emit redacted notification preview', async () => {
       const dto: SendMessageDto = {
