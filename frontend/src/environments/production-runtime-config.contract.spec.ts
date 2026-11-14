@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const frontendRoot = resolve(process.cwd());
@@ -17,14 +17,45 @@ const runtimeTemplate = readFileSync(
   resolve(frontendRoot, 'runtime-config.js.template'),
   'utf8',
 );
+const activeWorkflowPath = resolve(
+  frontendRoot,
+  '../.github/workflows/frontend-container-ci.yml',
+);
 const containerWorkflow = readFileSync(
-  resolve(frontendRoot, '../.github/workflows/frontend-container-ci.yml'),
+  existsSync(activeWorkflowPath)
+    ? activeWorkflowPath
+    : resolve(
+        frontendRoot,
+        '../.github/workflows-disabled/frontend-container-ci.yml',
+      ),
   'utf8',
+);
+const composeFiles = ['../docker-compose.yml', '../docker-compose.prod.yml'].map(
+  (path) => readFileSync(resolve(frontendRoot, path), 'utf8'),
 );
 
 describe('production runtime configuration', () => {
   it('replaces the development environment in production builds', () => {
     expect(angularConfig).toContain('"with": "src/environments/environment.prod.ts"');
+  });
+
+  it('replaces the mock environment in development builds', () => {
+    expect(angularConfig).toContain(
+      '"with": "src/environments/environment.development.ts"',
+    );
+  });
+
+  it('passes deployment configuration to the web container in both compose stacks', () => {
+    for (const compose of composeFiles) {
+      for (const variable of [
+        'PUBLIC_SUPABASE_URL',
+        'PUBLIC_SUPABASE_ANON_KEY',
+        'PUBLIC_CENTRIFUGO_URL',
+        'PUBLIC_LIVEKIT_URL',
+      ]) {
+        expect(compose).toContain(`- ${variable}=`);
+      }
+    }
   });
 
   it('contains no development service origins or credential placeholders', () => {
