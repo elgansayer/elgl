@@ -376,6 +376,21 @@ export class UsersService {
     }
   }
 
+  async updateUiLocale(userId: string, locale: string): Promise<string> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ ui_locale: locale })
+      .eq('id', userId);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to update UI locale: ${error.message}`,
+      );
+    }
+    return locale;
+  }
+
   async getNotificationPreferences(userId: string): Promise<{
     custom_tone_url?: string;
     vibration_pattern?: number[];

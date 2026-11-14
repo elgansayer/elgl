@@ -19,6 +19,9 @@ import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import { extractFirstHttpUrl } from '../link-preview/link-url';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
+import { I18nService } from '../i18n/i18n.service';
+import { translateBackendCopy } from '../i18n/translate';
+import { DEFAULT_UI_LOCALE } from '../i18n/backend-dictionary';
 import { CONVERSATION_PARTNER_INSTRUCTIONS } from './chat-llm-proxy.service';
 import {
   buildConversationPrompt,
@@ -134,6 +137,7 @@ export class ChatService {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     private readonly learnerKnowledgeService: LearnerKnowledgeService,
+    @Optional() private readonly i18nService?: I18nService,
   ) {}
 
   async generateConnectionToken(userId: string): Promise<string> {
@@ -1374,6 +1378,21 @@ export class ChatService {
     }
   }
 
+  private async localizedCopy(
+    key: string,
+    userId?: string,
+    params?: Record<string, string | number>,
+  ): Promise<string> {
+    const locale =
+      userId && this.i18nService
+        ? await this.i18nService.resolveUserLocale(userId)
+        : DEFAULT_UI_LOCALE;
+    return (
+      this.i18nService?.translate(key, locale, params) ??
+      translateBackendCopy(key, locale, params)
+    );
+  }
+
   async getLockedChats(userId: string): Promise<string[]> {
     const supabase = this.supabaseService.getClient();
 
@@ -1448,7 +1467,10 @@ export class ChatService {
     }
 
     const previewText =
-      dto.greetingText?.trim() || `Check out ${contact.display_name}'s profile`;
+      dto.greetingText?.trim() ||
+      (await this.localizedCopy('chat.contactShare', receiverId, {
+        name: contact.display_name ?? '',
+      }));
 
     const { data: savedMessage, error: insertError } = await supabase
       .from('chat_messages')
@@ -1616,10 +1638,14 @@ export class ChatService {
     if (!roomId) {
       // Create a new room when no existing 1-to-1 chat exists.
       const newRoomId = randomUUID();
+      const roomTitle = await this.localizedCopy(
+        'chat.statusReplyTitle',
+        dto.target_user_id,
+      );
 
       const { error: roomError } = await supabase.from('chat_rooms').insert({
         id: newRoomId,
-        title: 'Status reply',
+        title: roomTitle,
         subtitle: dto.status_text.slice(0, 80),
         avatar: '',
         is_online: false,

@@ -5,6 +5,8 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from '../notification-preferences/dto/update-notification-preferences.dto';
 import { NotificationDto } from './dto/notification.dto';
 import { UnreadCountsChangedEvent } from './events/notification.events';
+import { I18nService } from '../i18n/i18n.service';
+import { hasBackendCopy } from '../i18n/translate';
 
 type FirebaseAdmin = any;
 
@@ -38,6 +40,7 @@ export class NotificationsService {
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly i18nService: I18nService,
   ) {}
 
   async getPreferences(userId: string): Promise<LegacyNotificationPreferences> {
@@ -313,29 +316,29 @@ export class NotificationsService {
         );
       }
 
-      // Dispatch push alert as well
-      const titleMap: Record<string, string> = {
-        follow: 'New Follower',
-        like_profile: 'Profile Liked',
-        like_moment: 'Moment Liked',
-        comment_moment: 'New Comment',
-        reply_comment: 'New Reply',
-        profile_visit: 'Profile Visited',
-        mention_comment: 'Mentioned in Comment',
-        mention_chat: 'Mentioned in Chat',
-        system: 'System Alert',
-      };
-      const bodyMap: Record<string, string> = {
-        follow: 'Someone started following you',
-        like_profile: 'Someone liked your profile',
-        like_moment: 'Someone liked your moment',
-        comment_moment: message || 'Someone commented on your moment',
-        reply_comment: message || 'Someone replied to your comment',
-        profile_visit: 'Someone viewed your profile',
-        mention_comment: message || 'Someone mentioned you in a comment',
-        mention_chat: message || 'Someone mentioned you in a chat',
-        system: message || 'You have a new system alert',
-      };
+      // Dispatch push alert as well. The recipient's stored UI locale decides
+      // the language; user-authored `message` text always wins over the
+      // generated body for the types that carry it.
+      const locale = await this.i18nService.resolveUserLocale(recipientId);
+      const titleKey = `notifications.title.${type}`;
+      const bodyKey = `notifications.body.${type}`;
+      const pushTitle = this.i18nService.translate(
+        hasBackendCopy(titleKey) ? titleKey : 'notifications.fallback.title',
+        locale,
+      );
+      const generatedBody = this.i18nService.translate(
+        hasBackendCopy(bodyKey) ? bodyKey : 'notifications.fallback.body',
+        locale,
+      );
+      const messageSupersedesBody = new Set([
+        'comment_moment',
+        'reply_comment',
+        'mention_comment',
+        'mention_chat',
+        'system',
+      ]).has(type);
+      const pushBody =
+        messageSupersedesBody && message?.trim() ? message : generatedBody;
 
       // Determine notification category for push-toggle check
       let pushCategory:
@@ -362,8 +365,8 @@ export class NotificationsService {
       if (dispatchPush) {
         await this.sendPushNotification(recipientId, {
           type,
-          title: titleMap[type] || 'New Notification',
-          body: bodyMap[type] || 'You have a new alert',
+          title: pushTitle,
+          body: pushBody,
           data: {
             actorId: isSystemAlert ? '' : actorId,
             entityId: entityId || '',

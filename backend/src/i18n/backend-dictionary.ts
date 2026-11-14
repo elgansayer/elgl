@@ -1,0 +1,148 @@
+// Backend copy that reaches a recipient without passing through the Angular
+// dictionary. Keep keys namespaced by surface. English is the fallback for any
+// locale without an entry.
+
+export const DEFAULT_UI_LOCALE = 'en-GB';
+
+export const SUPPORTED_UI_LOCALES = [
+  'en-GB',
+  'en-US',
+  'es',
+  'fr',
+  'de',
+  'ar',
+  'ja',
+  'zh',
+  'he',
+  'fa',
+  'ru',
+  'pt',
+  'ko',
+  'hi',
+  'tr',
+  'vi',
+  'sw',
+  'it',
+  'pl',
+  'nl',
+  'el',
+  'uk',
+  'ur',
+] as const;
+
+type Dictionary = Record<string, string>;
+
+const english: Dictionary = {
+  'notifications.title.follow': 'New Follower',
+  'notifications.title.like_profile': 'Profile Liked',
+  'notifications.title.like_moment': 'Moment Liked',
+  'notifications.title.comment_moment': 'New Comment',
+  'notifications.title.reply_comment': 'New Reply',
+  'notifications.title.profile_visit': 'Profile Visited',
+  'notifications.title.mention_comment': 'Mentioned in Comment',
+  'notifications.title.mention_chat': 'Mentioned in Chat',
+  'notifications.title.system': 'System Alert',
+  'notifications.body.follow': 'Someone started following you',
+  'notifications.body.like_profile': 'Someone liked your profile',
+  'notifications.body.like_moment': 'Someone liked your moment',
+  'notifications.body.comment_moment': 'Someone commented on your moment',
+  'notifications.body.reply_comment': 'Someone replied to your comment',
+  'notifications.body.profile_visit': 'Someone viewed your profile',
+  'notifications.body.mention_comment': 'Someone mentioned you in a comment',
+  'notifications.body.mention_chat': 'Someone mentioned you in a chat',
+  'notifications.body.system': 'You have a new system alert',
+  'notifications.fallback.title': 'New Notification',
+  'notifications.fallback.body': 'You have a new alert',
+  'chat.directMessageTitle': 'Direct message',
+  'chat.statusReplyTitle': 'Status reply',
+  'chat.contactShare': "Check out {{name}}'s profile",
+};
+
+const spanish: Dictionary = {
+  'notifications.title.follow': 'Nuevo seguidor',
+  'notifications.title.like_profile': 'Perfil marcado como favorito',
+  'notifications.title.like_moment': 'Momento marcado como favorito',
+  'notifications.title.comment_moment': 'Nuevo comentario',
+  'notifications.title.reply_comment': 'Nueva respuesta',
+  'notifications.title.profile_visit': 'Perfil visitado',
+  'notifications.title.mention_comment': 'Te mencionaron en un comentario',
+  'notifications.title.mention_chat': 'Te mencionaron en un chat',
+  'notifications.title.system': 'Alerta del sistema',
+  'notifications.body.follow': 'Alguien empezó a seguirte',
+  'notifications.body.like_profile': 'A alguien le gustó tu perfil',
+  'notifications.body.like_moment': 'A alguien le gustó tu momento',
+  'notifications.body.comment_moment': 'Alguien comentó en tu momento',
+  'notifications.body.reply_comment': 'Alguien respondió a tu comentario',
+  'notifications.body.profile_visit': 'Alguien vio tu perfil',
+  'notifications.body.mention_comment': 'Alguien te mencionó en un comentario',
+  'notifications.body.mention_chat': 'Alguien te mencionó en un chat',
+  'notifications.body.system': 'Tienes una nueva alerta del sistema',
+  'notifications.fallback.title': 'Nueva notificación',
+  'notifications.fallback.body': 'Tienes una nueva alerta',
+  'chat.directMessageTitle': 'Mensaje directo',
+  'chat.statusReplyTitle': 'Respuesta al estado',
+  'chat.contactShare': 'Mira el perfil de {{name}}',
+};
+
+const french: Dictionary = {
+  'notifications.title.follow': 'Nouvel abonné',
+  'notifications.title.like_profile': 'Profil aimé',
+  'notifications.title.like_moment': 'Moment aimé',
+  'notifications.title.comment_moment': 'Nouveau commentaire',
+  'notifications.title.reply_comment': 'Nouvelle réponse',
+  'notifications.title.profile_visit': 'Profil consulté',
+  'notifications.title.mention_comment': 'Mention dans un commentaire',
+  'notifications.title.mention_chat': 'Mention dans un chat',
+  'notifications.title.system': 'Alerte système',
+  'notifications.body.follow': 'Quelqu’un a commencé à vous suivre',
+  'notifications.body.like_profile': 'Quelqu’un a aimé votre profil',
+  'notifications.body.like_moment': 'Quelqu’un a aimé votre moment',
+  'notifications.body.comment_moment': 'Quelqu’un a commenté votre moment',
+  'notifications.body.reply_comment': 'Quelqu’un a répondu à votre commentaire',
+  'notifications.body.profile_visit': 'Quelqu’un a consulté votre profil',
+  'notifications.body.mention_comment':
+    'Quelqu’un vous a mentionné dans un commentaire',
+  'notifications.body.mention_chat': 'Quelqu’un vous a mentionné dans un chat',
+  'notifications.body.system': 'Vous avez une nouvelle alerte système',
+  'notifications.fallback.title': 'Nouvelle notification',
+  'notifications.fallback.body': 'Vous avez une nouvelle alerte',
+  'chat.directMessageTitle': 'Message direct',
+  'chat.statusReplyTitle': 'Réponse au statut',
+  'chat.contactShare': 'Découvrez le profil de {{name}}',
+};
+
+const german: Dictionary = {
+  'notifications.title.follow': 'Neuer Follower',
+  'notifications.title.like_profile': 'Profil gefällt',
+  'notifications.title.like_moment': 'Moment gefällt',
+  'notifications.title.comment_moment': 'Neuer Kommentar',
+  'notifications.title.reply_comment': 'Neue Antwort',
+  'notifications.title.profile_visit': 'Profil besucht',
+  'notifications.title.mention_comment': 'In einem Kommentar erwähnt',
+  'notifications.title.mention_chat': 'Im Chat erwähnt',
+  'notifications.title.system': 'Systemwarnung',
+  'notifications.body.follow': 'Jemand folgt dir jetzt',
+  'notifications.body.like_profile': 'Jemand gefällt dein Profil',
+  'notifications.body.like_moment': 'Jemand gefällt dein Moment',
+  'notifications.body.comment_moment': 'Jemand hat deinen Moment kommentiert',
+  'notifications.body.reply_comment':
+    'Jemand hat auf deinen Kommentar geantwortet',
+  'notifications.body.profile_visit': 'Jemand hat dein Profil angesehen',
+  'notifications.body.mention_comment':
+    'Jemand hat dich in einem Kommentar erwähnt',
+  'notifications.body.mention_chat': 'Jemand hat dich in einem Chat erwähnt',
+  'notifications.body.system': 'Du hast eine neue Systemwarnung',
+  'notifications.fallback.title': 'Neue Benachrichtigung',
+  'notifications.fallback.body': 'Du hast eine neue Warnung',
+  'chat.directMessageTitle': 'Direktnachricht',
+  'chat.statusReplyTitle': 'Statusantwort',
+  'chat.contactShare': 'Schau dir das Profil von {{name}} an',
+};
+
+export const backendDictionary: Record<string, Dictionary> = {
+  'en-GB': english,
+  'en-US': english,
+  es: spanish,
+  fr: french,
+  de: german,
+};

@@ -81,6 +81,7 @@ export type UsersRow = {
   cover_url?: string | null;
   serious_learner_mode?: boolean | null;
   notification_preferences?: Record<string, unknown> | null;
+  ui_locale?: string | null;
   language_levels?: Record<string, string> | null;
   chat_preferences?: Record<string, unknown> | null;
   developer_api_key?: string | null;

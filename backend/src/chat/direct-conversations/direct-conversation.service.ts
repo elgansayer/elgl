@@ -7,6 +7,7 @@ import {
 import { createHash } from 'crypto';
 import { SafetyService } from '../../safety/safety.service';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { I18nService } from '../../i18n/i18n.service';
 
 interface DirectRoomRow {
   id: string;
@@ -23,6 +24,7 @@ export class DirectConversationService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
+    private readonly i18nService: I18nService,
   ) {}
 
   async openOrCreate(userId: string, targetUserId: string): Promise<string> {
@@ -41,7 +43,7 @@ export class DirectConversationService {
     const supabase = this.supabaseService.getClient();
     const { data: targetUser, error: targetError } = await supabase
       .from('users')
-      .select('id, is_deletion_pending')
+      .select('id, is_deletion_pending, ui_locale')
       .eq('id', targetUserId)
       .maybeSingle();
 
@@ -64,10 +66,14 @@ export class DirectConversationService {
     if (existingRoomId) return existingRoomId;
 
     const roomId = this.directRoomId(userId, targetUserId);
+    const roomTitle = this.i18nService.translate(
+      'chat.directMessageTitle',
+      targetUser.ui_locale,
+    );
     const { error: roomError } = await supabase.from('chat_rooms').upsert(
       {
         id: roomId,
-        title: 'Direct message',
+        title: roomTitle,
         subtitle: '',
         avatar: '',
         is_online: false,

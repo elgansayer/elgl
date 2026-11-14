@@ -12,11 +12,12 @@ import { FollowNotificationListener } from './listeners/follow-notification.list
 import { LikeNotificationListener } from './listeners/like-notification.listener';
 import { SystemNotificationListener } from './listeners/system-notification.listener';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { I18nModule } from '../i18n/i18n.module';
 
 import { NotificationsController } from './notifications.controller';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, I18nModule],
   controllers: [NotificationsController, NotificationPreferencesController],
   providers: [
     NotificationsService,

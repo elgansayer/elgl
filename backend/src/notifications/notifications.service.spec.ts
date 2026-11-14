@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotificationsService } from './notifications.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { I18nService } from '../i18n/i18n.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -51,6 +52,7 @@ describe('NotificationsService', () => {
           },
         },
         { provide: EventEmitter2, useValue: { emit } },
+        I18nService,
       ],
     }).compile();
 
@@ -154,6 +156,24 @@ describe('NotificationsService', () => {
         expect.objectContaining({
           recipientId: 'recipient-1',
           source: 'notifications',
+        }),
+      );
+    });
+
+    it('pushes copy in the recipient locale', async () => {
+      const push = vi.spyOn(service, 'sendPushNotification');
+      vi.spyOn(service['i18nService'], 'resolveUserLocale').mockResolvedValue(
+        'es',
+      );
+
+      await service.createNotification('recipient-1', 'actor-1', 'follow');
+
+      expect(push).toHaveBeenCalledWith(
+        'recipient-1',
+        expect.objectContaining({
+          type: 'follow',
+          title: 'Nuevo seguidor',
+          body: 'Alguien empezó a seguirte',
         }),
       );
     });

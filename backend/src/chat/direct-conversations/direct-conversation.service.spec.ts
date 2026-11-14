@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SafetyService } from '../../safety/safety.service';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { I18nService } from '../../i18n/i18n.service';
 import { DirectConversationService } from './direct-conversation.service';
 
 interface QueryResponse {
@@ -41,9 +42,13 @@ describe('DirectConversationService', () => {
     safetyService = {
       getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]),
     };
+    const supabaseService = {
+      getClient: () => ({ from }),
+    } as unknown as SupabaseService;
     service = new DirectConversationService(
-      { getClient: () => ({ from }) } as unknown as SupabaseService,
+      supabaseService,
       safetyService as unknown as SafetyService,
+      new I18nService(supabaseService),
     );
   });
 
