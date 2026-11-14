@@ -57,6 +57,7 @@ import { UnreadCounterService } from '../../services/unread-counter.service';
 import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
+import { ChatMediaService } from '../../services/chat-media.service';
 
 function isGroupMember(value: unknown): value is GroupMember {
   return typeof value === 'object' && value !== null && 'user_id' in value;
@@ -118,6 +119,7 @@ function errorMessage(error: unknown): string {
 export class ChatRoomComponent implements OnDestroy {
   readonly centrifugeService = inject(CentrifugeService);
   private chatService = inject(ChatService);
+  private readonly chatMediaService = inject(ChatMediaService);
   private readonly favouriteService = inject(FavouriteService);
   readonly authService = inject(AuthService);
   private userService = inject(UserService);
@@ -718,10 +720,14 @@ export class ChatRoomComponent implements OnDestroy {
   async onDoodleSaved(dataUrl: string): Promise<void> {
     this.showDoodleModal.set(false);
     try {
+      const uploaded = await this.chatMediaService.upload(
+        this.doodleDataUrlToFile(dataUrl),
+        'standard',
+      );
       const sent = await this.chatService.sendMessage({
         room_id: this.roomId,
         message_type: 'doodle',
-        media_url: dataUrl,
+        media_url: uploaded.url,
         text_content: this.i18n.translate('chatRoom.doodleCaption'),
       });
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
@@ -730,6 +736,19 @@ export class ChatRoomComponent implements OnDestroy {
       this.presentMessageFilterError(e);
       showErrorToast(this.i18n.translate('chatRoom.doodleSendFailed'));
     }
+  }
+
+  private doodleDataUrlToFile(dataUrl: string): File {
+    const prefix = 'data:image/png;base64,';
+    if (!dataUrl.startsWith(prefix)) {
+      throw new Error('Doodle must be a PNG data URL');
+    }
+    const binary = atob(dataUrl.slice(prefix.length));
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return new File([bytes], 'doodle.png', { type: 'image/png' });
   }
 
   async onVoiceUploaded(mediaUrl: string): Promise<void> {
