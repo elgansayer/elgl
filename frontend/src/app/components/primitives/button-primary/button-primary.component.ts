@@ -20,6 +20,7 @@ import { HlmButton, HlmButtonImports } from '@spartan-ng/helm/button';
       [size]="helmSize()"
       [type]="type()"
       [disabled]="disabled()"
+      [attr.aria-label]="ariaLabel() || null"
       (click)="onClick($event)"
     >
       <ng-content />
@@ -34,6 +35,7 @@ export class AppButtonPrimaryComponent {
   readonly disabled = input<boolean>(false);
   readonly type = input<'button' | 'submit' | 'reset'>('button');
   readonly customClass = input<string>('');
+  readonly ariaLabel = input<string>('');
   readonly clicked = output<MouseEvent>();
 
   readonly helmSize = computed(() => {

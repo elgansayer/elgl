@@ -5,10 +5,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
 import { SoundboardComponent } from '../soundboard/soundboard.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-room-chat',
-  imports: [HlmInput, HlmButton, CommonModule, FormsModule, SoundboardComponent],
+  imports: [HlmInput, HlmButton, CommonModule, FormsModule, SoundboardComponent, TranslatePipe],
   template: `
     <div
       class="bg-surface-200 rounded-3xl shadow-xl border border-surface-100 flex flex-col h-96 overflow-hidden"
@@ -94,7 +95,7 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
             type="text"
             [(ngModel)]="inputText"
             (keyup.enter)="send()"
-            placeholder="Send a chat message to the room..."
+            [placeholder]="'roomChat.messagePlaceholder' | t"
             class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-primary"
           />
           <button
@@ -114,7 +115,7 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
             type="text"
             [(ngModel)]="inputCaption"
             (keyup.enter)="sendSubtitle()"
-            placeholder="Simulate speech-to-text live subtitle broadcast..."
+            [placeholder]="'roomChat.transcriptPlaceholder' | t"
             class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-secondary"
           />
           <button

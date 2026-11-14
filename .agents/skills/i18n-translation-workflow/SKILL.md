@@ -80,7 +80,9 @@ correctly mirrored.
 
 ## Auditing for Violations
 
-`npm run check:rtl-logical` (frontend) fails the build on any physical-direction utility - run it, alongside the
-frontend completion gate, before marking i18n/RTL-touching work complete. There is no automated "no raw text in
-templates" check yet, so manually scan new/changed `*.html`/`*.ts` files for literal user-facing strings that
-aren't inside a translation key, an `aria-label` bound to a translated value, a log message, or a code comment.
+`npm run check:rtl-logical` (frontend) fails the build on any physical-direction utility, and root
+`npm run check:i18n-coverage` now fails on literal `aria-label`, `aria-description`, `placeholder`, `title` and `alt`
+values across `frontend/src/app` (including inline templates), plus any bound attribute expression containing raw
+English copy. Run both alongside the frontend completion gate before marking i18n/RTL-touching work complete. The
+gate cannot see visible text nodes, so still scan new/changed `*.html`/`*.ts` files for literal visible copy that
+isn't inside a translation key, a log message, or a code comment.

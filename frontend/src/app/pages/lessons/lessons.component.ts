@@ -71,7 +71,7 @@ import {
                 <div
                   class="mb-5 flex gap-1"
                   role="progressbar"
-                  aria-label="Lesson progress"
+                  [attr.aria-label]="'lessons.progressAria' | t"
                   aria-valuemin="0"
                   aria-valuemax="100"
                   [attr.aria-valuenow]="progressPercent()"
@@ -210,7 +210,7 @@ import {
         class="block rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         routerLink="/lessons"
         [queryParams]="{ lesson: lesson.id }"
-        [attr.aria-label]="'Open lesson: ' + lesson.title"
+        [attr.aria-label]="'lessons.openLessonAria' | t: { title: lesson.title }"
       >
         <div class="h-full overflow-hidden rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card transition-shadow hover:shadow-lift">
           @if (safeUrl(lesson.cover_image_url); as coverUrl) {

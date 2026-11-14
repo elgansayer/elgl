@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { TranslatePipe } from '../../services/translate.pipe';
 import {
   CreateLanguageChallengeRequest,
   LanguageChallenge,
@@ -12,7 +13,7 @@ import {
 
 @Component({
   selector: 'app-language-challenges',
-  imports: [CommonModule, FormsModule, HlmButton, HlmInput, HlmTextarea],
+  imports: [CommonModule, FormsModule, HlmButton, HlmInput, HlmTextarea, TranslatePipe],
   template: `
     <main class="mx-auto w-full max-w-5xl p-4 text-start text-foreground sm:p-6">
       <header class="mb-6">
@@ -182,10 +183,8 @@ import {
                         aria-valuemin="0"
                         [attr.aria-valuemax]="challenge.duration_days"
                         [attr.aria-label]="
-                          challenge.progress_days +
-                          ' of ' +
-                          challenge.duration_days +
-                          ' challenge days complete'
+                          'challenges.progressAria'
+                            | t: { completed: challenge.progress_days, total: challenge.duration_days }
                         "
                       >
                         <div

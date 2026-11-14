@@ -233,7 +233,9 @@ Repository CI additionally runs the canonical constitution/design-sync/component
 
 ## Recommended automated guard
 
-Follow-up issue #5502 should add the smallest useful automated regression gate. The guard should focus on high-signal migration mistakes rather than attempting to prove translation correctness statically. Recommended initial checks:
+`npm run check:i18n-coverage` now enforces the first of these checks across the whole frontend tree, not just changed lines: `scripts/i18n-english-lib.mjs` flags literal `aria-label`, `aria-description`, `placeholder`, `title` and `alt` values in `*.html` files and inline `*.ts` templates, plus bound attribute expressions that still contain raw English copy. Dotted translation keys passed to a primitive that pipes them itself (for example `app-select [ariaLabel]="'events.languagePair'"`) remain allowed, and a line carrying `translation-static-ok` is the documented escape hatch.
+
+The remaining recommendations from issue #5502 stay open:
 
 - flag newly added hardcoded `aria-label`, `placeholder`, and user-visible button text in migrated product components when the repository has an equivalent translation pattern;
 - flag new generic primitive inputs named `*Key`/`translationKey` when the primitive also imports the application i18n service;

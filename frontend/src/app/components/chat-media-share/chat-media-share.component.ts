@@ -5,6 +5,7 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { ChatMediaPickerComponent } from '../chat-media-picker/chat-media-picker.component';
 import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant-video-recorder.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-chat-media-share',
@@ -13,13 +14,14 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
     AppButtonSecondaryComponent,
     ChatMediaPickerComponent,
     InstantVideoRecorderComponent,
+    TranslatePipe,
   ],
   template: `
     <app-button-secondary
       type="button"
       (clicked)="open.set(true)"
       customClass="bg-secondary/20 text-secondary-ink ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      ariaLabel="Share a photo or video"
+      [ariaLabel]="'chatMedia.shareAria' | t"
     >
       📷 Media
     </app-button-secondary>
@@ -28,7 +30,7 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
       type="button"
       (clicked)="videoNoteOpen.set(true)"
       customClass="bg-accent/20 text-accent ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      ariaLabel="Record an instant video note"
+      [ariaLabel]="'chatMedia.recordVideoNoteAria' | t"
     >
       🎥 Video note
     </app-button-secondary>
@@ -38,7 +40,7 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4"
         role="dialog"
         aria-modal="true"
-        aria-label="Share a photo or video"
+        [attr.aria-label]="'chatMedia.shareAria' | t"
       >
         <app-chat-media-picker
           (uploaded)="onUploaded($event)"
@@ -52,7 +54,7 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4"
         role="dialog"
         aria-modal="true"
-        aria-label="Record an instant video note"
+        [attr.aria-label]="'chatMedia.recordVideoNoteAria' | t"
       >
         <app-instant-video-recorder
           (uploaded)="onUploaded($event)"
@@ -74,7 +76,7 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
             (clicked)="retryPending()"
             [disabled]="isSending()"
             customClass="min-h-11 px-3 text-xs"
-            ariaLabel="Retry sending uploaded media"
+            [ariaLabel]="'chatMedia.retryUploadAria' | t"
           >
             {{ isSending() ? 'Sending…' : 'Retry send' }}
           </app-button-primary>
@@ -83,7 +85,7 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
             (clicked)="discardPending()"
             [disabled]="isSending()"
             customClass="min-h-11 px-3 text-xs"
-            ariaLabel="Dismiss unsent uploaded media"
+            [ariaLabel]="'chatMedia.dismissUploadAria' | t"
           >
             Dismiss
           </app-button-secondary>

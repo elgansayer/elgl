@@ -26,24 +26,24 @@
 
   @if (loading()) {
     <div class="recommended-loading" role="status" aria-live="polite">
-      <span class="sr-only">Loading recommendations</span>
+      <span class="sr-only">{{ 'discovery.recommendationsLoading' | t }}</span>
       @for (item of [1, 2, 3]; track item) {
         <div class="recommended-skeleton" aria-hidden="true"></div>
       }
     </div>
   } @else if (error()) {
     <div class="recommended-state" role="alert">
-      <p>Recommendations are unavailable right now.</p>
+      <p>{{ 'discovery.recommendationsUnavailable' | t }}</p>
       <button hlmBtn type="button" class="recommended-retry" (click)="load()">
-        <span>Try again</span>
+        <span>{{ 'discovery.retry' | t }}</span>
       </button>
     </div>
   } @else if (recommendations().length === 0) {
     <app-empty-state
       [icon]="'👋'"
-      [title]="'No recommendations yet'"
-      [description]="'Add interests and learning languages to improve your matches.'"
-      [actionLabel]="'Update Profile'"
+      [title]="'discovery.noRecommendationsTitle' | t"
+      [description]="'discovery.noRecommendationsDescription' | t"
+      [actionLabel]="'discovery.updateProfile' | t"
       (actionClicked)="router.navigate(['/profile'])"
       class="col-span-full"
     ></app-empty-state>
@@ -61,7 +61,9 @@
           <a
             class="recommended-profile-link"
             [routerLink]="['/profile', recommendation.id]"
-            [attr.aria-label]="'View profile for ' + recommendation.display_name"
+            [attr.aria-label]="
+              'discovery.viewProfileAria' | t: { name: recommendation.display_name }
+            "
           >
             <div class="recommended-avatar" aria-hidden="true">
               @if (recommendation.avatar_url) {

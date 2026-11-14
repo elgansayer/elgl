@@ -2,6 +2,7 @@ import { Component, ElementRef, OnDestroy, ViewChild, inject, output, signal } f
 import { ChatMediaService, UploadedChatMedia } from '../../services/chat-media.service';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 const MAX_DURATION_SECONDS = 30;
 const MAX_RECORDED_BYTES = 12 * 1024 * 1024;
@@ -10,7 +11,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
 
 @Component({
   selector: 'app-instant-video-recorder',
-  imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent],
+  imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent, TranslatePipe],
   template: `
     <section
       class="w-full max-w-md rounded-sheet border border-surface-100 bg-surface-0 p-4 shadow-lift"
@@ -26,7 +27,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
         </div>
         <span
           class="shrink-0 rounded-full bg-surface-100 px-2 py-1 text-xs font-semibold text-text-secondary"
-          aria-label="Maximum recording duration 30 seconds"
+          [attr.aria-label]="'videoNote.maxDurationAria' | t"
         >
           {{ formatDuration(durationSeconds()) }} / 00:30
         </span>
@@ -40,7 +41,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             playsinline
             preload="metadata"
             class="h-full w-full object-cover"
-            aria-label="Recorded video note preview"
+            [attr.aria-label]="'videoNote.previewAria' | t"
           ></video>
         } @else {
           <video
@@ -49,7 +50,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             muted
             playsinline
             class="h-full w-full object-cover"
-            aria-label="Camera preview"
+            [attr.aria-label]="'videoNote.cameraPreviewAria' | t"
           ></video>
         }
       </div>
@@ -72,7 +73,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
           (clicked)="cancel()"
           [disabled]="isUploading()"
           customClass="min-h-11 px-4"
-          ariaLabel="Cancel video note"
+          [ariaLabel]="'videoNote.cancelAria' | t"
         >
           Cancel
         </app-button-secondary>
@@ -83,7 +84,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             (clicked)="startRecording()"
             [disabled]="isRequestingPermission() || isUploading()"
             customClass="min-h-11 px-4"
-            ariaLabel="Start recording video note"
+            [ariaLabel]="'videoNote.startAria' | t"
           >
             {{ isRequestingPermission() ? 'Opening camera…' : 'Record' }}
           </app-button-primary>
@@ -94,7 +95,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             type="button"
             (clicked)="stopRecording()"
             customClass="min-h-11 px-4"
-            ariaLabel="Stop recording video note"
+            [ariaLabel]="'videoNote.stopAria' | t"
           >
             Stop
           </app-button-primary>
@@ -106,7 +107,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             (clicked)="retake()"
             [disabled]="isUploading()"
             customClass="min-h-11 px-4"
-            ariaLabel="Record video note again"
+            [ariaLabel]="'videoNote.retakeAria' | t"
           >
             Retake
           </app-button-secondary>
@@ -115,7 +116,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
             (clicked)="uploadAndSend()"
             [disabled]="isUploading()"
             customClass="min-h-11 px-4"
-            ariaLabel="Upload and send video note"
+            [ariaLabel]="'videoNote.sendAria' | t"
           >
             {{ isUploading() ? 'Uploading…' : 'Send video note' }}
           </app-button-primary>

@@ -106,6 +106,110 @@ export function extractUsedKeys(source) {
   return keys;
 }
 
+const LITERAL_ATTRIBUTE_NAMES = ['aria-label', 'aria-description', 'placeholder', 'title', 'alt'];
+const COMPONENT_ARIA_LABEL = 'ariaLabel';
+const STATIC_ATTRIBUTE_PATTERN = new RegExp(
+  `(?<![.\\w\\[])(?:${LITERAL_ATTRIBUTE_NAMES.join('|')})\\s*=\\s*"([^"]*)"`,
+  'g',
+);
+const STATIC_COMPONENT_LABEL_PATTERN = new RegExp(
+  `(?<![.\\w\\[])${COMPONENT_ARIA_LABEL}\\s*=\\s*"([^"]*)"`,
+  'g',
+);
+const BOUND_ATTRIBUTE_PATTERN = new RegExp(
+  `\\[(?:attr\\.)?(?:${LITERAL_ATTRIBUTE_NAMES.join('|')}|${COMPONENT_ARIA_LABEL})\\]\\s*=\\s*"([^"]*)"`,
+  'g',
+);
+const DOTTED_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$/;
+const TRANSLATION_EXPRESSION_PATTERN = /\|\s*t\b|\.translate\(|(?<![.\w])t\(/;
+const STATIC_ESCAPE_COMMENT = 'translation-static-ok';
+
+function lineNumberAt(source, index) {
+  return source.slice(0, index).split('\n').length;
+}
+
+export function findDuplicateDictionaryKeys(source) {
+  const start = source.indexOf(BASE_DICTIONARY_START);
+  const end = source.indexOf(BASE_DICTIONARY_END);
+  if (start < 0 || end <= start) {
+    throw new Error('baseDictionary must stay locatable in i18n.service.ts');
+  }
+
+  const body = source.slice(start, end);
+  const keyPattern = /^\s{4,}(?:'([^']+)'|([A-Za-z_][A-Za-z0-9_]*)):\s*/gm;
+  const seen = new Set();
+  const duplicates = new Set();
+  for (const match of body.matchAll(keyPattern)) {
+    const key = match[1] ?? match[2];
+    if (seen.has(key)) duplicates.add(key);
+    seen.add(key);
+  }
+  return [...duplicates];
+}
+
+/**
+ * Finds template attributes that carry user-facing copy but never reach the
+ * translation pipe. Static values must use `| t`; bound expressions may pass a
+ * dotted translation key to a primitive that pipes it itself.
+ */
+export function findUntranslatedAttributes(source) {
+  const text = String(source);
+  const violations = [];
+
+  for (const match of text.matchAll(STATIC_ATTRIBUTE_PATTERN)) {
+    const value = match[1];
+    if (!value.trim() || value.includes('{{')) continue;
+    const line = lineNumberAt(text, match.index);
+    if (text.split('\n')[line - 1].includes(STATIC_ESCAPE_COMMENT)) continue;
+    violations.push({ line, attribute: match[0].split('=')[0].trim(), value });
+  }
+
+  for (const match of text.matchAll(STATIC_COMPONENT_LABEL_PATTERN)) {
+    const value = match[1];
+    if (!value.trim()) continue;
+    const line = lineNumberAt(text, match.index);
+    if (text.split('\n')[line - 1].includes(STATIC_ESCAPE_COMMENT)) continue;
+    if (DOTTED_KEY_PATTERN.test(value)) continue;
+    violations.push({ line, attribute: COMPONENT_ARIA_LABEL, value });
+  }
+
+  for (const match of text.matchAll(BOUND_ATTRIBUTE_PATTERN)) {
+    const expression = match[1];
+    if (TRANSLATION_EXPRESSION_PATTERN.test(expression)) continue;
+    const line = lineNumberAt(text, match.index);
+    if (text.split('\n')[line - 1].includes(STATIC_ESCAPE_COMMENT)) continue;
+    const literals = [...expression.matchAll(/'([^']*)'/g)]
+      .map((literal) => literal[1])
+      .filter((literal) => /[A-Za-z]{2}/.test(literal))
+      .filter((literal) => !DOTTED_KEY_PATTERN.test(literal));
+    if (literals.length === 0) continue;
+    violations.push({
+      line,
+      attribute: match[0]
+        .split('=')[0]
+        .replace(/^\[|\]$/g, '')
+        .trim(),
+      value: expression.trim(),
+    });
+  }
+
+  return violations.sort((left, right) => left.line - right.line);
+}
+
+export function collectUntranslatedAttributes() {
+  const violations = [];
+  const files = walk(resolve(root, 'frontend/src/app')).filter(
+    (file) => isScannedSource(file) && !file.includes('/components/ui/'),
+  );
+  for (const file of files) {
+    const relative = file.replace(`${root}/`, '');
+    for (const violation of findUntranslatedAttributes(readFileSync(file, 'utf8'))) {
+      violations.push({ file: relative, ...violation });
+    }
+  }
+  return violations;
+}
+
 export function collectUsedKeys() {
   const usage = new Map();
   const files = walk(resolve(root, 'frontend/src/app')).filter(isScannedSource);
