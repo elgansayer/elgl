@@ -59,4 +59,33 @@ describe('EventsService calendar API', () => {
 
     await expect(responsePromise).resolves.toEqual([]);
   });
+
+  it('posts the selected contact fields to the authenticated sharing endpoint', async () => {
+    const responsePromise = firstValueFrom(
+      service.shareContact('target-1', {
+        shareEmail: true,
+        customSocialHandle: '@learner_ana',
+      }),
+    );
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/users/me/contact-sharing`,
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      target_user_id: 'target-1',
+      share_email: true,
+      share_phone: false,
+      custom_social_handle: '@learner_ana',
+    });
+    req.flush({
+      email: 'learner@example.com',
+      social_handle: '@learner_ana',
+    });
+
+    await expect(responsePromise).resolves.toEqual({
+      email: 'learner@example.com',
+      social_handle: '@learner_ana',
+    });
+  });
 });

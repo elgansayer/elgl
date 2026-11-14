@@ -52,6 +52,7 @@ describe('UsersController', () => {
             unblockUser: vi.fn(),
             reportUser: vi.fn(),
             updateNotificationPreferences: vi.fn(),
+            shareContact: vi.fn(),
           },
         },
         {
@@ -1153,5 +1154,32 @@ describe('UsersController', () => {
         expect(Reflect.getMetadata(throttleTtlKey, handler)).toBe(ttl);
       },
     );
+  });
+
+  describe('shareContact', () => {
+    const targetUserId = '22222222-2222-4222-8222-222222222222';
+
+    it('requires authentication', async () => {
+      await expect(
+        controller.shareContact(null, { target_user_id: targetUserId }),
+      ).rejects.toThrow('Unauthorized');
+    });
+
+    it('delegates the selected fields to the service', async () => {
+      (usersService.shareContact as Mock).mockResolvedValue({
+        email: 'learner@example.com',
+      });
+
+      await expect(
+        controller.shareContact({ id: 'user-1' } as never, {
+          target_user_id: targetUserId,
+          share_email: true,
+        }),
+      ).resolves.toEqual({ email: 'learner@example.com' });
+      expect(usersService.shareContact).toHaveBeenCalledWith('user-1', {
+        target_user_id: targetUserId,
+        share_email: true,
+      });
+    });
   });
 });

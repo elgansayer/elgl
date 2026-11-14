@@ -25,6 +25,7 @@ import { UpdateGreetingMessageDto } from './dto/update-greeting-message.dto';
 import { UpdateAwayMessageDto } from './dto/update-away-message.dto';
 import { UpdateStatusVisibilityDto } from './dto/update-status-visibility.dto';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
+import { ShareContactDto } from './dto/share-contact.dto';
 import {
   UserProfile,
   ProfileVisitor,
@@ -590,12 +591,14 @@ export class UsersController {
   @Post('me/contact-sharing')
   async shareContact(
     @CurrentUser() user: User | null,
-    @Body('target_user_id') targetUserId: string,
-  ): Promise<{ phone_number?: string; email?: string }> {
+    @Body() dto: ShareContactDto,
+  ): Promise<{
+    phone_number?: string;
+    email?: string;
+    social_handle?: string;
+  }> {
     if (!user) throw new UnauthorizedException();
-    if (!targetUserId)
-      throw new BadRequestException('Target user ID is required');
-    return this.usersService.shareContact(user.id, targetUserId);
+    return this.usersService.shareContact(user.id, dto);
   }
 
   @Patch('me/notification-preferences')

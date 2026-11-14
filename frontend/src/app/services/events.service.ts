@@ -134,11 +134,22 @@ export class EventsService {
 
   shareContact(
     targetUserId: string,
-  ): Observable<{ phone_number?: string; email?: string }> {
-    return this.http.post<{ phone_number?: string; email?: string }>(
-      `${environment.apiUrl}/users/me/contact-sharing`,
-      { target_user_id: targetUserId },
-    );
+    options: {
+      shareEmail?: boolean;
+      sharePhone?: boolean;
+      customSocialHandle?: string;
+    } = {},
+  ): Observable<{ phone_number?: string; email?: string; social_handle?: string }> {
+    return this.http.post<{
+      phone_number?: string;
+      email?: string;
+      social_handle?: string;
+    }>(`${environment.apiUrl}/users/me/contact-sharing`, {
+      target_user_id: targetUserId,
+      share_email: options.shareEmail ?? false,
+      share_phone: options.sharePhone ?? false,
+      custom_social_handle: options.customSocialHandle,
+    });
   }
 
   getCategories(): Observable<string[]> {
