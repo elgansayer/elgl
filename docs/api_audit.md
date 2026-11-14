@@ -471,7 +471,6 @@
 - **GET** `/user-interests/tags` in `modules/user-interests/user-interests.controller.ts`
 - **POST** `/user-interests/tags` in `modules/user-interests/user-interests.controller.ts`
 - **GET** `/user-interests/vocabulary` in `modules/user-interests/user-interests.controller.ts`
-- **POST** `/stripe/webhook` in `monetisation/controllers/stripe.controller.ts`
 - **GET** `/subscription-plans` in `monetisation/controllers/subscription-plans.controller.ts`
 - **GET** `/subscription-plans/popular` in `monetisation/controllers/subscription-plans.controller.ts`
 - **GET** `/subscription-plans/free` in `monetisation/controllers/subscription-plans.controller.ts`

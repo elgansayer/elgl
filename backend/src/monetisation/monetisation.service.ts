@@ -272,6 +272,26 @@ export class MonetisationService {
       if (metadata?.userId) {
         await this.updateVipStatusFromWebhook(metadata.userId, false, null);
       }
+    } else if (
+      event.type === 'invoice.payment_succeeded' ||
+      event.type === 'invoice.payment_failed'
+    ) {
+      // The retired StripeService only logged invoice outcomes; keep that
+      // coverage on the single webhook route so no provider event is dropped.
+      const invoice = event.data.object as {
+        id?: string;
+        customer?: string | null;
+        metadata?: Record<string, string>;
+      };
+      const userId = invoice.metadata?.userId;
+      const detail = `customer ${invoice.customer ?? 'unknown'}${
+        userId ? `, user ${userId}` : ''
+      }`;
+      if (event.type === 'invoice.payment_succeeded') {
+        this.logger.info(`Stripe invoice payment succeeded for ${detail}`);
+      } else {
+        this.logger.warn(`Stripe invoice payment failed for ${detail}`);
+      }
     }
 
     return { received: true, status: 'processed' };

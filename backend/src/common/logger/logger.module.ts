@@ -39,7 +39,6 @@ const LOGGER_CONTEXTS = [
   'RecommendationsService',
   'SrsMetricsAggregator',
   'SrsRateLimiterGuard',
-  'StripeService',
   'StudyBuddiesRateLimiterGuard',
   'SuggestFlashcardsService',
   'TranscriptEgressService',
