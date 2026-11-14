@@ -11,7 +11,7 @@
 - **POST** `/this.apiUrl` (Raw: `this.apiUrl`) in `app/services/hobby-tags.service.ts`
 - **GET** `/this.apiUrl` (Raw: `this.apiUrl`) in `app/services/milestone.service.ts`
 - **POST** `/this.apiUrl` (Raw: `this.apiUrl`) in `app/services/milestone.service.ts`
-- **POST** `/this.apiUrl` (Raw: `this.apiUrl`) in `app/services/pronunciation.service.ts`
+- **POST** `/nlp/pronunciation-score` in `app/services/pronunciation.service.ts`
 - **GET** `/audio-rooms:param` (Raw: `/api/audio-rooms:param`) in `app/services/quick-poll.service.ts`
 - **GET** `/list` (Raw: `:param/list`) in `app/services/soundboard.service.ts`
 - **POST** `/play` (Raw: `:param/play`) in `app/services/soundboard.service.ts`
@@ -356,8 +356,6 @@
 - **POST** `/proficiency/languages` in `proficiency/proficiency.controller.ts`
 - **POST** `/profile-visits/:viewedId` in `profile-visits/profile-visits.controller.ts`
 - **GET** `/profile-visits/my-visitors` in `profile-visits/profile-visits.controller.ts`
-- **POST** `/pronunciation/feedback` in `pronunciation/pronunciation.controller.ts`
-- **POST** `/pronunciation/voice-feedback` in `pronunciation/pronunciation.controller.ts`
 - **GET** `/quests` in `quests/quests.controller.ts`
 - **POST** `/reading/resources` in `reading-engine/reading-engine.controller.ts`
 - **GET** `/reading/resources` in `reading-engine/reading-engine.controller.ts`

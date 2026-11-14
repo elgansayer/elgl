@@ -56,7 +56,6 @@ import { AchievementsModule } from './achievements/achievements.module';
 import { CulturalModule } from './cultural/cultural.module';
 import { DailyTipModule } from './daily-tip/daily-tip.module';
 import { LanguageChallengesModule } from './language-challenges/language-challenges.module';
-import { PronunciationModule } from './pronunciation/pronunciation.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { StudyBuddiesModule } from './study-buddies/study-buddies.module';
 import { AudioIntroModule } from './audio-intro/audio-intro.module';
@@ -152,7 +151,6 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     DailyTipModule,
     CorrectorScoreModule,
     LanguageChallengesModule,
-    PronunciationModule,
     GroupsModule,
     CommunitiesModule,
     ShoppingModule,

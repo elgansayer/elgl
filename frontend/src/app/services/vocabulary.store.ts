@@ -396,13 +396,9 @@ export class VocabularyStore {
           { headers: this.getHeaders() },
         ),
       );
-    } catch {
+    } catch (error) {
       this.isDegraded.set(true);
-      return {
-        overall_score: 85,
-        breakdown: [{ word: targetText, score: 85 }],
-        feedback_summary: 'Pronunciation scoring is currently unavailable',
-      };
+      throw error;
     }
   }
 

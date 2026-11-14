@@ -1,3 +1,4 @@
+import { ServiceUnavailableException } from '@nestjs/common';
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
@@ -270,6 +271,24 @@ describe('NlpController', () => {
       expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', true);
       expect(pronunciationScoringService.score).toHaveBeenCalledWith(dto);
       expect(result).toEqual(response);
+    });
+
+    it('propagates an Azure failure instead of returning a fabricated score', async () => {
+      const dto: any = {
+        audio_url: 'https://cdn.example.com/a.wav',
+        target_text: 'Hello',
+      };
+      const profile: any = { id: 'user-1', is_vip: false };
+      const failure = new ServiceUnavailableException(
+        'Pronunciation scoring is temporarily unavailable',
+      );
+
+      (usersService.getProfile as Mock).mockResolvedValue(profile);
+      (pronunciationScoringService.score as Mock).mockRejectedValue(failure);
+
+      await expect(
+        controller.pronunciationScore({ id: 'user-1' } as any, dto),
+      ).rejects.toBe(failure);
     });
   });
 

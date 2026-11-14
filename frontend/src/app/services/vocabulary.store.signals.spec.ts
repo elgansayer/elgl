@@ -360,7 +360,7 @@ describe('VocabularyStore signal reactivity', () => {
       const req = httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`);
       req.flush('Error', { status: 500, statusText: 'Server Error' });
 
-      await scorePromise;
+      await expect(scorePromise).rejects.toBeTruthy();
       expect(store.isDegraded()).toBe(true);
     });
   });
