@@ -7,6 +7,7 @@ import { XpModule } from '../xp/xp.module';
 import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { I18nModule } from '../i18n/i18n.module';
 import { FavouritesModule } from '../favourites/favourites.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
 import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
@@ -47,6 +48,7 @@ import { GroupChatService } from './group-chat.service';
     XpModule,
     LlmProxyModule,
     SupabaseModule,
+    I18nModule,
     FavouritesModule,
     CloudflareR2Module,
     LearnerKnowledgeModule,

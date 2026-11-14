@@ -106,6 +106,7 @@ export interface UserProfile {
   custom_avatar_url?: string; // Custom profile picture URL
   about_status?: string; // Custom About status
   notification_preferences?: NotificationPreferences;
+  ui_locale?: string;
 }
 
 export interface BusinessCatalogItem {

@@ -3225,7 +3225,6 @@ export class I18nService {
     'join.joinButton': 'Join group',
     'join.joining': 'Joining...',
     'join.loading': 'Loading group...',
-    'languageIslands.title': 'Language Islands',
     'languageParty.cancelBtn': 'Cancel',
     'languageParty.clearFilters': 'Clear',
     'languageParty.clearFiltersAction': 'Clear All Filters',
@@ -3504,6 +3503,19 @@ export class I18nService {
   private readonly authService = inject(AuthService);
   private readonly document = inject(DOCUMENT);
 
+  private persistLocale(code: string): void {
+    const token = this.authService.getAccessToken();
+    if (!token || typeof fetch !== 'function') return;
+    void fetch(`${environment.apiUrl}/users/me/ui-locale`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ locale: code }),
+    }).catch(() => undefined);
+  }
+
   private applyDocumentRtlAndLocale(lang: string): void {
     const document = this.document;
     if (!document?.documentElement) return;
@@ -3522,6 +3534,8 @@ export class I18nService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('hellotalk_locale', code);
     }
+    this.persistLocale(code);
+
 
     if (code === 'en-GB' || code === 'en' || code === 'en-US') {
       this.translations.set({ ...this.baseDictionary });

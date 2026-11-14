@@ -5,6 +5,7 @@ import { validateEnvironment } from './config/env.validation';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SharedLoggerModule } from './common/logger/logger.module';
+import { I18nModule } from './i18n/i18n.module';
 import { RetryModule } from './common/retry/retry.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -108,6 +109,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
       ignoreErrors: false,
     }),
     SharedLoggerModule,
+    I18nModule,
     RetryModule,
     LivekitModule,
     SupabaseModule,

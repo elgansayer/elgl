@@ -25,6 +25,7 @@ import { UpdateGreetingMessageDto } from './dto/update-greeting-message.dto';
 import { UpdateAwayMessageDto } from './dto/update-away-message.dto';
 import { UpdateStatusVisibilityDto } from './dto/update-status-visibility.dto';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
+import { UpdateUiLocaleDto } from './dto/update-ui-locale.dto';
 import {
   UserProfile,
   ProfileVisitor,
@@ -596,6 +597,18 @@ export class UsersController {
     if (!targetUserId)
       throw new BadRequestException('Target user ID is required');
     return this.usersService.shareContact(user.id, targetUserId);
+  }
+
+  @Patch('me/ui-locale')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async updateUiLocale(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateUiLocaleDto,
+  ): Promise<{ ui_locale: string }> {
+    if (!user) throw new UnauthorizedException();
+    return {
+      ui_locale: await this.usersService.updateUiLocale(user.id, dto.locale),
+    };
   }
 
   @Patch('me/notification-preferences')

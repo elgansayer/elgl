@@ -52,6 +52,7 @@ describe('UsersController', () => {
             unblockUser: vi.fn(),
             reportUser: vi.fn(),
             updateNotificationPreferences: vi.fn(),
+            updateUiLocale: vi.fn(),
           },
         },
         {
@@ -1097,6 +1098,23 @@ describe('UsersController', () => {
         { status_visibility: 'only_me' },
         false,
       );
+    });
+  });
+
+  describe('updateUiLocale', () => {
+    it('requires authentication', async () => {
+      await expect(
+        controller.updateUiLocale(null, { locale: 'es' }),
+      ).rejects.toThrow('Unauthorized');
+    });
+
+    it('persists the requested locale for the caller', async () => {
+      (usersService.updateUiLocale as Mock).mockResolvedValue('es');
+
+      await expect(
+        controller.updateUiLocale({ id: 'user-1' } as never, { locale: 'es' }),
+      ).resolves.toEqual({ ui_locale: 'es' });
+      expect(usersService.updateUiLocale).toHaveBeenCalledWith('user-1', 'es');
     });
   });
 
