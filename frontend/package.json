@@ -41,7 +41,9 @@
     "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:icon-contract && npm run check:density-modes && npm run check:forced-colors && npm run check:cypress-types",
     "cypress:open": "cypress open",
     "e2e": "node scripts/cypress-e2e.mjs cypress run",
-    "e2e:ci": "start-server-and-test start http://localhost:4200 e2e"
+    "e2e:ci": "start-server-and-test start http://localhost:4200 e2e",
+    "build:design-preview-css": "node scripts/build-design-preview-css.mjs",
+    "check:design-preview-css": "node scripts/build-design-preview-css.mjs --check"
   },
   "private": true,
   "engines": {
