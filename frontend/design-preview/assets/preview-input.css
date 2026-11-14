@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @source "../**/*.html";
 @theme {
   --color-surface-50: rgb(var(--surface-50));
@@ -30,7 +30,7 @@
   --color-neon-cyan: #2fc6d9;
   --color-neon-blue: #5b8def;
   --color-neon-orange: #f0954a;
-  --font-display: "Instrument Sans", ui-sans-serif, -apple-system, sans-serif;
+  --font-display: 'Instrument Sans', ui-sans-serif, -apple-system, sans-serif;
   --radius-app: 0.75rem;
   --radius-card: 1rem;
   --radius-sheet: 1.25rem;
