@@ -1064,4 +1064,187 @@ describe('UsersService', () => {
       expect(badges.some((b) => b.id === 'vip')).toBe(true);
     });
   });
+
+  describe('shareContact', () => {
+    const requesterId = '11111111-1111-4111-8111-111111111111';
+    const targetUserId = '22222222-2222-4222-8222-222222222222';
+
+    const usersChain = (row: Record<string, unknown> | null) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({ data: row, error: null }),
+        })),
+      })),
+    });
+    const followChain = (found: boolean) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: found ? { follower_id: 'x' } : null,
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    });
+    const roomsChain = (roomIds: string[]) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({
+          data: roomIds.map((room_id) => ({ room_id })),
+          error: null,
+        }),
+      })),
+    });
+
+    const wire = (
+      options: {
+        requester?: Record<string, unknown> | null;
+        followFound?: boolean;
+        sharedRooms?: boolean;
+        authUser?: Record<string, unknown>;
+      } = {},
+    ) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return usersChain(
+            options.requester === undefined
+              ? { id: requesterId, privacy_hide_contact: false }
+              : options.requester,
+          );
+        }
+        if (table === 'user_follows')
+          return followChain(options.followFound ?? true);
+        if (table === 'chat_room_members') {
+          return roomsChain(options.sharedRooms ? ['room-1'] : ['room-1']);
+        }
+        return mockQueryBuilder;
+      });
+      mockSupabaseClient.auth.admin.getUserById.mockResolvedValue({
+        data: {
+          user: options.authUser ?? {
+            email: 'verified@example.com',
+            email_confirmed_at: '2026-11-01T00:00:00.000Z',
+            phone: '+447700900999',
+            phone_confirmed_at: '2026-11-01T00:00:00.000Z',
+          },
+        },
+        error: null,
+      });
+    };
+
+    it('shares only the requested verified fields', async () => {
+      wire();
+      const log = vi
+        .spyOn(service['logger'], 'log')
+        .mockImplementation(() => {});
+
+      const result = await service.shareContact(requesterId, {
+        target_user_id: targetUserId,
+        share_email: true,
+      });
+
+      expect(result).toEqual({ email: 'verified@example.com' });
+      expect(result.phone_number).toBeUndefined();
+      expect(log).toHaveBeenCalledWith(
+        expect.stringContaining('"event":"contact_shared"'),
+      );
+      expect(log.mock.calls[0][0]).not.toContain('verified@example.com');
+    });
+
+    it('rejects sharing without a mutual follow or shared room', async () => {
+      wire({ followFound: false });
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return usersChain({ id: requesterId, privacy_hide_contact: false });
+        }
+        if (table === 'user_follows') return followChain(false);
+        if (table === 'chat_room_members') return roomsChain([]);
+        return mockQueryBuilder;
+      });
+
+      await expect(
+        service.shareContact(requesterId, {
+          target_user_id: targetUserId,
+          share_email: true,
+        }),
+      ).rejects.toThrow('mutual follow or an active chat room');
+    });
+
+    it('authorises an active shared chat room', async () => {
+      wire({ followFound: false });
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return usersChain({ id: requesterId, privacy_hide_contact: false });
+        }
+        if (table === 'user_follows') return followChain(false);
+        if (table === 'chat_room_members') return roomsChain(['shared-room']);
+        return mockQueryBuilder;
+      });
+      mockSupabaseClient.auth.admin.getUserById.mockResolvedValue({
+        data: {
+          user: {
+            phone: '+447700900999',
+            phone_confirmed_at: '2026-11-01T00:00:00.000Z',
+          },
+        },
+        error: null,
+      });
+
+      await expect(
+        service.shareContact(requesterId, {
+          target_user_id: targetUserId,
+          share_phone: true,
+        }),
+      ).resolves.toEqual({ phone_number: '+447700900999' });
+    });
+
+    it('refuses when contact sharing is hidden', async () => {
+      wire({ requester: { id: requesterId, privacy_hide_contact: true } });
+
+      await expect(
+        service.shareContact(requesterId, {
+          target_user_id: targetUserId,
+          share_email: true,
+        }),
+      ).rejects.toThrow('disabled for this account');
+    });
+
+    it('refuses when no requested field is verified', async () => {
+      wire({ authUser: { email: 'unverified@example.com' } });
+
+      await expect(
+        service.shareContact(requesterId, {
+          target_user_id: targetUserId,
+          share_email: true,
+        }),
+      ).rejects.toThrow('No verified contact field');
+    });
+
+    it('returns a custom social handle without exposing auth contacts', async () => {
+      wire();
+
+      await expect(
+        service.shareContact(requesterId, {
+          target_user_id: targetUserId,
+          custom_social_handle: '@learner_ana',
+        }),
+      ).resolves.toEqual({ social_handle: '@learner_ana' });
+
+      expect(mockSupabaseClient.auth.admin.getUserById).not.toHaveBeenCalled();
+    });
+
+    it('rejects self sharing and empty field selections', async () => {
+      await expect(
+        service.shareContact(requesterId, {
+          target_user_id: requesterId,
+          share_email: true,
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.shareContact(requesterId, { target_user_id: targetUserId }),
+      ).rejects.toThrow('Select at least one contact field');
+    });
+  });
 });

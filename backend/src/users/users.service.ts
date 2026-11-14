@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -22,11 +23,14 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
 import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
+import { ShareContactDto } from './dto/share-contact.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { DataExportWorker } from './data-export.worker';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
@@ -1294,19 +1298,146 @@ export class UsersService {
     return badges;
   }
 
-  shareContact(
+  async shareContact(
     requesterId: string,
-    targetUserId: string,
-  ): Promise<{ phone_number?: string; email?: string }> {
+    dto: ShareContactDto,
+  ): Promise<{
+    phone_number?: string;
+    email?: string;
+    social_handle?: string;
+  }> {
+    const targetUserId = dto.target_user_id;
     if (!requesterId || !targetUserId) {
       throw new BadRequestException('User IDs are required');
     }
-    // Placeholder implementation to support contact sharing.
-    // Future iterations will retrieve details from the user's profile.
-    return Promise.resolve({
-      phone_number: '+447700900123',
-      email: 'partner@example.com',
-    });
+    if (requesterId === targetUserId) {
+      throw new BadRequestException(
+        'You cannot share contact details with yourself',
+      );
+    }
+    if (!dto.share_email && !dto.share_phone && !dto.custom_social_handle) {
+      throw new BadRequestException(
+        'Select at least one contact field to share',
+      );
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const { data: requester, error: requesterError } = await supabase
+      .from('users')
+      .select('id, privacy_hide_contact, contact_social_handle')
+      .eq('id', requesterId)
+      .single();
+
+    if (requesterError || !requester) {
+      throw new NotFoundException('User not found');
+    }
+    if (requester.privacy_hide_contact) {
+      throw new ForbiddenException(
+        'Contact sharing is disabled for this account',
+      );
+    }
+
+    const authorised = await this.hasContactSharingRelationship(
+      requesterId,
+      targetUserId,
+    );
+    if (!authorised) {
+      throw new ForbiddenException(
+        'Contact sharing requires a mutual follow or an active chat room',
+      );
+    }
+
+    const needsVerifiedContact = Boolean(dto.share_email || dto.share_phone);
+    const authUser = needsVerifiedContact
+      ? (await supabase.auth.admin.getUserById(requesterId)).data
+      : null;
+    const verifiedEmail =
+      authUser?.user?.email && authUser.user.email_confirmed_at
+        ? authUser.user.email
+        : undefined;
+    const verifiedPhone =
+      authUser?.user?.phone && authUser.user.phone_confirmed_at
+        ? authUser.user.phone
+        : undefined;
+
+    const result: {
+      phone_number?: string;
+      email?: string;
+      social_handle?: string;
+    } = {};
+    if (dto.share_email && verifiedEmail) {
+      result.email = verifiedEmail;
+    }
+    if (dto.share_phone && verifiedPhone) {
+      result.phone_number = verifiedPhone;
+    }
+    if (dto.custom_social_handle) {
+      result.social_handle = dto.custom_social_handle;
+    }
+
+    if (Object.keys(result).length === 0) {
+      throw new BadRequestException(
+        'No verified contact field is available to share',
+      );
+    }
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'contact_shared',
+        actorUserId: requesterId,
+        targetUserId,
+        fields: Object.keys(result),
+        outcome: 'allowed',
+      }),
+    );
+
+    return result;
+  }
+
+  private async hasContactSharingRelationship(
+    requesterId: string,
+    targetUserId: string,
+  ): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const [forward, reverse] = await Promise.all([
+      supabase
+        .from('user_follows')
+        .select('follower_id')
+        .eq('follower_id', requesterId)
+        .eq('following_id', targetUserId)
+        .maybeSingle(),
+      supabase
+        .from('user_follows')
+        .select('follower_id')
+        .eq('follower_id', targetUserId)
+        .eq('following_id', requesterId)
+        .maybeSingle(),
+    ]);
+
+    if (forward.data && reverse.data) {
+      return true;
+    }
+
+    const [requesterRooms, targetRooms] = await Promise.all([
+      supabase
+        .from('chat_room_members')
+        .select('room_id')
+        .eq('user_id', requesterId),
+      supabase
+        .from('chat_room_members')
+        .select('room_id')
+        .eq('user_id', targetUserId),
+    ]);
+    if (requesterRooms.error || targetRooms.error) {
+      return false;
+    }
+
+    const targetRoomIds = new Set(
+      (targetRooms.data ?? []).map((row: { room_id: string }) => row.room_id),
+    );
+    return (requesterRooms.data ?? []).some((row: { room_id: string }) =>
+      targetRoomIds.has(row.room_id),
+    );
   }
 
   async permanentDeleteAccount(userId: string): Promise<void> {
