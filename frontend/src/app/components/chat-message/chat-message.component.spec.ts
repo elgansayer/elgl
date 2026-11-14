@@ -339,4 +339,63 @@ describe('ChatMessageComponent', () => {
     expect(image?.getAttribute('alt')).toBe('chatRoom.doodleImageAlt');
     expect(image?.getAttribute('alt')).not.toBe('Doodle');
   });
+
+  describe('location messages', () => {
+    it('renders a map card with coordinates and an external map link', () => {
+      fixture.componentRef.setInput('message', {
+        id: 'location-message',
+        room_id: 'room-id',
+        sender_id: 'sender-id',
+        message_type: 'location',
+        is_read: false,
+        created_at: '2026-11-14T12:00:00.000Z',
+        location_payload: {
+          latitude: 51.5074,
+          longitude: -0.1278,
+          label: 'Trafalgar Square',
+          is_live: false,
+        },
+      });
+      fixture.detectChanges();
+
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('chat.locationShared');
+      expect(text).toContain('Trafalgar Square');
+      expect(text).toContain('51.5074');
+      expect(text).toContain('-0.1278');
+
+      const link = fixture.nativeElement.querySelector(
+        'a[href*="openstreetmap.org"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link?.getAttribute('target')).toBe('_blank');
+      expect(link?.getAttribute('rel')).toContain('noopener');
+      expect(link?.href).toContain('mlat=51.5074');
+      expect(link?.href).toContain('mlon=-0.1278');
+    });
+
+    it('labels live location messages and explains their lifetime', () => {
+      fixture.componentRef.setInput('message', {
+        id: 'live-location-message',
+        room_id: 'room-id',
+        sender_id: 'sender-id',
+        message_type: 'live_location',
+        is_read: false,
+        created_at: '2026-11-14T12:00:00.000Z',
+        location_payload: {
+          latitude: 48.8566,
+          longitude: 2.3522,
+          is_live: true,
+        },
+      });
+      fixture.detectChanges();
+
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('chat.liveLocationShared');
+      expect(text).toContain('chat.liveLocationHint');
+      expect(
+        fixture.nativeElement.querySelector('[role="group"]'),
+      ).not.toBeNull();
+    });
+  });
 });

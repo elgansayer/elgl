@@ -699,6 +699,7 @@ export class ChatService {
         reply_to_id: dto.reply_to_id ?? null,
         correction_request_payload: dto.correction_request_payload ?? null,
         status_reply_payload: dto.status_reply_payload ?? null,
+        location_payload: this.locationPayloadFor(dto),
         is_view_once: dto.message_type === 'view_once_media' ? true : false,
         delivery_status: 'sent',
         is_encrypted: dto.is_encrypted ?? false,
@@ -1372,6 +1373,35 @@ export class ChatService {
     if (error) {
       throw new Error(`Failed to unlock chat: ${error.message}`);
     }
+  }
+
+  private locationPayloadFor(dto: SendMessageDto): {
+    latitude: number;
+    longitude: number;
+    label?: string | null;
+    is_live?: boolean;
+  } | null {
+    const isLocationType =
+      dto.message_type === 'location' || dto.message_type === 'live_location';
+    if (!isLocationType) {
+      if (dto.location_payload !== undefined) {
+        throw new BadRequestException(
+          'location_payload is only valid for location messages',
+        );
+      }
+      return null;
+    }
+    if (!dto.location_payload) {
+      throw new BadRequestException(
+        'location_payload is required for location messages',
+      );
+    }
+    return {
+      latitude: dto.location_payload.latitude,
+      longitude: dto.location_payload.longitude,
+      label: dto.location_payload.label ?? null,
+      is_live: dto.location_payload.is_live ?? false,
+    };
   }
 
   async getLockedChats(userId: string): Promise<string[]> {

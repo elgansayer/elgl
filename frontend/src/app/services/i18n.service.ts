@@ -3225,7 +3225,6 @@ export class I18nService {
     'join.joinButton': 'Join group',
     'join.joining': 'Joining...',
     'join.loading': 'Loading group...',
-    'languageIslands.title': 'Language Islands',
     'languageParty.cancelBtn': 'Cancel',
     'languageParty.clearFilters': 'Clear',
     'languageParty.clearFiltersAction': 'Clear All Filters',
@@ -3477,6 +3476,11 @@ export class I18nService {
     'wordModal.playAudio': 'Play pronunciation',
     'wordModal.reviewFlashcardsBtn': 'Review flashcards',
     'wordModal.srsLabel': 'Spaced repetition',
+    'chat.locationShared': 'Shared a location',
+    'chat.liveLocationShared': 'Live location',
+    'chat.locationPreviewAria': 'Shared location map card',
+    'chat.openInMaps': 'Open in OpenStreetMap',
+    'chat.liveLocationHint': 'Live while the sender keeps sharing',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

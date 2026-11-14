@@ -675,6 +675,12 @@ export type ChatMessageRow = {
     original_text: string;
     target_language?: string;
   } | null;
+  location_payload?: {
+    latitude: number;
+    longitude: number;
+    label?: string | null;
+    is_live?: boolean;
+  } | null;
   status_reply_payload?: {
     status_update_id: string;
     status_text: string;

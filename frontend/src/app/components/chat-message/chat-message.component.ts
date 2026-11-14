@@ -125,6 +125,60 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
               <app-gift-animation [giftPayload]="message().gift_payload ?? null" />
             }
 
+            @if (
+              (message().message_type === 'location' ||
+                message().message_type === 'live_location') &&
+              message().location_payload
+            ) {
+              @if (message().location_payload; as location) {
+                <div
+                  class="rounded-card border border-surface-100 bg-surface-300 p-3 space-y-1"
+                  role="group"
+                  [attr.aria-label]="'chat.locationPreviewAria' | t"
+                >
+                  <p class="text-sm font-semibold text-text-primary flex items-center gap-1">
+                    <svg
+                      class="w-4 h-4 text-primary-ink"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M10 18s6-5.2 6-10a6 6 0 10-12 0c0 4.8 6 10 6 10zm0-7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                    {{
+                      (location.is_live
+                        ? 'chat.liveLocationShared'
+                        : 'chat.locationShared'
+                      ) | t
+                    }}
+                  </p>
+                  @if (location.label) {
+                    <p class="text-xs text-text-secondary">{{ location.label }}</p>
+                  }
+                  <p class="text-xs font-mono text-text-muted text-start" dir="ltr">
+                    {{ location.latitude }}, {{ location.longitude }}
+                  </p>
+                  <a
+                    class="text-xs text-primary-ink underline"
+                    [href]="mapUrl(location)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {{ 'chat.openInMaps' | t }}
+                  </a>
+                  @if (location.is_live) {
+                    <p class="text-[11px] text-text-muted">
+                      {{ 'chat.liveLocationHint' | t }}
+                    </p>
+                  }
+                </div>
+              }
+            }
+
             @if (message().message_type === 'voice') {
               <div class="flex flex-wrap items-center gap-2">
                 <button
@@ -398,6 +452,15 @@ export class ChatMessageComponent {
     if (this.activeVoiceAudio) {
       this.activeVoiceAudio.playbackRate = next;
     }
+  }
+
+  mapUrl(location: {
+    latitude: number;
+    longitude: number;
+  }): string {
+    const latitude = Number(location.latitude.toFixed(6));
+    const longitude = Number(location.longitude.toFixed(6));
+    return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`;
   }
 
   playVoice(): void {

@@ -27,6 +27,12 @@ export interface ChatMessage {
   media_url?: string | null;
   correction_payload?: CorrectionPayload | null;
   system_event?: SystemEventPayload | null;
+  location_payload?: {
+    latitude: number;
+    longitude: number;
+    label?: string | null;
+    is_live?: boolean;
+  } | null;
   is_read: boolean;
   delivery_status?: 'sent' | 'delivered' | 'read' | (string & {});
   created_at: string;
