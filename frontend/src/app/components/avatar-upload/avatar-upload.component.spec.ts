@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AvatarUploadComponent } from './avatar-upload.component';
 import { I18nService } from '../../services/i18n.service';
 import { MediaService } from '../../services/media.service';
-import { SupabaseService } from '../../services/supabase.service';
+
 
 class MockI18nService {
   translate(key: string, _params?: Record<string, unknown>): string {
@@ -11,11 +11,9 @@ class MockI18nService {
   }
 }
 
-class MockMediaService {}
-
-class MockSupabaseService {
-  async uploadAvatar(_file: File): Promise<string> {
-    return 'https://example.com/avatar.png';
+class MockMediaService {
+  async uploadAvatar(_file: File): Promise<{ avatarUrl: string }> {
+    return { avatarUrl: 'https://cdn.example.com/avatar.png' };
   }
 }
 
@@ -44,7 +42,7 @@ type CanvasMock = {
 describe('AvatarUploadComponent', () => {
   let fixture: ComponentFixture<AvatarUploadComponent>;
   let component: AvatarUploadComponent;
-  let supabaseInstance: MockSupabaseService;
+  let mediaInstance: MockMediaService;
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
@@ -53,7 +51,6 @@ describe('AvatarUploadComponent', () => {
       providers: [
         { provide: I18nService, useClass: MockI18nService },
         { provide: MediaService, useClass: MockMediaService },
-        { provide: SupabaseService, useClass: MockSupabaseService },
       ],
     }).compileComponents();
 
@@ -61,7 +58,7 @@ describe('AvatarUploadComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
 
-    supabaseInstance = TestBed.inject(SupabaseService) as MockSupabaseService;
+    mediaInstance = TestBed.inject(MediaService) as MockMediaService;
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
@@ -204,8 +201,8 @@ describe('AvatarUploadComponent', () => {
 
     // Spy on the supabase upload call
     const uploadSpy = vi
-      .spyOn(supabaseInstance, 'uploadAvatar')
-      .mockResolvedValue('https://example.com/uploaded.png');
+      .spyOn(mediaInstance, 'uploadAvatar')
+      .mockResolvedValue({ avatarUrl: 'https://example.com/uploaded.png' });
 
     const emittedValues: string[] = [];
     const sub = component.avatarUrl.subscribe((url) => emittedValues.push(url));
@@ -251,7 +248,7 @@ describe('AvatarUploadComponent', () => {
       return document.createElement(tag);
     });
 
-    vi.spyOn(supabaseInstance, 'uploadAvatar').mockRejectedValue(
+    vi.spyOn(mediaInstance, 'uploadAvatar').mockRejectedValue(
       new Error('upload failed'),
     );
 

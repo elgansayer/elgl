@@ -20,7 +20,7 @@ export class StreakCounterComponent {
   private async loadStreak(): Promise<void> {
     const userId = this.authService.currentUser()?.id;
     if (!userId) return;
-    const streakCount = await this.supabaseService.getDailyStreak(userId);
+    const streakCount = await this.supabaseService.getDailyStreak();
     this.streak.set(streakCount);
   }
 }

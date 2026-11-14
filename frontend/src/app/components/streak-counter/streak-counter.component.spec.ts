@@ -55,7 +55,7 @@ describe('StreakCounterComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(mockSupabaseService.getDailyStreak).toHaveBeenCalledWith('current-user-id');
+    expect(mockSupabaseService.getDailyStreak).toHaveBeenCalledWith();
     expect(fixture.nativeElement.textContent).toContain('5');
   });
 
