@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { LearnerKnowledgeController } from './learner-knowledge.controller';
 import { LearnerKnowledgeService } from './learner-knowledge.service';
 import { FlashcardsModule } from '../flashcards/flashcards.module';
 import { HobbyTagsModule } from '../hobby-tags/hobby-tags.module';
@@ -16,6 +17,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
     UsersModule,
     SupabaseModule,
   ],
+  controllers: [LearnerKnowledgeController],
   providers: [LearnerKnowledgeService],
   exports: [LearnerKnowledgeService],
 })
