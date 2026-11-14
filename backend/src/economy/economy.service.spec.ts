@@ -1041,6 +1041,10 @@ describe('EconomyService', () => {
         expectedGiftEvent,
       );
       expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'gifts:global',
+        expectedGiftEvent,
+      );
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
         'room_room-101',
         expectedGiftEvent,
       );
@@ -1124,6 +1128,14 @@ describe('EconomyService', () => {
         'user_receiver-1',
         expect.objectContaining({
           type: 'virtual_gift',
+          room_id: undefined,
+        }),
+      );
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'gifts:global',
+        expect.objectContaining({
+          type: 'virtual_gift',
+          gift_id: 'gift-2',
           room_id: undefined,
         }),
       );

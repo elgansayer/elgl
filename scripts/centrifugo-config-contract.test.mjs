@@ -17,6 +17,17 @@ test('Centrifugo uses the shared Redis service with bounded realtime namespaces'
   assert.equal(config.prometheus, true);
 
   const namespaces = new Map(config.namespaces.map((namespace) => [namespace.name, namespace]));
+  const gifts = namespaces.get('gifts');
+  assert.ok(gifts, 'missing gifts namespace');
+  assert.equal(gifts.publish, true);
+  assert.equal(gifts.subscribe_to_publish, false);
+  assert.equal(gifts.presence, false);
+  assert.ok(Number.isInteger(gifts.channel_limit) && gifts.channel_limit > 0);
+  assert.ok(
+    Number.isInteger(gifts.channel_subscription_rate_limit) &&
+      gifts.channel_subscription_rate_limit > 0,
+  );
+
   for (const name of ['chat', 'room', 'user']) {
     const namespace = namespaces.get(name);
     assert.ok(namespace, `missing ${name} namespace`);
