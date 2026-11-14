@@ -47,7 +47,6 @@ const EXPECTED_MODULE_NAMES = [
   'DailyTipModule',
   'CorrectorScoreModule',
   'LanguageChallengesModule',
-  'PronunciationModule',
   'GroupsModule',
   'ShoppingModule',
   'MilestonesModule',

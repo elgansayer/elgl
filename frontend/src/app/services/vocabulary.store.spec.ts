@@ -553,16 +553,14 @@ describe('VocabularyStore', () => {
       expect(result).toEqual(scoreResult);
     });
 
-    it('should set isDegraded signal on error and return fallback result', async () => {
+    it('should set isDegraded and reject instead of fabricating a score', async () => {
       const promise = store.scorePronunciation('http://audio.url', 'hello', 'en');
       httpMock
         .expectOne(`${environment.apiUrl}/nlp/pronunciation-score`)
         .flush({}, { status: 500, statusText: 'Error' });
 
-      const result = await promise;
+      await expect(promise).rejects.toBeTruthy();
       expect(store.isDegraded()).toBe(true);
-      expect(result.overall_score).toBe(85);
-      expect(result.feedback_summary).toContain('unavailable');
     });
   });
 

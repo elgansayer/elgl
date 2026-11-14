@@ -90,6 +90,18 @@ describe('PronunciationFeedbackComponent', () => {
       expect(component.feedback()).toBeNull();
       expect(component.sentence()).toBe('');
     });
+
+    it('should disable recording until a target sentence is entered', () => {
+      const recordButton = fixture.nativeElement.querySelector(
+        'button',
+      ) as HTMLButtonElement;
+      expect(recordButton.disabled).toBe(true);
+
+      component.sentence.set('Hello world');
+      fixture.detectChanges();
+
+      expect(recordButton.disabled).toBe(false);
+    });
   });
 
   describe('startRecording', () => {

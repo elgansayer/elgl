@@ -23,7 +23,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </label>
 
       <div class="flex flex-wrap gap-3">
-        <button hlmBtn type="button" size="touch" [disabled]="isRecording()" (click)="startRecording()">
+        <button
+          hlmBtn
+          type="button"
+          size="touch"
+          [disabled]="isRecording() || !sentence().trim()"
+          (click)="startRecording()"
+        >
           {{ (isRecording() ? 'pronunciation.recording' : 'pronunciation.start') | t }}
         </button>
 
@@ -89,9 +95,8 @@ export class PronunciationFeedbackComponent {
   }
 
   private sendForAnalysis(blob: Blob): void {
-    const reference = this.sentence().trim();
     this.pronunciationService
-      .analyse(blob, reference || undefined)
+      .analyse(blob, this.sentence())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => this.feedback.set(result),

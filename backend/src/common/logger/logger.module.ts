@@ -33,7 +33,6 @@ const LOGGER_CONTEXTS = [
   'ModerationMetricsAggregator',
   'MonetisationService',
   'NlpRateLimiterGuard',
-  'PronunciationService',
   'RecommendationsMetricsAggregator',
   'RecommendationsRateLimiterGuard',
   'RecommendationsService',
