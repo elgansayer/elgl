@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
@@ -1029,6 +1030,20 @@ describe('UsersController', () => {
       expect(usersService.updateDoNotDisturbSettings).not.toHaveBeenCalled();
     });
 
+    it('propagates a persistence outage instead of claiming success', async () => {
+      (usersService.updateDoNotDisturbSettings as Mock).mockRejectedValue(
+        new ServiceUnavailableException(
+          'Unable to update do-not-disturb settings',
+        ),
+      );
+
+      await expect(
+        controller.setDoNotDisturb({ id: 'user-1' } as never, {
+          do_not_disturb: true,
+        }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
     it('should call updateDoNotDisturbSettings', async () => {
       const dto = { do_not_disturb: true };
       (usersService.updateDoNotDisturbSettings as Mock).mockResolvedValue({
@@ -1101,6 +1116,18 @@ describe('UsersController', () => {
   });
 
   describe('updateNotificationPreferences', () => {
+    it('propagates a persistence outage instead of returning a mock profile', async () => {
+      (usersService.updateNotificationPreferences as Mock).mockRejectedValue(
+        new ServiceUnavailableException(
+          'Unable to update notification preferences',
+        ),
+      );
+
+      await expect(
+        controller.updateNotificationPreferences({ id: 'user-1' } as never, {}),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
     it('should throw UnauthorizedException when no user', async () => {
       await expect(
         controller.updateNotificationPreferences(null, {}),

@@ -1543,7 +1543,35 @@ describe('ChatService', () => {
       );
     });
 
-    it('should return fallback mock rooms when rooms query fails', async () => {
+    it('fails with a stable 503 when the rooms query fails in production', async () => {
+      const originalMode = process.env.MOCK_BACKEND_MODE;
+      delete process.env.MOCK_BACKEND_MODE;
+      mockQueryBuilder.order
+        .mockReturnValueOnce(mockQueryBuilder)
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'Query failed' },
+        });
+
+      await expect(service.getRooms('user-1')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      process.env.MOCK_BACKEND_MODE = originalMode;
+    });
+
+    it('returns an empty collection when the rooms query succeeds with no rows', async () => {
+      mockQueryBuilder.order
+        .mockReturnValueOnce(mockQueryBuilder)
+        .mockResolvedValueOnce({ data: [], error: null });
+
+      await expect(service.getRooms('user-1')).resolves.toEqual([]);
+    });
+
+    it('serves deterministic fallback rooms only when mock mode is explicit', async () => {
+      const originalMode = process.env.MOCK_BACKEND_MODE;
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'test';
+      process.env.MOCK_BACKEND_MODE = 'test';
       mockQueryBuilder.order
         .mockReturnValueOnce(mockQueryBuilder)
         .mockResolvedValueOnce({
@@ -1552,20 +1580,11 @@ describe('ChatService', () => {
         });
 
       const result = await service.getRooms('user-1');
-      // The service returns pre-seeded fallback rooms when the query fails
+
       expect(result).toHaveLength(2);
-      expect(result[0]).toMatchObject({
-        id: 'mock-room-1',
-        title: 'Spanish Practice',
-        is_online: true,
-        is_pinned: true,
-      });
-      expect(result[1]).toMatchObject({
-        id: 'mock-room-2',
-        title: 'Language Exchange - JP/EN',
-        is_online: false,
-        is_pinned: false,
-      });
+      expect(result[0]).toMatchObject({ id: 'mock-room-1' });
+      process.env.MOCK_BACKEND_MODE = originalMode;
+      process.env.NODE_ENV = originalNodeEnv;
     });
   });
 
@@ -1605,16 +1624,42 @@ describe('ChatService', () => {
       expect(result).toEqual(messages);
     });
 
-    it('should return fallback mock messages when query returns error or null data', async () => {
+    it('fails with a stable 503 when the message query fails in production', async () => {
+      const originalMode = process.env.MOCK_BACKEND_MODE;
+      delete process.env.MOCK_BACKEND_MODE;
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: null,
+        error: { message: 'Error' },
+      });
+
+      await expect(service.getMessages('room-1')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      process.env.MOCK_BACKEND_MODE = originalMode;
+    });
+
+    it('returns an empty collection when the message query succeeds with no rows', async () => {
+      mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
+
+      await expect(service.getMessages('room-1')).resolves.toEqual([]);
+    });
+
+    it('serves deterministic fallback messages only when mock mode is explicit', async () => {
+      const originalMode = process.env.MOCK_BACKEND_MODE;
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'test';
+      process.env.MOCK_BACKEND_MODE = 'test';
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,
         error: { message: 'Error' },
       });
 
       const result = await service.getMessages('room-1');
+
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({ id: 'mock-msg-1', room_id: 'room-1' });
-      expect(result[1]).toMatchObject({ id: 'mock-msg-2', room_id: 'room-1' });
+      process.env.MOCK_BACKEND_MODE = originalMode;
+      process.env.NODE_ENV = originalNodeEnv;
     });
 
     it('applies query.or filter to preserve system messages while excluding blocked users', async () => {

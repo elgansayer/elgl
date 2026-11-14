@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { DataExportWorker } from './data-export.worker';
@@ -1062,6 +1063,58 @@ describe('UsersService', () => {
       });
       const badges = await service.getBadges('user-1');
       expect(badges.some((b) => b.id === 'vip')).toBe(true);
+    });
+  });
+
+  describe('fail-closed persistence', () => {
+    const originalMode = process.env.MOCK_BACKEND_MODE;
+    const originalNodeEnv = process.env.NODE_ENV;
+
+    afterEach(() => {
+      process.env.MOCK_BACKEND_MODE = originalMode;
+      process.env.NODE_ENV = originalNodeEnv;
+    });
+
+    it('returns 503 instead of a mock profile when DND persistence fails', async () => {
+      delete process.env.MOCK_BACKEND_MODE;
+      mockQueryBuilder.eq.mockResolvedValueOnce({
+        error: { message: 'unavailable' },
+      });
+
+      await expect(
+        service.updateDoNotDisturbSettings('user-1', {
+          do_not_disturb: true,
+        }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
+    it('returns 503 instead of a mock profile when preference persistence fails', async () => {
+      delete process.env.MOCK_BACKEND_MODE;
+      mockQueryBuilder.eq.mockResolvedValueOnce({
+        error: { message: 'unavailable' },
+      });
+
+      await expect(
+        service.updateNotificationPreferences('user-1', {}),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
+    it('returns deterministic fixtures only when mock mode is explicit', async () => {
+      process.env.NODE_ENV = 'test';
+      process.env.MOCK_BACKEND_MODE = 'test';
+      mockQueryBuilder.eq.mockResolvedValue({
+        error: { message: 'unavailable' },
+      });
+
+      const result = await service.updateDoNotDisturbSettings('user-1', {
+        do_not_disturb: true,
+      });
+
+      expect(result).toMatchObject({
+        id: 'user-1',
+        display_name: 'My Profile (Mock)',
+        do_not_disturb: true,
+      });
     });
   });
 });
