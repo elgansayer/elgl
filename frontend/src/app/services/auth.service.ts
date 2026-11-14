@@ -70,7 +70,7 @@ export class AuthService {
 
       this.updateAuthState(session);
       if (session) {
-        void this.refreshEarnedBadges(session.user.id);
+        void this.refreshEarnedBadges();
       } else {
         this.earnedBadges.set(null);
       }
@@ -85,7 +85,7 @@ export class AuthService {
     this.supabase.auth.onAuthStateChange((_event, session) => {
       this.updateAuthState(session);
       if (session) {
-        void this.refreshEarnedBadges(session.user.id);
+        void this.refreshEarnedBadges();
       } else {
         this.earnedBadges.set(null);
       }
@@ -229,9 +229,9 @@ export class AuthService {
     await this.requestBiometric();
   }
 
-  private async refreshEarnedBadges(userId: string): Promise<void> {
+  private async refreshEarnedBadges(): Promise<void> {
     try {
-      const badges = await this.supabaseService.getEarnedBadges(userId);
+      const badges = await this.supabaseService.getEarnedBadges();
       this.earnedBadges.set(badges);
       const user = this.currentUser();
       if (user) {

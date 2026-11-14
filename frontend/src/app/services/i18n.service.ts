@@ -3225,7 +3225,6 @@ export class I18nService {
     'join.joinButton': 'Join group',
     'join.joining': 'Joining...',
     'join.loading': 'Loading group...',
-    'languageIslands.title': 'Language Islands',
     'languageParty.cancelBtn': 'Cancel',
     'languageParty.clearFilters': 'Clear',
     'languageParty.clearFiltersAction': 'Clear All Filters',
