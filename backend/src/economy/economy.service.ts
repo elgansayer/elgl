@@ -687,6 +687,7 @@ export class EconomyService {
   ): Promise<{ coins: number; new_balance: number }> {
     const startTime = Date.now();
     const supabase = this.supabaseService.getClient();
+    let pendingWebPurchase: CoinPurchaseRecord | null = null;
 
     const detectedPlatform = this.detectPlatform(dto.receipt_token);
     const hasPlatformPrefix =
@@ -749,6 +750,8 @@ export class EconomyService {
       if (pendingRecord.status !== 'pending') {
         throw new BadRequestException('Invalid purchase receipt status');
       }
+
+      pendingWebPurchase = pendingRecord;
     }
 
     // 1. Verify with the store/provider. A rejected receipt must never reach
@@ -785,77 +788,32 @@ export class EconomyService {
     const coinsToCredit = coinPackage.coins * quantity;
     const amountPaid = coinPackage.price * quantity;
 
+    // Finalise the purchase record and credit the balance in one database
+    // transaction. The RPC takes a row lock on the user and reports duplicate
+    // store transactions instead of crediting twice.
+    let newBalance: number;
     if (platform === 'web') {
-      // Update the existing pending record to completed
-      const sessionId = this.extractStripeSessionId(dto.receipt_token);
-      const { data: existingWeb, error: existingWebError } =
-        await withExponentialBackoff(
-          () =>
-            supabase
-              .from('coin_purchases')
-              .select('*')
-              .eq('user_id', userId)
-              .eq('receipt_token', sessionId)
-              .maybeSingle(),
-          'supabaseOperation',
-          { logger: this.logger },
-        );
-
-      if (existingWebError) {
+      if (!pendingWebPurchase) {
         throw new InternalServerErrorException(
-          'Failed to look up purchase record',
+          'Pending purchase record was not loaded',
         );
       }
-
-      if (!existingWeb || !isCoinPurchaseRecord(existingWeb)) {
-        throw new BadRequestException('Purchase record not found');
-      }
-
-      if (existingWeb.status === 'completed') {
-        this.metricsService.recordCoinFraudAttempt(
-          'web',
-          'duplicate_transaction',
-        );
-        throw new ConflictException(
-          'This transaction has already been processed',
-        );
-      }
-
-      const { error: updateWebError } = await withExponentialBackoff(
+      const pendingPurchase = pendingWebPurchase;
+      const { data, error } = await withExponentialBackoff(
         () =>
-          supabase
-            .from('coin_purchases')
-            .update({
-              status: 'completed',
-              transaction_id: transactionId || sessionId,
-            })
-            .eq('user_id', userId)
-            .eq('receipt_token', sessionId),
+          supabase.rpc('complete_pending_coin_purchase', {
+            p_purchase_id: pendingPurchase.id,
+            p_user_id: userId,
+            p_transaction_id: transactionId || pendingPurchase.receipt_token,
+          }),
         'supabaseOperation',
         { logger: this.logger },
       );
-
-      if (updateWebError) {
-        this.logger.error(
-          `Failed to finalize purchase record for user ${userId}: ${updateWebError.message}`,
-        );
-        throw new InternalServerErrorException(
-          'Failed to finalize purchase record',
-        );
+      if (error) {
+        this.throwCoinSettlementError(error, platform, userId);
       }
-    } else {
-      // ios / android flow: insert a new completed record
-      const { data: existing } = await withExponentialBackoff(
-        () =>
-          supabase
-            .from('coin_purchases')
-            .select('id')
-            .eq('transaction_id', transactionId)
-            .maybeSingle(),
-        'supabaseOperation',
-        { logger: this.logger },
-      );
-      if (existing) {
+      const settlement = this.parseCoinSettlement(data);
+      if (settlement.status !== 'settled') {
         this.metricsService.recordCoinFraudAttempt(
           platform,
           'duplicate_transaction',
@@ -864,101 +822,37 @@ export class EconomyService {
           'This transaction has already been processed',
         );
       }
-
-      const { error: insertError } = await withExponentialBackoff(
+      newBalance = settlement.new_balance;
+    } else {
+      const { data, error } = await withExponentialBackoff(
         () =>
-          supabase.from('coin_purchases').insert({
-            user_id: userId,
-            package_id: coinPackage.id,
-            coins_added: coinsToCredit,
-            amount_paid: amountPaid,
-            currency: 'usd',
-            receipt_token: dto.receipt_token,
-            platform,
-            transaction_id: transactionId,
-            status: 'completed',
+          supabase.rpc('fulfil_coin_purchase', {
+            p_user_id: userId,
+            p_package_id: coinPackage.id,
+            p_coins_added: coinsToCredit,
+            p_amount_paid: amountPaid,
+            p_currency: 'usd',
+            p_receipt_token: dto.receipt_token,
+            p_platform: platform,
+            p_transaction_id: transactionId,
           }),
         'supabaseOperation',
         { logger: this.logger },
       );
-
-      if (insertError) {
-        if (insertError.code === '23505') {
-          throw new ConflictException(
-            'This transaction has already been processed',
-          );
-        }
-        this.logger.error(
-          `Failed to record coin purchase for user ${userId}: ${insertError.message}`,
-        );
-        throw new InternalServerErrorException('Failed to record purchase');
+      if (error) {
+        this.throwCoinSettlementError(error, platform, userId);
       }
-    }
-
-    // Read current balance and credit coins
-    const { data: userData, error: userError } = await withExponentialBackoff(
-      () =>
-        supabase
-          .from('users')
-          .select('coins_balance')
-          .eq('id', userId)
-          .single(),
-      'supabaseOperation',
-      { logger: this.logger },
-    );
-
-    if (userError || !userData) {
-      // For non-web platforms roll back the purchase record; for web the record
-      // is already finalised but we log and return a helpful error.
-      if (platform !== 'web') {
-        await withExponentialBackoff(
-          () =>
-            supabase
-              .from('coin_purchases')
-              .delete()
-              .eq('transaction_id', transactionId),
-          'supabaseOperation',
-          { logger: this.logger },
+      const settlement = this.parseCoinSettlement(data);
+      if (settlement.status !== 'settled') {
+        this.metricsService.recordCoinFraudAttempt(
+          platform,
+          'duplicate_transaction',
+        );
+        throw new ConflictException(
+          'This transaction has already been processed',
         );
       }
-      this.logger.error(
-        `Failed to retrieve user balance during purchase for ${userId}.`,
-      );
-      throw new BadRequestException('User not found');
-    }
-
-    const currentBalance =
-      typeof userData.coins_balance === 'number' ? userData.coins_balance : 0;
-    const newBalance = currentBalance + coinsToCredit;
-
-    const { error: updateError } = await withExponentialBackoff(
-      () =>
-        supabase
-          .from('users')
-          .update({ coins_balance: newBalance })
-          .eq('id', userId),
-      'supabaseOperation',
-      { logger: this.logger },
-    );
-
-    if (updateError) {
-      if (platform !== 'web') {
-        await withExponentialBackoff(
-          () =>
-            supabase
-              .from('coin_purchases')
-              .delete()
-              .eq('transaction_id', transactionId),
-          'supabaseOperation',
-          { logger: this.logger },
-        );
-      }
-      this.logger.error(
-        `Failed to credit coin balance for user ${userId}: ${updateError.message}`,
-      );
-      throw new InternalServerErrorException(
-        'Failed to credit coin balance.  Your payment was recorded; please contact support.',
-      );
+      newBalance = settlement.new_balance;
     }
 
     this.logger.info(
@@ -981,6 +875,62 @@ export class EconomyService {
       coins: coinsToCredit,
       new_balance: newBalance,
     };
+  }
+
+  private parseCoinSettlement(
+    value: unknown,
+  ):
+    | { status: 'settled'; new_balance: number }
+    | { status: 'duplicate' | 'not_pending' } {
+    if (typeof value !== 'object' || value === null) {
+      throw new InternalServerErrorException(
+        'Invalid coin settlement response',
+      );
+    }
+    const record = value as Record<string, unknown>;
+    if (
+      record['status'] === 'duplicate' ||
+      record['status'] === 'not_pending'
+    ) {
+      return { status: record['status'] };
+    }
+    const newBalance = record['new_balance'];
+    if (
+      record['status'] !== 'settled' ||
+      typeof newBalance !== 'number' ||
+      !Number.isInteger(newBalance) ||
+      newBalance < 0
+    ) {
+      throw new InternalServerErrorException(
+        'Invalid coin settlement response',
+      );
+    }
+    return { status: 'settled', new_balance: newBalance };
+  }
+
+  private throwCoinSettlementError(
+    error: { code?: string; message?: string },
+    platform: PurchasePlatform,
+    userId: string,
+  ): never {
+    if (error.code === '23505') {
+      this.metricsService.recordCoinFraudAttempt(
+        platform,
+        'duplicate_transaction',
+      );
+      throw new ConflictException(
+        'This transaction has already been processed',
+      );
+    }
+    if (error.code === 'P0002') {
+      throw new BadRequestException('User not found');
+    }
+    this.logger.error(
+      `Failed to settle coin purchase for user ${userId}: ${error.message ?? 'unknown error'}`,
+    );
+    throw new InternalServerErrorException(
+      'Failed to settle coin purchase. Your payment was recorded; please contact support.',
+    );
   }
 
   private detectPlatform(receiptToken: string): PurchasePlatform {
