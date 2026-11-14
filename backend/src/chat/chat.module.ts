@@ -27,8 +27,6 @@ import { DirectConversationService } from './direct-conversation.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
 import { ChatSettingsService } from './chat-settings.service';
-import { ChatBackupController } from '../chat-backup/chat-backup.controller';
-import { ChatBackupService } from '../chat-backup/chat-backup.service';
 import { QuickRepliesController } from './quick-replies/quick-replies.controller';
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
@@ -59,7 +57,6 @@ import { GroupChatService } from './group-chat.service';
     ChatSearchController,
     DirectConversationController,
     ChatSettingsController,
-    ChatBackupController,
     QuickRepliesController,
     GroupChatController,
   ],
@@ -75,7 +72,6 @@ import { GroupChatService } from './group-chat.service';
     DirectConversationService,
     SystemMessageService,
     ChatSettingsService,
-    ChatBackupService,
     QuickRepliesService,
     ChatSystemEventListener,
     DisappearingMessagesCleanupService,

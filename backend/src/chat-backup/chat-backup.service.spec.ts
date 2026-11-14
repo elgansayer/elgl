@@ -1,15 +1,52 @@
 import type { Mock } from 'vitest';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatBackupService } from './chat-backup.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import {
+  MAX_IMPORT_MESSAGES,
+  MAX_IMPORT_PAYLOAD_BYTES,
+} from './dto/import-chat-backup.dto';
+
+const ROOM_ID = '11111111-2222-4333-8444-555555555555';
+const USER_ID = '99999999-8888-4777-8666-555555555555';
 
 describe('ChatBackupService', () => {
   let service: ChatBackupService;
   let supabaseService: { getClient: Mock };
+  let membershipQuery: { maybeSingle: Mock };
+  let messagesQuery: { order: Mock; insert: Mock };
+
+  const client = () => ({
+    from: vi.fn((table: string) => {
+      if (table === 'chat_room_members') {
+        return { select: vi.fn(() => membershipQuery) };
+      }
+      if (table === 'chat_messages') {
+        return {
+          select: vi.fn(() => ({ eq: vi.fn(() => messagesQuery) })),
+          insert: messagesQuery.insert,
+        };
+      }
+      throw new Error(`Unexpected table ${table}`);
+    }),
+  });
 
   beforeEach(async () => {
+    membershipQuery = {
+      eq: vi.fn(),
+      maybeSingle: vi
+        .fn()
+        .mockResolvedValue({ data: { room_id: ROOM_ID }, error: null }),
+    };
+    (membershipQuery.eq as Mock).mockReturnValue(membershipQuery);
+    messagesQuery = {
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      insert: vi.fn(() => ({ select: vi.fn() })),
+    };
+
     supabaseService = {
-      getClient: vi.fn(),
+      getClient: vi.fn(() => client()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -20,7 +57,6 @@ describe('ChatBackupService', () => {
     }).compile();
 
     service = module.get<ChatBackupService>(ChatBackupService);
-    // Mock the logger to prevent console spam
     vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
   });
 
@@ -28,273 +64,163 @@ describe('ChatBackupService', () => {
     vi.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
-  describe('createBackup', () => {
-    it('should format messages correctly', async () => {
-      const mockData = [
-        { created_at: '2023-01-01', sender: 'Alice', content: 'Hello' },
-        { created_at: '2023-01-02', sender: 'Alice', content: 'World' },
+  describe('exportRoomBackup', () => {
+    it('exports a room document for a member', async () => {
+      const messages = [
+        {
+          message_type: 'text',
+          text_content: 'hola',
+          media_url: null,
+          correction_payload: null,
+          sender_id: USER_ID,
+          created_at: '2026-11-01T10:00:00.000Z',
+        },
       ];
+      messagesQuery.order.mockResolvedValue({ data: messages, error: null });
 
-      const mockOrder = vi
-        .fn()
-        .mockResolvedValue({ data: mockData, error: null });
-      const mockEq = vi.fn().mockReturnValue({ order: mockOrder });
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
+      const result = await service.exportRoomBackup(USER_ID, ROOM_ID);
 
-      supabaseService.getClient.mockReturnValue({ from: mockFrom });
-
-      const result = await service.createBackup('user-123');
-      expect(result).toContain('Backup Start');
-      expect(result).toContain('[2023-01-01] Alice: Hello');
-      expect(result).toContain('[2023-01-02] Alice: World');
-      expect(result).toContain('Backup End');
-    });
-
-    it('should format messages correctly using fallback fields', async () => {
-      const mockData = [
-        { created_at: '2023-01-03', sender_id: 'Bob', text_content: 'Hi' },
-        { created_at: '2023-01-04', sender_id: 'Charlie' }, // No content or text_content
-      ];
-
-      const mockOrder = vi
-        .fn()
-        .mockResolvedValue({ data: mockData, error: null });
-      const mockEq = vi.fn().mockReturnValue({ order: mockOrder });
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
-      supabaseService.getClient.mockReturnValue({ from: mockFrom });
-
-      const result = await service.createBackup('user-123');
-      expect(result).toContain('Backup Start');
-      expect(result).toContain('[2023-01-03] Bob: Hi');
-      expect(result).toContain('[2023-01-04] Charlie: ');
-      expect(result).toContain('Backup End');
-    });
-
-    it('should return empty string if no data', async () => {
-      const mockOrder = vi.fn().mockResolvedValue({ data: null, error: null });
-      supabaseService.getClient.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({ order: mockOrder }),
-          }),
-        }),
+      expect(membershipQuery.maybeSingle).toHaveBeenCalled();
+      expect(result.room_id).toBe(ROOM_ID);
+      expect(result.messages).toEqual(messages);
+      expect(typeof result.exported_at).toBe('string');
+      expect(messagesQuery.order).toHaveBeenCalledWith('created_at', {
+        ascending: true,
       });
-
-      const result = await service.createBackup('user-123');
-      expect(result).toBe('');
     });
 
-    it('should throw and log if error occurs', async () => {
-      const mockError = { message: 'DB Error' };
-      const mockOrder = vi
-        .fn()
-        .mockResolvedValue({ data: null, error: mockError });
-      supabaseService.getClient.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({ order: mockOrder }),
-          }),
-        }),
-      });
-
-      await expect(service.createBackup('user-123')).rejects.toThrow(
-        'DB Error',
-      );
-      expect(service['logger'].error).toHaveBeenCalledWith(
-        'Backup failed for user user-123: DB Error',
-      );
-    });
-  });
-
-  describe('exportChannelBackup', () => {
-    it('should export messages successfully', async () => {
-      const mockChannelId = 'channel-123';
-      const mockMessages = [
-        { id: 'msg-1', content: 'hello' },
-        { id: 'msg-2', content: 'world' },
-      ];
-
-      const mockOrder = vi
-        .fn()
-        .mockResolvedValue({ data: mockMessages, error: null });
-      const mockEq = vi.fn().mockReturnValue({ order: mockOrder });
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
-
-      supabaseService.getClient.mockReturnValue({ from: mockFrom });
-
-      const result = await service.exportChannelBackup(mockChannelId);
-
-      expect(result).toEqual(mockMessages);
-      expect(mockFrom).toHaveBeenCalledWith('chat_messages');
-      expect(mockSelect).toHaveBeenCalledWith('*');
-      expect(mockEq).toHaveBeenCalledWith('channel_id', mockChannelId);
-      expect(mockOrder).toHaveBeenCalledWith('created_at', { ascending: true });
-    });
-
-    it('should return empty array if data is null', async () => {
-      const mockOrder = vi.fn().mockResolvedValue({ data: null, error: null });
-      supabaseService.getClient.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: mockOrder,
-            }),
-          }),
-        }),
-      });
-
-      const result = await service.exportChannelBackup('channel-123');
-      expect(result).toEqual([]);
-    });
-
-    it('should throw an error and log if export fails', async () => {
-      const mockError = { message: 'Export error' };
-      const mockOrder = vi
-        .fn()
-        .mockResolvedValue({ data: null, error: mockError });
-      supabaseService.getClient.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: mockOrder,
-            }),
-          }),
-        }),
-      });
-
-      await expect(service.exportChannelBackup('channel-123')).rejects.toThrow(
-        'Export error',
-      );
-      expect(service['logger'].error).toHaveBeenCalledWith(
-        'Export failed for channel channel-123: Export error',
-      );
-    });
-  });
-
-  describe('importChannelBackup', () => {
-    it('should import messages in single chunk', async () => {
-      const mockChannelId = 'channel-123';
-      const mockMessages = [
-        { id: '1', content: 'a', sender: 'x' },
-        { id: '2', content: 'b', sender: 'y' },
-      ];
-
-      const mockSelect = vi.fn().mockResolvedValue({
-        data: [{ id: 'new-1' }, { id: 'new-2' }],
+    it('rejects a non-member before reading any message', async () => {
+      membershipQuery.maybeSingle.mockResolvedValue({
+        data: null,
         error: null,
       });
-      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
-      const mockFrom = vi.fn().mockReturnValue({ insert: mockInsert });
 
-      supabaseService.getClient.mockReturnValue({ from: mockFrom });
-
-      const result = await service.importChannelBackup(
-        mockChannelId,
-        mockMessages,
+      await expect(service.exportRoomBackup(USER_ID, ROOM_ID)).rejects.toThrow(
+        ForbiddenException,
       );
+      expect(messagesQuery.order).not.toHaveBeenCalled();
+    });
 
-      expect(result).toBe(2);
-      expect(mockFrom).toHaveBeenCalledWith('chat_messages');
-      // Should strip 'id' and add 'channel_id'
-      expect(mockInsert).toHaveBeenCalledWith([
-        { content: 'a', sender: 'x', channel_id: mockChannelId },
-        { content: 'b', sender: 'y', channel_id: mockChannelId },
+    it('rejects when membership cannot be verified', async () => {
+      membershipQuery.maybeSingle.mockResolvedValue({
+        data: null,
+        error: { message: 'membership lookup failed' },
+      });
+
+      await expect(service.exportRoomBackup(USER_ID, ROOM_ID)).rejects.toThrow(
+        'You are not a member of this chat room',
+      );
+    });
+
+    it('fails without leaking provider details when the export query fails', async () => {
+      messagesQuery.order.mockResolvedValue({
+        data: null,
+        error: { message: 'column room_id does not exist' },
+      });
+
+      await expect(service.exportRoomBackup(USER_ID, ROOM_ID)).rejects.toThrow(
+        'Failed to export chat backup',
+      );
+      expect(service['logger'].error).toHaveBeenCalledWith(
+        'Export failed for room 11111111-2222-4333-8444-555555555555: column room_id does not exist',
+      );
+    });
+  });
+
+  describe('importRoomBackup', () => {
+    const insertChain = (response: {
+      data: unknown;
+      error: null | { message: string };
+    }) => {
+      const select = vi.fn().mockResolvedValue(response);
+      messagesQuery.insert.mockReturnValue({ select });
+      return select;
+    };
+
+    it('imports a bounded payload as the caller', async () => {
+      insertChain({ data: [{ id: 'new-1' }, { id: 'new-2' }], error: null });
+
+      const count = await service.importRoomBackup(USER_ID, ROOM_ID, [
+        {
+          message_type: 'text',
+          text_content: 'hello',
+          sender_id: 'someone-else',
+          created_at: '2026-11-01T10:00:00.000Z',
+        },
+        { text_content: 'world' },
+      ]);
+
+      expect(count).toBe(2);
+      expect(messagesQuery.insert).toHaveBeenCalledWith([
+        {
+          room_id: ROOM_ID,
+          sender_id: USER_ID,
+          message_type: 'text',
+          text_content: 'hello',
+          media_url: null,
+          correction_payload: null,
+          created_at: '2026-11-01T10:00:00.000Z',
+        },
+        {
+          room_id: ROOM_ID,
+          sender_id: USER_ID,
+          message_type: 'text',
+          text_content: 'world',
+          media_url: null,
+          correction_payload: null,
+          created_at: expect.any(String),
+        },
       ]);
     });
 
-    it('should import messages in multiple chunks of 500', async () => {
-      const mockChannelId = 'channel-123';
-      const mockMessages = Array.from({ length: 1200 }, (_, i) => ({
-        id: `old-${i}`,
-        val: i,
-      }));
+    it('rejects an oversized payload before inserting', async () => {
+      const oversized = [
+        {
+          text_content: 'x'.repeat(MAX_IMPORT_PAYLOAD_BYTES),
+        },
+      ];
 
-      const mockSelect = vi
-        .fn()
-        .mockResolvedValueOnce({
-          data: Array(500).fill({ id: 'new' }),
-          error: null,
-        })
-        .mockResolvedValueOnce({
-          data: Array(500).fill({ id: 'new' }),
-          error: null,
-        })
-        .mockResolvedValueOnce({
-          data: Array(200).fill({ id: 'new' }),
-          error: null,
-        });
-
-      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
-      const mockFrom = vi.fn().mockReturnValue({ insert: mockInsert });
-
-      supabaseService.getClient.mockReturnValue({ from: mockFrom });
-
-      const result = await service.importChannelBackup(
-        mockChannelId,
-        mockMessages,
-      );
-
-      expect(result).toBe(1200);
-      expect(mockInsert).toHaveBeenCalledTimes(3);
-
-      const firstChunk = mockInsert.mock.calls[0][0];
-      expect(firstChunk).toHaveLength(500);
-      expect(firstChunk[0]).not.toHaveProperty('id');
-      expect(firstChunk[0]).toHaveProperty('channel_id', mockChannelId);
-
-      const thirdChunk = mockInsert.mock.calls[2][0];
-      expect(thirdChunk).toHaveLength(200);
+      await expect(
+        service.importRoomBackup(USER_ID, ROOM_ID, oversized),
+      ).rejects.toThrow(BadRequestException);
+      expect(messagesQuery.insert).not.toHaveBeenCalled();
     });
 
-    it('should throw an error and log if insert fails', async () => {
-      const mockMessages = Array.from({ length: 600 }, (_, i) => ({
-        id: `old-${i}`,
-        val: i,
+    it('rejects more messages than the import bound allows', async () => {
+      const tooMany = Array.from({ length: MAX_IMPORT_MESSAGES + 1 }, () => ({
+        text_content: 'a',
       }));
-      const mockError = { message: 'Insert failed' };
 
-      const mockSelect = vi
-        .fn()
-        .mockResolvedValueOnce({
-          data: Array(500).fill({ id: 'new' }),
-          error: null,
-        })
-        .mockResolvedValueOnce({ data: null, error: mockError });
+      await expect(
+        service.importRoomBackup(USER_ID, ROOM_ID, tooMany),
+      ).rejects.toThrow(`messages must contain at most ${MAX_IMPORT_MESSAGES}`);
+      expect(messagesQuery.insert).not.toHaveBeenCalled();
+    });
 
-      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
-      supabaseService.getClient.mockReturnValue({
-        from: vi.fn().mockReturnValue({ insert: mockInsert }),
+    it('rejects a non-member before inserting', async () => {
+      membershipQuery.maybeSingle.mockResolvedValue({
+        data: null,
+        error: null,
       });
 
       await expect(
-        service.importChannelBackup('channel-123', mockMessages),
-      ).rejects.toThrow('Insert failed');
-
-      expect(mockInsert).toHaveBeenCalledTimes(2);
-      expect(service['logger'].error).toHaveBeenCalledWith(
-        'Import failed for chunk starting at index 500: Insert failed',
-      );
+        service.importRoomBackup(USER_ID, ROOM_ID, [{ text_content: 'hi' }]),
+      ).rejects.toThrow(ForbiddenException);
+      expect(messagesQuery.insert).not.toHaveBeenCalled();
     });
 
-    it('should add up correctly when data is null but error is null', async () => {
-      const mockSelect = vi.fn().mockResolvedValue({ data: null, error: null });
-      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
-      supabaseService.getClient.mockReturnValue({
-        from: vi.fn().mockReturnValue({ insert: mockInsert }),
+    it('fails without leaking provider details when the insert fails', async () => {
+      insertChain({
+        data: null,
+        error: { message: 'relation does not exist' },
       });
 
-      const result = await service.importChannelBackup('channel-123', [
-        { id: '1' },
-      ]);
-      expect(result).toBe(0);
+      await expect(
+        service.importRoomBackup(USER_ID, ROOM_ID, [{ text_content: 'hi' }]),
+      ).rejects.toThrow('Failed to import chat backup');
+      expect(service['logger'].error).toHaveBeenCalledWith(
+        'Import failed for room 11111111-2222-4333-8444-555555555555: relation does not exist',
+      );
     });
   });
 });

@@ -147,8 +147,8 @@
 - **GET** `/chat/rooms/:roomId/greeting` in `chat/chat.controller.ts`
 - **POST** `/chat/rooms/:roomId/wallpaper` in `chat/chat.controller.ts`
 - **GET** `/chat/rooms/:roomId/wallpaper` in `chat/chat.controller.ts`
-- **GET** `/chat-backup/export/:channelId` in `chat-backup/chat-backup.controller.ts`
-- **POST** `/chat-backup/import/:channelId` in `chat-backup/chat-backup.controller.ts`
+- **GET** `/chat-backup/export/:roomId` in `chat-backup/chat-backup.controller.ts`
+- **POST** `/chat-backup/import/:roomId` in `chat-backup/chat-backup.controller.ts`
 - **POST** `/communities` in `communities/communities.controller.ts`
 - **GET** `/communities/:communityId` in `communities/communities.controller.ts`
 - **GET** `/communities` in `communities/communities.controller.ts`
