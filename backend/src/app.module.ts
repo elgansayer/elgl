@@ -52,6 +52,7 @@ import { PrivacyModule } from './privacy/privacy.module';
 import { LegalModule } from './legal/legal.module';
 import { AiConversationModule } from './ai-conversation/ai-conversation.module';
 import { CorrectorScoreModule } from './corrector-score/corrector-score.module';
+import { DeveloperBotsModule } from './developer-bots/developer-bots.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { CulturalModule } from './cultural/cultural.module';
 import { DailyTipModule } from './daily-tip/daily-tip.module';
@@ -151,6 +152,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     CulturalModule,
     DailyTipModule,
     CorrectorScoreModule,
+    DeveloperBotsModule,
     LanguageChallengesModule,
     PronunciationModule,
     GroupsModule,

@@ -192,6 +192,59 @@ describe('AiConversationService', () => {
     });
   });
 
+  describe('custom educational bots', () => {
+    const bot = {
+      id: '11111111-1111-4111-8111-111111111111',
+      owner_id: 'user-1',
+      display_name: 'Chef Ana',
+      persona: 'A cheerful Spanish chef who teaches through cooking',
+      target_language: 'es',
+      tone: 'playful' as const,
+      greeting: 'Hola, soy la chef Ana',
+      is_enabled: true,
+      created_at: '2026-11-14T00:00:00.000Z',
+      updated_at: '2026-11-14T00:00:00.000Z',
+    };
+
+    it('injects the bot persona and target language into the system prompt', async () => {
+      llmProxy.chatCompletion.mockResolvedValue('Buenas');
+
+      await service.generateReply('user-1', 'Hola', undefined, undefined, bot);
+
+      const messages = llmProxy.chatCompletion.mock.calls[0][0];
+      expect(messages[0].content).toContain('Chef Ana');
+      expect(messages[0].content).toContain('cheerful Spanish chef');
+      expect(messages[0].content).toContain('Target language: es');
+      expect(messages[0].content).not.toContain('barista');
+    });
+
+    it('seeds the configured greeting as the opening assistant turn', async () => {
+      llmProxy.chatCompletion.mockResolvedValue('Buenas');
+
+      await service.generateReply('user-1', 'Hola', undefined, undefined, bot);
+
+      const messages = llmProxy.chatCompletion.mock.calls[0][0];
+      expect(messages).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: 'assistant',
+            content: 'Hola, soy la chef Ana',
+          }),
+        ]),
+      );
+    });
+
+    it('keeps built-in scenarios working unchanged', async () => {
+      llmProxy.chatCompletion.mockResolvedValue('Buenas');
+
+      await service.generateReply('user-1', 'Hola', 'ordering-coffee');
+
+      const messages = llmProxy.chatCompletion.mock.calls[0][0];
+      expect(messages[0].content).toContain('barista');
+      expect(messages[0].content).not.toContain('Chef Ana');
+    });
+  });
+
   describe('generateReply', () => {
     it('should generate a reply without English-only vocabulary for Spanish prompts', async () => {
       // Set target language to 'es'

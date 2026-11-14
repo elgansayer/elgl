@@ -12,10 +12,14 @@ import { AiConversationService } from './ai-conversation.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AiConversationMessageDto } from './dto/ai-conversation-message.dto';
+import { DeveloperBotsService } from '../developer-bots/developer-bots.service';
 
 @Controller('ai-conversation')
 export class AiConversationController {
-  constructor(private readonly aiConversationService: AiConversationService) {}
+  constructor(
+    private readonly aiConversationService: AiConversationService,
+    private readonly developerBotsService: DeveloperBotsService,
+  ) {}
 
   @Get('scenarios')
   getScenarios() {
@@ -46,11 +50,16 @@ export class AiConversationController {
       );
     }
 
+    const customBot = dto.botId
+      ? await this.developerBotsService.getEnabledBot(dto.botId, user.id)
+      : undefined;
+
     const reply = await this.aiConversationService.generateReply(
       user.id,
       dto.message,
       dto.scenarioId ?? undefined,
       dto.conversationHistory,
+      customBot,
     );
     return { reply };
   }

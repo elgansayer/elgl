@@ -1107,6 +1107,45 @@ export interface Database {
         Update: Partial<CorrectorRatingRow>;
         Relationships: [];
       };
+      custom_educational_bots: {
+        Row: {
+          id: string;
+          owner_id: string;
+          display_name: string;
+          persona: string;
+          target_language: string;
+          tone: string;
+          greeting: string | null;
+          is_enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<{
+          id: string;
+          owner_id: string;
+          display_name: string;
+          persona: string;
+          target_language: string;
+          tone: string;
+          greeting: string | null;
+          is_enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        }>;
+        Update: Partial<{
+          id: string;
+          owner_id: string;
+          display_name: string;
+          persona: string;
+          target_language: string;
+          tone: string;
+          greeting: string | null;
+          is_enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
       media: {
         Row: MediaRow;
         Insert: Partial<MediaRow>;
