@@ -25,8 +25,8 @@ export const settingsRoutes: Routes = [
   {
     path: 'settings/notification',
     loadComponent: () =>
-      import('../pages/settings/notification-settings/notification-settings.component').then(
-        (m) => m.NotificationSettingsComponent,
+      import('../components/notification-preferences/notification-preferences.component').then(
+        (m) => m.NotificationPreferencesComponent,
       ),
     title: 'Notification Settings - HelloTalk',
   },

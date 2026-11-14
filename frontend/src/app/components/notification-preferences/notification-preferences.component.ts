@@ -7,7 +7,7 @@ import { I18nService } from '../../services/i18n.service';
 import {
   NotificationPreferencesService,
   NotificationPreferences,
-  CategoryPreference,
+  PreferenceChannel,
   NotificationCategory,
   NotificationChannel,
 } from '../../services/notification-preferences.service';
@@ -120,7 +120,12 @@ export class NotificationPreferencesComponent {
   private service = inject(NotificationPreferencesService);
   private i18n = inject(I18nService);
 
-  readonly channels: Array<'push' | 'badge'> = ['push', 'badge'];
+  readonly channels: NotificationChannel[] = [
+    'push',
+    'email',
+    'in_app',
+    'badges',
+  ];
 
   private prefs = signal<NotificationPreferences | null>(null);
   readonly loading = signal(true);
@@ -165,7 +170,7 @@ export class NotificationPreferencesComponent {
     this.prefsResource.reload();
   }
 
-  private categoryPref(cat: NotificationCategory): CategoryPreference | undefined {
+  private categoryPref(cat: NotificationCategory): PreferenceChannel | undefined {
     const p = this.prefs();
     return p?.[cat];
   }
@@ -202,7 +207,7 @@ export class NotificationPreferencesComponent {
       });
   }
 
-  channelEnabled(cat: NotificationCategory, ch: 'push' | 'badge'): boolean {
+  channelEnabled(cat: NotificationCategory, ch: NotificationChannel): boolean {
     const cp = this.categoryPref(cat);
     if (!cp) return false;
     return cp[ch];
@@ -216,7 +221,7 @@ export class NotificationPreferencesComponent {
     return `notification_preferences.channel.${ch}`;
   }
 
-  toggle(cat: NotificationCategory, ch: 'push' | 'badge'): void {
+  toggle(cat: NotificationCategory, ch: NotificationChannel): void {
     const p = this.prefs();
     if (!p || this.mutationPending()) return;
     const cp = this.categoryPref(cat);

@@ -38,7 +38,7 @@ The canonical category shape is:
 { push: boolean, email: boolean, in_app: boolean, badges: boolean }
 ```
 
-The old frontend-only `badge` field and legacy category names (`direct_messages`, `groups`, `likes`, `voice_rooms`) are not part of this endpoint's contract. Legacy `/notifications/preferences` helpers remain isolated for callers that still need the historical endpoint.
+The old frontend-only `badge` field and legacy category names (`direct_messages`, `groups`, `likes`, `voice_rooms`) are not part of this endpoint's contract. The legacy `/notifications/preferences` helpers were removed; the rich `/api/notification-preferences` contract is now the only preference API.
 
 Migration `20260820204500_notification_preferences_timezone.sql` converges `notification_preferences` into the root Supabase migration history and adds the nullable `quiet_hours_timezone` field. The table was originally defined only by a module-local backend migration, so a clean `supabase db reset` could otherwise reach the timezone migration without having the table. The migration is idempotent: on a fresh database it creates the canonical table, trigger, index, and owner-only RLS policies; on an existing deployment it only adds missing newer fields. Existing rows are not rewritten.
 
