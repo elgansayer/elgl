@@ -2,6 +2,8 @@ import { Component, ChangeDetectionStrategy, output } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 
+export type SocialLoginProvider = 'google' | 'apple';
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-social-login-buttons',
@@ -17,12 +19,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </svg>
         {{ 'auth.login_google' | t }}
       </button>
-      <button hlmBtn type="button" variant="outline" size="touch" class="w-full rounded-full" (click)="loginWith('facebook')">
-        <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true">
-          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-        </svg>
-        {{ 'auth.login_facebook' | t }}
-      </button>
       <button hlmBtn type="button" variant="outline" size="touch" class="w-full rounded-full" (click)="loginWith('apple')">
         <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M17.569 12.625c-.026-2.056 1.68-3.06 1.755-3.107-.955-1.4-2.442-1.59-2.972-1.613-1.265-.128-2.47.745-3.113.745-.642 0-1.636-.726-2.689-.707-1.383.02-2.657.804-3.37 2.043-1.436 2.492-.367 6.187 1.032 8.217.683.994 1.497 2.11 2.566 2.071 1.03-.04 1.419-.67 2.666-.67 1.247 0 1.597.67 2.683.65 1.107-.02 1.81-.992 2.471-1.988.78-1.133 1.106-2.232 1.123-2.29-.025-.009-2.158-.829-2.187-3.288zm-1.828-5.406c.564-.683.945-1.633.842-2.578-.813.033-1.803.541-2.382 1.224-.521.61-.977 1.588-.854 2.524.902.07 1.824-.46 2.394-1.17z"/>
@@ -33,9 +29,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
 })
 export class SocialLoginButtonsComponent {
-  readonly loginProvider = output<string>();
+  readonly loginProvider = output<SocialLoginProvider>();
 
-  loginWith(provider: string): void {
+  loginWith(provider: SocialLoginProvider): void {
     this.loginProvider.emit(provider);
   }
 }

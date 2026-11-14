@@ -1,9 +1,26 @@
 import { Routes } from '@angular/router';
+import { authGuard, guestGuard } from '../guards/auth.guard';
 
 /**
  * Auth & onboarding routes - login, registration, password flows, and onboarding wizard.
  */
 export const authRoutes: Routes = [
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('../pages/auth/sign-in.component').then((m) => m.SignInComponent),
+    title: 'Sign In - HelloTalk',
+    canActivate: [guestGuard],
+  },
+  {
+    path: 'register',
+    loadComponent: () =>
+      import('../pages/auth/register.component').then(
+        (m) => m.RegisterComponent,
+      ),
+    title: 'Create Account - HelloTalk',
+    canActivate: [guestGuard],
+  },
   {
     path: 'onboarding',
     loadComponent: () =>
@@ -11,6 +28,7 @@ export const authRoutes: Routes = [
         (m) => m.OnboardingWizardComponent,
       ),
     title: 'Onboarding - HelloTalk',
+    canActivate: [authGuard],
   },
   {
     path: 'forgot-password',
@@ -35,6 +53,7 @@ export const authRoutes: Routes = [
         (m) => m.ChangePasswordComponent,
       ),
     title: 'Change Password - HelloTalk',
+    canActivate: [authGuard],
   },
   {
     path: 'lock',
