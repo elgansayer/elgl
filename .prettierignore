@@ -27,3 +27,7 @@ out/
 # Generated and cache directories
 .angular/
 coverage/
+
+# Generated design-preview stylesheet (validated by check:design-preview-css)
+frontend/design-preview/assets/tailwind.css
+frontend/design-preview/assets/preview-input.css
