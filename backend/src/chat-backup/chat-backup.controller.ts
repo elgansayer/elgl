@@ -1,66 +1,60 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
   Param,
-  Body,
+  ParseUUIDPipe,
+  Post,
   Res,
+  UnauthorizedException,
   UseGuards,
-  HttpException,
-  HttpStatus,
 } from '@nestjs/common';
+import { User } from '@supabase/supabase-js';
 import type { Response } from 'express';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ChatBackupService } from './chat-backup.service';
+import { ImportChatBackupDto } from './dto/import-chat-backup.dto';
 
 @Controller('chat-backup')
 @UseGuards(SupabaseAuthGuard)
 export class ChatBackupController {
   constructor(private readonly backupService: ChatBackupService) {}
 
-  @Get('export/:channelId')
+  @Get('export/:roomId')
   async exportBackup(
-    @Param('channelId') channelId: string,
-    @Res() res: Response,
-  ): Promise<void> {
-    try {
-      const messages = await this.backupService.exportChannelBackup(channelId);
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="chat-backup-${channelId}.json"`,
-      );
-      res.json(messages);
-    } catch (err) {
-      throw new HttpException(
-        (err as Error).message || 'Failed to export backup',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    @Param('roomId', new ParseUUIDPipe()) roomId: string,
+    @CurrentUser() user: User | null,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<unknown> {
+    if (!user) {
+      throw new UnauthorizedException();
     }
+
+    const backup = await this.backupService.exportRoomBackup(user.id, roomId);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="chat-backup-${roomId}.json"`,
+    );
+    return backup;
   }
 
-  @Post('import/:channelId')
+  @Post('import/:roomId')
   async importBackup(
-    @Param('channelId') channelId: string,
-    @Body('messages') messages: Record<string, unknown>[],
+    @Param('roomId', new ParseUUIDPipe()) roomId: string,
+    @Body() dto: ImportChatBackupDto,
+    @CurrentUser() user: User | null,
   ): Promise<{ importedCount: number }> {
-    if (!Array.isArray(messages) || messages.length === 0) {
-      throw new HttpException(
-        'messages array is required',
-        HttpStatus.BAD_REQUEST,
-      );
+    if (!user) {
+      throw new UnauthorizedException();
     }
-    try {
-      const count = await this.backupService.importChannelBackup(
-        channelId,
-        messages,
-      );
-      return { importedCount: count };
-    } catch (err) {
-      throw new HttpException(
-        (err as Error).message || 'Failed to import backup',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+
+    const importedCount = await this.backupService.importRoomBackup(
+      user.id,
+      roomId,
+      dto.messages,
+    );
+    return { importedCount };
   }
 }

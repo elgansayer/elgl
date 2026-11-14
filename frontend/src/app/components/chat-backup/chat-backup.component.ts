@@ -44,7 +44,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
   `,
 })
 export class ChatBackupComponent {
-  readonly channelId = input.required<string>();
+  readonly roomId = input.required<string>();
 
   private readonly backupService = inject(ChatBackupService);
 
@@ -57,12 +57,14 @@ export class ChatBackupComponent {
     this.exporting.set(true);
     this.exportError.set(false);
     try {
-      const arrayBuffer = await this.backupService.exportChannel(this.channelId());
-      const blob = new Blob([arrayBuffer], { type: 'application/json' });
+      const backupDocument = await this.backupService.exportRoom(this.roomId());
+      const blob = new Blob([JSON.stringify(backupDocument)], {
+        type: 'application/json',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `chat-backup-${this.channelId()}.json`;
+      a.download = `chat-backup-${this.roomId()}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -90,13 +92,13 @@ export class ChatBackupComponent {
           this.importError.set(true);
           return;
         }
-        const messages = JSON.parse(rawResult);
-        if (!Array.isArray(messages)) {
+        const messages = this.extractMessages(JSON.parse(rawResult));
+        if (!messages) {
           this.importError.set(true);
           return;
         }
         this.importing.set(true);
-        await this.backupService.importChannel(this.channelId(), messages);
+        await this.backupService.importRoom(this.roomId(), messages);
       } catch {
         this.importError.set(true);
       } finally {
@@ -106,5 +108,32 @@ export class ChatBackupComponent {
     };
 
     reader.readAsText(file);
+  }
+
+  private extractMessages(
+    parsed: unknown,
+  ): ReadonlyArray<Record<string, unknown>> | null {
+    const candidate = Array.isArray(parsed)
+      ? parsed
+      : typeof parsed === 'object' &&
+          parsed !== null &&
+          'messages' in parsed &&
+          Array.isArray(parsed.messages)
+        ? parsed.messages
+        : null;
+
+    if (!candidate) {
+      return null;
+    }
+
+    const records: Record<string, unknown>[] = [];
+    for (const entry of candidate) {
+      if (typeof entry !== 'object' || entry === null) {
+        return null;
+      }
+      // Boundary cast: every entry is a non-null object; only string keys are read.
+      records.push(entry as Record<string, unknown>);
+    }
+    return records;
   }
 }

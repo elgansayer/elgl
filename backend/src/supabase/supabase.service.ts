@@ -665,7 +665,6 @@ export type ChatMessageRow = {
   message_type: string;
   text_content?: string | null;
   media_url?: string | null;
-  channel_id?: string | null;
   correction_payload?: {
     original: string;
     corrected: string;

@@ -142,8 +142,10 @@ export class BackupRestoreComponent {
     const roomId = this.selectedRoom();
     if (!roomId) return;
     try {
-      const buffer = await this.backupService.exportChannel(roomId);
-      const blob = new Blob([buffer], { type: 'application/json' });
+      const backup = await this.backupService.exportRoom(roomId);
+      const blob = new Blob([JSON.stringify(backup)], {
+        type: 'application/json',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -181,7 +183,7 @@ export class BackupRestoreComponent {
         throw new Error('Invalid backup format');
       }
       const messagesForImport: Record<string, unknown>[] = messages;
-      const count = await this.backupService.importChannel(roomId, messagesForImport);
+      const count = await this.backupService.importRoom(roomId, messagesForImport);
       this.statusMessage.set(
         this.i18n.translate('backupRestore.importSuccess', { count: count.toString() }),
       );

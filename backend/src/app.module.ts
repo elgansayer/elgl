@@ -16,6 +16,7 @@ import { MediaModule } from './media/media.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
+import { ChatBackupModule } from './chat-backup/chat-backup.module';
 import { LearnerKnowledgeModule } from './learner-knowledge/learner-knowledge.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
@@ -118,6 +119,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     DiscoveryModule,
     ProfileVisitsModule,
     ChatModule,
+    ChatBackupModule,
     NlpModule,
     FlashcardsModule,
     DecksModule,
