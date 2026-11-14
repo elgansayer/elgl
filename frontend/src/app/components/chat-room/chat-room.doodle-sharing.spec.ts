@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthService } from '../../services/auth.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
+import { ChatMediaService } from '../../services/chat-media.service';
 import { ChatMessage, ChatService } from '../../services/chat.service';
 import { I18nService } from '../../services/i18n.service';
 import { NetworkStatusService } from '../../services/network-status.service';
@@ -35,7 +36,9 @@ describe('ChatRoomComponent doodle sharing contract', () => {
   let fixture: ComponentFixture<ChatRoomComponent>;
   let component: ChatRoomComponent;
   let sendMessage: ReturnType<typeof vi.fn>;
+  let uploadDoodle: ReturnType<typeof vi.fn>;
   let i18n: I18nService;
+  const uploadedDoodleUrl = 'https://media.example.com/chat-media/user-1/image/standard/doodle.png';
 
   async function settle(): Promise<void> {
     fixture.detectChanges();
@@ -66,6 +69,12 @@ describe('ChatRoomComponent doodle sharing contract', () => {
 
   beforeEach(async () => {
     sendMessage = vi.fn();
+    uploadDoodle = vi.fn().mockResolvedValue({
+      url: uploadedDoodleUrl,
+      objectKey: 'chat-media/user-1/image/standard/doodle.png',
+      kind: 'image',
+      quality: 'standard',
+    });
     toastsSignal.set([]);
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 
@@ -123,6 +132,7 @@ describe('ChatRoomComponent doodle sharing contract', () => {
       imports: [ChatRoomComponent],
       providers: [
         { provide: ChatService, useValue: chatService },
+        { provide: ChatMediaService, useValue: { upload: uploadDoodle } },
         { provide: CentrifugeService, useValue: centrifugeService },
         { provide: AuthService, useValue: authService },
         { provide: SafetyService, useValue: safetyService },
@@ -226,20 +236,27 @@ describe('ChatRoomComponent doodle sharing contract', () => {
     });
   });
 
-  it('sends the saved PNG data URL as a doodle message and appends it once', async () => {
+  it('uploads the saved PNG to chat media and sends the stored URL as a doodle message', async () => {
     const dataUrl = 'data:image/png;base64,dGVzdC1kb29kbGU=';
-    const sent = doodleMessage(dataUrl);
+    const sent = doodleMessage(uploadedDoodleUrl);
     sendMessage.mockResolvedValue(sent);
     component.showDoodleModal.set(true);
 
     await component.onDoodleSaved(dataUrl);
 
     expect(component.showDoodleModal()).toBe(false);
+    expect(uploadDoodle).toHaveBeenCalledTimes(1);
+    const [file, quality] = uploadDoodle.mock.calls[0] as [File, string];
+    expect(file).toBeInstanceOf(File);
+    expect(file.name).toBe('doodle.png');
+    expect(file.type).toBe('image/png');
+    expect(file.size).toBe(11);
+    expect(quality).toBe('standard');
     expect(sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         room_id: 'room-1',
         message_type: 'doodle',
-        media_url: dataUrl,
+        media_url: uploadedDoodleUrl,
       }),
     );
     expect(component.messages()).toEqual([sent]);
@@ -271,6 +288,20 @@ describe('ChatRoomComponent doodle sharing contract', () => {
     const [payload] = sendMessage.mock.calls[0];
     expect(payload.text_content).toBe(i18n.translate('chatRoom.doodleCaption'));
     expect(payload.text_content).toBe('Doodle');
+  });
+
+  it('does not send a message when the doodle upload fails', async () => {
+    const failure = new Error('Upload ticket did not match the selected media');
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    uploadDoodle.mockRejectedValueOnce(failure);
+
+    await component.onDoodleSaved('data:image/png;base64,dGVzdA==');
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(component.messages()).toEqual([]);
+    const toast = toastsSignal().at(-1);
+    expect(toast?.type).toBe('error');
+    expect(toast?.message).toBe(i18n.translate('chatRoom.doodleSendFailed'));
   });
 
   it('keeps the conversation usable when doodle persistence fails', async () => {

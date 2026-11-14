@@ -26,11 +26,13 @@ const MEDIA_MESSAGE_TYPES = [
 
 const DOODLE_PNG_DATA_URL_PATTERN =
   /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/;
+const DOODLE_UPLOADED_URL_PATTERN = /^https:\/\/[^\s]+$/;
+const DOODLE_UPLOADED_URL_MAX_LENGTH = 2048;
 
-function IsDoodlePngDataUrl(validationOptions?: ValidationOptions) {
+function IsDoodleMedia(validationOptions?: ValidationOptions) {
   return (object: object, propertyName: string): void => {
     registerDecorator({
-      name: 'isDoodlePngDataUrl',
+      name: 'isDoodleMedia',
       target: object.constructor,
       propertyName,
       options: validationOptions,
@@ -40,8 +42,11 @@ function IsDoodlePngDataUrl(validationOptions?: ValidationOptions) {
             .message_type;
           if (messageType !== 'doodle') return true;
 
+          if (typeof value !== 'string') return false;
+          if (DOODLE_PNG_DATA_URL_PATTERN.test(value)) return true;
           return (
-            typeof value === 'string' && DOODLE_PNG_DATA_URL_PATTERN.test(value)
+            value.length <= DOODLE_UPLOADED_URL_MAX_LENGTH &&
+            DOODLE_UPLOADED_URL_PATTERN.test(value)
           );
         },
       },
@@ -135,8 +140,9 @@ export class SendMessageDto {
   @IsString()
   @Matches(/\S/, { message: 'media_url must not be blank' })
   @MaxLength(3000000)
-  @IsDoodlePngDataUrl({
-    message: 'doodle media_url must be a PNG data URL produced by the canvas',
+  @IsDoodleMedia({
+    message:
+      'doodle media_url must be an uploaded https URL or a PNG data URL produced by the canvas',
   })
   media_url?: string;
 

@@ -119,8 +119,20 @@ describe('SendMessageDto', () => {
     expect(errors).toHaveLength(0);
   });
 
+  it('accepts an uploaded https URL produced by the chat media pipeline', async () => {
+    const errors = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'doodle',
+      media_url:
+        'https://media.example.com/chat-media/user-1/image/standard/doodle.png',
+    });
+
+    expect(errors).toHaveLength(0);
+  });
+
   it.each([
-    'https://example.com/doodle.png',
+    'http://media.example.com/doodle.png',
+    'https://media.example.com/doodle.png?signature=with space',
     'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ',
     'data:image/png;base64,QUJDRA==',
     'data:text/html;base64,PGltZyBzcmM9eCBvbmVycm9yPWFsZXJ0KDEpPg==',
