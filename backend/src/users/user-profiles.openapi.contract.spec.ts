@@ -120,7 +120,6 @@ describe('User Profiles OpenAPI architecture contract', () => {
       '/users/me/dnd',
       '/users/me/status-visibility',
       '/users/me/contact-sharing',
-      '/users/me/notification-preferences',
     ];
 
     for (const path of requiredPaths) {
@@ -262,6 +261,6 @@ describe('User Profiles OpenAPI architecture contract', () => {
     expect(controllerSource).toContain("@Post('block/:id')");
     expect(controllerSource).toContain("@Post('report')");
     expect(controllerSource).toContain("@Patch('me/privacy')");
-    expect(controllerSource).toContain("@Patch('me/notification-preferences')");
+    expect(controllerSource).not.toContain('me/notification-preferences');
   });
 });

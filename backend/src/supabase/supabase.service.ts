@@ -80,7 +80,6 @@ export type UsersRow = {
   cover_photo_url?: string | null;
   cover_url?: string | null;
   serious_learner_mode?: boolean | null;
-  notification_preferences?: Record<string, unknown> | null;
   language_levels?: Record<string, string> | null;
   chat_preferences?: Record<string, unknown> | null;
   developer_api_key?: string | null;

@@ -18,7 +18,6 @@ function walkTypeScriptFiles(directory: string): string[] {
 const legacyRootRelativeCallers = new Set([
   'src/app/services/crash-report.service.ts',
   'src/app/services/monetisation.service.ts',
-  'src/app/services/notification-preferences.service.ts',
   'src/app/services/quick-poll.service.ts',
   'src/app/services/soundboard.service.ts',
   'src/app/services/user-interests.service.ts',

@@ -45,13 +45,11 @@ describe('UsersController', () => {
             updateBusinessProfile: vi.fn(),
             updateDoNotDisturbSettings: vi.fn(),
             permanentDeleteAccount: vi.fn(),
-            getNotificationPreferences: vi.fn(),
             updateGreetingMessage: vi.fn(),
             updateAwayMessage: vi.fn(),
             blockUser: vi.fn(),
             unblockUser: vi.fn(),
             reportUser: vi.fn(),
-            updateNotificationPreferences: vi.fn(),
           },
         },
         {
@@ -570,29 +568,6 @@ describe('UsersController', () => {
     });
   });
 
-  describe('getMyNotificationPreferences', () => {
-    it('should throw UnauthorizedException when no user', async () => {
-      await expect(
-        controller.getMyNotificationPreferences(null),
-      ).rejects.toThrow('Unauthorized');
-      expect(usersService.getNotificationPreferences).not.toHaveBeenCalled();
-    });
-
-    it('should return notification preferences for current user', async () => {
-      const prefs = { custom_tone_url: 'https://example.com/tone.mp3' };
-      (usersService.getNotificationPreferences as Mock).mockResolvedValue(
-        prefs,
-      );
-      const result = await controller.getMyNotificationPreferences({
-        id: 'user-1',
-      } as any);
-      expect(usersService.getNotificationPreferences).toHaveBeenCalledWith(
-        'user-1',
-      );
-      expect(result).toEqual(prefs);
-    });
-  });
-
   describe('getMyStats', () => {
     it('should throw UnauthorizedException when no user', async () => {
       await expect(controller.getMyStats(null)).rejects.toThrow('Unauthorized');
@@ -1097,35 +1072,6 @@ describe('UsersController', () => {
         { status_visibility: 'only_me' },
         false,
       );
-    });
-  });
-
-  describe('updateNotificationPreferences', () => {
-    it('should throw UnauthorizedException when no user', async () => {
-      await expect(
-        controller.updateNotificationPreferences(null, {}),
-      ).rejects.toThrow('Unauthorized');
-      expect(usersService.updateNotificationPreferences).not.toHaveBeenCalled();
-    });
-
-    it('should call updateNotificationPreferences with the user id and dto', async () => {
-      const dto = {
-        custom_tone_url: 'https://example.com/tone.mp3',
-        vibration_pattern: [100, 200, 100],
-      };
-      const updatedProfile: any = { id: 'user-1', ...dto };
-      (usersService.updateNotificationPreferences as Mock).mockResolvedValue(
-        updatedProfile,
-      );
-      const result = await controller.updateNotificationPreferences(
-        { id: 'user-1' } as any,
-        dto,
-      );
-      expect(usersService.updateNotificationPreferences).toHaveBeenCalledWith(
-        'user-1',
-        dto,
-      );
-      expect(result).toEqual(updatedProfile);
     });
   });
 

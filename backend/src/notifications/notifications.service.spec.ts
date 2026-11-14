@@ -3,16 +3,25 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotificationsService } from './notifications.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { NotificationPreferencesService } from './notification-preferences.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let preferencesService: {
+    getPreferences: ReturnType<typeof vi.fn>;
+    shouldSendNotification: ReturnType<typeof vi.fn>;
+  };
   const emit = vi.fn();
 
   beforeEach(async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     emit.mockClear();
+    preferencesService = {
+      getPreferences: vi.fn().mockResolvedValue({}),
+      shouldSendNotification: vi.fn().mockResolvedValue(true),
+    };
 
     mockQueryBuilder = {
       single: vi.fn().mockReturnThis(),
@@ -51,6 +60,10 @@ describe('NotificationsService', () => {
           },
         },
         { provide: EventEmitter2, useValue: { emit } },
+        {
+          provide: NotificationPreferencesService,
+          useValue: preferencesService,
+        },
       ],
     }).compile();
 
@@ -66,21 +79,9 @@ describe('NotificationsService', () => {
   });
 
   describe('sendPushNotification', () => {
-    const defaultPreferences = {
-      userId: 'user-1',
-      direct_messages: { push: true, badge: true },
-      groups: { push: true, badge: true },
-      likes: { push: true, badge: true },
-      voice_rooms: { push: true, badge: true },
-      do_not_disturb: false,
-      updatedAt: '2026-08-23T10:00:00.000Z',
-    };
-
-    it('returns suppressed when the user has intentionally disabled the category', async () => {
-      vi.spyOn(service, 'getPreferences').mockResolvedValue({
-        ...defaultPreferences,
-        groups: { push: false, badge: true },
-      });
+    it('returns suppressed when the rich preference disables the category', async () => {
+      preferencesService.shouldSendNotification.mockResolvedValue(false);
+      preferencesService.getPreferences.mockResolvedValue({});
 
       const result = await service.sendPushNotification('user-1', {
         type: 'event_reminder',
@@ -90,11 +91,23 @@ describe('NotificationsService', () => {
       });
 
       expect(result).toBe('suppressed');
+      expect(preferencesService.shouldSendNotification).toHaveBeenCalledWith(
+        'user-1',
+        'moment_comment',
+        'push',
+      );
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
     it('returns suppressed when there are no registered push tokens', async () => {
-      vi.spyOn(service, 'getPreferences').mockResolvedValue(defaultPreferences);
+      preferencesService.getPreferences.mockResolvedValue({
+        moment_comment: {
+          push: true,
+          email: false,
+          in_app: true,
+          badges: true,
+        },
+      });
 
       const result = await service.sendPushNotification('user-1', {
         type: 'event_reminder',
@@ -107,7 +120,14 @@ describe('NotificationsService', () => {
     });
 
     it('returns retry when the push-token lookup fails', async () => {
-      vi.spyOn(service, 'getPreferences').mockResolvedValue(defaultPreferences);
+      preferencesService.getPreferences.mockResolvedValue({
+        moment_comment: {
+          push: true,
+          email: false,
+          in_app: true,
+          badges: true,
+        },
+      });
       mockQueryBuilder.then.mockImplementationOnce(
         (resolve: (value: any) => void) => {
           resolve({ data: null, error: { message: 'temporary failure' } });

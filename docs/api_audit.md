@@ -317,6 +317,7 @@
 - **POST** `/monetisation/webhooks/apple` in `monetisation/apple-notification.controller.ts`
 - **POST** `/monetisation/webhooks/google` in `monetisation/google-play-notification.controller.ts`
 - **POST** `/monetisation/webhooks/stripe` in `monetisation/monetisation.controller.ts`
+- **POST** `/stripe/webhook` in `monetisation/controllers/stripe.controller.ts`
 - **POST** `/monetisation/webhooks/apple` in `monetisation/monetisation.controller.ts`
 - **POST** `/monetisation/webhooks/google` in `monetisation/monetisation.controller.ts`
 - **POST** `/monetisation/generate-api-key` in `monetisation/monetisation.controller.ts`
@@ -337,17 +338,11 @@
 - **POST** `/nlp/pronunciation-score` in `nlp/nlp.controller.ts`
 - **POST** `/nlp/translate-and-correct` in `nlp/nlp.controller.ts`
 - **POST** `/nlp/translate-bio` in `nlp/nlp.controller.ts`
-- **GET** `/notification-preferences` in `notification-preferences/notification-preferences.controller.ts`
-- **PUT** `/notification-preferences` in `notification-preferences/notification-preferences.controller.ts`
-- **POST** `/notification-preferences/reset` in `notification-preferences/notification-preferences.controller.ts`
 - **GET** `/notification-preferences` in `notifications/notification-preferences.controller.ts`
 - **PUT** `/notification-preferences` in `notifications/notification-preferences.controller.ts`
 - **POST** `/notification-preferences/reset` in `notifications/notification-preferences.controller.ts`
-- **PATCH** `/notification-preferences/:category/:channel` in `notifications/notification-preferences.controller.ts`
 - **GET** `/notifications` in `notifications/notifications.controller.ts`
 - **GET** `/notifications/unread-count` in `notifications/notifications.controller.ts`
-- **GET** `/notifications/preferences` in `notifications/notifications.controller.ts`
-- **PUT** `/notifications/preferences` in `notifications/notifications.controller.ts`
 - **PATCH** `/notifications/read-all` in `notifications/notifications.controller.ts`
 - **PATCH** `/notifications/:id/read` in `notifications/notifications.controller.ts`
 - **POST** `/auth/request-password-reset` in `password-reset/password-reset.controller.ts`
@@ -421,7 +416,6 @@
 - **DELETE** `/users/me/permanent` in `users/users.controller.ts`
 - **POST** `/users/me/restore` in `users/users.controller.ts`
 - **GET** `/users/me/export` in `users/users.controller.ts`
-- **GET** `/users/me/notification-preferences` in `users/users.controller.ts`
 - **GET** `/users/me` in `users/users.controller.ts`
 - **GET** `/users/me/stats` in `users/users.controller.ts`
 - **GET** `/users/me/xp` in `users/users.controller.ts`
@@ -457,7 +451,6 @@
 - **PATCH** `/users/me/dnd` in `users/users.controller.ts`
 - **PATCH** `/users/me/status-visibility` in `users/users.controller.ts`
 - **POST** `/users/me/contact-sharing` in `users/users.controller.ts`
-- **PATCH** `/users/me/notification-preferences` in `users/users.controller.ts`
 - **GET** `/version` in `version/version.controller.ts`
 - **GET** `/version/minimum` in `version/version.controller.ts`
 - **POST** `/video-calls/start` in `video-calls/video-calls.controller.ts`
@@ -471,7 +464,6 @@
 - **GET** `/user-interests/tags` in `modules/user-interests/user-interests.controller.ts`
 - **POST** `/user-interests/tags` in `modules/user-interests/user-interests.controller.ts`
 - **GET** `/user-interests/vocabulary` in `modules/user-interests/user-interests.controller.ts`
-- **POST** `/stripe/webhook` in `monetisation/controllers/stripe.controller.ts`
 - **GET** `/subscription-plans` in `monetisation/controllers/subscription-plans.controller.ts`
 - **GET** `/subscription-plans/popular` in `monetisation/controllers/subscription-plans.controller.ts`
 - **GET** `/subscription-plans/free` in `monetisation/controllers/subscription-plans.controller.ts`

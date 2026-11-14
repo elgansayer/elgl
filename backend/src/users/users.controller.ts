@@ -20,7 +20,6 @@ import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 import { MessageFiltersDto, UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
-import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { UpdateGreetingMessageDto } from './dto/update-greeting-message.dto';
 import { UpdateAwayMessageDto } from './dto/update-away-message.dto';
 import { UpdateStatusVisibilityDto } from './dto/update-status-visibility.dto';
@@ -149,17 +148,6 @@ export class UsersController {
   ): Promise<Record<string, unknown>> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.exportUserData(user.id);
-  }
-
-  @Get('me/notification-preferences')
-  async getMyNotificationPreferences(
-    @CurrentUser() user: User | null,
-  ): Promise<{
-    custom_tone_url?: string;
-    vibration_pattern?: number[];
-  } | null> {
-    if (!user) throw new UnauthorizedException();
-    return this.usersService.getNotificationPreferences(user.id);
   }
 
   @Get('me')
@@ -596,14 +584,5 @@ export class UsersController {
     if (!targetUserId)
       throw new BadRequestException('Target user ID is required');
     return this.usersService.shareContact(user.id, targetUserId);
-  }
-
-  @Patch('me/notification-preferences')
-  async updateNotificationPreferences(
-    @CurrentUser() user: User | null,
-    @Body() dto: UpdateNotificationPreferencesDto,
-  ): Promise<UserProfile | null> {
-    if (!user) throw new UnauthorizedException();
-    return this.usersService.updateNotificationPreferences(user.id, dto);
   }
 }

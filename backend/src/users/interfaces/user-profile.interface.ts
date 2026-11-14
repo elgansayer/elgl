@@ -105,7 +105,6 @@ export interface UserProfile {
   incognito_profile_views?: boolean; // Indicates if incognito profile views are enabled
   custom_avatar_url?: string; // Custom profile picture URL
   about_status?: string; // Custom About status
-  notification_preferences?: NotificationPreferences;
 }
 
 export interface BusinessCatalogItem {
@@ -115,11 +114,6 @@ export interface BusinessCatalogItem {
   price?: string;
   currency?: string;
   image_url?: string;
-}
-
-export interface NotificationPreferences {
-  custom_tone_url?: string;
-  vibration_pattern?: number[];
 }
 
 export interface ProfileVisitorSummary {
