@@ -312,6 +312,50 @@ describe('MonetisationService', () => {
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
     });
 
+    it('logs invoice payment outcomes without mutating VIP state', async () => {
+      const logger = module.get('PinoLogger:MonetisationService');
+      mockConstructEvent
+        .mockReturnValueOnce({
+          type: 'invoice.payment_succeeded',
+          data: {
+            object: { customer: 'cus_1', metadata: { userId: 'user-1' } },
+          },
+        })
+        .mockReturnValueOnce({
+          type: 'invoice.payment_failed',
+          data: { object: { customer: 'cus_2', metadata: {} } },
+        });
+
+      await service.handleStripeWebhook(Buffer.from(''), 'sig');
+      await service.handleStripeWebhook(Buffer.from(''), 'sig');
+
+      expect(logger.info).toHaveBeenCalledWith(
+        'Stripe invoice payment succeeded for customer cus_1, user user-1',
+      );
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Stripe invoice payment failed for customer cus_2',
+      );
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+
+    it('stays idempotent when Stripe replays the same subscription event', async () => {
+      const event: any = {
+        type: 'customer.subscription.deleted',
+        data: { object: { metadata: { userId: 'user-1' } } },
+      };
+      mockConstructEvent.mockReturnValue(event);
+
+      await service.handleStripeWebhook(Buffer.from(''), 'sig');
+      await service.handleStripeWebhook(Buffer.from(''), 'sig');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledTimes(2);
+      const updates = mockQueryBuilder.update.mock.calls.map((call) => call[0]);
+      expect(updates).toEqual([
+        { is_vip: false, vip_tier: null },
+        { is_vip: false, vip_tier: null },
+      ]);
+    });
+
     it('should throw an error when STRIPE_WEBHOOK_SECRET is not configured', async () => {
       const configService = module.get<ConfigService>(ConfigService);
       vi.spyOn(configService, 'get').mockImplementation((key: string) =>

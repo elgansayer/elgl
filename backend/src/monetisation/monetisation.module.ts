@@ -10,8 +10,6 @@ import { GooglePlayNotificationService } from './google-play-notification.servic
 import { GooglePlayNotificationController } from './google-play-notification.controller';
 import { SubscriptionPlansController } from './controllers/subscription-plans.controller';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
-import { StripeController } from './controllers/stripe.controller';
-import { StripeService } from './services/stripe.service';
 import { VipGuard } from './guards/vip.guard';
 import { DeveloperApiKeyGuard } from './guards/developer-api-key.guard';
 import { DeveloperApiUsageInterceptor } from './interceptors/developer-api-usage.interceptor';
@@ -23,7 +21,6 @@ import { DeveloperApiUsageInterceptor } from './interceptors/developer-api-usage
     AppleNotificationController,
     GooglePlayNotificationController,
     SubscriptionPlansController,
-    StripeController,
   ],
   providers: [
     MonetisationService,
@@ -31,7 +28,6 @@ import { DeveloperApiUsageInterceptor } from './interceptors/developer-api-usage
     AppleNotificationService,
     GooglePlayNotificationService,
     SubscriptionPlansService,
-    StripeService,
     VipGuard,
     DeveloperApiKeyGuard,
     DeveloperApiUsageInterceptor,
@@ -42,7 +38,6 @@ import { DeveloperApiUsageInterceptor } from './interceptors/developer-api-usage
     AppleNotificationService,
     GooglePlayNotificationService,
     SubscriptionPlansService,
-    StripeService,
   ],
 })
 export class MonetisationModule {}
