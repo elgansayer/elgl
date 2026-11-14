@@ -33,6 +33,15 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
   readonly isLoading = signal<boolean>(true);
 
+  private resolveReady!: () => void;
+
+  /**
+   * Resolves once the initial session restore has settled. Route guards await
+   * this so a hard refresh does not redirect a signed-in user to /login while
+   * `getSession()` is still in flight.
+   */
+  readonly ready: Promise<void>;
+
   private readonly LOCK_ENABLED_KEY = 'hellotalk_biometric_lock_enabled';
   private readonly CREDENTIAL_ID_KEY = 'hellotalk_biometric_credential_id';
 
@@ -51,10 +60,15 @@ export class AuthService {
   }
 
   constructor() {
+    this.ready = new Promise<void>((resolve) => {
+      this.resolveReady = resolve;
+    });
+
     if (isPlatformBrowser(this.platformId)) {
       void this.initAuthListener();
     } else {
       this.isLoading.set(false);
+      this.resolveReady();
     }
   }
 
@@ -80,6 +94,7 @@ export class AuthService {
       this.earnedBadges.set(null);
     } finally {
       this.isLoading.set(false);
+      this.resolveReady();
     }
 
     this.supabase.auth.onAuthStateChange((_event, session) => {
